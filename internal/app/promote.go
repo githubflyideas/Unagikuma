@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
-	"errors"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,7 +22,7 @@ import (
 // aside as diverged, never applied by itself.
 
 var (
-	errRejoinNotAllowed = errors.New("rejoin not allowed for this node")
+	errRejoinNotAllowed  = errors.New("rejoin not allowed for this node")
 	errRejoinNoAdvertise = errors.New("no advertisable master URL")
 )
 

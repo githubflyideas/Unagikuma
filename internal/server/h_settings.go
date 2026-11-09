@@ -250,7 +250,6 @@ func (s *Server) channelTest(w http.ResponseWriter, r *http.Request) (any, error
 	return out, nil
 }
 
-
 func (s *Server) policies(w http.ResponseWriter, r *http.Request) (any, error) {
 	type polJSON struct {
 		Name          string   `json:"name"`
