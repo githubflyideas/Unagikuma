@@ -81,6 +81,13 @@ Sur la machine où tourne Unagikuma :
 
 Tapez le nouveau mot de passe deux fois (il ne s'affiche pas). Ajoutez `--generate` pour en obtenir un au hasard.
 
+
+## Alertes, contacts et adresse d'écoute
+
+- E-mail/SMS réservés aux contacts actifs. Le test de canal utilise la même liste.
+- Une notification en échec est retentée quelques fois (`notify.channel-retries=0` pour désactiver). Les essais de sonde sont séparés.
+- L'UI est en HTTP clair par défaut. Préférez un reverse proxy TLS ou `--tls-cert`/`--tls-key`. Les agents utilisent déjà du TLS épinglé sur le même port.
+
 ## En savoir plus
 
 - [Manuel d’utilisation (en anglais)](docs/manual.md) — tout le reste, étape par étape

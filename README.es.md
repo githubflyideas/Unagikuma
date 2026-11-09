@@ -81,6 +81,13 @@ En la máquina donde se ejecuta Unagikuma:
 
 Escribe la nueva contraseña dos veces (no se muestra). Añade `--generate` para obtener una aleatoria.
 
+
+## Alertas, contactos y dirección de escucha
+
+- Correo/SMS solo a contactos activos. La prueba del canal usa la misma lista.
+- Una notificación fallida se reintenta unas veces (`notify.channel-retries=0` lo desactiva). Los reintentos de sondeo son aparte.
+- La UI usa HTTP en claro por defecto. Prefiera un proxy inverso TLS o `--tls-cert`/`--tls-key`. Los agentes ya usan TLS anclado en el mismo puerto.
+
 ## Más información
 
 - [Manual de usuario (en inglés)](docs/manual.md) — todo lo demás, paso a paso

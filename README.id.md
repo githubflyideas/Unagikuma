@@ -81,6 +81,13 @@ Di mesin tempat Unagikuma berjalan:
 
 Ketik kata sandi baru dua kali (tidak ditampilkan). Tambahkan `--generate` untuk mendapatkan kata sandi acak.
 
+
+## Peringatan, kontak, dan alamat listen
+
+- Email/SMS hanya ke kontak aktif. Tombol uji saluran memakai daftar yang sama.
+- Notifikasi gagal dicoba ulang beberapa kali (`notify.channel-retries=0` menonaktifkan). Coba ulang probe terpisah.
+- UI default HTTP polos. Lebih baik reverse proxy TLS atau `--tls-cert`/`--tls-key`. Agen sudah memakai TLS terpasang di port yang sama.
+
 ## Pelajari lebih lanjut
 
 - [Panduan pengguna (dalam bahasa Inggris)](docs/manual.md) — semua hal lainnya, langkah demi langkah

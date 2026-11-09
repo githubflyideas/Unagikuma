@@ -182,6 +182,9 @@ func (a *App) allowedRejoinName(want string) (string, bool) {
 // IssueRejoinOffer builds a retire-style notice with a join code for a
 // replaced peer that proved possession of this cluster's CA key.
 func (a *App) IssueRejoinOffer(want string) (cluster.RetireNotice, error) {
+	if !a.ConfigAuthority() {
+		return cluster.RetireNotice{}, errRejoinNotAllowed
+	}
 	site, ok := a.allowedRejoinName(want)
 	if !ok {
 		return cluster.RetireNotice{}, errRejoinNotAllowed

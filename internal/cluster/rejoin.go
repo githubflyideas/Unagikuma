@@ -26,36 +26,45 @@ const RejoinOfferPath = "/api/v1/agent/rejoin-offer"
 // A replaced master still has that key until it demotes, so it can prove
 // it belongs to the cluster without an agent token yet.
 type RejoinRequest struct {
-	Node string    `json:"node"`
-	At   time.Time `json:"at"`
-	Sig  string    `json:"sig"`
+	Node  string    `json:"node"`
+	At    time.Time `json:"at"`
+	Nonce string    `json:"nonce"` // one-time; master rejects replays
+	Sig   string    `json:"sig"`
 }
 
-func rejoinDigest(node string, at time.Time) []byte {
-	h := sha256.Sum256([]byte(fmt.Sprintf("unagikuma-rejoin\n%s\n%s\n", node, at.UTC().Format(time.RFC3339Nano))))
+func rejoinDigest(node, nonce string, at time.Time) []byte {
+	h := sha256.Sum256([]byte(fmt.Sprintf("unagikuma-rejoin\n%s\n%s\n%s\n", node, nonce, at.UTC().Format(time.RFC3339Nano))))
 	return h[:]
 }
 
-// SignRejoin signs a rejoin request for node.
+// SignRejoin signs a rejoin request for node with a fresh nonce.
 func (p *PKI) SignRejoin(node string, now time.Time) (RejoinRequest, error) {
 	if p.caKey == nil {
 		return RejoinRequest{}, errors.New("no CA key")
 	}
-	sig, err := ecdsa.SignASN1(rand.Reader, p.caKey, rejoinDigest(node, now))
+	var nb [16]byte
+	if _, err := rand.Read(nb[:]); err != nil {
+		return RejoinRequest{}, err
+	}
+	nonce := base64.RawURLEncoding.EncodeToString(nb[:])
+	sig, err := ecdsa.SignASN1(rand.Reader, p.caKey, rejoinDigest(node, nonce, now))
 	if err != nil {
 		return RejoinRequest{}, err
 	}
-	return RejoinRequest{Node: node, At: now, Sig: base64.StdEncoding.EncodeToString(sig)}, nil
+	return RejoinRequest{Node: node, At: now, Nonce: nonce, Sig: base64.StdEncoding.EncodeToString(sig)}, nil
 }
 
 // CheckRejoin verifies a rejoin request against this cluster's CA.
 func (p *PKI) CheckRejoin(r RejoinRequest) error {
+	if strings.TrimSpace(r.Nonce) == "" {
+		return errors.New("missing nonce")
+	}
 	sig, err := base64.StdEncoding.DecodeString(r.Sig)
 	if err != nil {
 		return errors.New("bad signature")
 	}
 	pub, ok := p.CA.PublicKey.(*ecdsa.PublicKey)
-	if !ok || !ecdsa.VerifyASN1(pub, rejoinDigest(r.Node, r.At), sig) {
+	if !ok || !ecdsa.VerifyASN1(pub, rejoinDigest(r.Node, r.Nonce, r.At), sig) {
 		return errors.New("not signed by this cluster's CA")
 	}
 	// Reject stale requests (clock skew allowance).

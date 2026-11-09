@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.6.3 — unreleased
+
+**Fixed**
+- A master replaced by a higher term rejoins as a replica without a restart (join URL works when listen is `:8077`; CA-signed rejoin offer with nonce / no replay; only after Reach confirms the winner).
+- Channel **Test** uses the same active-contact directory as real alerts by default. An empty whitelist is not reported as success. Optional connection-only mode is labelled as such.
+
+**Changed**
+- Default `notify.channel-retries` is 2 (about 2s then 5s). Permanent errors are not retried. Explicit `0` still means no retries. Probe retries are unchanged.
+- Startup and the System page warn when the UI is served over plain HTTP. The listen address is unchanged; agent traffic on the same port remains pinned TLS.
+
+
 ## v2.6.2 — 2026-11-10
 
 **Fixed**

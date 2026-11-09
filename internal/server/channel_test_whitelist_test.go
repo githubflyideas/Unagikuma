@@ -64,3 +64,20 @@ mail IN CHANNEL email host=127.0.0.1 port=9 tls=none from=mon@example.com to="li
 		t.Fatalf("mode %v", diag)
 	}
 }
+
+func TestChannelTestHTTPConnectionModeTagged(t *testing.T) {
+	bind := `@ IN SOA unagikuma. admin.localhost. ( 1 1m 15s 5s 3 )
+mail IN CHANNEL email host=127.0.0.1 port=9 tls=none from=mon@example.com to="nobody-real@example.com"
+`
+	e := newEnv(t, bind, nil)
+	e.setup()
+	var out map[string]any
+	code := e.do("POST", "/api/v1/channels/test", map[string]any{"name": "mail", "mode": "connection"}, &out)
+	if code != 200 {
+		t.Fatalf("%d %v", code, out)
+	}
+	diag, _ := out["diagnostic"].(map[string]any)
+	if diag["mode"] != "connection" || diag["note"] != "connection_only" {
+		t.Fatalf("diagnostic %+v", diag)
+	}
+}

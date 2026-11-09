@@ -81,6 +81,13 @@ Trên máy đang chạy Unagikuma:
 
 Nhập mật khẩu mới hai lần (không hiển thị). Thêm `--generate` để nhận một mật khẩu ngẫu nhiên.
 
+
+## Cảnh báo, danh bạ và địa chỉ listen
+
+- Email/SMS chỉ tới liên hệ đang làm việc. Nút kiểm tra kênh dùng cùng danh sách.
+- Thông báo lỗi được thử lại vài lần (`notify.channel-retries=0` để tắt). Thử lại thăm dò là cấu hình khác.
+- UI mặc định HTTP thuần. Nên dùng reverse proxy TLS hoặc `--tls-cert`/`--tls-key`. Agent đã dùng TLS ghim trên cùng cổng.
+
 ## Tìm hiểu thêm
 
 - [Hướng dẫn sử dụng (tiếng Anh)](docs/manual.md) — mọi thứ còn lại, từng bước một

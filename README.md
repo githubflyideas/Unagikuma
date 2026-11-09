@@ -82,6 +82,13 @@ On the machine where Unagikuma runs:
 
 Type the new password twice (it is not shown). Add `--generate` to get a random one instead.
 
+
+## Alerts, contacts and the listen address
+
+- **Contacts.** E-mail and SMS go only to active people in the directory. The channel **Test** button uses that same list by default, so a test cannot look successful when nobody would receive a real alert.
+- **Retries.** A failed notification channel is retried a couple of times before fallback (override with `notify.channel-retries=0` to keep the old no-retry behaviour). Probe retries are separate.
+- **Listen.** The UI defaults to plain HTTP on the listen address (often `:8077`). Prefer a TLS reverse proxy or `--tls-cert` / `--tls-key` for anything beyond a private network. Agents already use pinned TLS on the same port.
+
 ## Learn more
 
 - [User manual](docs/manual.md) — everything else, step by step

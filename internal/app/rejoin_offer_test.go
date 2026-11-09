@@ -75,3 +75,38 @@ func TestSignAndCheckRejoin(t *testing.T) {
 		t.Fatal("stale must fail")
 	}
 }
+
+func TestRejoinNonceRejectsReplay(t *testing.T) {
+	dir := t.TempDir()
+	a, err := New(Options{DataDir: dir, Listen: "127.0.0.1:18077", Probe: (&fakeProbes{}).run})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Store().Close()
+	req, err := a.PKI().SignRejoin("a", time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := a.PKI().CheckRejoin(req); err != nil {
+		t.Fatal(err)
+	}
+	if !a.ConsumeRejoinNonce(req) {
+		t.Fatal("first consume")
+	}
+	if a.ConsumeRejoinNonce(req) {
+		t.Fatal("replay must fail")
+	}
+}
+
+func TestIssueRejoinOfferRequiresAuthority(t *testing.T) {
+	dir := t.TempDir()
+	a, err := New(Options{DataDir: dir, Listen: "127.0.0.1:18078", Probe: (&fakeProbes{}).run})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Store().Close()
+	a.supersede(9, "other")
+	if _, err := a.IssueRejoinOffer("x"); err == nil {
+		t.Fatal("superseded master must not issue rejoin offers")
+	}
+}

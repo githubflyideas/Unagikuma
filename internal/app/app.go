@@ -97,6 +97,9 @@ type App struct {
 	applyMu sync.Mutex
 	// sitePauseMu guards read-modify-write of site-pauses.json.
 	sitePauseMu sync.Mutex
+	// rejoinSeen rejects replayed CA-signed rejoin-offer requests.
+	rejoinOnce sync.Once
+	rejoinSeen rejoinSeen
 
 	pubMu   sync.RWMutex
 	publish func(typ string, v any)

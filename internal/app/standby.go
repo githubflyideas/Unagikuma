@@ -625,9 +625,14 @@ func (a *App) AcceptRetire(n cluster.RetireNotice) error {
 		return nil
 	}
 	// Older masters omitted Join when Listen had no host; still self-heal.
+	// Only dial peers that answer Reach as master (never unverified listens).
 	go func() {
 		for _, addr := range a.peerListenAddrs() {
-			a.followMasterAsReplica(addr, "")
+			rv, ok := a.probeReach(addr)
+			if !ok || rv.Role != "master" {
+				continue
+			}
+			a.followMasterAsReplica(addr, rv.Node)
 			if a.isMember() {
 				return
 			}

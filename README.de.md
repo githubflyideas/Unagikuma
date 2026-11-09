@@ -81,6 +81,13 @@ Auf dem Rechner, auf dem Unagikuma läuft:
 
 Geben Sie das neue Passwort zweimal ein (es wird nicht angezeigt). Mit `--generate` bekommen Sie stattdessen ein zufälliges.
 
+
+## Alarme, Kontakte und Listen-Adresse
+
+- E-Mail/SMS nur an aktive Kontakte. Der Kanal-Test nutzt dieselbe Liste.
+- Fehlgeschlagene Benachrichtigungen werden einige Male wiederholt (`notify.channel-retries=0` schaltet das ab). Sonden-Retries sind getrennt.
+- Die UI nutzt standardmäßig HTTP ohne TLS. TLS-Reverse-Proxy oder `--tls-cert`/`--tls-key` empfohlen. Agenten nutzen gepinntes TLS auf demselben Port.
+
 ## Mehr erfahren
 
 - [Benutzerhandbuch (auf Englisch)](docs/manual.md) — alles Weitere, Schritt für Schritt

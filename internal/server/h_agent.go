@@ -83,6 +83,10 @@ func (s *Server) agentRejoinOffer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, Errorf(http.StatusForbidden, CodeForbidden, "%v", err))
 		return
 	}
+	if !s.app.ConsumeRejoinNonce(req) {
+		writeError(w, Errorf(http.StatusForbidden, CodeForbidden, "rejoin request replayed"))
+		return
+	}
 	n, err := s.app.IssueRejoinOffer(req.Node)
 	if err != nil {
 		writeError(w, Errorf(http.StatusConflict, CodeConflict, "%v", err))
