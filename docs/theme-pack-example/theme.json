@@ -1,0 +1,21 @@
+{
+  "name": "Harbour Blue",
+  "author": "Example Co.",
+  "version": "1.0",
+  "base": "light",
+  "layout": "standard",
+  "brand": {
+    "product": "Harbour Monitor",
+    "short": "HM",
+    "hide_powered": false
+  },
+  "colors": {
+    "bg": "#f2f6fa",
+    "side": "#e3ebf3",
+    "panel": "#ffffff",
+    "border": "#d4dee8",
+    "accent": "#0a5fc2",
+    "accent-soft": "#dde9f8",
+    "link": "#0a54ad"
+  }
+}

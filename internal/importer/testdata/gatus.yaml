@@ -1,0 +1,9 @@
+endpoints:
+  - name: Gatus example
+    group: Applications
+    url: https://example.invalid/health
+    enabled: false
+    interval: 60s
+    method: HEAD
+    conditions:
+      - "[STATUS] == 200"

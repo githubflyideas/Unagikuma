@@ -1,0 +1,75 @@
+@ IN SOA master. me.example.com. ( 2026102101 1m 15s 5s 3 )
+
+; ====================================================================
+; Imported from Uptime Kuma 1.x (kuma) on 2026-10-30 09:00
+; 30 monitors, 10 notification channels, 9 notification policies, 1
+; maintenance window, 1 status page, 1 account
+; Names were made from the original names; title= keeps the original.
+; ====================================================================
+
+; --- Notification channels (from Uptime Kuma notifications)
+dingtalk-bot        IN CHANNEL dingtalk url=${secret:kuma_dingtalk_bot_url} secret=${secret:kuma_dingtalk_bot_secret}
+discord-alerts      IN CHANNEL discord url=${secret:kuma_discord_alerts_url}
+feishu-bot          IN CHANNEL feishu url=${secret:kuma_feishu_bot_url}
+generic-webhook     IN CHANNEL webhook url=https://hooks.example.com/kuma
+ntfy-phone          IN CHANNEL webhook preset=ntfy topic=kuma-fake
+ops-email           IN CHANNEL email host=smtp.example.com port=587 username=alerts@example.com password=${secret:kuma_ops_email_password} from="Kuma <alerts@example.com>" to=ops@example.com,lead@example.com
+ops-telegram        IN CHANNEL telegram token=${secret:kuma_ops_telegram_token} chat=-1001234567
+team-slack          IN CHANNEL slack url=${secret:kuma_team_slack_url}
+webhook-custom-body IN CHANNEL webhook url=https://hooks.example.com/custom header.x-token=${secret:kuma_webhook_custom_body_header_x_token}
+wecom-bot           IN CHANNEL wecom url=${secret:kuma_wecom_bot_url}
+
+; --- Notification policies: the channels each monitor notifies
+notify-dingtalk-bot-feishu-bot IN POLICY chain=dingtalk-bot,feishu-bot mode=all
+notify-discord-alerts          IN POLICY chain=discord-alerts mode=all
+notify-generic-webhook         IN POLICY chain=generic-webhook mode=all
+notify-ntfy-phone-ops-telegram IN POLICY chain=ntfy-phone,ops-telegram mode=all
+notify-ops-email               IN POLICY chain=ops-email mode=all
+notify-ops-telegram-team-slack IN POLICY chain=ops-telegram,team-slack mode=all
+notify-team-slack              IN POLICY chain=team-slack mode=all
+notify-webhook-custom-body     IN POLICY chain=webhook-custom-body mode=all
+notify-wecom-bot               IN POLICY chain=wecom-bot mode=all
+
+; --- Uptime Kuma group: Production
+no-maintenance-banner  1m IN HTTP https://example.com/ title="No maintenance banner" keyword=Maintenance absent=yes attempts=1 timeout=48s group=Production
+postgres-port          1m IN TCP  db.internal.example:5432 title="Postgres port" attempts=1 timeout=48s group=Production
+website               30s IN HTTP https://example.com title=Website retry=20s attempts=3 timeout=24s tags=critical,env:prod,team:web group=Production policy=notify-ops-telegram-team-slack
+www.example.cn         1m IN HTTP https://www.example.cn/ title=官网首页 attempts=1 timeout=48s tags=env:prod group=Production description=公司官网
+
+; --- Uptime Kuma group: Production / API
+api-health-json  1m IN HTTP https://api.example.com/health title="API health (JSON)" json-path=$.status json-expect=ok attempts=1 timeout=48s group="Production / API" policy=notify-discord-alerts
+api-with-headers 1m IN HTTP https://api.example.com/v1/ping title="API with headers" header.accept=application/json header.authorization=${secret:kuma_api_with_headers_authorization} header.x-env=prod attempts=1 timeout=48s group="Production / API" policy=notify-generic-webhook
+login-page       1m IN HTTP https://example.com/login title="Login page" keyword="Sign in" attempts=1 timeout=48s group="Production / API" policy=notify-ops-telegram-team-slack
+
+; --- Uptime Kuma group: Staging
+gateway   1m IN PING gw.example.com title=Gateway attempts=1 timeout=48s tags="env:staging,owner-name:Li Lei Ops" group=Staging
+website-2 1m IN HTTP https://staging.example.com title=Website attempts=1 timeout=48s tags=env:staging group=Staging policy=notify-team-slack
+
+; --- Not in a group
+a-very-long-monitor-name-that-goes-on  1m IN HTTP     https://long.example.com/ title="A very long monitor name that goes on and on to test truncation…" attempts=1 timeout=48s description="A very long monitor name that goes on and on to test truncation of record names in the generated file"
+admin-basic-auth                       1m IN HTTP     https://admin.example.com/ title="Admin (basic auth)" basic=${secret:kuma_admin_basic_auth_basic} attempts=1 timeout=48s policy=notify-ops-email
+api-v2-health                          1m IN HTTP     https://api.example.com/v2/health title="API: v2 / health ✓" attempts=1 timeout=48s description="Checks the v2 API"
+billing-db                             1m IN POSTGRES pg.example.com:5432 title="Billing DB" user=billing database=billing ssl=yes password=${secret:kuma_billing_db_password} attempts=1 timeout=48s
+cache                                  1m IN REDIS    cache.example.com:6379 title=Cache password=${secret:kuma_cache_password} attempts=1 timeout=48s
+core-router                           20s IN PING     10.0.0.1 title="Core router" retry=1m attempts=4 timeout=16s tags=critical policy=notify-ntfy-phone-ops-telegram
+cron-heartbeat                            IN PUSH     title="Cron heartbeat" period=5m
+dns-default-resolver                   1m IN DNS      1.1.1.1 title="DNS default resolver" query=example.org qtype=AAAA attempts=1 timeout=48s
+dns-example.com-a                      1m IN DNS      1.1.1.1 title="DNS example.com A" query=example.com attempts=1 timeout=48s
+grpc-users                             1m IN GRPC     users.example.com:443 title="gRPC users" service=users.v1.Users tls=yes attempts=1 timeout=48s
+ipv6-web-port                          1m IN TCP      [2001:db8::10]:443 title="IPv6 web port" attempts=1 timeout=48s
+mail-mx                                1m IN DNS      8.8.8.8 title="Mail MX" query=example.com qtype=MX attempts=1 timeout=48s
+nightly-backup                            IN PUSH     title="Nightly backup" period=1d policy=notify-ops-email
+old-site-paused                        1m IN HTTP     https://old.example.com/ title="Old site (paused)" attempts=1 timeout=48s disabled=yes policy=notify-team-slack
+orders-db                              1m IN MYSQL    db.example.com:3306 title="Orders DB" user=app database=orders password=${secret:kuma_orders_db_password} attempts=1 timeout=48s
+private-api-returns-401                1m IN HTTP     https://api.example.com/private title="Private API returns 401" expect=401 attempts=1 timeout=48s
+redis-container                        1m IN DOCKER   redis title="Redis container" attempts=1 timeout=48s
+shop-tls                               1m IN HTTP     https://shop.example.com/ title="Shop TLS" cert-days=62 attempts=1 timeout=48s tags=env:prod policy=notify-dingtalk-bot-feishu-bot
+ssh-bastion                            2m IN TCP      10.0.0.5:22 title="SSH bastion" retry=1m attempts=1 timeout=48s policy=notify-wecom-bot
+tailscale-node                         1m IN PING     node1 title="Tailscale node" attempts=1 timeout=48s
+webhook-receiver-post                  1m IN HTTP     https://hooks.example.com/in title="Webhook receiver POST" method=POST body="{\"ping\":true}" expect=200-299,301,302 insecure=yes no-follow=yes attempts=1 timeout=48s policy=notify-webhook-custom-body
+
+; --- Maintenance windows (from Uptime Kuma)
+weekly-patch-window IN MAINT "Weekly patch window" select=name:login-page,website every=sun start=02:00 duration=2h
+
+; --- Status pages (from Uptime Kuma)
+public IN STATUSPAGE "Public status" select=name:website,www.example.cn,core-router,dns-example.com-a

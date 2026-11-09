@@ -1,0 +1,63 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+  # Releasing from the Actions page (or the API): the version is tagged on
+  # the commit the run is started from, normally main.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. v1.5.1 (CHANGELOG.md needs a "## v1.5.1" section)'
+        required: true
+permissions:
+  contents: write
+env:
+  TAG: ${{ inputs.version || github.ref_name }}
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: version
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' || { echo "version must look like v1.2.3, got $TAG"; exit 1; }
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "tag $TAG exists already"; exit 1
+          fi
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: checks
+        run: |
+          test -z "$(gofmt -l . | tee /dev/stderr)"
+          go vet ./...
+          go test ./...
+      - name: build archives
+        run: scripts/dist.sh "$TAG"
+      - name: release notes
+        # The section of CHANGELOG.md whose heading starts with the tag.
+        run: |
+          awk -v tag="## $TAG" '/^## / { on = index($0, tag) == 1; next } on' CHANGELOG.md >dist/NOTES.md
+          test -s dist/NOTES.md
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A release made on github.com with this tag gets the files added.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/unagikuma-* dist/SHA256SUMS --clobber
+            # Fill in notes left empty when the release was made by hand.
+            if [ -z "$(gh release view "$TAG" --json body -q .body)" ]; then
+              gh release edit "$TAG" --title "unagikuma $TAG" --notes-file dist/NOTES.md
+            fi
+          elif [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            # The release creates the tag on the commit this run built.
+            gh release create "$TAG" dist/unagikuma-* dist/SHA256SUMS \
+              --title "unagikuma $TAG" --notes-file dist/NOTES.md --target "$GITHUB_SHA"
+          else
+            gh release create "$TAG" dist/unagikuma-* dist/SHA256SUMS \
+              --title "unagikuma $TAG" --notes-file dist/NOTES.md --verify-tag
+          fi

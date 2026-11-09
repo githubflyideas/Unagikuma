@@ -1,0 +1,77 @@
+@ IN SOA master. me.example.com. ( 2026102101 1m 15s 5s 3 )
+old-web1 IN TCP 10.0.1.11:22
+
+; ====================================================================
+; Imported from Nagios (nagios.cfg) on 2026-10-30 09:00
+; 31 monitors, 4 notification channels, 1 contact group, 4
+; notification policies, 2 time periods
+; Names were made from the original names; title= keeps the original.
+; ====================================================================
+
+; --- Time periods (from Nagios timeperiods)
+nights    IN PERIOD "mon-fri 00:00-08:00; mon-fri 18:00-24:00; sat-sun 00:00-24:00"
+workhours IN PERIOD "mon-fri 09:00-17:00"
+
+; --- Notification channels (from Nagios contacts and contact groups)
+alice       IN CHANNEL email via=sendmail to=alice@example.com
+bob         IN CHANNEL email via=sendmail to=bob@example.com period=workhours
+dave        IN CHANNEL email via=sendmail to=dave@example.com period=nights
+nagiosadmin IN CHANNEL email via=sendmail to=nagios@localhost
+oncall      IN CHANNEL group members=alice,dave
+
+; --- Notification policies: who each monitor notifies, and how often
+notify-bob                IN POLICY chain=bob mode=all repeat=1h
+notify-nagiosadmin        IN POLICY chain=nagiosadmin mode=all repeat=1h
+notify-nagiosadmin-30m    IN POLICY chain=nagiosadmin mode=all repeat=30m
+notify-nagiosadmin-oncall IN POLICY chain=nagiosadmin,oncall mode=all repeat=1h delay=5m
+
+; --- Host core-rtr1 (Core router), 10.0.0.1, group network
+core-rtr1     5m IN PING 10.0.0.1 title="Core router" retry=1m attempts=3 device=core-rtr1 group=network policy=notify-bob
+core-rtr1-ntp 5m IN NTP  10.0.0.1 title="core-rtr1 / NTP" retry=1m attempts=4 device=core-rtr1 group=network parent=core-rtr1 policy=notify-nagiosadmin
+
+; --- Host core-sw1 (Core switch 1), 10.0.0.2, group network
+core-sw1              5m IN PING 10.0.0.2 title="Core switch 1" retry=1m attempts=3 device=core-sw1 group=network parent=core-rtr1 policy=notify-bob
+core-sw1-passive-trap    IN PUSH title="core-sw1 / Passive trap" period=1h device=core-sw1 group=network policy=notify-nagiosadmin
+core-sw1-snmp-uptime  5m IN SNMP 10.0.0.2 title="core-sw1 / SNMP uptime" community=${secret:nagios_core_sw1_snmp_uptime_community} retry=1m attempts=4 device=core-sw1 group=network parent=core-sw1 policy=notify-nagiosadmin
+
+; --- Host crlf-host, 10.0.9.9, group linux-servers
+crlf-host     5m IN PING 10.0.9.9 retry=1m attempts=3 device=crlf-host group=linux-servers policy=notify-nagiosadmin description="Production Linux"
+crlf-host-ssh 5m IN TCP  10.0.9.9:22 title="crlf-host / SSH" retry=1m attempts=4 device=crlf-host group=linux-servers parent=crlf-host policy=notify-nagiosadmin
+
+; --- Host db1, 10.0.2.21, group db-servers
+db1            5m IN PING     10.0.2.21 retry=1m attempts=3 device=db1 group=db-servers parent=core-sw1 policy=notify-nagiosadmin description="Production Linux"
+db1-disk       5m IN EXEC     "check_nrpe -H 10.0.2.21 -c check_disk" title="db1 / Disk /" address=10.0.2.21 retry=1m attempts=4 device=db1 group=db-servers parent=db1 disabled=yes policy=notify-nagiosadmin
+db1-mysql      5m IN MYSQL    10.0.2.21:3306 title="db1 / MySQL" user=monitor password=${secret:nagios_db1_mysql_password} retry=1m attempts=4 device=db1 group=db-servers parent=db1 policy=notify-nagiosadmin
+db1-postgresql 5m IN POSTGRES 10.0.2.21:5432 title="db1 / PostgreSQL" user=monitor database=app retry=1m attempts=4 device=db1 group=db-servers parent=db1 policy=notify-nagiosadmin
+
+; --- Host db2, 10.0.2.22, group db-servers
+db2       5m IN PING  10.0.2.22 retry=1m attempts=3 device=db2 group=db-servers parent=core-sw1 disabled=yes policy=notify-nagiosadmin description="Production Linux"
+db2-disk  5m IN EXEC  "check_nrpe -H 10.0.2.22 -c check_disk" title="db2 / Disk /" address=10.0.2.22 retry=1m attempts=4 device=db2 group=db-servers parent=db2 disabled=yes policy=notify-nagiosadmin
+db2-mysql 5m IN MYSQL 10.0.2.22:3306 title="db2 / MySQL" user=monitor password=${secret:nagios_db2_mysql_password} retry=1m attempts=4 device=db2 group=db-servers parent=db2 policy=notify-nagiosadmin
+
+; --- Host dmz-noaddr
+dmz-noaddr IN PING dmz-noaddr device=dmz-noaddr
+
+; --- Host mail1 (Mail server), mail1.example.com, group linux-servers
+mail1                     5m IN TCP mail1.example.com:25 title="Mail server" retry=1m attempts=3 device=mail1 group=linux-servers policy=notify-nagiosadmin description="Production Linux"
+mail1-dns-resolve         5m IN DNS 10.0.0.53 title="mail1 / DNS resolve" query=www.example.com retry=1m attempts=4 device=mail1 group=linux-servers parent=mail1 policy=notify-nagiosadmin
+mail1-dns-system-resolver 5m IN DNS mail1.example.com title="mail1 / DNS system resolver" query=www.example.org retry=1m attempts=4 device=mail1 group=linux-servers parent=mail1 policy=notify-nagiosadmin
+mail1-ssh                 5m IN TCP mail1.example.com:22 title="mail1 / SSH" retry=1m attempts=4 device=mail1 group=linux-servers parent=mail1 policy=notify-nagiosadmin
+
+; --- Host web1 (Web server 1), 10.0.1.11, group web-servers
+web1                    5m IN PING 10.0.1.11 title="Web server 1" retry=1m attempts=3 device=web1 group=web-servers parent=core-sw1 policy=notify-nagiosadmin description="Production Linux"
+web1-admin-basic-auth   5m IN HTTP http://10.0.1.11/admin title="web1 / Admin basic auth" basic=${secret:nagios_web1_admin_basic_auth_basic} no-follow=yes expect=200-399 retry=1m attempts=4 device=web1 group=web-servers parent=web1 policy=notify-nagiosadmin
+web1-api-json           5m IN HTTP http://10.0.1.11/api/health title="web1 / API JSON" host=web1 keyword=ok method=POST no-follow=yes expect=200-399 retry=1m attempts=4 device=web1 group=web-servers parent=web1 policy=notify-nagiosadmin
+web1-disk               5m IN EXEC "check_nrpe -H 10.0.1.11 -c check_disk" title="web1 / Disk /" address=10.0.1.11 retry=1m attempts=4 device=web1 group=web-servers parent=web1 disabled=yes policy=notify-nagiosadmin
+web1-http               1m IN HTTP http://10.0.1.11/ title="web1 / HTTP" no-follow=yes expect=200-399 attempts=4 tags=web-checks device=web1 group=web-servers parent=web1 policy=notify-nagiosadmin-oncall
+web1-https-shop         5m IN HTTP https://shop.example.com/cart title="web1 / HTTPS shop" keyword="Add to cart" expect=200,301 cert-days=21 cert-critical-days=7 no-follow=yes retry=1m attempts=4 device=web1 group=web-servers parent=web1 policy=notify-nagiosadmin
+web1-restart-on-failure 5m IN TCP  10.0.1.11:8080 title="web1 / Restart on failure" retry=1m attempts=4 device=web1 group=web-servers parent=web1 handler="restart-app.sh $SERVICESTATE$ $SERVICESTATETYPE$ $SERVICEATTEMPT$" policy=notify-nagiosadmin
+
+; --- Host web2 (Web server 2), 10.0.1.12, group web-servers
+web2           5m IN PING 10.0.1.12 title="Web server 2" retry=1m attempts=3 device=web2 group=web-servers parent=core-sw1 policy=notify-nagiosadmin description="Production Linux"
+web2-api-token 5m IN HTTP http://10.0.1.12/api title="web2 / API token" header.authorization="Bearer ${secret:nagios_user3}" no-follow=yes expect=200-399 retry=1m attempts=4 device=web2 group=web-servers parent=web2 policy=notify-nagiosadmin
+web2-disk      5m IN EXEC "check_nrpe -H 10.0.1.12 -c check_disk" title="web2 / Disk /" address=10.0.1.12 retry=1m attempts=4 device=web2 group=web-servers parent=web2 disabled=yes policy=notify-nagiosadmin
+web2-http      1m IN HTTP http://10.0.1.12/ title="web2 / HTTP" no-follow=yes expect=200-399 attempts=4 tags=web-checks device=web2 group=web-servers parent=web2 policy=notify-nagiosadmin-oncall
+
+; --- Host winsrv1 (Windows File Server), 10.0.3.5, group windows-servers
+winsrv1 5m IN PING 10.0.3.5 title="Windows File Server" retry=1m attempts=10 device=winsrv1 group=windows-servers policy=notify-nagiosadmin-30m

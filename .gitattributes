@@ -1,0 +1,3 @@
+# Test fixtures and golden files are compared byte for byte.
+internal/importer/testdata/** -text
+

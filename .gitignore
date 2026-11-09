@@ -1,0 +1,12 @@
+/unagikuma
+/dist/
+/bin/
+*.db
+*.db-wal
+*.db-shm
+unagikuma.key
+/data/
+.DS_Store
+node_modules/
+/test-results/
+/playwright-report/

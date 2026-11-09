@@ -1,0 +1,30 @@
+[
+  {
+    "id": "65f1c2a4d8b9e0123456789a",
+    "userId": "65f1c2a4d8b9e01234567891",
+    "teamId": "65f1c2a4d8b9e01234567890",
+    "name": "Checkmate example",
+    "description": "Synthetic format fixture; no real credentials or target",
+    "type": "http",
+    "method": "HEAD",
+    "url": "https://example.invalid/health",
+    "isActive": false,
+    "interval": 60000,
+    "status": "paused",
+    "statusWindow": [],
+    "statusWindowSize": 1,
+    "statusWindowThreshold": 100,
+    "ignoreTlsErrors": false,
+    "proxyMode": "none",
+    "useAdvancedMatching": false,
+    "notifications": [],
+    "tags": [],
+    "customUpCodes": [304],
+    "group": "Applications",
+    "geoCheckEnabled": false,
+    "recentChecks": [],
+    "createdAt": "2026-04-01T10:00:00.000Z",
+    "updatedAt": "2026-04-15T14:30:00.000Z",
+    "lastEvaluatedAt": 0
+  }
+]

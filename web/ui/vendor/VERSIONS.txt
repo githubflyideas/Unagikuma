@@ -1,0 +1,28 @@
+Vendored third-party browser modules, copied from the published npm tarballs
+(registry.npmjs.org); nothing is fetched at runtime. One local change:
+preact/hooks.module.js imports "./preact.module.js" instead of the bare
+specifier "preact", because the page's CSP forbids an inline import map.
+Update by downloading the tarball, copying the same files and refreshing the
+checksums below.
+
+preact 10.29.8   MIT          https://registry.npmjs.org/preact/-/preact-10.29.8.tgz
+  preact/preact.module.js   <- package/dist/preact.module.js
+  preact/hooks.module.js    <- package/hooks/dist/hooks.module.js
+  preact/LICENSE            <- package/LICENSE
+
+htm 3.1.1        Apache-2.0   https://registry.npmjs.org/htm/-/htm-3.1.1.tgz
+  htm/htm.module.js         <- package/dist/htm.module.js
+  htm/LICENSE               <- package/LICENSE
+
+uplot 1.6.32     MIT          https://registry.npmjs.org/uplot/-/uplot-1.6.32.tgz
+  uplot/uPlot.esm.js        <- package/dist/uPlot.esm.js
+  uplot/uPlot.min.css       <- package/dist/uPlot.min.css
+  uplot/LICENSE             <- package/LICENSE
+
+sha256
+  ab33dd3f38059b9be4d5f5350128eefb2356639c4e0bbe9d9e8b3ba75847e9e4  htm/htm.module.js
+  a6ee626f2d01570592dd569a792e3f050154aa02890eead8c223fa3ed5aa3d5a  preact/hooks.module.js (upstream)
+  f3555e7a8dba84175c94f17148ba6670e4b3716888fe06b3330a485637296a38  preact/hooks.module.js (patched import)
+  c30e721ebfdc6e2ad4c18c14d2dfb82667829c8aec27de1207774e3fc16858a8  preact/preact.module.js
+  5dd9b3281aa64b461b42d9945f6adb2649d346502b12281a9ae0d46599a80eba  uplot/uPlot.esm.js
+  df630c6a8d6f8eeaff264b50f73ce5b114f646ffd9a0bb74f049b0a00135fa04  uplot/uPlot.min.css

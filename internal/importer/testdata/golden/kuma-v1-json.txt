@@ -1,0 +1,138 @@
+Uptime Kuma 1.23.16 → Unagikuma
+===============================
+
+  Imported:      30 monitors, 10 notification channels, 9 notification policies
+  Needs a look:  7 items (imported; see below)
+  Not imported:  9 items (see below for what to do)
+
+Added to monitors.conf
+
+Monitors
+--------
+  Name                          Type          Checks            Group
+  ----------------------------  ------------  ----------------  ----------------
+  no-maintenance-banner         HTTP keyword  https://example…  Production
+  postgres-port                 TCP port      db.internal.exa…  Production
+  website                       HTTP          https://example…  Production
+  www.example.cn                HTTP          https://www.exa…  Production
+  api-health-json               HTTP JSON     https://api.exa…  Production / API
+  api-with-headers              HTTP          https://api.exa…  Production / API
+  login-page                    HTTP keyword  https://example…  Production / API
+  gateway                       Ping          gw.example.com    Staging
+  website-2                     HTTP          https://staging…  Staging
+  a-very-long-monitor-name-th…  HTTP          https://long.ex…
+  admin-basic-auth              HTTP          https://admin.e…
+  api-v2-health                 HTTP          https://api.exa…
+  billing-db                    PostgreSQL    postgres://pg.e…
+  cache                         Redis         redis://cache.e…
+  core-router                   Ping          10.0.0.1
+  cron-heartbeat                Push          waits for a push
+  dns-default-resolver          DNS           example.org
+  dns-example.com-a             DNS           example.com
+  grpc-users *                  gRPC          users.example.c…
+  ipv6-web-port                 TCP port      [2001:db8::10]:…
+  mail-mx                       DNS           example.com
+  nightly-backup                Push          waits for a push
+  old-site-paused *             HTTP          https://old.exa…
+  orders-db                     MySQL         mysql://db.exam…
+  private-api-returns-401       HTTP          https://api.exa…
+  redis-container               Docker        container redis
+  shop-tls                      HTTP          https://shop.ex…
+  ssh-bastion                   TCP port      10.0.0.5:22
+  tailscale-node *              Ping          node1
+  webhook-receiver-post         HTTP          https://hooks.e…
+
+Also imported
+-------------
+  Name                            What                Details
+  ------------------------------  ------------------  --------------------------
+  dingtalk-bot                    channel (DingTalk)
+  discord-alerts                  channel (Discord)
+  feishu-bot                      channel (Feishu)
+  generic-webhook *               channel (Webhook)   https://hooks.example.com…
+  ntfy-phone                      channel (ntfy)      topic kuma-fake
+  ops-email *                     channel (Email)     to ops@example.com,lead@e…
+  ops-telegram                    channel (Telegram)  chat -1001234567
+  team-slack *                    channel (Slack)
+  webhook-custom-body *           channel (Webhook)   https://hooks.example.com…
+  wecom-bot                       channel (WeCom)
+  notify-dingtalk-bot-feishu-bot  policy              sends to dingtalk-bot, fe…
+  notify-discord-alerts           policy              sends to discord-alerts
+  notify-generic-webhook          policy              sends to generic-webhook
+  notify-ntfy-phone-ops-telegram  policy              sends to ntfy-phone, ops-…
+  notify-ops-email                policy              sends to ops-email
+  notify-ops-telegram-team-slack  policy              sends to ops-telegram, te…
+  notify-team-slack               policy              sends to team-slack
+  notify-webhook-custom-body      policy              sends to webhook-custom-b…
+  notify-wecom-bot                policy              sends to wecom-bot
+
+Needs a look (imported)
+-----------------------
+1. gRPC users (gRPC) → grpc-users
+   It uses the standard gRPC health check instead of a keyword match.
+2. Old site (paused) (HTTP) → old-site-paused
+   It was paused in Uptime Kuma, so it is imported paused.
+   To do: Resume it when you want it checked.
+3. Tailscale node (Ping) → tailscale-node
+   It is pinged directly, not through Tailscale.
+   To do: Run Unagikuma (or a probe node) on a machine in your tailnet if the
+          name only resolves there.
+4. Channel "Team Slack" → team-slack
+   Messages go to the webhook's own channel; the channel override (#alerts) is
+   not used.
+5. Channel "Generic webhook" → generic-webhook
+   The message body differs from Uptime Kuma's.
+   To do: Check that the receiving side understands it (Alerting › Channels ›
+          Test).
+6. Channel "Webhook custom body" → webhook-custom-body
+   The message body differs from Uptime Kuma's. Its custom body template was not
+   carried over (the template language differs).
+   To do: Check that the receiving side understands it (Alerting › Channels ›
+          Test). Write the body again under Alerting › Channels (body=).
+7. Channel "Ops email" → ops-email
+   Copy (CC/BCC) addresses are sent to as normal recipients.
+
+Not imported
+------------
+1. Minecraft server (Game server)
+   Why: Unagikuma has no game-server query.
+   To do: Check the server's port with a TCP or UDP monitor.
+2. Mongo (MongoDB)
+   Why: Unagikuma has no MongoDB check.
+   To do: Check port 27017 with a TCP monitor, or run a script check (EXEC).
+3. MQTT sensors (MQTT)
+   Why: Unagikuma has no MQTT check.
+   To do: Check the broker port with a TCP monitor, or have the device call a
+          push URL (a Push monitor).
+4. MSSQL (SQL Server)
+   Why: Unagikuma has no SQL Server check.
+   To do: Check port 1433 with a TCP monitor, or run a script check (EXEC).
+5. Old host must be down (HTTP)
+   Why: It is in upside-down mode (it is up when the service is down). Unagikuma
+        has no such mode, so it would report the opposite.
+   To do: If you still need it, add it by hand as a normal check and decide what
+          “up” should mean.
+6. RADIUS (RADIUS)
+   Why: Unagikuma cannot log in to RADIUS.
+   To do: Check that the server answers with a UDP monitor on port radius
+          (1812).
+7. Steam game server (Steam game server)
+   Why: Unagikuma has no Steam server query.
+   To do: Check the server's port with a TCP or UDP monitor.
+8. Group "Empty group"
+   Why: The group has no monitors that were imported.
+   To do: Nothing to do: groups appear here as soon as a monitor uses them
+          (group=).
+9. Channels: Pushover (Pushover), Teams (Microsoft Teams), Gotify (Gotify),
+   PagerDuty (PagerDuty), Unused Matrix (Matrix)
+   Why: No imported monitor uses them.
+   To do: Add them under Alerting › Channels if you still need them.
+
+Good to know
+------------
+- Past checks, uptime history and incidents stay in Uptime Kuma: history starts
+  fresh here.
+- Credentials (tokens, passwords, webhook addresses) are stored as encrypted
+  secrets, not in the configuration file.
+- A JSON backup has no accounts, maintenance windows or status pages. To bring
+  those too, import kuma.db instead (it is in Uptime Kuma's data folder).
