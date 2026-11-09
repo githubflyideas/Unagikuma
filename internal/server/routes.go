@@ -195,7 +195,6 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET "+cluster.ConnectPath, s.agentConnect)
 	s.mux.HandleFunc("GET "+app.SiteObservationPath, s.app.ServeSiteObservations)
 	s.mux.HandleFunc("POST "+app.SiteIncidentActionPath, s.app.ServeSiteIncidentAction)
-	s.mux.HandleFunc("POST "+app.SitePausePath, s.app.ServeSitePause)
 	s.mux.HandleFunc("GET "+cluster.StatePath, s.agentState)
 	s.mux.HandleFunc("GET "+cluster.MergePath, s.agentMerge)
 	s.mux.HandleFunc("POST "+cluster.MergePath, s.agentMerge)

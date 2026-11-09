@@ -176,16 +176,14 @@ export function MonitorDetail({ name }) {
   };
   const pause = async () => {
     try {
-      const res = await post(`/monitors/${enc(name)}/pause`, { paused: !row.disabled }, ifMatch(row.etag));
-      if (res && res.relayed) toast(t('ui.mon.pause_relayed'));
+      await post(`/monitors/${enc(name)}/pause`, { paused: !row.disabled }, ifMatch(row.etag));
       d.reload();
     } catch (e) {
       if (e.code !== 'scripts_missing') return toastError(e);
       const nodes = (e.body.nodes || []).map(n => n.node + ' (' + t('ui.scripts.state.' + n.state) + ')').join(', ');
       if (!await confirmDialog(t('ui.scripts.enable_confirm', { plugin: e.body.plugin, nodes }))) return;
       try {
-        const res = await post(`/monitors/${enc(name)}/pause`, { paused: false, force: true }, ifMatch(row.etag));
-        if (res && res.relayed) toast(t('ui.mon.pause_relayed'));
+        await post(`/monitors/${enc(name)}/pause`, { paused: false, force: true }, ifMatch(row.etag));
         d.reload();
       } catch (e2) { toastError(e2); }
     }
