@@ -106,8 +106,12 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
       <p class="small muted" style=${{ margin: 0 }}>${t('ui.ch.system_hint')}</p>
       <label class="switch"><input type="checkbox" checked=${opts.report !== 'no'} onChange=${(e) => set('report', e.target.checked ? '' : 'no')} /> ${t('ui.ch.takes_report')}</label>
       ${err && html`<div class="banner error">${errText(err)}</div>`}
-      ${test && !test.busy && html`<div class=${'banner ' + (test.err || !test.res.ok ? 'error' : 'ok')}>
-        ${test.err ? errText(test.err) : test.res.ok ? t('ui.ch.test_ok') : html`${t('ui.ch.test_failed')}: <span class="ltr">${test.res.error || (test.res.status ? 'HTTP ' + test.res.status : '')}</span>`}
+      ${test && !test.busy && html`<div class=${'banner ' + (test.err || !test.res.ok ? 'error' : (test.res.warning ? 'warning' : 'ok'))}>
+        ${test.err ? errText(test.err) : test.res.ok
+          ? (test.res.warning === 'connection_only_success' ? t('ui.ch.test_ok_connection') : t('ui.ch.test_ok'))
+          : html`${t('ui.ch.test_failed')}: <span class="ltr">${test.res.error || (test.res.status ? 'HTTP ' + test.res.status : '')}</span>`}
+        ${test.res && test.res.diagnostic && test.res.diagnostic.filtered > 0 && html`<div class="small" style=${{ marginTop: '6px' }}>${t('ui.ch.test_filtered', { n: test.res.diagnostic.filtered, kept: test.res.diagnostic.kept || 0 })}</div>`}
+        ${test.res && test.res.diagnostic && test.res.diagnostic.issues && test.res.diagnostic.issues.length > 0 && html`<div class="small" style=${{ marginTop: '4px' }}>${test.res.diagnostic.issues.map(i => html`<div><span class="rdot"></span> <${IssueLine} i=${i} /></div>`)}</div>`}
       </div>`}
       ${initial && initial.issues && initial.issues.length > 0 && html`<div class="banner warning">${initial.issues.map(i => html`<div><span class="rdot"></span> <${IssueLine} i=${i} /></div>`)}</div>`}
       <div class="row">
@@ -138,7 +142,12 @@ function ChannelsTab() {
   const test = async (c) => {
     try {
       const r = await post('/channels/test', { name: c.name });
-      r.ok ? toast(t('ui.ch.test_ok')) : toast(t('ui.ch.test_failed') + ': ' + (r.error || ''), 'error');
+      if (r.ok) toast(t('ui.ch.test_ok'));
+      else {
+        let msg = t('ui.ch.test_failed') + ': ' + (r.error || '');
+        if (r.diagnostic && r.diagnostic.filtered > 0) msg += ' (' + t('ui.ch.test_filtered', { n: r.diagnostic.filtered, kept: r.diagnostic.kept || 0 }) + ')';
+        toast(msg, 'error');
+      }
     } catch (e) { toastError(e); }
   };
   if (!list.data || !kinds.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;

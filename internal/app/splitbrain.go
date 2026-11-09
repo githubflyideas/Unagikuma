@@ -41,8 +41,8 @@ func (a *App) FullReachView() cluster.ReachView {
 // higher term (or the same term with a lexicographically smaller name)
 // wins: this server steps down. Equal-or-foreign masters also raise a
 // CRITICAL "two masters" notice so the split is not silent. The lower
-// term never auto-promotes; it only steps down to replica via supersede
-// (and a later retire/join).
+// term never auto-promotes; it steps down via supersede and then requests
+// a rejoin offer so it can follow the winner as a replica without restart.
 func (a *App) watchForeignMasters() {
 	if a.isMember() || a.SupersededBy() != nil {
 		return
@@ -59,12 +59,14 @@ func (a *App) watchForeignMasters() {
 			a.log.Warn("another master has a higher term; stepping down", "peer", rv.Node, "term", rv.Term, "addr", addr)
 			a.engine.TwoMasters(rv.Node, rv.Term)
 			a.supersede(rv.Term, rv.Node)
+			a.tryFollowAfterSupersede(addr, rv.Node)
 			return
 		case rv.Term == myTerm && rv.Node < self:
 			a.log.Warn("another master has the same term and wins the name tie-break; stepping down", "peer", rv.Node, "term", rv.Term, "addr", addr)
 			a.engine.TwoMasters(rv.Node, rv.Term)
 			// Bump past the tie so agents prefer the winner once it is the only master.
 			a.supersede(rv.Term+1, rv.Node)
+			a.tryFollowAfterSupersede(addr, rv.Node)
 			return
 		case rv.Term == myTerm && rv.Node > self:
 			a.engine.TwoMasters(rv.Node, rv.Term)
@@ -231,6 +233,7 @@ func (a *App) probeForeignMastersAtStart() {
 		if rv.Term > myTerm {
 			a.log.Warn("another master has a higher term; stepping down at start", "peer", rv.Node, "term", rv.Term, "addr", addr)
 			a.supersede(rv.Term, rv.Node)
+			a.tryFollowAfterSupersede(addr, rv.Node)
 			return
 		}
 	}

@@ -260,6 +260,9 @@ func runServer(args []string) error {
 	ln := cluster.SniffListener(raw, a.PKI().TLSConfig(uiCert), 10*time.Second)
 	log.Info("unagikuma started", "version", version, "listen", raw.Addr().String(), "data", *data, "config", a.ConfigPath(),
 		"agent_ca", a.PKI().Fingerprint())
+	if *certFile == "" {
+		log.Warn("UI HTTP is plaintext on the listen address; put a TLS reverse proxy in front or pass --tls-cert/--tls-key. Agent traffic already uses pinned TLS on the same port via protocol sniffing. Prefer an internal network; do not expose :8077 to the public Internet without authentication and TLS.")
+	}
 	errc := make(chan error, 1)
 	go func() { errc <- hs.Serve(ln) }()
 	runDone := make(chan error, 1)

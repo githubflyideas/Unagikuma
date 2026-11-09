@@ -485,6 +485,7 @@ func (a *App) Run(ctx context.Context) error {
 	})
 	run(func() {
 		a.every(ctx, 10*time.Second, a.watchForeignMasters)
+		a.every(ctx, 15*time.Second, a.watchSupersededRejoin)
 	})
 	run(func() {
 		a.every(ctx, time.Hour, func() {

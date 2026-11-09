@@ -1607,5 +1607,9 @@
 "ui.report.receiving_none": "일일 보고서를 받는 팀이 없습니다.",
 "ui.report.opt_out_hint": "연락처에서 사람별로, 또는 채널 설정에서 채널별로 끌 수 있습니다.",
 "ui.report.via_team": "팀 {team}의 채널",
-"ui.report.via_system": "시스템 채널"
+"ui.report.via_system": "시스템 채널",
+"ui.ch.test_ok_connection": "연결 프로브 성공(실제 알림 수신자 도달을 보장하지 않음)",
+"ui.ch.test_filtered": "재직 화이트리스트로 {n}명 필터링, {kept}명 유지",
+"ui.sys.listen": "수신 주소",
+"ui.sys.ui_plaintext": "이 UI 요청은 평문 HTTP입니다. TLS 리버스 프록시 또는 --tls-cert/--tls-key를 권장합니다. 같은 포트의 Agent 트래픽은 고정 TLS입니다. 수신 주소는 사설망에 두세요."
 }

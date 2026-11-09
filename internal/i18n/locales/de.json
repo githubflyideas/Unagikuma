@@ -1615,5 +1615,9 @@
 "ui.report.receiving_none": "Kein Team erhält den Tagesbericht.",
 "ui.report.opt_out_hint": "Abschaltbar für einzelne Personen unter Kontakte oder für einen Kanal in seinen Einstellungen.",
 "ui.report.via_team": "die Kanäle von Team {team}",
-"ui.report.via_system": "die Systemkanäle"
+"ui.report.via_system": "die Systemkanäle",
+"ui.ch.test_ok_connection": "Verbindungsprobe erfolgreich (beweist nicht, dass echte Alert-Empfänger erreichbar sind)",
+"ui.ch.test_filtered": "{n} Empfänger durch die Aktiv-Kontakt-Whitelist gefiltert; {kept} behalten",
+"ui.sys.listen": "Listen",
+"ui.sys.ui_plaintext": "Diese UI-Anfrage nutzte HTTP ohne TLS. Bevorzugen Sie einen TLS-Reverse-Proxy oder --tls-cert/--tls-key. Agent-Verkehr nutzt bereits gepinntes TLS auf demselben Port. Listen-Adresse im privaten Netz belassen."
 }

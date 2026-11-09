@@ -1615,5 +1615,9 @@
 "ui.report.receiving_none": "Nenhuma equipe recebe o relatório diário.",
 "ui.report.opt_out_hint": "Pode ser desligado para uma pessoa em Contatos, ou para um canal nas configurações dele.",
 "ui.report.via_team": "os canais da equipe {team}",
-"ui.report.via_system": "os canais do sistema"
+"ui.report.via_system": "os canais do sistema",
+"ui.ch.test_ok_connection": "Sonda de conexão bem-sucedida (não prova que destinatários reais de alerta são alcançáveis)",
+"ui.ch.test_filtered": "{n} destinatário(s) filtrados pela lista branca de contactos ativos; {kept} mantidos",
+"ui.sys.listen": "Escuta",
+"ui.sys.ui_plaintext": "Este pedido da UI usou HTTP em claro. Prefira um proxy reverso TLS ou --tls-cert/--tls-key. O tráfego de agentes já usa TLS fixado na mesma porta. Mantenha o endereço de escuta numa rede privada."
 }

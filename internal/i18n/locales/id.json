@@ -1607,5 +1607,9 @@
 "ui.report.receiving_none": "Tidak ada tim yang menerima laporan harian.",
 "ui.report.opt_out_hint": "Bisa dimatikan untuk seseorang di Kontak, atau untuk kanal di pengaturannya.",
 "ui.report.via_team": "kanal tim {team}",
-"ui.report.via_system": "kanal sistem"
+"ui.report.via_system": "kanal sistem",
+"ui.ch.test_ok_connection": "Probe koneksi berhasil (tidak membuktikan penerima peringatan nyata dapat dijangkau)",
+"ui.ch.test_filtered": "{n} penerima difilter daftar putih kontak aktif; {kept} dipertahankan",
+"ui.sys.listen": "Listen",
+"ui.sys.ui_plaintext": "Permintaan UI ini memakai HTTP polos. Lebih baik reverse proxy TLS atau --tls-cert/--tls-key. Lalu lintas agen sudah memakai TLS terpasang di port yang sama. Simpan alamat listen di jaringan privat."
 }

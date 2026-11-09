@@ -62,3 +62,31 @@ func (s *Server) agentRetire(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
+
+// agentRejoinOffer lets a superseded master that still holds the cluster CA
+// key obtain a join code and return as a replica without a restart.
+func (s *Server) agentRejoinOffer(w http.ResponseWriter, r *http.Request) {
+	if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
+		writeError(w, rateLimited(wait))
+		return
+	}
+	if r.TLS == nil {
+		writeError(w, Errorf(http.StatusForbidden, CodeForbidden, "TLS required"))
+		return
+	}
+	var req cluster.RejoinRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&req); err != nil {
+		writeError(w, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err))
+		return
+	}
+	if err := s.app.PKI().CheckRejoin(req); err != nil {
+		writeError(w, Errorf(http.StatusForbidden, CodeForbidden, "%v", err))
+		return
+	}
+	n, err := s.app.IssueRejoinOffer(req.Node)
+	if err != nil {
+		writeError(w, Errorf(http.StatusConflict, CodeConflict, "%v", err))
+		return
+	}
+	writeJSON(w, http.StatusOK, n)
+}

@@ -167,6 +167,8 @@ var coreMigrations = []string{
 	// is left_at).
 	`ALTER TABLE people ADD COLUMN status TEXT NOT NULL DEFAULT '';`,
 	`ALTER TABLE people ADD COLUMN no_report INTEGER NOT NULL DEFAULT 0;`,
+	// Rejoin codes name the NODE they may reclaim after a master handover.
+	`ALTER TABLE join_codes ADD COLUMN rejoin TEXT NOT NULL DEFAULT '';`,
 }
 
 var historyMigrations = []string{

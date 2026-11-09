@@ -1607,5 +1607,9 @@
 "ui.report.receiving_none": "Không nhóm nào nhận báo cáo hằng ngày.",
 "ui.report.opt_out_hint": "Có thể tắt cho từng người trong Danh bạ, hoặc cho một kênh trong phần cài đặt của kênh.",
 "ui.report.via_team": "các kênh của nhóm {team}",
-"ui.report.via_system": "các kênh hệ thống"
+"ui.report.via_system": "các kênh hệ thống",
+"ui.ch.test_ok_connection": "Thăm dò kết nối thành công (không chứng minh người nhận cảnh báo thật liên lạc được)",
+"ui.ch.test_filtered": "{n} người nhận bị lọc bởi danh sách trắng liên hệ đang làm việc; giữ {kept}",
+"ui.sys.listen": "Nghe",
+"ui.sys.ui_plaintext": "Yêu cầu UI này dùng HTTP thuần. Nên dùng reverse proxy TLS hoặc --tls-cert/--tls-key. Lưu lượng agent đã dùng TLS ghim trên cùng cổng. Giữ địa chỉ listen trong mạng nội bộ."
 }

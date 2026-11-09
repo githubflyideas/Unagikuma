@@ -1607,5 +1607,9 @@
 "ui.report.receiving_none": "没有团队接收日报。",
 "ui.report.opt_out_hint": "可在“联系人”中为某个人关闭，或在通知通道的设置中为该通道关闭。",
 "ui.report.via_team": "团队 {team} 的通知通道",
-"ui.report.via_system": "系统通知通道"
+"ui.report.via_system": "系统通知通道",
+"ui.ch.test_ok_connection": "连接探测成功（不能证明真实告警收件人可达）",
+"ui.ch.test_filtered": "有 {n} 个收件人被在职白名单过滤，保留 {kept} 个",
+"ui.sys.listen": "监听地址",
+"ui.sys.ui_plaintext": "当前 UI 请求走的是明文 HTTP。请用反向代理终结 TLS，或启动时加 --tls-cert/--tls-key。同端口上的 Agent 流量已是钉扎 TLS。请把监听地址放在内网。"
 }

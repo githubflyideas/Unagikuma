@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
+	"errors"
 	"encoding/json"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,6 +20,11 @@ import (
 // told to step down, rejoins as a replica and sends what it wrote after the
 // copy through the same merge; a configuration it kept changing is kept
 // aside as diverged, never applied by itself.
+
+var (
+	errRejoinNotAllowed = errors.New("rejoin not allowed for this node")
+	errRejoinNoAdvertise = errors.New("no advertisable master URL")
+)
 
 const (
 	ownDir          = "own"
@@ -133,23 +138,68 @@ func (a *App) prevSite(p promoted) string {
 // master, and sets the marks its rows are merged from.
 func (a *App) rejoinOffer(n *cluster.RetireNotice) {
 	p, ok := a.loadPromoted()
-	host, port, err := net.SplitHostPort(a.opts.Listen)
-	if !ok || err != nil || host == "" || net.ParseIP(host).IsUnspecified() {
+	if !ok {
 		return
 	}
 	site := a.prevSite(p)
 	if site == "" {
 		return
 	}
-	code, _, err := a.CreateJoinCode("https://" + net.JoinHostPort(host, port))
+	server := a.advertiseServerURL()
+	if server == "" {
+		a.log.Warn("cannot offer rejoin: no advertisable master URL")
+		return
+	}
+	code, _, err := a.CreateRejoinJoinCode(server, site)
 	if err != nil {
+		a.log.Warn("cannot offer rejoin join code", "err", err)
 		return
 	}
 	if err := a.store.SetMergeMarks(site, p.Marks); err != nil {
+		a.log.Warn("cannot set merge marks for rejoin", "err", err)
 		return
 	}
 	n.Join, n.Node = code, site
 	n.Version, n.SHA256 = p.Base.Serial, p.Base.SHA256
+}
+
+// allowedRejoinName picks the NODE name a CA-signed rejoin request may reclaim.
+func (a *App) allowedRejoinName(want string) (string, bool) {
+	cfg := a.Config().Config
+	if p, ok := a.loadPromoted(); ok && p.Self == cfg.MName {
+		site := a.prevSite(p)
+		if site != "" && (want == "" || want == site) {
+			return site, true
+		}
+	}
+	want = strings.TrimSpace(want)
+	if want != "" && want != cfg.MName && cfg.FindNode(want) != nil {
+		return want, true
+	}
+	return "", false
+}
+
+// IssueRejoinOffer builds a retire-style notice with a join code for a
+// replaced peer that proved possession of this cluster's CA key.
+func (a *App) IssueRejoinOffer(want string) (cluster.RetireNotice, error) {
+	site, ok := a.allowedRejoinName(want)
+	if !ok {
+		return cluster.RetireNotice{}, errRejoinNotAllowed
+	}
+	server := a.advertiseServerURL()
+	if server == "" {
+		return cluster.RetireNotice{}, errRejoinNoAdvertise
+	}
+	code, _, err := a.CreateRejoinJoinCode(server, site)
+	if err != nil {
+		return cluster.RetireNotice{}, err
+	}
+	n := cluster.RetireNotice{Term: a.Term(), At: a.now(), Join: code, Node: site}
+	if p, ok := a.loadPromoted(); ok {
+		n.Version, n.SHA256 = p.Base.Serial, p.Base.SHA256
+		_ = a.store.SetMergeMarks(site, p.Marks)
+	}
+	return n, nil
 }
 
 // demote turns a replaced master into a replica of the new one.

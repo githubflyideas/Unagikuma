@@ -164,6 +164,10 @@ func (s *Server) channelTest(w http.ResponseWriter, r *http.Request) (any, error
 		Name string            `json:"name"`
 		Kind string            `json:"kind"`
 		Opts map[string]string `json:"opts"`
+		// Mode selects recipient handling:
+		//   "" / "alert" (default): same active-contact whitelist as real alerts
+		//   "connection": transport-only probe; does not claim real recipients are reachable
+		Mode string `json:"mode"`
 	}
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
@@ -190,10 +194,62 @@ func (s *Server) channelTest(w http.ResponseWriter, r *http.Request) (any, error
 		}
 		ch.Opts[k] = rv
 	}
+
+	mode := strings.ToLower(strings.TrimSpace(req.Mode))
+	if mode == "" {
+		mode = "alert"
+	}
+	diag := map[string]any{"mode": mode}
+	if key, kind, ok := directory.AddressKey(ch.Kind); ok {
+		raw := ch.Opts[key]
+		send, issues := s.app.Directory().Resolve(kind, raw)
+		filtered := 0
+		if raw != "" {
+			// Approximate input count via Resolve issues + kept.
+			filtered = len(directory.SplitList(raw)) - len(send)
+			if filtered < 0 {
+				filtered = 0
+			}
+		}
+		diag["input"] = raw
+		diag["kept"] = len(send)
+		diag["filtered"] = filtered
+		diag["issues"] = issues
+		switch mode {
+		case "connection":
+			diag["note"] = "connection_only"
+			// Leave opts unchanged: connection mode does not claim whitelist delivery.
+		default:
+			ch.Opts[key] = strings.Join(send, ",")
+			if len(send) == 0 {
+				msg := "nobody to send to: no recipient is an active contact (see Alerting › Contacts)"
+				if raw == "" {
+					msg = "nobody to send to: channel has no recipients configured"
+				}
+				return map[string]any{
+					"ok": false, "error": msg, "channel": ch.Name,
+					"status": 0, "diagnostic": diag,
+				}, nil
+			}
+		}
+	} else if mode == "connection" {
+		diag["note"] = "connection_only"
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), s.app.EffectiveConfig().Tunables.Duration("notify.channel-timeout"))
 	defer cancel()
-	return s.app.Engine().TestChannel(ctx, ch), nil
+	att := s.app.Engine().TestChannel(ctx, ch)
+	out := map[string]any{
+		"ok": att.OK, "error": att.Error, "channel": att.Channel,
+		"status": att.Status, "response": att.Response, "latency_ms": float64(att.Latency) / float64(time.Millisecond),
+		"diagnostic": diag,
+	}
+	if mode == "connection" && att.OK {
+		out["warning"] = "connection_only_success"
+	}
+	return out, nil
 }
+
 
 func (s *Server) policies(w http.ResponseWriter, r *http.Request) (any, error) {
 	type polJSON struct {
@@ -421,6 +477,10 @@ func (s *Server) system(w http.ResponseWriter, r *http.Request) (any, error) {
 		"uptime_s": int(s.now().Sub(s.app.Started()).Seconds()), "platform": runtime.GOOS + "/" + runtime.GOARCH,
 		"go": runtime.Version(), "storage": st, "sse_clients": s.hub.Clients(),
 		"setup_token_pending": s.SetupToken() != "",
+		// ui_plaintext is true when this request itself arrived without TLS.
+		// Agents still use sniffed TLS on the same port; this warns about the UI.
+		"ui_plaintext": r.TLS == nil,
+		"listen":       s.app.ListenAddr(),
 	}, nil
 }
 

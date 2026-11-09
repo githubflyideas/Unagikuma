@@ -475,6 +475,9 @@ func (a *App) Resolver() func(string) (string, error) { return a.resolver() }
 // BaseURL is the address links in messages point to.
 func (a *App) BaseURL() string { return a.baseURL() }
 
+// ListenAddr is the configured UI/agent listen address (e.g. :8077).
+func (a *App) ListenAddr() string { return a.opts.Listen }
+
 // SendDirect sends one message outside any notification policy (status
 // page subscriptions).
 func (a *App) SendDirect(ctx context.Context, ch notify.Channel, m *notify.Message) notify.Attempt {

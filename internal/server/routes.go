@@ -203,6 +203,7 @@ func (s *Server) routes() {
 		cluster.ServeReach(w, s.app.FullReachView())
 	})
 	s.mux.HandleFunc("POST "+cluster.RetirePath, s.agentRetire)
+	s.mux.HandleFunc("POST "+cluster.RejoinOfferPath, s.agentRejoinOffer)
 	s.mux.HandleFunc("POST "+cluster.JoinPath, s.agentJoin)
 	s.mux.HandleFunc("GET /api/v1/status/{name}", s.statusPageJSON)
 	s.mux.HandleFunc("POST /api/v1/status/{name}/subscribe", s.subscribe)

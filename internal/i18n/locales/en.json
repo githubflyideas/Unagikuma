@@ -1616,5 +1616,9 @@
 "ui.report.receiving_none": "No team receives the daily report.",
 "ui.report.opt_out_hint": "It can be switched off for a person in Contacts, or for a channel in its settings.",
 "ui.report.via_team": "the channels of team {team}",
-"ui.report.via_system": "the system channels"
+"ui.report.via_system": "the system channels",
+"ui.ch.test_ok_connection": "Connection probe succeeded (does not prove real alert recipients are reachable)",
+"ui.ch.test_filtered": "{n} recipient(s) filtered by the active-contact whitelist; {kept} kept",
+"ui.sys.listen": "Listen",
+"ui.sys.ui_plaintext": "This UI request used plain HTTP. Prefer a TLS reverse proxy or --tls-cert/--tls-key. Agent traffic already uses pinned TLS on the same port. Keep the listen address on a private network."
 }

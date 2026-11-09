@@ -404,7 +404,9 @@ function System() {
         <dt>${t('ui.sys.uptime')}</dt><dd>${dur(d.uptime_s)}</dd>
         <dt>${t('ui.sys.config')}</dt><dd class="mono ltr">${d.config_path}</dd>
         <dt>${t('ui.sys.clients')}</dt><dd>${d.sse_clients}</dd>
+        <dt>${t('ui.sys.listen')}</dt><dd class="mono ltr">${d.listen || '–'}</dd>
       </dl>
+      ${d.ui_plaintext && html`<div class="banner warning small" style=${{ marginTop: '10px' }}>${t('ui.sys.ui_plaintext')}</div>`}
     <//>
     <${Card} title=${t('ui.sys.storage')}>
       <dl class="kv">

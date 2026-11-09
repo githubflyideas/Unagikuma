@@ -622,7 +622,17 @@ func (a *App) AcceptRetire(n cluster.RetireNotice) error {
 	a.supersede(n.Term, "the new master")
 	if n.Join != "" {
 		go a.demote(n)
+		return nil
 	}
+	// Older masters omitted Join when Listen had no host; still self-heal.
+	go func() {
+		for _, addr := range a.peerListenAddrs() {
+			a.followMasterAsReplica(addr, "")
+			if a.isMember() {
+				return
+			}
+		}
+	}()
 	return nil
 }
 

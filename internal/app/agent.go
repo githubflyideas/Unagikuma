@@ -253,6 +253,16 @@ func (a *App) CreateJoinCode(server string) (string, time.Time, error) {
 	return cluster.EncodeJoin(cluster.JoinInfo{Server: server, Fingerprint: a.pki.Fingerprint(), Code: code, Expires: exp}), exp, nil
 }
 
+// CreateRejoinJoinCode issues a join capability that may only reclaim node.
+func (a *App) CreateRejoinJoinCode(server, node string) (string, time.Time, error) {
+	ttl := a.Config().Config.Tunables.Duration("cluster.join-code-ttl")
+	code, exp, err := a.store.CreateRejoinCode(ttl, node)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return cluster.EncodeJoin(cluster.JoinInfo{Server: server, Fingerprint: a.pki.Fingerprint(), Code: code, Expires: exp}), exp, nil
+}
+
 // ErrNodeName means a joining machine asked for an unusable node name.
 var ErrNodeName = errors.New("invalid node name")
 
@@ -262,9 +272,14 @@ var ErrNodeName = errors.New("invalid node name")
 func (a *App) AcceptJoin(req cluster.JoinRequest) (cluster.JoinResponse, error) {
 	resp := cluster.JoinResponse{Node: req.Node}
 	cfg := a.Config().Config
-	// Only the immediately replaced master may reclaim its existing NODE
-	// record, and it must still present a valid one-use join capability.
+	// A replaced master (or healed peer) may reclaim its existing NODE
+	// with a rejoin-scoped join code, or when promoted.json names it.
 	rejoin := false
+	if intended := a.store.JoinCodeRejoin(req.Code); intended != "" && intended == req.Node {
+		if cfg.FindNode(req.Node) != nil && req.Node != cfg.MName {
+			rejoin = true
+		}
+	}
 	if p, ok := a.loadPromoted(); ok && p.Self == cfg.MName && p.OldMaster == req.Node {
 		for _, n := range cfg.Nodes {
 			if n.Name == req.Node {

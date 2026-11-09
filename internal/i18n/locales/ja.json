@@ -1607,5 +1607,9 @@
 "ui.report.receiving_none": "日次レポートを受け取るチームはありません。",
 "ui.report.opt_out_hint": "連絡先で人ごとに、またはチャネルの設定でチャネルごとにオフにできます。",
 "ui.report.via_team": "チーム {team} のチャネル",
-"ui.report.via_system": "システムチャネル"
+"ui.report.via_system": "システムチャネル",
+"ui.ch.test_ok_connection": "接続プローブは成功しました（実アラートの宛先到達は保証しません）",
+"ui.ch.test_filtered": "アクティブ連絡先ホワイトリストにより {n} 件を除外、{kept} 件を保持",
+"ui.sys.listen": "リッスン",
+"ui.sys.ui_plaintext": "この UI 要求は平文 HTTP です。TLS リバースプロキシまたは --tls-cert/--tls-key を推奨します。同一ポートのエージェント通信はピン留め TLS です。リスン先はプライベートネットワークに置いてください。"
 }

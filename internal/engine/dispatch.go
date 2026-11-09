@@ -172,7 +172,17 @@ func (e *Engine) onAttempt(a attemptResult) {
 	if ch, ok := e.cfg.Channels[in.Delivery.Steps[a.step].Channel]; ok && ch.Retries > 0 {
 		retries = ch.Retries
 	}
-	in.Delivery.Finish(a.step, a.att.OK, a.att.Error, now, retries, e.cfg.Tunables.Duration("notify.retry-backoff"))
+	if !a.att.OK && permanentNotifyErr(a.att) {
+		retries = 0 // auth / bad request: skip to fallback channel
+		e.log.Info("notify permanent error; not retrying channel", "channel", a.att.Channel, "status", a.att.Status, "err", a.att.Error)
+	}
+	backoff := notifyRetryBackoff(in.Delivery.Steps[a.step].Attempts, e.cfg.Tunables.Duration("notify.retry-backoff"))
+	if !a.att.OK && a.att.Status == 429 {
+		if d := retryAfterDuration(a.att.Response); d > 0 && d < 60*time.Second {
+			backoff = d
+		}
+	}
+	in.Delivery.Finish(a.step, a.att.OK, a.att.Error, now, retries, backoff)
 	if a.att.OK {
 		e.noteResponder(in, in.Delivery.Steps[a.step].Channel, a.more)
 	}

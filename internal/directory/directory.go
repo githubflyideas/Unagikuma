@@ -96,9 +96,6 @@ func (d *Directory) ByHandle(h string) *store.Person {
 	return d.byHandle[strings.ToLower(strings.TrimPrefix(h, "@"))]
 }
 
-// SplitList splits a recipient list into its items.
-func SplitList(s string) []string { return splitList(s) }
-
 func (d *Directory) owner(kind, v string) *store.Person {
 	if kind == store.ContactPhone {
 		return d.phoneOwner(v)
@@ -173,7 +170,7 @@ func (d *Directory) Resolve(kind, list string) (send []string, issues []Issue) {
 			add(v)
 		}
 	}
-	for _, item := range splitList(list) {
+	for _, item := range SplitList(list) {
 		if h, ok := strings.CutPrefix(item, "@"); ok {
 			p := d.byHandle[strings.ToLower(h)]
 			if p == nil {
@@ -195,7 +192,7 @@ func (d *Directory) Resolve(kind, list string) (send []string, issues []Issue) {
 		}
 		check(item, item, nil)
 	}
-	if len(send) == 0 && len(splitList(list)) > 0 {
+	if len(send) == 0 && len(SplitList(list)) > 0 {
 		issues = append(issues, Issue{Code: IssueNoRecipients})
 	}
 	sort.SliceStable(issues, func(i, j int) bool { return rank[issues[i].Code] < rank[issues[j].Code] })
@@ -204,9 +201,9 @@ func (d *Directory) Resolve(kind, list string) (send []string, issues []Issue) {
 
 var rank = map[string]int{IssueUnknownHandle: 0, IssueNoRecipients: 1, IssueLeft: 2, IssueInactive: 3, IssueBouncing: 4, IssueNoAddress: 5, IssueUnknown: 6}
 
-// splitList splits "a@x, Name <b@y>, @ops" on commas outside angle
+// SplitList splits "a@x, Name <b@y>, @ops" on commas outside angle
 // brackets and quotes.
-func splitList(s string) []string {
+func SplitList(s string) []string {
 	var out []string
 	var cur strings.Builder
 	depth, quoted := 0, false
@@ -238,7 +235,7 @@ func splitList(s string) []string {
 // not know, from a recipient list (for the "add to the directory" prompt).
 func (d *Directory) Unknown(kind, list string) []string {
 	var out []string
-	for _, item := range splitList(list) {
+	for _, item := range SplitList(list) {
 		if strings.HasPrefix(item, "@") {
 			continue
 		}
