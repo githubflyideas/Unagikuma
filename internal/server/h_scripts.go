@@ -54,7 +54,7 @@ func (s *Server) scriptReport() ([]scriptCheck, []nodeScripts, int) {
 		if m.Type != "EXEC" {
 			continue
 		}
-		c := scriptCheck{Monitor: m.Name, Plugin: probe.PluginOf(m.Target, m.Opts), Area: m.Area, Paused: m.Disabled}
+		c := scriptCheck{Monitor: m.Name, Plugin: probe.PluginOf(m.Target, m.Opts), Area: m.Area, Paused: s.app.EffectivelyPaused(m.Name)}
 		nodes := m.Nodes
 		if len(nodes) == 0 {
 			nodes = []string{self}

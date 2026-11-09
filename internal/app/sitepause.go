@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/engine"
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
@@ -20,13 +19,9 @@ import (
 //
 // The overlay is a map of monitor name → wanted pause. true forces a
 // pause; false forces a run on this site (overrides shared disabled=yes
-// without writing monitors.conf — used on replicas). Absent means follow
-// the shared disabled= flag.
-//
-// Pausing never writes monitors.conf. Resuming on a configuration
-// authority also clears a shared disabled=yes so new script checks and
-// legacy file pauses can be enabled from the master; a replica only
-// updates its overlay.
+// without writing monitors.conf). Absent means follow the shared
+// disabled= flag. Master and replica behave the same: pause/resume never
+// edits monitors.conf and never propagates to other sites.
 
 const sitePausesFile = "site-pauses.json"
 
@@ -107,6 +102,7 @@ func (a *App) applySitePauses(ec *engine.Config) {
 }
 
 // SetLocalPaused pauses or resumes monitors on this site only.
+// It never writes monitors.conf.
 func (a *App) SetLocalPaused(names []string, paused bool, actor string) (changed int, err error) {
 	if len(names) == 0 {
 		return 0, nil
@@ -126,7 +122,7 @@ func (a *App) SetLocalPaused(names []string, paused bool, actor string) (changed
 
 	a.sitePauseMu.Lock()
 	cur := a.loadSitePauses()
-	var did, clearDisabled []string
+	var did []string
 	for _, n := range names {
 		m := cfg.FindMonitor(n)
 		disabled := m != nil && m.Disabled
@@ -136,12 +132,8 @@ func (a *App) SetLocalPaused(names []string, paused bool, actor string) (changed
 		if paused {
 			cur[n] = true
 		} else if disabled {
-			if a.ConfigAuthority() {
-				delete(cur, n)
-				clearDisabled = append(clearDisabled, n)
-			} else {
-				cur[n] = false
-			}
+			// Force a run here without clearing shared disabled=.
+			cur[n] = false
 		} else {
 			delete(cur, n)
 		}
@@ -158,16 +150,7 @@ func (a *App) SetLocalPaused(names []string, paused bool, actor string) (changed
 	if len(did) == 0 {
 		return 0, nil
 	}
-
-	if len(clearDisabled) > 0 {
-		if _, err = a.EditConfigFrom(actor, "resume "+strings.Join(clearDisabled, ", "), map[string]any{"cleared_disabled": true}, func(f *config.File) error {
-			return SetPaused(f, clearDisabled, false)
-		}); err != nil {
-			return 0, err
-		}
-	} else {
-		a.reapply()
-	}
+	a.reapply()
 	for _, n := range did {
 		a.emit("state", map[string]any{"name": n})
 	}
