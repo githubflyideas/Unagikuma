@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -784,8 +783,8 @@ func (s *Server) monitorBulkDelete(w http.ResponseWriter, r *http.Request) (any,
 	return s.saved(st), nil
 }
 
-// monitorBulkPause pauses or resumes several monitors in one edit of the
-// file. Monitors already in the wanted state are left alone; when resuming,
+// monitorBulkPause pauses or resumes several monitors on this site only.
+// Monitors already in the wanted local state are left alone; when resuming,
 // a script check whose script is missing on some node is skipped unless
 // force is set, and its name is returned in "skipped".
 func (s *Server) monitorBulkPause(w http.ResponseWriter, r *http.Request) (any, error) {
@@ -802,6 +801,7 @@ func (s *Server) monitorBulkPause(w http.ResponseWriter, r *http.Request) (any, 
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "no monitors given")
 	}
 	cfg := s.app.EffectiveConfig()
+	etags := s.recordETags()
 	var names, skipped []string
 	seen := map[string]bool{}
 	for _, name := range req.Names {
@@ -816,7 +816,13 @@ func (s *Server) monitorBulkPause(w http.ResponseWriter, r *http.Request) (any, 
 			continue
 		}
 		seen[name] = true
-		if m.Disabled == req.Paused {
+		if want := req.ETags[name]; want != "" {
+			cur := etags[name]
+			if cur == "" || !etagListHas(want, cur) {
+				return nil, &APIError{Status: http.StatusPreconditionFailed, Code: CodeConflict, Message: errPrecondition{cur}.Error(), Extra: map[string]any{"etag": cur}}
+			}
+		}
+		if s.app.EffectivelyPaused(name) == req.Paused {
 			continue
 		}
 		if !req.Paused && m.Type == "EXEC" && !req.Force && len(s.scriptProblems(name)) > 0 {
@@ -828,46 +834,21 @@ func (s *Server) monitorBulkPause(w http.ResponseWriter, r *http.Request) (any, 
 	if skipped == nil {
 		skipped = []string{}
 	}
-	verb := "resume"
-	if req.Paused {
-		verb = "pause"
-	}
 	if len(names) == 0 {
-		return map[string]any{"serial": s.app.Config().Serial, "etag": s.app.Config().ETag(), "changed": 0, "skipped": skipped}, nil
+		return map[string]any{"changed": 0, "skipped": skipped, "site_local": true}, nil
 	}
 	auditOf(r).target = strings.Join(names, ", ")
-	if s.app.IsMember() {
-		// A node passes it on to its master (see app.RelayPause).
-		if err := s.app.RelayPause(r.Context(), app.PauseRequest{Monitors: names, Paused: req.Paused, Actor: authOf(r).user}); err != nil {
-			return nil, relayError(err)
-		}
-		return map[string]any{"changed": len(names), "skipped": skipped, "relayed": true}, nil
-	}
-	changed := 0
-	st, err := s.editConfig(r, verb+" "+strings.Join(names, ", "), func(f *config.File) error {
-		for _, name := range names {
-			if want := req.ETags[name]; want != "" {
-				if cur := f.RecordETag(name); cur == "" || !etagListHas(want, cur) {
-					return errPrecondition{cur}
-				}
-			}
-			if err := app.SetPaused(f, []string{name}, req.Paused); err != nil {
-				return err
-			}
-			changed++
-		}
-		return nil
-	})
+	changed, err := s.app.SetLocalPaused(names, req.Paused, authOf(r).user)
 	if err != nil {
-		return nil, s.configError(err)
+		if errors.Is(err, engine.ErrNotFound) {
+			return nil, notFound("monitor")
+		}
+		return nil, err
 	}
-	out := s.saved(st)
-	out["changed"] = changed
-	out["skipped"] = skipped
-	return out, nil
+	return map[string]any{"changed": changed, "skipped": skipped, "site_local": true}, nil
 }
 
-// monitorPause toggles disabled=yes on the record (pausing is configuration).
+// monitorPause pauses or resumes one monitor on this site only.
 func (s *Server) monitorPause(w http.ResponseWriter, r *http.Request) (any, error) {
 	name := s.monitorParam(r)
 	if !seesMonitor(r, name) {
@@ -883,10 +864,16 @@ func (s *Server) monitorPause(w http.ResponseWriter, r *http.Request) (any, erro
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
-	cur := s.app.Config()
-	m := cur.Config.FindMonitor(name)
+	cfg := s.app.EffectiveConfig()
+	m := cfg.FindMonitor(name)
 	if m == nil {
 		return nil, notFound("monitor")
+	}
+	if want := strings.TrimSpace(r.Header.Get("If-Match")); want != "" && want != "*" {
+		cur := s.recordETags()[name]
+		if cur == "" || !etagListHas(want, cur) {
+			return nil, &APIError{Status: http.StatusPreconditionFailed, Code: CodeConflict, Message: errPrecondition{cur}.Error(), Extra: map[string]any{"etag": cur}}
+		}
 	}
 	if m.Type == "EXEC" && !req.Paused && !req.Force {
 		if bad := s.scriptProblems(name); len(bad) > 0 {
@@ -895,28 +882,21 @@ func (s *Server) monitorPause(w http.ResponseWriter, r *http.Request) (any, erro
 			return nil, e
 		}
 	}
-	if s.app.IsMember() {
-		// A node passes it on to its master (see app.RelayPause).
-		if err := s.app.RelayPause(r.Context(), app.PauseRequest{Monitors: []string{name}, Paused: req.Paused, Actor: authOf(r).user}); err != nil {
-			return nil, relayError(err)
-		}
-		return map[string]any{"relayed": true}, nil
-	}
-	st, err := s.editConfig(r, fmt.Sprintf("pause %s: %v", name, req.Paused), ifMatch(r, name, func(f *config.File) error {
-		return app.SetPaused(f, []string{name}, req.Paused)
-	}))
+	auditOf(r).target = name
+	changed, err := s.app.SetLocalPaused([]string{name}, req.Paused, authOf(r).user)
 	if err != nil {
-		return nil, s.configError(err)
+		if errors.Is(err, engine.ErrNotFound) {
+			return nil, notFound("monitor")
+		}
+		return nil, err
 	}
-	return s.savedRecord(st, name), nil
-}
-
-// relayError maps a failure to pass a change on to the master.
-func relayError(err error) error {
-	if errors.Is(err, engine.ErrNotFound) {
-		return notFound("monitor")
-	}
-	return Errorf(http.StatusServiceUnavailable, CodeConflict, "%v", err)
+	return map[string]any{
+		"name":       name,
+		"paused":     s.app.EffectivelyPaused(name),
+		"changed":    changed,
+		"site_local": true,
+		"etag":       s.recordETags()[name],
+	}, nil
 }
 
 func (s *Server) monitorCheck(w http.ResponseWriter, r *http.Request) (any, error) {

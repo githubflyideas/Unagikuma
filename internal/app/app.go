@@ -95,6 +95,8 @@ type App struct {
 	told       map[string]time.Time // channel|team → when the admins were last told
 	// applyMu orders configuration applies with directory re-applies.
 	applyMu sync.Mutex
+	// sitePauseMu guards read-modify-write of site-pauses.json.
+	sitePauseMu sync.Mutex
 
 	pubMu   sync.RWMutex
 	publish func(typ string, v any)
@@ -395,6 +397,7 @@ func (a *App) applyLocked(cfg *config.Config) {
 	}
 	ec.Monitors = keep
 	a.addSiteLocal(&ec, siteLocal)
+	a.applySitePauses(&ec)
 	installed := map[string]bool{}
 	for _, m := range ec.Monitors {
 		installed[m.Name] = true

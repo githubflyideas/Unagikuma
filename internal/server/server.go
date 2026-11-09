@@ -352,6 +352,11 @@ func notFound(what string) error {
 }
 
 func sharedConfigRoute(path string) bool {
+	// Pause and resume are site-local: allowed on every node, including a
+	// read-only replica, and must not require the master's configuration.
+	if strings.HasSuffix(path, "/pause") || strings.HasSuffix(path, "/bulk-pause") {
+		return false
+	}
 	if strings.HasSuffix(path, "/test") || strings.HasSuffix(path, "/predict") || strings.HasSuffix(path, "/push-token") || strings.HasSuffix(path, "/push/rotate") {
 		return false
 	}

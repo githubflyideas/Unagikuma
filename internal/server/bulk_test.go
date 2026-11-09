@@ -40,7 +40,7 @@ func TestMonitorBulkDelete(t *testing.T) {
 func TestMonitorBulkPause(t *testing.T) {
 	e := newEnv(t, testBind, nil)
 	e.setup()
-	paused := func(name string) bool { return e.app.Config().Config.FindMonitor(name).Disabled }
+	paused := func(name string) bool { return e.app.LocalPaused(name) }
 	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{}, "paused": true}, nil); c != 400 {
 		t.Fatalf("empty: %d", c)
 	}
@@ -52,21 +52,25 @@ func TestMonitorBulkPause(t *testing.T) {
 		t.Fatalf("stale etag: %d", c)
 	}
 	var st struct {
-		Changed int      `json:"changed"`
-		Skipped []string `json:"skipped"`
+		Changed   int      `json:"changed"`
+		Skipped   []string `json:"skipped"`
+		SiteLocal bool     `json:"site_local"`
 	}
-	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web", "db", "web"}, "paused": true}, &st); c != 200 || st.Changed != 2 {
+	serial := e.app.Config().Serial
+	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web", "db", "web"}, "paused": true}, &st); c != 200 || st.Changed != 2 || !st.SiteLocal {
 		t.Fatalf("pause: %d %+v", c, st)
 	}
 	if !paused("web") || !paused("db") || paused("backup") {
 		t.Fatal("wrong monitors paused")
+	}
+	if e.app.Config().Serial != serial || strings.Contains(e.app.Config().Text, "disabled") {
+		t.Fatal("pause wrote the shared configuration")
 	}
 	// Pausing again changes nothing; one already paused and one running
 	// only touches the running one.
 	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web", "backup"}, "paused": true}, &st); c != 200 || st.Changed != 1 || !paused("backup") {
 		t.Fatalf("pause again: %d %+v", c, st)
 	}
-	serial := e.app.Config().Serial
 	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web"}, "paused": true}, &st); c != 200 || st.Changed != 0 || e.app.Config().Serial != serial {
 		t.Fatalf("no-op wrote the file: %d %+v", c, st)
 	}

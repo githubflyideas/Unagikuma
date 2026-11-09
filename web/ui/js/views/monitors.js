@@ -133,7 +133,6 @@ export function Monitors({ query }) {
     try {
       const res = await post('/monitors/bulk-pause', { names, paused, etags });
       toast(t(paused ? 'ui.mon.paused_n' : 'ui.mon.resumed_n', { n: fmtNum(res.changed) }));
-      if (res.relayed) toast(t('ui.mon.pause_relayed'));
       if (res.skipped && res.skipped.length) toast(t('ui.mon.resume_skipped', { names: res.skipped.join(', ') }), 'error');
       list.reload();
     } catch (e) { toastError(e); }
