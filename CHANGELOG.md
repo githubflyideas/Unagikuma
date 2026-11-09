@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.2 — 2026-11-10
+
+**Fixed**
+- Pausing or resuming a monitor is local to the site where you do it. It no longer goes to the master, does not write `disabled=yes` into the shared configuration, and does not change other sites. A replica can pause while the master is unreachable. Shared `disabled=yes` in the configuration file remains a default; resume on one site overrides it only there.
+
 ## v2.6.1 — 2026-11-10
 
 **Changed**
