@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.6.3 — unreleased
+## v2.6.3 — 2026-11-11
 
 **Fixed**
 - A master replaced by a higher term rejoins as a replica without a restart (join URL works when listen is `:8077`; CA-signed rejoin offer with nonce / no replay; only after Reach confirms the winner).
