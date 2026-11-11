@@ -1,5 +1,25 @@
 # Changelog
 
+## v2.6.6 — unreleased
+
+**Fixed**
+- A master that restarts after a take-over joins the new master within a few seconds, also when it never learnt the new master's own identity. It checks the new master through the cluster CA and looks for it every 2 seconds for the first two minutes. It used to need about a minute, and both machines acted as master until then.
+- A bare `standby=127.0.0.1:8077` is accepted again: it is read as `https://127.0.0.1:8077`, with a `standby_scheme_added` warning. 2.6.5 refused such a file and would not start.
+- `POST /api/v1/people/lookup` no longer lists an empty issue when nobody would be notified. The case is a separate `no_recipients` field.
+- `POST /api/v1/incidents/{id}/silence` accepts the duration wrapped as `{"record": {"duration_s": …}}` as well as flat. A wrapped and a flat duration that differ are refused.
+- API errors are in the caller's language (the `Accept-Language` header, or the console's language), with a `Content-Language` header. They were always in English.
+- Counted texts use the right plural in French, Portuguese, German, Spanish, Hindi, Bengali, Urdu, Russian and Arabic.
+
+**Accessibility**
+- Every console page and the public status page pass the WCAG 2.1 A and AA checks of axe-core in all seven themes. Form fields are tied to their labels, the segmented controls are tabs, code blocks can be scrolled with the keyboard, links in text are underlined and faint texts have enough contrast.
+
+**Changed**
+- The command line reads passwords and the terminal width without golang.org/x/term. The only modules besides the standard library are golang.org/x/crypto, x/net, x/sys and modernc.org/sqlite.
+
+**Internal**
+- Long functions in the importers, the configuration reader, the engine, the store, the checks, the start-up and the server are split into smaller ones. Behaviour is unchanged; no function outside the tests has a cyclomatic complexity above 30.
+- New tests run the command line against a real installation, translate every API error message, check every plural form, and restart a replaced master in three ways (by address, by name, after losing its peer list).
+
 ## v2.6.5 — 2026-11-11
 
 **Fixed**
