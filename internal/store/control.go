@@ -10,7 +10,7 @@ import (
 // Promotion also transfers agent authentication hashes with configuration
 // authority; ordinary replica refreshes do not. src is an immutable snapshot.
 func (s *Store) CopyControlFrom(src *Store, changes bool) error {
-	tables := []string{"people", "contacts", "oncall_overrides"}
+	tables := []string{"people", "contacts"}
 	if changes {
 		tables = append(tables, "changes", "agent_tokens")
 	}

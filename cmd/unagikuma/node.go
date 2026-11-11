@@ -65,6 +65,11 @@ func runNode(args []string, out io.Writer) error {
 			return err
 		}
 		defer st.Close()
+		if ok, err := st.HasAgentToken(name); err != nil {
+			return err
+		} else if !ok {
+			return fmt.Errorf("no node named %s has a token (see: unagikuma node list)", name)
+		}
 		if err := st.DeleteAgentToken(name); err != nil {
 			return err
 		}

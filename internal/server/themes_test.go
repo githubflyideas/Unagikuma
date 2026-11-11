@@ -162,9 +162,8 @@ func TestSummary(t *testing.T) {
 	if sum.Range != "7d" || len(sum.Days) != 7 || sum.Now.Total == 0 || sum.Attention == nil || sum.Recent == nil {
 		t.Fatalf("summary: %+v", sum)
 	}
-	// An unknown or too short range falls back to 30 days.
-	e.do("GET", "/api/v1/reports/summary?range=1h", nil, &sum)
-	if sum.Range != "30d" || len(sum.Days) != 30 {
-		t.Fatalf("fallback range: %s %d", sum.Range, len(sum.Days))
+	// A range it does not offer is refused, not answered for another one.
+	if c := e.do("GET", "/api/v1/reports/summary?range=1h", nil, nil); c != 400 {
+		t.Fatalf("range=1h: %d", c)
 	}
 }

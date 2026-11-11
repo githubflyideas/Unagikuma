@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/keywords"
-	"github.com/githubflyideas/unagikuma/internal/oncall"
 	"github.com/githubflyideas/unagikuma/internal/schedule"
 	"github.com/githubflyideas/unagikuma/internal/tunables"
 )
@@ -65,6 +64,10 @@ type builder struct {
 	diags []Diagnostic
 	names map[string]Pos
 }
+
+// legacyRotationOpts are the options of on-call rotations, a feature that
+// was removed: they are accepted and ignored so old files stay valid.
+var legacyRotationOpts = map[string]bool{"rotate": true, "handoff": true, "start": true, "tz": true}
 
 func (b *builder) errf(p Pos, code, format string, args ...any) {
 	b.diags = append(b.diags, Diagnostic{Pos: p, Severity: SevError, Code: code, Msg: fmt.Sprintf(format, args...)})
@@ -841,6 +844,9 @@ func (b *builder) monitor(r Record, defaults []Opt, scope *scopeDir) {
 			b.errf(r.NamePos, "invalid_option", "%s: %v", m.Name, err)
 		}
 	}
+	if m.Type == "HTTP" && m.Opts["basic"] != "" && m.Opts["bearer"] != "" {
+		b.warnf(r.NamePos, "conflicting_auth", "%s sets both basic= and bearer=: a request carries one Authorization header, and bearer= is the one sent", m.Name)
+	}
 	m.MetaHash, m.ParamHash, m.DefHash = hashes(m)
 	b.cfg.Monitors = append(b.cfg.Monitors, m)
 }
@@ -1147,14 +1153,19 @@ func (b *builder) channel(r Record) {
 		if len(c.Members) == 0 {
 			b.errf(r.NamePos, "missing_option", "group channel %s needs members=channel[,channel...]", c.Name)
 		}
+		rotation := false
 		for k := range c.Opts {
-			if !oncall.IsOption(k) {
+			if legacyRotationOpts[k] {
+				rotation = true
+			} else {
 				b.errf(r.NamePos, "unknown_option", "group channel %s: option %s does not apply", c.Name, k)
 			}
 		}
-		// rotate= makes it an on-call rotation: one member at a time.
-		if _, err := oncall.Parse(c.Opts, c.Members); err != nil {
-			b.errf(r.NamePos, "invalid_value", "group channel %s: %v", c.Name, err)
+		// On-call rotations were removed. A file that still has one keeps
+		// loading, and its group tells every member, so nobody who used to
+		// be reached is left out.
+		if rotation {
+			b.warnf(r.NamePos, "rotation_removed", "group channel %s: on-call rotations were removed; rotate=, handoff=, start= and tz= are ignored and every member is notified", c.Name)
 		}
 		b.cfg.Channels = append(b.cfg.Channels, c)
 		return

@@ -108,14 +108,13 @@ func unescape(s string) []byte {
 func runTCP(ctx context.Context, s Spec) Result {
 	o := opts(s.Opts)
 	host, port, _ := splitHostPort(s.Target)
-	ip, err := resolve(ctx, host, o)
+	ips, err := resolveDial(ctx, host, o)
 	if err != nil {
 		return classify(err, false, o)
 	}
-	addr := net.JoinHostPort(ip.String(), strconv.Itoa(port))
 	start := time.Now()
 	var d net.Dialer
-	conn, err := d.DialContext(ctx, "tcp", addr)
+	conn, addr, err := dialAny(ctx, &d, ips, strconv.Itoa(port))
 	if err != nil {
 		r := classify(err, false, o)
 		r.Evidence = &Evidence{Peer: addr}

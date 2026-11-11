@@ -66,7 +66,7 @@ func personalChannels(ec *engine.Config, prefix string, p store.Person) []string
 		name := prefix + via
 		cs := base
 		cs.Channel = notify.Channel{Name: name, Kind: base.Kind, Opts: opts}
-		cs.Members, cs.Rotation, cs.NoRecipients = nil, nil, ""
+		cs.Members, cs.NoRecipients = nil, ""
 		ec.Channels[name] = cs
 		out = append(out, name)
 	}

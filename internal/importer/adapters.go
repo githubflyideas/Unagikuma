@@ -43,6 +43,14 @@ func adapterResult(source string, monitors []adapterMonitor, existing *config.Co
 		}
 		name := newNamer(nil).take(m.name, "endpoint")
 		if used[name] || existing != nil && (existing.HasName(name) || existing.MName == name) {
+			// Imported before: the same check under the same name is
+			// already here, so a second run leaves it as it is.
+			if em := existingMonitor(existing, name); em != nil && !used[name] && em.Type == "HTTP" && em.Target == m.target {
+				used[name] = true
+				it.Name, it.Target, it.Status, it.Todo = name, m.target, StatusSkipped, ""
+				r.add(it)
+				continue
+			}
 			m.why = "record name collision; rename the source monitor explicitly"
 		}
 		used[name] = true
@@ -149,4 +157,12 @@ func (r *Result) ActivationError() error {
 		}
 	}
 	return nil
+}
+
+// existingMonitor is the monitor of that name in the configuration, if any.
+func existingMonitor(c *config.Config, name string) *config.Monitor {
+	if c == nil {
+		return nil
+	}
+	return c.FindMonitor(name)
 }

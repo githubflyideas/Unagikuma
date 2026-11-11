@@ -27,123 +27,15 @@ func (e *Engine) location() *time.Location {
 	return time.Local
 }
 
-// OnCallOrder returns the order in which a rotation's members are tried
-// at t (nil when the channel is not a rotation).
-func (e *Engine) OnCallOrder(channel string, t time.Time) []string {
-	var out []string
-	e.do(func() {
-		if ch, ok := e.cfg.Channels[channel]; ok && ch.Rotation != nil {
-			out = ch.Rotation.Order(channel, e.cfg.Overrides, t, e.location())
-		}
-	})
-	return out
-}
-
-// groupMembers returns the members of a contact group usable now; for a
-// rotation, in the order they are tried.
+// groupMembers returns the members of a contact group usable now.
 func (e *Engine) groupMembers(ch ChannelSpec, now time.Time) []ChannelSpec {
-	names := ch.Members
-	if ch.Rotation != nil {
-		names = ch.Rotation.Order(ch.Name, e.cfg.Overrides, now, e.location())
-	}
 	var out []ChannelSpec
-	for _, name := range names {
+	for _, name := range ch.Members {
 		if m, ok := e.cfg.Channels[name]; ok && e.inPeriod(m, now) {
 			out = append(out, m)
 		}
 	}
 	return out
-}
-
-// rotationMembers is groupMembers for a delivery of intent in: a
-// recovery (or any follow-up that is not a problem notice) of an incident
-// goes first to the member who was told about the problem, then to whoever
-// is on call now. Problem notices always follow the current shift.
-func (e *Engine) rotationMembers(ch ChannelSpec, in *Intent, now time.Time) []ChannelSpec {
-	members := e.groupMembers(ch, now)
-	if ch.Rotation == nil || in == nil || problemNotice(in.Kind) {
-		return members
-	}
-	inc := e.incidents[in.IncidentID]
-	who := ""
-	if inc != nil {
-		who = inc.State.Responder(ch.Name)
-	}
-	if who == "" {
-		return members
-	}
-	m, ok := e.cfg.Channels[who]
-	if !ok || !e.inPeriod(m, now) {
-		return members
-	}
-	out := []ChannelSpec{m}
-	for _, x := range members {
-		if x.Name != who {
-			out = append(out, x)
-		}
-	}
-	return out
-}
-
-// problemNotice reports whether a notice kind tells of a problem (rather
-// than its recovery or another follow-up).
-func problemNotice(kind string) bool {
-	switch NoticeKind(kind) {
-	case NoticeProblem, NoticeRepeat, NoticeReopen, NoticeEscalate:
-		return true
-	}
-	return false
-}
-
-// noteResponder remembers which member of a rotation took a problem
-// notice of an incident.
-func (e *Engine) noteResponder(in *Intent, channel string, more []notify.Attempt) {
-	ch, ok := e.cfg.Channels[channel]
-	if !ok || ch.Rotation == nil || !problemNotice(in.Kind) || in.Message.DryRun {
-		return
-	}
-	inc := e.incidents[in.IncidentID]
-	if inc == nil {
-		return
-	}
-	for i := len(more) - 1; i >= 0; i-- {
-		if more[i].OK {
-			if inc.State.Responder(channel) != more[i].Channel {
-				inc.State.setResponder(channel, more[i].Channel)
-				e.saveIncident(inc)
-			}
-			return
-		}
-	}
-}
-
-// sendRotation tries the members one after another, whoever is on call
-// first, and stops at the first that delivers: the others are only woken
-// when the person on call cannot be reached. Runs outside the engine loop.
-func (e *Engine) sendRotation(ctx context.Context, members []ChannelSpec, msg *notify.Message) (notify.Attempt, []notify.Attempt) {
-	if len(members) == 0 {
-		return notify.Attempt{Error: "no member is inside its time period"}, nil
-	}
-	var atts []notify.Attempt
-	var errs []string
-	sum := notify.Attempt{}
-	for _, m := range members {
-		m2 := *msg
-		a := e.deps.Send(ctx, m.Channel, &m2)
-		a.Channel = m.Name
-		atts = append(atts, a)
-		sum.Latency += a.Latency
-		if a.OK {
-			sum.OK = true
-			return sum, atts
-		}
-		errs = append(errs, a.Channel+": "+a.Error)
-		if ctx.Err() != nil {
-			break
-		}
-	}
-	sum.Error = strings.Join(errs, "; ")
-	return sum, atts
 }
 
 // sendGroup notifies every member at once; the group succeeds when any

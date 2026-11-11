@@ -59,8 +59,18 @@ func TestGatusSecretsAndCollisions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if again.Monitors != 0 || again.Items[0].Status != StatusLeftOut {
-		t.Fatalf("collision silently renamed: %+v", again)
+	// Running the same import again leaves what is already here.
+	if again.Monitors != 0 || again.Items[0].Status != StatusSkipped || again.ActivationError() != nil {
+		t.Fatalf("a second run of the same import: %+v", again)
+	}
+	// The same name for a different check is still a collision: nothing
+	// is overwritten or renamed silently.
+	other, err := Gatus([]byte(strings.Replace(string(data), "https://example.invalid", "https://other.invalid", 1)), cfg, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if other.Items[0].Status != StatusLeftOut || other.ActivationError() == nil {
+		t.Fatalf("collision silently renamed: %+v", other)
 	}
 }
 

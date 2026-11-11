@@ -100,7 +100,7 @@ main     IN STATUSPAGE "Service status" select="group:public"
 ```
 
 - After editing the file by hand, **increase the revision** on the `$FILE` line; Unagikuma then validates and applies it. Saving a monitor, channel or team in the web UI raises it for you. Files from earlier releases start with an `@ IN SOA … ( serial interval retry timeout attempts )` line instead; it still works the same way, and its first number is the revision. **Configuration › monitors.conf** shows the file read-only, with a copy button; edit it on the server. A file with errors is never applied: the last good version keeps running and the UI shows what is wrong.
-- Credentials never need to be in the file: store them under **Settings › Secrets** and refer to them as `${secret:name}`. Values from the environment can be used as `${env:NAME}` when the server is started with `--allow-env NAME`.
+- Credentials never need to be in the file: store them under **Settings › Secrets** and refer to them as `${secret:name}`. A secret the configuration still uses cannot be deleted: the refusal names the records that use it. Values from the environment can be used as `${env:NAME}` when the server is started with `--allow-env NAME`.
 - Monitors are grouped into hosts by the address they check; `device=core-sw1` groups monitors of several addresses under one name. A host with a PING monitor is UP or DOWN by that ping.
 - `parent=gw` (or `parent=sw1,gw`) declares a dependency: while a parent is down, a failing child is shown as UNREACHABLE and not notified. If the child is still down once its parents are back, it is notified as usual.
 - Maintenance windows hold notifications for the monitors they select; that time does not count against uptime, and a monitor still down when the window closes is notified then:
@@ -162,13 +162,6 @@ admin     IN TEAM channels=team,night-sms mode=all
 - **How often.** `notify.repeat`, `notify.max` and the other `notify.*` tunables (**Settings › Tunables**) set how often a problem is repeated and how many notices it sends.
 - **Time periods.** `PERIOD` records are weekly rules (`mon-fri 09:00-18:00`, ranges past midnight such as `22:00-07:00`, `24:00` for end of day). `period=office` on a channel uses it only inside the period, `period=!office` only outside it. A skipped channel is not a failure: the next one in a fallback chain is tried.
 - **Contact groups.** A `group` channel notifies all its `members=` at once; it succeeds if any member does. Members keep their own time periods.
-- **On-call rotations.** `rotate=daily|weekly|Nd|Nh` makes a group a rotation: it notifies only the member whose shift it is, and the others in turn only when that one cannot be reached. `handoff="mon 09:00"` sets when shifts change (a day only for whole weeks), `start=` the date from which the first member is on call, and `tz=` (such as `Asia/Shanghai`) the time zone of both, whatever the server's own zone is. Handoffs stay at the same local time across daylight saving changes (a daily shift that spans one lasts 23 or 25 hours; a handoff the clocks skip happens when they resume). Give each person one channel (their SMS, their chat) and list them in shift order:
-
-  ```text
-  oncall IN CHANNEL group members=li-sms,wang-sms,zhao-sms rotate=weekly handoff="mon 09:00" start=2026-11-02 tz=Asia/Shanghai
-  ```
-
-  The **On call** page shows a month or week calendar of who is on call each day, creates rotations, and takes stand-ins and swaps: a stand-in covers for a while and alerts go to them first; a swap trades two shifts. Neither changes the order of the shifts. A recovery goes to whoever was told about the problem, even after a handoff. It also measures MTTA and MTTR over `oncall.stats-window` (30 days), counting each incident for whoever was told about it.
 - **Summaries say what kind of problem it is.** When many notices queue up at once (`notify.coalesce-queue`, `notify.coalesce-wait`) they are replaced by a summary, and the summary tells services from the network:
   - services that fail on their own come first, as "please act now", for their owners;
   - `notify.group-min` (3) or more monitors of one IP segment failing at the network level together are reported as a fault of that segment, its switch or uplink; monitors failing to resolve their names together, as a DNS fault — "please contact the network team".
@@ -311,7 +304,7 @@ There is no election: which machine is the master is your decision, and moving i
 
 1. Give the machine that should be able to take over a **standby address** under **Nodes › Edit** (`bj IN NODE standby=https://10.0.0.2:8077`). It then keeps a copy of the master's state — databases, `monitors.conf`, the secret key and the cluster CA — refreshed every `cluster.standby-sync` (5 minutes) and after each configuration change. Every machine learns the standby's address.
 2. **Planned** (maintenance, new hardware): **Nodes › Make master** on the standby. It takes the current state and restarts as master; the other machines move over by themselves. Users, tokens, secrets and the CA come along, so nothing has to be joined again.
-3. **Master lost**: on the standby, **Run mode › Take over as master** (or stop it and run `unagikuma promote`). The other machines move to it once the old master is unreachable.
+3. **Master lost**: on the standby, **Run mode › Take over as master** (or stop it and run `unagikuma promote`). While the master still answers, taking over is refused, since it would make two masters: move the role with a handover from the master instead. Only for a master that runs but is broken can the take-over be forced. A member cut off from the master by the network cannot tell that it still runs, so treat the administrator accounts of members like the master's own. The other machines move to it once the old master is unreachable.
 
 Every handover raises a **term**. Machines follow the highest term they have seen. A replaced master that comes back is told so by the new one (with a notice signed by the cluster CA) or by the first machine that reaches it; it then rejoins as an ordinary member under its own site name and keeps checking, and only the new master accepts configuration changes. Taking over after a loss is always done by a person: without a quorum, an automatic takeover would split the cluster whenever the network splits.
 
@@ -429,7 +422,7 @@ A licence may limit the number of nodes (the master included) and of accounts. W
 
 ## Moving from Uptime Kuma, Nagios, Checkmate or Gatus
 
-The import adds what Unagikuma can run and lists everything else with the reason and what to do instead. It never changes or deletes monitors that are already here, so running it twice is safe. Always look first with `--dry-run`. On a new machine you can import before the first start: the import creates the data directory.
+The import adds what Unagikuma can run and lists everything else with the reason and what to do instead. It never changes or deletes monitors that are already here, so running it twice is safe: what came over the first time is listed as already here. Always look first with `--dry-run`. On a new machine you can import before the first start: the import creates the data directory.
 
 **From Uptime Kuma** (1.23 and 2.x). Stop Uptime Kuma, then:
 

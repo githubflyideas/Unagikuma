@@ -567,13 +567,6 @@ button.search { cursor: text; font: inherit; text-align: start; }
 .fp-link:hover { text-decoration: underline; }
 .tbl th.sel, .tbl td.sel { width: 32px; padding-inline-end: 0; }
 .tbl tr.picked td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.oc-rot .hd { flex-wrap: wrap; gap: 8px; }
-.oc-now { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; }
-.oc-now b { font-size: 22px; }
-.oc-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
-.oc-kpis > div { background: var(--panel); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
-.oc-kpis b { font-size: 20px; }
-.oc-kpis span { font-size: 12px; color: var(--muted); }
 
 /* Audit log: high-risk actions stand out. */
 tr.risk-high td { background: color-mix(in srgb, var(--degraded) 9%, transparent); }
@@ -584,32 +577,6 @@ tr.risk-high td:first-child { box-shadow: inset 3px 0 0 var(--degraded); }
 .pm .pm-list { margin: 0; padding-inline-start: 1.2rem; }
 .pm .pm-list li { margin: .25rem 0; overflow-wrap: anywhere; }
 .pm .pm-list time { margin-inline-end: .4rem; white-space: nowrap; }
-
-/* On-call calendar */
-.oc-bar { flex-wrap: wrap; gap: 8px; align-items: center; }
-.oc-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.oc-head { background: var(--panel-2); padding: 6px 8px; font-size: 11.5px; font-weight: 650; color: var(--muted); text-transform: uppercase; }
-.oc-day { background: var(--panel); min-height: 74px; padding: 4px 5px 6px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.oc-cal.week .oc-day { min-height: 140px; }
-.oc-day.other { background: var(--panel-2); }
-.oc-day.other .oc-date { opacity: .5; }
-.oc-day.today { box-shadow: inset 0 0 0 2px var(--link); }
-.oc-date { font-size: 11.5px; color: var(--muted); font-weight: 600; }
-.oc-day.today .oc-date { color: var(--link); }
-.oc-seg { display: flex; gap: 4px; align-items: baseline; width: 100%; min-width: 0; text-align: start; font: inherit; font-size: 12px; line-height: 1.3; padding: 2px 6px; border-radius: 6px; cursor: pointer;
-  border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--text); }
-.oc-seg:hover { background: color-mix(in srgb, var(--c) 30%, transparent); }
-.oc-seg.standin { border-style: dashed; border-width: 1.5px; }
-.oc-seg.over { cursor: default; opacity: .6; }
-.oc-time { font-size: 10.5px; color: var(--muted); flex: none; }
-.oc-cal.week .oc-seg { flex-direction: column; align-items: flex-start; gap: 0; padding: 3px 6px; }
-.oc-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 12px; }
-.oc-legend > span { display: inline-flex; align-items: center; gap: 6px; }
-.oc-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; background: color-mix(in srgb, var(--c) 45%, transparent); border: 1px solid var(--c); }
-.oc-dot.standin { --c: var(--muted); background: transparent; border-style: dashed; }
-.oc-c0 { --c: #3b82f6; } .oc-c1 { --c: #10b981; } .oc-c2 { --c: #f59e0b; } .oc-c3 { --c: #ec4899; }
-.oc-c4 { --c: #8b5cf6; } .oc-c5 { --c: #14b8a6; } .oc-c6 { --c: #ef4444; } .oc-c7 { --c: #84cc16; }
-@media (max-width: 720px) { .oc-day { min-height: 56px; padding: 3px; } .oc-seg { font-size: 11px; padding: 1px 3px; } .oc-time { display: none; } }
 
 /* ---- Nagios-style status: solid blocks, striped tables ----
    The state is the first thing an operator looks for, so it is a filled

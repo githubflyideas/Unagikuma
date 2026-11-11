@@ -20,7 +20,9 @@ func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
 	case <-time.After(5 * time.Second):
 		code, state = http.StatusServiceUnavailable, "engine not responding"
 	}
-	if s.app.SupersededBy() != nil {
+	// A replaced master that has joined its successor is a healthy member
+	// again; only one still standing aside says so.
+	if s.app.SupersededBy() != nil && !s.app.IsMember() {
 		state = "replaced by a newer master"
 	}
 	out := map[string]any{"status": state, "version": s.app.Version(), "uptime_s": int(s.now().Sub(s.app.Started()).Seconds())}

@@ -153,7 +153,14 @@ function Membership({ state, d, reload }) {
     const msg = t('ui.ha.promote_confirm', { master: m.server }) + ' ' + t('ui.ha.promote_age', { s: age, at: copy ? fmtTime(copy.fetched) : '–' }) + ' '
       + t(s.connected ? 'ui.ha.promote_sync' : 'ui.ha.promote_nosync');
     if (!await confirmDialog(msg, { danger: true, ok: t('ui.ha.promote') })) return;
-    try { const r = await post('/cluster/promote', {}); toast(t('ui.ha.promoting', { term: r.term })); } catch (e) { toastError(e); }
+    const go = async (force) => { const r = await post('/cluster/promote', force ? { force: true } : {}); toast(t('ui.ha.promoting', { term: r.term })); };
+    try { await go(false); } catch (e) {
+      // The master still answers: taking over would make two masters. Say
+      // so, and go ahead only if the administrator insists (a broken master).
+      if (e.code !== 'master_alive') return toastError(e);
+      if (!await confirmDialog(t('ui.ha.master_alive', { master: e.body.master || m.server }), { danger: true, ok: t('ui.ha.promote_force') })) return;
+      try { await go(true); } catch (e2) { toastError(e2); }
+    }
   };
   const leave = async () => {
     if (!await confirmDialog(t('ui.join.leave_confirm', { master: m.server }), { danger: true, ok: t('ui.join.leave') })) return;

@@ -280,6 +280,8 @@ message}`. The codes are part of version 1 and keep their meaning:
 | `unterminated_string`, `unbalanced_paren`, `invalid_utf8` | lexical errors |
 | `soa_first`, `missing_soa`, `duplicate_soa` | placement of the file header (`$FILE` or SOA) |
 | `invalid_serial`, `invalid_duration`, `invalid_value` | a value that cannot be read |
+| `invalid_option` | an option a monitor's type does not accept, or a value it cannot use (the message names which) |
+| `unknown_secret`, `env_not_allowed` | a `${secret:…}` that does not exist, or an `${env:…}` that is not allowed |
 | `invalid_name`, `duplicate_name`, `duplicate_option` | names and options |
 | `unknown_policy`, `unknown_team`, `unknown_parent`, `unknown_node` | a reference to something not defined |
 | `unknown_type`, `unknown_directive`, `unknown_option` | names this release does not know |
@@ -288,4 +290,7 @@ message}`. The codes are part of version 1 and keep their meaning:
 
 A file with any error is never applied; the last good version keeps
 running. Warnings (for example a timeout not shorter than the interval) do
-not stop a file from being applied.
+not stop a file from being applied. Among them: `conflicting_auth` (an
+HTTP monitor sets both `basic=` and `bearer=`; `bearer=` is sent) and
+`rotation_removed` (a group still has the options of on-call rotations,
+which were removed; they are ignored and every member is notified).

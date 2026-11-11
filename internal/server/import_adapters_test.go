@@ -65,9 +65,10 @@ func TestBoundedImportsAPI(t *testing.T) {
 				t.Fatal("credential value not preserved")
 			}
 			serial = e.app.Config().Serial
+			// The same import again: everything is already here, nothing changes.
 			code, _ = post(data, "?apply=1")
-			if code != 400 || e.app.Config().Serial != serial {
-				t.Fatal("collision was not rejected without mutation")
+			if code >= 500 || e.app.Config().Serial != serial {
+				t.Fatalf("a second run changed the configuration: %d", code)
 			}
 			bad := strings.ReplaceAll(data, "imported-http", "unsafe-http")
 			if source == "gatus" {

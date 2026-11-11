@@ -71,9 +71,13 @@ type summaryEntry struct {
 }
 
 func (s *Server) summary(w http.ResponseWriter, r *http.Request) (any, error) {
-	key, d := rangeOf(r)
-	if r.URL.Query().Get("range") == "" || d < 7*24*time.Hour {
-		key, d = "30d", ranges["30d"]
+	key, d := "30d", ranges["30d"]
+	switch q := r.URL.Query().Get("range"); q {
+	case "":
+	case "7d", "30d", "90d":
+		key, d = q, ranges[q]
+	default:
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "range is 7d, 30d or 90d")
 	}
 	cfg := s.app.EffectiveConfig()
 	var names []string

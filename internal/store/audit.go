@@ -49,7 +49,7 @@ var highRisk = []string{
 	"backup.restore", "backup.download", "export.", "import.", "config.rollback", "config.bump",
 	"cluster.", "node.", "system.hold_released", "system.abnormal_exit", "system.clock_changed",
 	"audit.", "maintenance.", "silence", "monitor.delete", "channel.delete", "policy.delete",
-	"people.delete", "contact.delete", "oncall.delete",
+	"people.delete", "contact.delete",
 }
 
 // RiskOf says whether an action is high-risk.

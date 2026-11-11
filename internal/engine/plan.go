@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/tunables"
@@ -119,34 +117,9 @@ type IncidentState struct {
 	SummaryDue time.Time `json:"summary_due,omitzero"`
 	// Escalated counts the escalation steps already sent.
 	Escalated int `json:"escalated,omitzero"`
-	// Responders are, by on-call rotation, the member who last received a
-	// problem notice of this incident: its recovery goes to them first,
-	// even when the shift has changed hands or a stand-in has ended since.
-	// Kept as "rotation=member,rotation=member" so the state stays
-	// comparable.
+	// Responders was written by on-call rotations (removed); it is kept so
+	// incident states stored by earlier versions read back unchanged.
 	Responders string `json:"responders,omitzero"`
-}
-
-// Responder returns the member of rotation who last took a problem notice.
-func (s *IncidentState) Responder(rotation string) string {
-	for _, kv := range strings.Split(s.Responders, ",") {
-		if k, v, ok := strings.Cut(kv, "="); ok && k == rotation {
-			return v
-		}
-	}
-	return ""
-}
-
-// setResponder records member as the responder of rotation.
-func (s *IncidentState) setResponder(rotation, member string) {
-	out := []string{rotation + "=" + member}
-	for _, kv := range strings.Split(s.Responders, ",") {
-		if k, _, ok := strings.Cut(kv, "="); ok && k != rotation {
-			out = append(out, kv)
-		}
-	}
-	sort.Strings(out)
-	s.Responders = strings.Join(out, ",")
 }
 
 // told reports whether anyone received a problem notification.

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"regexp"
 	"runtime"
 	"slices"
 	"sort"
@@ -94,6 +95,9 @@ func (s *Server) channels(w http.ResponseWriter, r *http.Request) (any, error) {
 }
 
 // channelSave creates or replaces a CHANNEL record. Credential fields are
+
+var telegramToken = regexp.MustCompile(`^[0-9]+:[A-Za-z0-9_-]+$`)
+
 // stored as secrets and referenced, so plaintext never reaches the file.
 func (s *Server) channelSave(w http.ResponseWriter, r *http.Request) (any, error) {
 	var req struct {
@@ -122,6 +126,11 @@ func (s *Server) channelSave(w http.ResponseWriter, r *http.Request) (any, error
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	// A bot token typed here is checked before it is stored: a wrong one
+	// would otherwise only show when an alert fails to go out.
+	if tok := req.Opts["token"]; kind == "telegram" && tok != "" && tok != "***" && !strings.Contains(tok, "${") && !telegramToken.MatchString(tok) {
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "this is not a Telegram bot token: it looks like 123456789:AAE… (numbers, a colon, then letters and digits), as BotFather gives it")
+	}
 	var opts []config.Opt
 	for _, k := range keys {
 		v := req.Opts[k]
@@ -575,8 +584,48 @@ func (s *Server) secretPut(w http.ResponseWriter, r *http.Request) (any, error) 
 	return nil, nil
 }
 
+// secretDelete removes a secret, unless the configuration still refers to
+// it: the file would stop validating and every later edit would be
+// refused until the secret was put back.
 func (s *Server) secretDelete(w http.ResponseWriter, r *http.Request) (any, error) {
-	return nil, s.app.SecretStore().Delete(r.PathValue("name"))
+	name := r.PathValue("name")
+	if users := s.secretUsers(name); len(users) > 0 {
+		e := Errorf(http.StatusConflict, CodeConflict, "secret %s is still used by %s: change or delete %s first", name, strings.Join(users, ", "),
+			map[bool]string{true: "it", false: "them"}[len(users) == 1])
+		e.Extra = map[string]any{"used_by": users}
+		return nil, e
+	}
+	return nil, s.app.SecretStore().Delete(name)
+}
+
+// secretUsers names the records of the shared and the site's own
+// configuration that refer to a secret.
+func (s *Server) secretUsers(name string) []string {
+	ref := "${secret:" + name + "}"
+	seen := map[string]bool{}
+	var out []string
+	scan := func(path, text string) {
+		f, err := config.Parse(path, []byte(text))
+		if err != nil || f == nil {
+			if strings.Contains(text, ref) {
+				out = append(out, path)
+			}
+			return
+		}
+		for _, rec := range f.Records() {
+			used := strings.Contains(rec.Target, ref)
+			for _, o := range rec.Opts {
+				used = used || strings.Contains(o.Value, ref)
+			}
+			if used && !seen[rec.Name] {
+				seen[rec.Name] = true
+				out = append(out, rec.Name)
+			}
+		}
+	}
+	scan("monitors.conf", s.app.Config().Text)
+	scan("site-local.conf", s.app.SiteLocal())
+	return out
 }
 
 // backup streams an archive. GET gives the databases and monitors.conf;

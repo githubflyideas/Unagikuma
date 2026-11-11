@@ -206,12 +206,13 @@ func teamOfNewRecord(ai *authInfo, spec *config.RecordSpec) error {
 // teamRoutes are the routes open to team members; each filters by team.
 var teamRoutes = map[string]bool{
 	// Their own session and preferences.
-	"GET /api/v1/session":     true,
-	"DELETE /api/v1/session":  true,
-	"GET /api/v1/preferences": true,
-	"PUT /api/v1/preferences": true,
-	"GET /api/v1/languages":   true,
-	"GET /api/v1/keywords":    true, // the UDP keyword catalogue: no one's data
+	"GET /api/v1/session":          true,
+	"DELETE /api/v1/session":       true,
+	"PUT /api/v1/session/password": true,
+	"GET /api/v1/preferences":      true,
+	"PUT /api/v1/preferences":      true,
+	"GET /api/v1/languages":        true,
+	"GET /api/v1/keywords":         true, // the UDP keyword catalogue: no one's data
 	// Monitors: lists and details are filtered, changes go through
 	// allowsMonitor.
 	"GET /api/v1/monitors":                     true,

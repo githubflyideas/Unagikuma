@@ -23,7 +23,6 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/keywords"
 	"github.com/githubflyideas/unagikuma/internal/netscope"
 	"github.com/githubflyideas/unagikuma/internal/notify"
-	"github.com/githubflyideas/unagikuma/internal/oncall"
 	"github.com/githubflyideas/unagikuma/internal/probe"
 	"github.com/githubflyideas/unagikuma/internal/tunables"
 )
@@ -129,6 +128,14 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// ApplyProbeDefaults gives a one-off probe (the probe command, "check
+// now" before saving) the thresholds a running monitor gets from the
+// tunables, so both judge the same way.
+func ApplyProbeDefaults(spec *probe.Spec, ts tunables.Set) {
+	certDefaults(spec, ts)
+	pingDefaults(spec, ts)
 }
 
 // certDefaults gives TLS checks the default certificate expiry thresholds
@@ -257,7 +264,6 @@ func (a *App) engineConfig(cfg *config.Config) engine.Config {
 		ec.Maints = append(ec.Maints, engine.MaintSpec{Name: mt.Name, Title: mt.Title, Monitors: mt.Monitors, Schedule: mt.Schedule, Notify: mt.Notify})
 	}
 	ec.Maints = append(ec.Maints, a.changeWindows(cfg)...)
-	ec.Overrides = a.currentOverrides()
 	leftOut := map[string][]directory.Issue{}
 	for _, c := range cfg.Channels {
 		opts := map[string]string{}
@@ -269,9 +275,6 @@ func (a *App) engineConfig(cfg *config.Config) engine.Config {
 			opts[k] = rv
 		}
 		cs := engine.ChannelSpec{Channel: notify.Channel{Name: c.Name, Kind: c.Kind, Opts: opts}, Retries: c.Retries, Members: c.Members}
-		if c.Kind == "group" {
-			cs.Rotation, _ = oncall.Parse(c.Opts, c.Members) // validated with the file
-		}
 		if key, kind, ok := directory.AddressKey(c.Kind); ok {
 			// Recipients go through the contact directory: @handles become
 			// addresses, people who left and dead addresses are dropped.

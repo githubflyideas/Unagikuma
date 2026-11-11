@@ -132,6 +132,10 @@ func dispatch(cmd string, args []string) error {
 	case "report":
 		err = runReport(args)
 	case "version", "-v", "-version", "--version":
+		if len(args) > 0 {
+			fmt.Fprintf(os.Stderr, "unagikuma version takes no arguments (got %q)\n", strings.Join(args, " "))
+			os.Exit(2)
+		}
 		fmt.Println("unagikuma", version)
 	case "help", "-h", "-help", "--help":
 		fmt.Print(usage)
@@ -568,6 +572,7 @@ func runProbe(args []string) error {
 	if err != nil {
 		return err
 	}
+	app.ApplyProbeDefaults(&spec, cfg.Tunables)
 	res := probe.Run(context.Background(), spec)
 	fmt.Printf("%s %s → %s (%s) in %s, depth %s\n%s\n", m.Type, spec.Target, res.Vote, res.Reason, res.Latency.Round(time.Microsecond), res.Depth, res.Detail)
 	if ev := res.Evidence; ev != nil {

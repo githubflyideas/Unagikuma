@@ -270,6 +270,21 @@ func (f *File) Record(name string) (Record, bool) {
 	return *r, true
 }
 
+// Records returns every record as written, the file header aside.
+func (f *File) Records() []Record {
+	var out []Record
+	for i := range f.Stmts {
+		s := &f.Stmts[i]
+		if s.isDirective() {
+			continue
+		}
+		if r, d := s.record(); d == nil && r.Type != "SOA" {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
 // findRecord returns the statement of a named record.
 func (f *File) findRecord(name string) (*Stmt, *Record) {
 	for i := range f.Stmts {

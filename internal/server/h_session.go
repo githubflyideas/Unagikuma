@@ -145,6 +145,11 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) (any, er
 		return nil, err
 	}
 	ai := authOf(r)
+	// Everyone changes their own password, whatever their role; an API
+	// token is not a person and has none.
+	if !ai.session {
+		return nil, Errorf(http.StatusForbidden, CodeForbidden, "sign in to change your password: an API token has none")
+	}
 	if _, err := s.app.Store().Authenticate(ai.user, req.Old); err != nil {
 		return nil, Errorf(http.StatusForbidden, CodeForbidden, "the current password is wrong")
 	}

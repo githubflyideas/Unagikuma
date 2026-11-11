@@ -18,7 +18,7 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/session", "read", s.sessionGet)
 	s.handle("POST /api/v1/session", "", s.sessionLogin)
 	s.handle("DELETE /api/v1/session", "read", s.sessionLogout)
-	s.handle("PUT /api/v1/session/password", "admin", s.changePassword)
+	s.handle("PUT /api/v1/session/password", "read", s.changePassword)
 
 	// Overview and monitors.
 	s.handle("GET /api/v1/overview", "read", s.overview)
@@ -66,11 +66,6 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/channels", "admin", global(s.channelSave))
 	s.handle("DELETE /api/v1/channels/{name}", "admin", global(s.channelDelete))
 	s.handle("POST /api/v1/channels/test", "admin", global(s.channelTest))
-	s.handle("GET /api/v1/oncall", "read", s.oncallView)
-	s.handle("GET /api/v1/oncall/calendar", "read", s.oncallCalendar)
-	s.handle("POST /api/v1/oncall/overrides", "write", s.oncallOverrideCreate)
-	s.handle("POST /api/v1/oncall/swap", "write", s.oncallSwap)
-	s.handle("DELETE /api/v1/oncall/overrides/{id}", "write", s.oncallOverrideDelete)
 	s.handle("GET /api/v1/changes", "read", s.changes)
 	s.handle("POST /api/v1/changes", "write", s.changeCreate)
 	s.handle("PUT /api/v1/changes/{id}", "write", s.changeUpdate)

@@ -507,7 +507,7 @@ function browserOf(ua) {
   return os ? name + ' · ' + os : name;
 }
 
-const AUDIT_ACTIONS = ['user', 'token', 'secret', 'node', 'cluster', 'config', 'monitor', 'maintenance', 'channel', 'policy', 'incident', 'session', 'import', 'backup', 'settings', 'tunables', 'oncall', 'people', 'system', 'audit'];
+const AUDIT_ACTIONS = ['user', 'token', 'secret', 'node', 'cluster', 'config', 'monitor', 'maintenance', 'channel', 'policy', 'incident', 'session', 'import', 'backup', 'settings', 'tunables', 'people', 'system', 'audit'];
 
 function CheckScripts() {
   const rep = useFetch(() => get('/scripts'), []);
@@ -673,7 +673,9 @@ const TABS = ['general', 'appearance', 'users', 'teams', 'regions', 'audit', 'sc
 
 export function Settings({ tab, user }) {
   useDocTitle(t('ui.nav.settings'));
-  const tabs = TABS;
+  // Operators and viewers have their own account here: the password.
+  const tabs = me.role === 'admin' ? TABS : ['account'];
+  if (!tabs.includes(tab)) tab = tabs[0];
   let body;
   switch (tab) {
     case 'appearance': body = html`<${Appearance} />`; break;

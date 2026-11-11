@@ -123,7 +123,7 @@ func (e *Engine) dispatchIntents(ctx context.Context, wg *sync.WaitGroup) {
 			msg := in.Message
 			msg.Delayed = LateBy(in.DueAt, now, late)
 			id, step := in.ID, i
-			members := e.rotationMembers(ch, in, now)
+			members := e.groupMembers(ch, now)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -133,8 +133,6 @@ func (e *Engine) dispatchIntents(ctx context.Context, wg *sync.WaitGroup) {
 				switch {
 				case len(ch.Members) == 0:
 					res.att = e.deps.Send(sctx, ch.Channel, &msg)
-				case ch.Rotation != nil:
-					res.att, res.more = e.sendRotation(sctx, members, &msg)
 				default:
 					res.att, res.more = e.sendGroup(sctx, members, &msg)
 				}
@@ -183,9 +181,6 @@ func (e *Engine) onAttempt(a attemptResult) {
 		}
 	}
 	in.Delivery.Finish(a.step, a.att.OK, a.att.Error, now, retries, backoff)
-	if a.att.OK {
-		e.noteResponder(in, in.Delivery.Steps[a.step].Channel, a.more)
-	}
 	in.UpdatedAt = now
 	in.Attempts = append(in.Attempts, a.more...)
 	if len(a.more) == 0 {

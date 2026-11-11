@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/githubflyideas/unagikuma/internal/config"
@@ -42,12 +41,14 @@ func TestAdapterImportCLI(t *testing.T) {
 			if m == nil || !m.Disabled {
 				t.Fatalf("monitor %+v", m)
 			}
-			if err := runImport([]string{source, "--data", data, "--report", report, input}); err == nil || !strings.Contains(err.Error(), "blocked") {
-				t.Fatalf("collision: %v", err)
+			// A second run of the same import is safe: it finds everything
+			// already here and changes nothing.
+			if err := runImport([]string{source, "--data", data, "--report", report, input}); err != nil {
+				t.Fatalf("second run: %v", err)
 			}
 			again, _ := os.ReadFile(p)
 			if string(again) != string(raw) {
-				t.Fatal("collision changed config")
+				t.Fatal("a second run changed the config")
 			}
 		})
 	}

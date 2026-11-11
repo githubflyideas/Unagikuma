@@ -51,6 +51,11 @@ func runReport(args []string) error {
 		fmt.Fprint(os.Stderr, reportUsage)
 		os.Exit(2)
 	}
+	switch *format {
+	case "", "md", "markdown", "json", "html":
+	default:
+		return fmt.Errorf("unknown format %q (md, json or html)", *format)
+	}
 	id, err := strconv.ParseInt(strings.TrimPrefix(fs.Arg(0), "#"), 10, 64)
 	if err != nil || id <= 0 {
 		return fmt.Errorf("%q is not an incident number", fs.Arg(0))

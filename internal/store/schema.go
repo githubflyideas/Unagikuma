@@ -84,7 +84,8 @@ var coreMigrations = []string{
 		state TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL,
 		updated_at INTEGER NOT NULL, finished_at INTEGER NOT NULL DEFAULT 0, finished_by TEXT NOT NULL DEFAULT '', sent TEXT NOT NULL DEFAULT '');
 	CREATE INDEX changes_start ON changes(start_at);`,
-	// Stand-ins of on-call rotations: who covers a rotation, and when.
+	// Stand-ins of on-call rotations. The feature was removed; the table
+	// stays so this list of migrations keeps its order.
 	`CREATE TABLE oncall_overrides (id INTEGER PRIMARY KEY AUTOINCREMENT, rotation TEXT NOT NULL, member TEXT NOT NULL,
 		from_at INTEGER NOT NULL, until_at INTEGER NOT NULL, by TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
 		created_at INTEGER NOT NULL);

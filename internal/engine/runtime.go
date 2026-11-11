@@ -13,7 +13,6 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/hostclock"
 	"github.com/githubflyideas/unagikuma/internal/netscope"
 	"github.com/githubflyideas/unagikuma/internal/notify"
-	"github.com/githubflyideas/unagikuma/internal/oncall"
 	"github.com/githubflyideas/unagikuma/internal/probe"
 	"github.com/githubflyideas/unagikuma/internal/ratelimit"
 	"github.com/githubflyideas/unagikuma/internal/schedule"
@@ -93,9 +92,6 @@ type ChannelSpec struct {
 	Outside bool
 	// Members makes a contact group: every member is notified at once.
 	Members []string
-	// Rotation makes the group an on-call rotation: the member on call is
-	// notified first, the others in turn only if that fails.
-	Rotation *oncall.Rotation
 	// Reachability of the channel's endpoint, for pausing it during a local
 	// network outage instead of failing it.
 	Scope  netscope.Scope
@@ -148,12 +144,10 @@ type Config struct {
 	Lang             string // message language: zh | en
 	BaseURL          string // for links in messages ("" = none)
 	Location         *time.Location
-	// Overrides are the stand-ins of on-call rotations.
-	Overrides []oncall.Override
-	Monitors  []MonitorSpec
-	Policies  map[string]PolicySpec
-	Channels  map[string]ChannelSpec
-	Tunables  tunables.Set
+	Monitors         []MonitorSpec
+	Policies         map[string]PolicySpec
+	Channels         map[string]ChannelSpec
+	Tunables         tunables.Set
 	// LocalDetect enables local network anomaly detection on this node.
 	LocalDetect bool
 	// Anchors are explicit lan/wan anchors of this node.

@@ -128,15 +128,15 @@ func runHTTP(ctx context.Context, s Spec) Result {
 			if err != nil {
 				return nil, err
 			}
-			ip, err := resolve(dctx, host, o)
+			ips, err := resolveDial(dctx, host, o)
 			if err != nil {
 				return nil, err
 			}
-			c, err := dialer.DialContext(dctx, "tcp", net.JoinHostPort(ip.String(), port))
+			c, addr, err := dialAny(dctx, dialer, ips, port)
 			if c != nil {
 				setPeer(c.RemoteAddr().String())
 			} else {
-				setPeer(net.JoinHostPort(ip.String(), port))
+				setPeer(addr)
 			}
 			return c, err
 		},
@@ -153,7 +153,8 @@ func runHTTP(ctx context.Context, s Spec) Result {
 		client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	} else {
 		client.CheckRedirect = func(r *http.Request, via []*http.Request) error {
-			if len(via) >= 10 {
+			// via holds the requests made so far, the first one included.
+			if len(via) > 10 {
 				return errors.New("more than 10 redirects")
 			}
 			return nil

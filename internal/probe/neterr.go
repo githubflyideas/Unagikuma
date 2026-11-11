@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 )
 
 // classify maps a network error to a vote and reason. udp selects the UDP
@@ -124,4 +125,64 @@ func resolve(ctx context.Context, host string, o opts) (netip.Addr, error) {
 		return netip.Addr{}, &net.DNSError{Err: "no address of the requested family", Name: host, IsNotFound: true}
 	}
 	return check(addrs[0])
+}
+
+// resolveDial returns the addresses a connection may be tried on: the
+// one resolve gives, then, unless family= pins one, the name's first
+// address of the other family. Many names (localhost above all) resolve
+// to IPv6 first while the service only listens on IPv4: trying both is
+// what browsers and curl do, so a reachable service is not called down.
+func resolveDial(ctx context.Context, host string, o opts) ([]netip.Addr, error) {
+	first, err := resolve(ctx, host, o)
+	if err != nil {
+		return nil, err
+	}
+	out := []netip.Addr{first}
+	host = strings.Trim(host, "[]")
+	if _, lit := netip.ParseAddr(host); lit == nil || o.str("family", "") != "" {
+		return out, nil
+	}
+	addrs, err := lookupNetIP(ctx, "ip", host)
+	if err != nil {
+		return out, nil
+	}
+	for _, a := range addrs {
+		a = a.Unmap()
+		if a.Is4() != first.Is4() && (!isMetadata(a) || o.on("allow-metadata")) {
+			return append(out, a), nil
+		}
+	}
+	return out, nil
+}
+
+// dialAny connects to the first address that accepts, sharing the time
+// left between the addresses still to try. It reports the address that
+// answered, or the first one and its error when none did.
+func dialAny(ctx context.Context, d *net.Dialer, addrs []netip.Addr, port string) (net.Conn, string, error) {
+	var firstErr error
+	for i, a := range addrs {
+		addr := net.JoinHostPort(a.String(), port)
+		actx, cancel := ctx, context.CancelFunc(func() {})
+		if left := len(addrs) - i; left > 1 {
+			budget := d.Timeout
+			if dl, ok := ctx.Deadline(); ok && (budget <= 0 || time.Until(dl) < budget) {
+				budget = time.Until(dl)
+			}
+			if budget > 0 {
+				actx, cancel = context.WithTimeout(ctx, budget/time.Duration(left))
+			}
+		}
+		c, err := d.DialContext(actx, "tcp", addr)
+		cancel()
+		if err == nil {
+			return c, addr, nil
+		}
+		if firstErr == nil {
+			firstErr = err
+		}
+		if ctx.Err() != nil {
+			break
+		}
+	}
+	return nil, net.JoinHostPort(addrs[0].String(), port), firstErr
 }

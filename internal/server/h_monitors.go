@@ -977,6 +977,7 @@ func (s *Server) probeOnce(w http.ResponseWriter, r *http.Request) (any, error) 
 	if err != nil {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 	}
+	app.ApplyProbeDefaults(&ps, s.app.EffectiveConfig().Tunables)
 	ctx, cancel := context.WithTimeout(r.Context(), ps.Timeout+5*time.Second)
 	defer cancel()
 	res := s.app.Engine().ProbeOnce(ctx, ps)

@@ -143,3 +143,47 @@ func TestOfflinePromoteUsesAuthenticatedGuard(t *testing.T) {
 		t.Fatal("refused promote wrote request")
 	}
 }
+
+// A manual promote while the current master still answers is refused:
+// it would make two masters. Forced, it goes ahead (a running but broken
+// master).
+func TestPromoteRefusedWhileMasterAlive(t *testing.T) {
+	prev := promoteDelayFn
+	promoteDelayFn = func() time.Duration { return 0 }
+	defer func() { promoteDelayFn = prev }()
+
+	a, _, _, _ := newApp(t, testConfig)
+	defer a.Store().Close()
+	meta := StandbyState{Term: 1, Key: "k", Fetched: time.Now()}
+	if err := os.MkdirAll(a.dataPath(standbyDir), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := json.Marshal(meta)
+	_ = os.WriteFile(a.dataPath(standbyDir, stateMetaFile), b, 0o600)
+	_ = os.WriteFile(a.dataPath(standbyDir, stateFile), []byte("x"), 0o600)
+	mux := http.NewServeMux()
+	mux.HandleFunc(cluster.ReachPath, func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(cluster.ReachView{Node: "boss", Role: "master", Term: 1})
+	})
+	srv := trustedReachServer(t, a, mux)
+	defer srv.Close()
+	_ = os.WriteFile(a.dataPath(peersFile), mustJSON([]string{srv.Listener.Addr().String()}), 0o644)
+
+	_, err := a.Promote(context.Background(), 0, "tester")
+	var alive *ErrMasterAlive
+	if !errors.As(err, &alive) || alive.Master != "boss" || alive.Term != 1 {
+		t.Fatalf("promote with the master alive: %v", err)
+	}
+	if _, err := os.Stat(a.dataPath(promoteFile)); err == nil {
+		t.Fatal("a refused promote wrote its request")
+	}
+	term, err := a.PromoteForce(context.Background(), 0, "tester", true)
+	if err != nil || term != 2 {
+		t.Fatalf("forced promote: term=%d err=%v", term, err)
+	}
+	select {
+	case <-a.RestartRequested():
+	default:
+		t.Fatal("a forced promote did not ask for the restart")
+	}
+}

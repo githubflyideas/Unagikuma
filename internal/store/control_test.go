@@ -8,7 +8,6 @@ func TestCopyControlPreservesRuntime(t *testing.T) {
 	for _, q := range []string{
 		`INSERT INTO people(id,handle,name,username,left_at,created_at,updated_at,notify) VALUES(7,'a','A','old',1,1,2,'sms,email')`,
 		`INSERT INTO contacts(person_id,kind,value) VALUES(7,'email','a@example.com')`,
-		`INSERT INTO oncall_overrides(rotation,member,from_at,until_at,created_at) VALUES('ops','a',1,2,1)`,
 	} {
 		if _, err := src.core.Exec(q); err != nil {
 			t.Fatal(err)
@@ -30,10 +29,6 @@ func TestCopyControlPreservesRuntime(t *testing.T) {
 		t.Fatalf("people=%+v err=%v", people, err)
 	}
 	var n int
-	dst.core.QueryRow("SELECT count(*) FROM oncall_overrides").Scan(&n)
-	if n != 1 {
-		t.Fatal(n)
-	}
 	dst.core.QueryRow("SELECT count(*) FROM audit").Scan(&n)
 	if n != before {
 		t.Fatal("audit overwritten")

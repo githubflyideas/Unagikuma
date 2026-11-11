@@ -100,8 +100,22 @@ func (s *Server) clusterAgent(w http.ResponseWriter, r *http.Request) (any, erro
 // clusterPromote makes this standby the master, with the copy of the
 // master's state it holds; the server restarts.
 func (s *Server) clusterPromote(w http.ResponseWriter, r *http.Request) (any, error) {
-	term, err := s.app.Promote(r.Context(), 0, authOf(r).user)
+	var req struct {
+		Force bool `json:"force"`
+	}
+	if r.ContentLength != 0 {
+		if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+			return nil, err
+		}
+	}
+	term, err := s.app.PromoteForce(r.Context(), 0, authOf(r).user, req.Force)
 	if err != nil {
+		var alive *app.ErrMasterAlive
+		if errors.As(err, &alive) {
+			e := Errorf(http.StatusConflict, "master_alive", "%v", err)
+			e.Extra = map[string]any{"master": alive.Master, "term": alive.Term}
+			return nil, e
+		}
 		var refused *app.PromoteRefused
 		if errors.As(err, &refused) {
 			lang := i18n.Normalize(firstLang(r.Header.Get("Accept-Language")))
@@ -110,7 +124,7 @@ func (s *Server) clusterPromote(w http.ResponseWriter, r *http.Request) (any, er
 		}
 		return nil, Errorf(http.StatusConflict, CodeConflict, "%v", err)
 	}
-	auditOf(r).note("term", term)
+	auditOf(r).note("term", term).note("force", req.Force)
 	return map[string]any{"term": term, "restarting": true}, nil
 }
 

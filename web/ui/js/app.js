@@ -13,7 +13,6 @@ import { Events } from './views/events.js';
 import { ConfigView } from './views/config.js';
 import { Alerts } from './views/alerts.js';
 import { Notices } from './views/announce.js';
-import { OnCall } from './views/oncall.js';
 import { brand, product, logoURL, loadBrand, brandColors } from './brand.js';
 import { Settings } from './views/settings.js';
 import { Nodes } from './views/nodes.js';
@@ -143,7 +142,6 @@ const NAV = [
   ['/problems', 'ui.nav.problems', '⚠'],
   ['/events', 'ui.nav.events', '≡'],
   ['/alerts', 'ui.nav.alerts', '✉'],
-  ['/oncall', 'ui.nav.oncall', '☎'],
   ['/notices', 'ui.nav.notices', '⚑'],
   ['/config', 'ui.nav.config', '{}'],
   ['/nodes', 'ui.nav.runmode', '⌖'],
@@ -197,7 +195,6 @@ function Shell({ user, onLogout, onLang }) {
     // Changes, status pages and the report used to live under Alerting;
     // their old addresses still open them.
     case 'alerts': view = OLD_ALERT_TABS[p[1]] ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]]} />` : html`<${Alerts} tab=${p[1] === 'contacts' ? 'contacts' : 'channels'} />`; break; // policies went to the teams
-    case 'oncall': view = html`<${OnCall} />`; break;
     case 'notices': view = html`<${Notices} tab=${p[1] || 'changes'} />`; break;
     case 'config': view = html`<${ConfigView} tab=${p[1] || 'edit'} />`; break;
     // Nodes used to be a Settings tab; its old address opens Run mode.
@@ -209,7 +206,8 @@ function Shell({ user, onLogout, onLang }) {
   // Run mode (single machine, two machines or a cluster, and its nodes)
   // has its own place in the sidebar.
   // A team member works with their teams' monitors only.
-  const nav = NAV.filter(([path]) => (!me.teams || TEAM_NAV.has(path)));
+  // Everyone has Settings for their own account (password).
+  const nav = NAV.filter(([path]) => (!me.teams || TEAM_NAV.has(path) || path === '/settings'));
   return html`<div class=${'shell' + (mini ? ' mini' : '')}>
     <aside class=${'side' + (open ? ' open' : '')}>
       <a class="brand" href="#/"><${Logo} /><div>${product()}

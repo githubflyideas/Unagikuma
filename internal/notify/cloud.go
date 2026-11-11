@@ -252,6 +252,9 @@ func (s *Sender) aliyun(ctx context.Context, o map[string]string, phone, def str
 	if err := s.doJSON(req, &out); err != nil {
 		return err
 	}
+	if out.Code == "" && out.Message == "" {
+		return errors.New("aliyun: the reply has no result code: check the endpoint")
+	}
 	if out.Code != "OK" {
 		if aliyunBadNumber[out.Code] {
 			return &bounceError{Bounce{Address: phone, Reason: "aliyun: " + out.Code + " " + out.Message}}

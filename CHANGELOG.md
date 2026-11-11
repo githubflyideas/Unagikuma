@@ -5,10 +5,25 @@
 **Fixed**
 - A master replaced by a higher term rejoins as a replica without a restart (join URL works when listen is `:8077`; CA-signed rejoin offer with nonce / no replay; only after Reach confirms the winner).
 - Channel **Test** uses the same active-contact directory as real alerts by default. An empty whitelist is not reported as success. Optional connection-only mode is labelled as such.
+- A manual take-over (promote) is refused while the current master still answers, since it would make two masters; move the role with a handover from the master. It can be forced for a master that runs but is broken. Two members promoting at once are still refused as before.
+- A secret that the configuration still uses can no longer be deleted. Deleting it used to make the file invalid, so every later edit was refused until the secret was put back. The refusal names the records that use it.
+- Operators and viewers can change their own password (**Settings › Account**). An API token cannot change a password.
+- HTTP and TCP checks of a name that resolves to both IPv6 and IPv4 try the other family when the first does not connect: `localhost` with a service listening on IPv4 only is no longer reported down. `family=4|6` still pins one.
+- `unagikuma probe` and **Check now** apply the default certificate expiry thresholds (`probe.cert-warn-days`, `probe.cert-critical-days`) like running monitors do.
+- HTTP checks follow up to 10 redirects, as the error message says (they stopped at 9).
+- `/healthz` no longer says "replaced by a newer master" once that server has rejoined as a member.
+- Running a Checkmate or Gatus import again skips what the first run brought over, instead of failing on the names it already added. The same name for a different check still stops the import.
+- `GET /api/v1/reports/summary` refuses a `range` other than 7d, 30d or 90d instead of quietly answering for 30 days.
+- A Telegram bot token without the `number:` part is refused when the channel is saved, not when the first alert fails. An Aliyun reply without a result code says so instead of an empty error.
+- `unagikuma node revoke` fails for a node that has no token; `unagikuma report incident --format` checks the format before reading the incident; `unagikuma version` refuses extra arguments.
+
+**Removed**
+- On-call rotations, the **On call** page and its stand-ins, swaps and response-time statistics. A group that still has `rotate=`, `handoff=`, `start=` or `tz=` keeps loading with a `rotation_removed` warning and notifies all its members. The `oncall.*` tunables have no effect and stay only so old `$SET` lines remain valid.
 
 **Changed**
 - Default `notify.channel-retries` is 2 (about 2s then 5s). Permanent errors are not retried. Explicit `0` still means no retries. Probe retries are unchanged.
 - Startup and the System page warn when the UI is served over plain HTTP. The listen address is unchanged; agent traffic on the same port remains pinned TLS.
+- An HTTP monitor with both `basic=` and `bearer=` gets a `conflicting_auth` warning: only `bearer=` is sent. The configuration spec now lists the `invalid_option` and `unknown_secret` diagnostics.
 
 
 ## v2.6.2 — 2026-11-10

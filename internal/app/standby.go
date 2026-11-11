@@ -279,6 +279,23 @@ type promoteRequest struct {
 // A handover from the current master (author "handover") skips the delay
 // but still refuses a strictly newer foreign master.
 func (a *App) Promote(ctx context.Context, term uint64, author string) (uint64, error) {
+	return a.PromoteForce(ctx, term, author, false)
+}
+
+// ErrMasterAlive means a manual promote was asked for while the current
+// master still answers: taking over then makes two masters for nothing.
+type ErrMasterAlive struct {
+	Master string
+	Term   uint64
+}
+
+func (e *ErrMasterAlive) Error() string {
+	return fmt.Sprintf("the master %s (term %d) is running: hand over from it instead, or force the promote if it is broken", e.Master, e.Term)
+}
+
+// PromoteForce is Promote; with force a manual promote goes ahead even
+// though the current master answers (for a master that runs but is broken).
+func (a *App) PromoteForce(ctx context.Context, term uint64, author string, force bool) (uint64, error) {
 	a.am.mu.Lock()
 	ag := a.am.agent
 	a.am.mu.Unlock()
@@ -304,6 +321,19 @@ func (a *App) Promote(ctx context.Context, term uint64, author string) (uint64, 
 	// concurrent promoter can discover each other after heal.
 	a.persistPeerListens()
 	manual := author != "handover"
+	if manual && !force {
+		// A promote is for a master that is gone. One still connected, or
+		// answering at the term this copy came from, is alive.
+		if ag != nil && ag.Status().Connected {
+			return 0, &ErrMasterAlive{Master: ag.Status().Server, Term: max(meta.Term, ag.Term())}
+		}
+		if peer, t, ok := a.competingMaster(max(meta.Term, 1)); ok {
+			if t >= term {
+				return 0, &PromoteRefused{Peer: peer, Term: t}
+			}
+			return 0, &ErrMasterAlive{Master: peer, Term: t}
+		}
+	}
 	if manual {
 		if err := a.waitPromoteGuard(ctx, term); err != nil {
 			return 0, err
