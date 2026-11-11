@@ -51,7 +51,24 @@ jobs:
         with:
           node-version: 22
       - name: playwright
-        run: npm install --no-save --no-package-lock playwright@1.49.1 && npx playwright install --with-deps chromium
+        # The runner's own Chrome is used when there is one: installing a
+        # browser pulls packages from the Ubuntu mirrors, which the runner
+        # cannot always reach.
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -n "$chrome" ]; then
+            echo "UNAGIKUMA_E2E_CHROME=$chrome" >> "$GITHUB_ENV"
+            "$chrome" --version
+            exit 0
+          fi
+          for i in 1 2 3; do
+            PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD= npx playwright install --with-deps chromium && exit 0
+            sleep 30
+          done
+          exit 1
       - name: browser tests and failover
         env:
           UNAGIKUMA_E2E_UI: "1"

@@ -6,7 +6,10 @@ const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 
 const [base, out, nagiosCfg] = process.argv.slice(2);
-const browser = await chromium.launch();
+// UNAGIKUMA_E2E_CHROME names a Chrome already installed (as on CI
+// runners), so the tests need no browser download.
+const exe = process.env.UNAGIKUMA_E2E_CHROME;
+const browser = await chromium.launch(exe ? { executablePath: exe } : {});
 const errors = [];
 let failed = 0;
 let ctx = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'en-US' });
