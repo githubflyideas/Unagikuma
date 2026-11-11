@@ -183,8 +183,6 @@ func (e *Engine) Overview() Overview {
 	return o
 }
 
-// OpenIncidents returns the incidents the engine is tracking (open, or
-// resolved but still reopenable).
 // Unhandled is the one definition of an unhandled problem, shared by the
 // sidebar, the overview, the problems page and /metrics: an open incident
 // of any kind (regional and low-priority ones included), not a drill,
@@ -199,6 +197,8 @@ func Handled(inc *Incident, now time.Time) bool {
 	return inc.State.Acked || now.Before(inc.State.SilencedUntil)
 }
 
+// OpenIncidents returns the incidents the engine is tracking (open, or
+// resolved but still reopenable).
 func (e *Engine) OpenIncidents() []Incident {
 	var out []Incident
 	e.do(func() {

@@ -39,9 +39,11 @@ const (
 	leafRenewBefore = 90 * 24 * time.Hour
 )
 
-// PKI is the master's private CA and the certificate agents connect to.
+// PeerServerName is the TLS server name under which a server presents
+// its own site certificate to other servers of the cluster.
 const PeerServerName = "peer.unagikuma.invalid"
 
+// PKI is the master's private CA and the certificate agents connect to.
 type PKI struct {
 	Peer  *PKI // stable site identity, never replaced by authority promotion
 	CA    *x509.Certificate

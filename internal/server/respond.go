@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/githubflyideas/unagikuma/internal/i18n"
 	"io"
 	"net/http"
 	"strconv"
@@ -44,13 +45,46 @@ type APIError struct {
 	Location *Location `json:"location,omitempty"`
 	// Extra fields for specific codes (etag, patch, retry_after_s).
 	Extra map[string]any `json:"-"`
+	// format and args rebuild Message in the caller's language.
+	format string
+	args   []any
+}
+
+// localized returns e with its message in lang when the API catalog has
+// the message; otherwise e itself.
+func (e *APIError) localized(lang string) *APIError {
+	if e == nil || e.format == "" || lang == "en" {
+		return e
+	}
+	msg, ok := i18n.APIMessage(lang, e.format, e.args...)
+	if !ok {
+		return e
+	}
+	c := *e
+	c.Message = msg
+	return &c
+}
+
+// writeErrorFor writes err in the language the request asks for.
+func writeErrorFor(w http.ResponseWriter, r *http.Request, err error) {
+	var ae *APIError
+	if errors.As(err, &ae) {
+		w.Header().Set("Content-Language", requestLang(r))
+		err = ae.localized(requestLang(r))
+	}
+	writeError(w, err)
+}
+
+// requestLang is the supported language the request prefers ("en" if none).
+func requestLang(r *http.Request) string {
+	return i18n.Normalize(firstLang(r.Header.Get("Accept-Language")))
 }
 
 func (e *APIError) Error() string { return e.Code + ": " + e.Message }
 
 // Errorf builds an APIError.
 func Errorf(status int, code, format string, args ...any) *APIError {
-	return &APIError{Status: status, Code: code, Message: fmt.Sprintf(format, args...)}
+	return &APIError{Status: status, Code: code, Message: fmt.Sprintf(format, args...), format: format, args: args}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -86,7 +120,7 @@ func writeError(w http.ResponseWriter, err error) {
 // rateLimited builds the 429 error with a whole-second retry hint.
 func rateLimited(wait time.Duration) *APIError {
 	s := int((wait + time.Second - 1) / time.Second)
-	return &APIError{Status: http.StatusTooManyRequests, Code: CodeRateLimited, Message: "too many requests",
+	return &APIError{Status: http.StatusTooManyRequests, Code: CodeRateLimited, Message: "too many requests", format: "too many requests",
 		Extra: map[string]any{"retry_after_s": max(1, s)}}
 }
 

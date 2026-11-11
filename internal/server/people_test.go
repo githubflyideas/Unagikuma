@@ -116,13 +116,20 @@ func TestContactDirectory(t *testing.T) {
 	}
 	// The channel form's check before saving.
 	var lk struct {
-		Unknown []string
-		Issues  []struct{ Code string }
+		Unknown      []string
+		Issues       []struct{ Code, Address string }
+		NoRecipients bool `json:"no_recipients"`
 	}
 	// Li left and the other address is unknown: nobody would be sent to.
+	// Every issue names its address; the empty list is a field of its own.
 	e.do("POST", "/api/v1/people/lookup", map[string]any{"kind": "email", "list": "li@example.com, other@example.com"}, &lk)
-	if len(lk.Unknown) != 1 || lk.Unknown[0] != "other@example.com" || len(lk.Issues) != 3 {
+	if len(lk.Unknown) != 1 || lk.Unknown[0] != "other@example.com" || len(lk.Issues) != 2 || !lk.NoRecipients {
 		t.Fatalf("lookup: %+v", lk)
+	}
+	for _, is := range lk.Issues {
+		if is.Address == "" {
+			t.Fatalf("an issue without an address: %+v", lk.Issues)
+		}
 	}
 }
 

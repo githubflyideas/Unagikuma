@@ -241,10 +241,10 @@ func (s *Store) auditSystem(ev engine.Event) {
 	}
 }
 
-// Counter adds to a daily value counter.
 // Decision records a step in the decision ledger.
 func (s *Store) Decision(d engine.Decision) { s.batch.add(item{decision: &d}) }
 
+// Counter adds to a daily value counter.
 func (s *Store) Counter(name string, n int) { s.batch.add(item{counter: name, n: n}) }
 
 // Flush writes pending batched items now.

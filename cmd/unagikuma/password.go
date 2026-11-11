@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/term"
-
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
 
@@ -124,7 +122,7 @@ func runResetPassword(args []string) error {
 // line from a pipe.
 func askPassword(in *os.File, out io.Writer) (string, error) {
 	fd := int(in.Fd())
-	if !term.IsTerminal(fd) {
+	if !isTerminal(fd) {
 		pw, err := readLine(in)
 		if err == nil && pw == "" {
 			err = errors.New("no password given on standard input")
@@ -133,7 +131,7 @@ func askPassword(in *os.File, out io.Writer) (string, error) {
 	}
 	for {
 		fmt.Fprint(out, "New password (at least 8 characters, not shown): ")
-		a, err := term.ReadPassword(fd)
+		a, err := readPassword(fd)
 		fmt.Fprintln(out)
 		if err != nil {
 			return "", err
@@ -146,7 +144,7 @@ func askPassword(in *os.File, out io.Writer) (string, error) {
 			continue
 		}
 		fmt.Fprint(out, "Type it again: ")
-		b, err := term.ReadPassword(fd)
+		b, err := readPassword(fd)
 		fmt.Fprintln(out)
 		if err != nil {
 			return "", err

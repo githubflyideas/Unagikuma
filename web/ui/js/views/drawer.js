@@ -93,7 +93,7 @@ function Drawer({ name, onClose }) {
       <div class="sec"><h4>${t('ui.why.title')}</h4><ul class="why">${whyLines(row, tl.data && tl.data.items).map(l => html`<li class=${l.cls}>${l.text}</li>`)}</ul></div>
       ${path && html`<div class="sec"><h4>${t('ui.path.title')}</h4><${Path} row=${row} path=${path} bare /></div>`}
       <div class="sec"><h4>${t('ui.drawer.timeline')}</h4>${tl.data ? html`<${EventRows} items=${tl.data.items} hideMonitor />` : html`<${Loading} />`}</div>
-      ${record && html`<div class="sec"><h4>${t('ui.drawer.record', { line: record.line })}</h4><pre class="code">${record.text}</pre></div>`}`;
+      ${record && html`<div class="sec"><h4>${t('ui.drawer.record', { line: record.line })}</h4><pre class="code" tabindex="0">${record.text}</pre></div>`}`;
   };
   return html`<div class="scrim" onClick=${onClose}></div>
     <aside class="drawer" role="dialog" aria-modal="true" aria-label=${name}>${body()}</aside>`;

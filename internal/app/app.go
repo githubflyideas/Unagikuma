@@ -491,7 +491,12 @@ func (a *App) Run(ctx context.Context) error {
 		// written only when they change.
 		a.every(ctx, 5*time.Second, a.persistPeerListens)
 	})
-	run(func() { a.every(ctx, 10*time.Second, a.watchForeignMasters) })
+	run(func() {
+		// Often at first: a master that comes back after being replaced
+		// must find the new one before it does much as a master itself.
+		a.everyFor(ctx, 2*time.Second, 2*time.Minute, a.watchForeignMasters)
+		a.every(ctx, 10*time.Second, a.watchForeignMasters)
+	})
 	// every blocks, so the rejoin retry needs a loop of its own: in the
 	// same one as watchForeignMasters it never ran, and a replaced master
 	// whose first rejoin failed stayed outside the cluster.
@@ -527,6 +532,23 @@ func (a *App) Run(ctx context.Context) error {
 	a.master.Close()
 	wg.Wait()
 	return a.store.Close()
+}
+
+// everyFor calls f every d until total has passed (or ctx ends).
+func (a *App) everyFor(ctx context.Context, d, total time.Duration, f func()) {
+	t := time.NewTicker(d)
+	defer t.Stop()
+	end := time.After(total)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-end:
+			return
+		case <-t.C:
+			f()
+		}
+	}
 }
 
 func (a *App) every(ctx context.Context, d time.Duration, f func()) {

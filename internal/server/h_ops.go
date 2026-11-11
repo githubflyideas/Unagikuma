@@ -279,11 +279,21 @@ func (s *Server) incidentSilence(w http.ResponseWriter, r *http.Request) (any, e
 	if err := s.incidentGate(r, id); err != nil {
 		return nil, err
 	}
+	// Flat, or wrapped in "record" like the other write endpoints.
 	var req struct {
 		DurationS int `json:"duration_s"`
+		Record    *struct {
+			DurationS int `json:"duration_s"`
+		} `json:"record"`
 	}
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
+	}
+	if req.Record != nil {
+		if req.DurationS != 0 && req.DurationS != req.Record.DurationS {
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "duration_s is given twice with different values")
+		}
+		req.DurationS = req.Record.DurationS
 	}
 	return nil, engineErr(s.app.ActOnIncident(r.Context(), id, app.IncidentAction{Action: "silence", Actor: authOf(r).user, DurationS: req.DurationS}, incidentVia(r)))
 }

@@ -275,7 +275,7 @@ export function MonitorDetail({ name }) {
         <//>
         ${row.type === 'PUSH' && html`<${PushBox} name=${name} />`}
         ${d.data.record && html`<${Card} title=${t('ui.mon.record')} actions=${html`<a class="btn sm" href="#/config">${t('ui.mon.line', { line: d.data.record.line })}</a>`}>
-          <pre class="code">${d.data.record.text}</pre>
+          <pre class="code" tabindex="0">${d.data.record.text}</pre>
         <//>`}
       </div>
     </div>

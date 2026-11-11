@@ -1,5 +1,5 @@
 // Shared components and hooks.
-import { html, useState, useEffect, useRef, useCallback } from './lib.js';
+import { html, useState, useEffect, useRef, useCallback, useLayoutEffect } from './lib.js';
 import { t, ago, fmtTime, fmtNum, detailText } from './i18n.js';
 import { onLive } from './live.js';
 import { product } from './brand.js';
@@ -201,12 +201,26 @@ export function ConfirmHost() {
   <//>`;
 }
 
+let fieldSeq = 0;
+
+// Field labels the first control inside it, so screen readers announce the
+// label and a click on it focuses the control.
 export function Field({ label, hint, children, error }) {
-  return html`<div class="field">${label && html`<label>${label}</label>`}${children}${error ? html`<div class="hint err-text">${error}</div>` : hint && html`<div class="hint">${hint}</div>`}</div>`;
+  const box = useRef(null);
+  const id = useRef('');
+  if (!id.current) id.current = 'fld-' + (++fieldSeq);
+  useLayoutEffect(() => {
+    const el = box.current?.querySelector('input:not([type=hidden]), select, textarea');
+    const lb = box.current?.querySelector(':scope > label');
+    if (!el || !lb) return;
+    if (!el.id) el.id = id.current;
+    lb.htmlFor = el.id;
+  });
+  return html`<div class="field" ref=${box}>${label && html`<label>${label}</label>`}${children}${error ? html`<div class="hint err-text">${error}</div>` : hint && html`<div class="hint">${hint}</div>`}</div>`;
 }
 
-export function Seg({ value, options, onChange }) {
-  return html`<div class="seg" role="tablist">${options.map(([v, label]) => html`<button type="button" class=${v === value ? 'on' : ''} onClick=${() => onChange(v)}>${label}</button>`)}</div>`;
+export function Seg({ value, options, onChange, label }) {
+  return html`<div class="seg" role="tablist" aria-label=${label}>${options.map(([v, text]) => html`<button type="button" role="tab" aria-selected=${v === value} class=${v === value ? 'on' : ''} onClick=${() => onChange(v)}>${text}</button>`)}</div>`;
 }
 
 export function Copy({ text, label }) {

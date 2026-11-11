@@ -61,6 +61,8 @@ type server struct {
 	log  *bytes.Buffer
 	c    *http.Client
 	csrf string
+	// listenAll listens on every address (":port"), as most installations do.
+	listenAll bool
 }
 
 func start(t *testing.T, name, bind string) *server {
@@ -75,7 +77,11 @@ func start(t *testing.T, name, bind string) *server {
 
 func (s *server) run() {
 	s.log = &bytes.Buffer{}
-	s.cmd = exec.Command(bin, "server", "--data", s.dir, "--listen", fmt.Sprintf("127.0.0.1:%d", s.port))
+	host := "127.0.0.1"
+	if s.listenAll {
+		host = ""
+	}
+	s.cmd = exec.Command(bin, "server", "--data", s.dir, "--listen", fmt.Sprintf("%s:%d", host, s.port))
 	s.cmd.Stdout, s.cmd.Stderr = s.log, s.log
 	if err := s.cmd.Start(); err != nil {
 		s.t.Fatal(err)

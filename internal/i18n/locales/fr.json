@@ -752,6 +752,7 @@
 "ui.ov.lan_targets": "Cibles LAN",
 "ui.ov.wan_targets": "Cibles Internet",
 "ui.ov.n_targets": "{n} cibles",
+"ui.ov.n_targets_one": "{n} cible",
 "ui.ov.break_gateway": "Passerelle injoignable",
 "ui.ov.break_uplink_self": "Sortie coupée · vérifications suspendues",
 "ui.ov.break_uplink_node": "Inaccessible depuis ce site",

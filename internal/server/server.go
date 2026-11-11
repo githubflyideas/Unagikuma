@@ -205,20 +205,20 @@ func (s *Server) handle(pattern, scope string, f apiFunc) {
 		if scope != "" {
 			ai, err := s.authenticate(r)
 			if err != nil {
-				writeError(w, err)
+				writeErrorFor(w, r, err)
 				return
 			}
 			if !ai.scopes[scope] && !ai.scopes["admin"] {
-				writeError(w, Errorf(http.StatusForbidden, CodeForbidden, "this token lacks the %q scope", scope))
+				writeErrorFor(w, r, Errorf(http.StatusForbidden, CodeForbidden, "this token lacks the %q scope", scope))
 				return
 			}
 			if ai.team != nil && !teamRoutes[pattern] {
-				writeError(w, errTeamOnly)
+				writeErrorFor(w, r, errTeamOnly)
 				return
 			}
 			if ai.session && r.Method != http.MethodGet && r.Method != http.MethodHead {
 				if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Unagikuma-CSRF")), []byte(ai.csrf)) != 1 {
-					writeError(w, Errorf(http.StatusForbidden, CodeForbidden, "missing or wrong CSRF token"))
+					writeErrorFor(w, r, Errorf(http.StatusForbidden, CodeForbidden, "missing or wrong CSRF token"))
 					return
 				}
 			}
@@ -227,13 +227,13 @@ func (s *Server) handle(pattern, scope string, f apiFunc) {
 				key = "t:" + ai.token
 			}
 			if ok, wait := s.api.Allow(key, s.now()); !ok {
-				writeError(w, rateLimited(wait))
+				writeErrorFor(w, r, rateLimited(wait))
 				return
 			}
 			r = r.WithContext(context.WithValue(r.Context(), ctxKey{}, ai))
 		}
 		if (scope == "write" || scope == "admin") && r.Method != "GET" && r.Method != "HEAD" && !s.app.ConfigAuthority() && sharedConfigRoute(r.URL.Path) {
-			writeError(w, Errorf(http.StatusConflict, CodeConflict, "configuration is read-only on this site"))
+			writeErrorFor(w, r, Errorf(http.StatusConflict, CodeConflict, "configuration is read-only on this site"))
 			return
 		}
 		audit := r.Method != http.MethodGet && r.Method != http.MethodHead && scope != "read" && !noAudit[pattern]
@@ -246,7 +246,7 @@ func (s *Server) handle(pattern, scope string, f apiFunc) {
 				return
 			}
 			if err != nil {
-				writeError(w, err)
+				writeErrorFor(w, r, err)
 				return
 			}
 			if audit {

@@ -319,15 +319,23 @@ func (s *Server) peopleLookup(w http.ResponseWriter, r *http.Request) (any, erro
 		return map[string]any{"unknown": []string{}, "issues": []directory.Issue{}}, nil
 	}
 	d := s.app.Directory()
-	_, issues := d.Resolve(kind, req.List)
+	_, all := d.Resolve(kind, req.List)
 	unknown := d.Unknown(kind, req.List)
 	if unknown == nil {
 		unknown = []string{}
 	}
-	if issues == nil {
-		issues = []directory.Issue{}
+	// issues are about addresses; that nobody at all is left to send to
+	// is about the whole list, and has a field of its own.
+	issues := []directory.Issue{}
+	none := false
+	for _, is := range all {
+		if is.Code == directory.IssueNoRecipients {
+			none = true
+			continue
+		}
+		issues = append(issues, is)
 	}
-	return map[string]any{"kind": kind, "unknown": unknown, "issues": issues}, nil
+	return map[string]any{"kind": kind, "unknown": unknown, "issues": issues, "no_recipients": none}, nil
 }
 
 func (s *Server) bounceClear(w http.ResponseWriter, r *http.Request) (any, error) {

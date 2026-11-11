@@ -218,7 +218,6 @@ type Stats struct {
 	Rows         map[string]int64 `json:"rows"`
 }
 
-// Stats computes storage statistics.
 // DBBytes returns the on-disk size of core.db and history.db, each with
 // its write-ahead log; cheap enough for every metrics scrape.
 func (s *Store) DBBytes() (core, history int64) {

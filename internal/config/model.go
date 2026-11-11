@@ -426,7 +426,6 @@ func (c *Config) FindPolicy(name string) *Policy {
 	return nil
 }
 
-// FindChannel returns a channel by name.
 // FindPeriod returns the named time period, or nil.
 func (c *Config) FindPeriod(name string) *Period {
 	for _, p := range c.Periods {
@@ -437,6 +436,7 @@ func (c *Config) FindPeriod(name string) *Period {
 	return nil
 }
 
+// FindChannel returns a channel by name.
 func (c *Config) FindChannel(name string) *Channel {
 	for _, ch := range c.Channels {
 		if ch.Name == name {

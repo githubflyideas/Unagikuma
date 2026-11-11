@@ -1,4 +1,5 @@
 // REST client. Writes carry the session's CSRF token.
+import { currentLang } from './i18n.js';
 let csrf = '';
 let onAuthLost = null;
 
@@ -27,7 +28,8 @@ export class ApiError extends Error {
 }
 
 export async function api(method, path, body, headers) {
-  const opt = { method, headers: { ...(headers || {}) }, credentials: 'same-origin' };
+  // Errors come back in the console's language, not the browser's.
+  const opt = { method, headers: { 'Accept-Language': currentLang(), ...(headers || {}) }, credentials: 'same-origin' };
   if (body !== undefined) {
     opt.headers['Content-Type'] = 'application/json';
     opt.body = JSON.stringify(body);

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"encoding/json"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -80,5 +82,36 @@ func TestTelegramTokenCheckedOnSave(t *testing.T) {
 	}
 	if c := e.do("POST", "/api/v1/channels", map[string]any{"name": "tg", "kind": "telegram", "opts": map[string]string{"token": "123456:AAE-x_y", "chat": "1"}}, nil); c != 200 {
 		t.Fatalf("good token refused: %d", c)
+	}
+}
+
+// API errors follow Accept-Language where the message is translated, and
+// stay English otherwise.
+func TestAPIErrorsInTheCallersLanguage(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	e.setup()
+	get := func(lang string) (int, string, string) {
+		req, _ := http.NewRequest("GET", e.ts.URL+"/api/v1/reports/summary?range=1h", nil)
+		req.Header.Set("Accept-Language", lang)
+		resp, err := e.c.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var body struct{ Code, Message string }
+		_ = json.NewDecoder(resp.Body).Decode(&body)
+		return resp.StatusCode, body.Message, resp.Header.Get("Content-Language")
+	}
+	if c, m, cl := get("zh-CN,zh;q=0.9"); c != 400 || m != "range 只能是 7d、30d 或 90d" || cl != "zh" {
+		t.Fatalf("zh: %d %q %q", c, m, cl)
+	}
+	if c, m, _ := get("de-DE"); c != 400 || m != "range ist 7d, 30d oder 90d" {
+		t.Fatalf("de: %d %q", c, m)
+	}
+	if c, m, _ := get("en-US"); c != 400 || m != "range is 7d, 30d or 90d" {
+		t.Fatalf("en: %d %q", c, m)
+	}
+	if c, m, _ := get("xx"); c != 400 || m != "range is 7d, 30d or 90d" {
+		t.Fatalf("unknown language: %d %q", c, m)
 	}
 }

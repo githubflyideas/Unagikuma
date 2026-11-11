@@ -155,7 +155,7 @@ function FaultPath({ paths, rows }) {
   const exNode = paths.find(p => p.self && p.exit) || paths.find(p => p.exit && p.online);
   const exSt = exNode ? hopStates(exNode).ex : '';
   const yEx = yWan + 52, xEx = xB + 24;
-  return html`<div class="fp-scroll"><svg viewBox=${`0 0 1160 ${H}`} preserveAspectRatio="xMidYMid meet" role="img" aria-label=${t('ui.ov.path_title')}>
+  return html`<div class="fp-scroll"><svg viewBox=${`0 0 1160 ${H}`} preserveAspectRatio="xMidYMid meet" role="group" aria-label=${t('ui.ov.path_title')}>
     <text class="fp-sub" x=${xN} y="18" text-anchor="middle">${t('ui.ov.col_node')}</text>
     <text class="fp-sub" x=${xG} y="18" text-anchor="middle">${t('ui.health.gateway')}</text>
     <text class="fp-sub" x=${xU} y="18" text-anchor="middle">${t('ui.ov.col_uplink')}</text>

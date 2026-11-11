@@ -72,7 +72,6 @@ func (s *Store) AgentTokens() ([]AgentToken, error) {
 	return out, rows.Err()
 }
 
-// DeleteAgentToken revokes a node's token.
 // HasAgentToken reports whether a node has a token.
 func (s *Store) HasAgentToken(node string) (bool, error) {
 	var n int
@@ -80,6 +79,7 @@ func (s *Store) HasAgentToken(node string) (bool, error) {
 	return n > 0, err
 }
 
+// DeleteAgentToken revokes a node's token.
 func (s *Store) DeleteAgentToken(node string) error {
 	s.wmu.Lock()
 	defer s.wmu.Unlock()

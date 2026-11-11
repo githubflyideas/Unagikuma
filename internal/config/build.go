@@ -1081,11 +1081,18 @@ func (b *builder) node(r Record) {
 		case "policy":
 			n.Policy = o.Value
 		case "standby":
-			u, err := url.Parse(o.Value)
-			if err != nil || u.Scheme != "https" || u.Host == "" || (u.Path != "" && u.Path != "/") {
+			v := o.Value
+			if !strings.Contains(v, "://") {
+				// A bare host:port, as hand-written files often have it,
+				// means the node's own port, which always speaks TLS.
+				v = "https://" + v
+				b.warnf(o.Pos, "standby_scheme_added", "standby %s has no scheme: read as %s", o.Value, v)
+			}
+			u, err := url.Parse(v)
+			if err != nil || u.Scheme != "https" || u.Host == "" || u.Port() == "" && strings.HasSuffix(u.Host, ":") || (u.Path != "" && u.Path != "/") {
 				b.errf(o.Pos, "invalid_value", "standby must be the https://host:port this node serves on")
 			}
-			n.Standby = strings.TrimRight(o.Value, "/")
+			n.Standby = strings.TrimRight(v, "/")
 		case "node-timeout":
 			d, err := tunables.ParseDuration(o.Value)
 			if err != nil || d <= 0 {

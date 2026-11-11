@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/term"
-
 	"github.com/githubflyideas/unagikuma/internal/app"
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/importer"
@@ -402,7 +400,7 @@ func termWidth(flagWidth int) int {
 	if flagWidth > 0 {
 		return flagWidth
 	}
-	if w, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && w > 0 {
+	if w, ok := ttyWidth(int(os.Stdout.Fd())); ok {
 		return min(w, 120)
 	}
 	if n, err := strconv.Atoi(os.Getenv("COLUMNS")); err == nil && n > 0 {

@@ -96,7 +96,7 @@ function JoinCode({ server, onClose }) {
           <button class="btn primary">${t('ui.join.generate')}</button></div><//>
       ${res && html`<div class="col" style=${{ gap: '8px' }}>
         <div class="row"><span class="small muted spacer">${t('ui.join.expires', { time: fmtTime(res.expires) })}</span><${Copy} text=${res.code} /></div>
-        <pre class="code" style=${{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>${res.code}</pre>
+        <pre class="code" tabindex="0" style=${{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>${res.code}</pre>
       </div>`}
     </form>
   <//>`;

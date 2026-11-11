@@ -87,3 +87,41 @@ func TestAckHistoryIsAppendOnly(t *testing.T) {
 		t.Errorf("unknown incident: %d", code)
 	}
 }
+
+// Silence takes its body flat or wrapped in "record", like the other write
+// endpoints; the two forms disagreeing is refused.
+func TestSilenceBodyShapes(t *testing.T) {
+	e := newEnv(t, testBind+"down IN TCP 127.0.0.1:1\n", nil)
+	e.setup()
+	var id int64
+	for deadline := time.Now().Add(15 * time.Second); id == 0 && time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
+		var l struct {
+			Items []struct {
+				ID      int64
+				Monitor string
+			}
+		}
+		e.do("GET", "/api/v1/incidents?state=unhandled", nil, &l)
+		for _, it := range l.Items {
+			if it.Monitor == "down" {
+				id = it.ID
+			}
+		}
+	}
+	if id == 0 {
+		t.Fatal("no incident")
+	}
+	path := fmt.Sprintf("/api/v1/incidents/%d/silence", id)
+	for _, body := range []map[string]any{
+		{"duration_s": 600},
+		{"record": map[string]any{"duration_s": 900}},
+		{"duration_s": 900, "record": map[string]any{"duration_s": 900}},
+	} {
+		if code := e.do("POST", path, body, nil); code != 204 && code != 200 {
+			t.Fatalf("silence %v: %d", body, code)
+		}
+	}
+	if code := e.do("POST", path, map[string]any{"duration_s": 60, "record": map[string]any{"duration_s": 900}}, nil); code != 400 {
+		t.Fatalf("two different durations: %d", code)
+	}
+}

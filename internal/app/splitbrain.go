@@ -3,7 +3,9 @@ package app
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -149,31 +151,46 @@ func (a *App) peerListenAddrs() []string {
 
 func (a *App) probeReach(addr string) (cluster.ReachView, bool) {
 	pins, expected := a.peerTrust(addr)
-	tr := &http.Transport{Proxy: nil, TLSClientConfig: cluster.PinnedPeerTLSConfig(pins...)}
-	defer tr.CloseIdleConnections()
-	client := &http.Client{Timeout: 3 * time.Second, Transport: tr, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+addr+cluster.ReachPath, nil)
+	rv, err := reach(addr, cluster.PinnedPeerTLSConfig(pins...))
+	if err != nil && a.pki != nil {
+		// The peer's own identity may be unknown here (lost, never saved,
+		// or saved under another address). A master that took over this
+		// cluster holds its CA and proves it on the agent name, so the
+		// cluster CA alone recognises it.
+		rv, err = reach(addr, cluster.PinnedTLSConfig(a.pki.Fingerprint()))
+	}
 	if err != nil {
-		return cluster.ReachView{}, false
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return cluster.ReachView{}, false
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return cluster.ReachView{}, false
-	}
-	var rv cluster.ReachView
-	if json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&rv) != nil {
 		return cluster.ReachView{}, false
 	}
 	if expected != "" && rv.Node != expected {
 		return cluster.ReachView{}, false
 	}
 	return rv, true
+}
+
+func reach(addr string, tc *tls.Config) (cluster.ReachView, error) {
+	tr := &http.Transport{Proxy: nil, TLSClientConfig: tc}
+	defer tr.CloseIdleConnections()
+	client := &http.Client{Timeout: 3 * time.Second, Transport: tr, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+addr+cluster.ReachPath, nil)
+	if err != nil {
+		return cluster.ReachView{}, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return cluster.ReachView{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return cluster.ReachView{}, fmt.Errorf("reach: %s", resp.Status)
+	}
+	var rv cluster.ReachView
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&rv); err != nil {
+		return cluster.ReachView{}, err
+	}
+	return rv, nil
 }
 
 // persistPeerListens writes known peer listen addresses so a returning

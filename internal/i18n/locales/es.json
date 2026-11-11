@@ -752,6 +752,7 @@
 "ui.ov.lan_targets": "Objetivos LAN",
 "ui.ov.wan_targets": "Objetivos de Internet",
 "ui.ov.n_targets": "{n} objetivos",
+"ui.ov.n_targets_one": "{n} objetivo",
 "ui.ov.break_gateway": "Pasarela inalcanzable",
 "ui.ov.break_uplink_self": "Salida caída · comprobaciones en pausa",
 "ui.ov.break_uplink_node": "Inaccesible desde este sitio",

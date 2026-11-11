@@ -5,7 +5,7 @@
    at a glance, tuned per tone so they stay calm on white and bright on black. */
 :root, :root[data-theme="paper"], :root[data-theme="light"] {
   --bg: #f6f7f9; --side: #eceff3; --panel: #ffffff; --panel-2: #f8fafb; --border: #e3e7ec; --border-strong: #c9d1da;
-  --text: #17202b; --muted: #5f6b7a; --faint: #98a3b0;
+  --text: #17202b; --muted: #5f6b7a; --faint: #67717d;
   --accent: #1f7a4d; --accent-soft: #e4f2ea; --accent-text: #ffffff; --link: #1d6b44;
   --ok: #1f9d55; --ok-soft: #e1f5e8; --degraded: #c98a12; --degraded-soft: #fdf2d6;
   --critical: #d93a3a; --critical-soft: #fde4e4; --unknown: #8a5cf0; --unknown-soft: #efe8fe;
@@ -20,7 +20,7 @@
 }
 :root[data-theme="mist"] {
   --bg: #e9edf1; --side: #dce2e8; --panel: #f6f8fa; --panel-2: #eef1f4; --border: #d3dae2; --border-strong: #b9c3ce;
-  --text: #1a2430; --muted: #556273; --faint: #8b97a5;
+  --text: #1a2430; --muted: #556273; --faint: #606b79;
   --accent: #1d7350; --accent-soft: #dcece3; --accent-text: #ffffff; --link: #1a6646;
   --ok: #1c8f4e; --ok-soft: #d8eee0; --degraded: #b97d0e; --degraded-soft: #f5e9c9;
   --critical: #cc3434; --critical-soft: #f5dcdc; --unknown: #7c52de; --unknown-soft: #e6def8;
@@ -31,7 +31,7 @@
 }
 :root[data-theme="slate"] {
   --bg: #29313b; --side: #212830; --panel: #313a46; --panel-2: #38424f; --border: #434e5c; --border-strong: #566273;
-  --text: #e8edf2; --muted: #a9b4c1; --faint: #7c8796;
+  --text: #e8edf2; --muted: #a9b4c1; --faint: #a7b0bb;
   --accent: #46c69a; --accent-soft: #2c4a44; --accent-text: #10241d; --link: #7fdcbc;
   --ok: #45cc85; --ok-soft: #2d4a3d; --degraded: #f0bd4b; --degraded-soft: #4d4430;
   --critical: #ff6b6b; --critical-soft: #553a40; --unknown: #b39cff; --unknown-soft: #443f5f;
@@ -42,7 +42,7 @@
 }
 :root[data-theme="graphite"] {
   --bg: #15181c; --side: #0e1013; --panel: #1c2025; --panel-2: #22272d; --border: #2c3239; --border-strong: #3b434c;
-  --text: #e6e9ed; --muted: #959fab; --faint: #646e7a;
+  --text: #e6e9ed; --muted: #959fab; --faint: #88909a;
   --accent: #34d0a6; --accent-soft: #163029; --accent-text: #06231b; --link: #6fe0c0;
   --ok: #3ddc84; --ok-soft: #15301f; --degraded: #f6c343; --degraded-soft: #362c12;
   --critical: #ff5c6c; --critical-soft: #3c1a20; --unknown: #b197fc; --unknown-soft: #2b2442;
@@ -53,7 +53,7 @@
 }
 :root[data-theme="ink"], :root[data-theme="dark"] {
   --bg: #050608; --side: #0e1115; --panel: #0b0d10; --panel-2: #111418; --border: #1b1f25; --border-strong: #2a3038;
-  --text: #e9edf1; --muted: #8a94a1; --faint: #565f6b;
+  --text: #e9edf1; --muted: #8a94a1; --faint: #79818b;
   --accent: #2dd4bf; --accent-soft: #0e2a27; --accent-text: #04221d; --link: #5eead4;
   --ok: #2fe3a0; --ok-soft: #0c271d; --degraded: #ffb547; --degraded-soft: #2e230e; --critical: #ff4f6e; --critical-soft: #34131c;
   --unknown: #a98bff; --unknown-soft: #201a38; --pending: #8a94a1; --pending-soft: #15191e; --maint: #5fa8ff; --maint-soft: #102037;
@@ -66,7 +66,7 @@
    deep purple. Status colours stay the same blocks as in the tones. */
 :root[data-theme="sky"] {
   --bg: #eaf3fb; --side: #dbe9f6; --panel: #f9fcff; --panel-2: #eef5fc; --border: #cfe0f0; --border-strong: #a9c4de;
-  --text: #13263a; --muted: #4d6680; --faint: #8aa0b6;
+  --text: #13263a; --muted: #4d6680; --faint: #5a6f84;
   --accent: #2a78c8; --accent-soft: #dbeafa; --accent-text: #ffffff; --link: #1f67b0;
   --ok: #1f9d55; --ok-soft: #dff3e7; --degraded: #c98a12; --degraded-soft: #fbf0d4;
   --critical: #d93a3a; --critical-soft: #fbe3e3; --unknown: #7a5ce0; --unknown-soft: #ece6fc;
@@ -77,7 +77,7 @@
 }
 :root[data-theme="violet"] {
   --bg: #1b1428; --side: #140e1f; --panel: #241a35; --panel-2: #2c2040; --border: #3a2c52; --border-strong: #4f3d6e;
-  --text: #ece6f7; --muted: #b3a6cc; --faint: #7f7299;
+  --text: #ece6f7; --muted: #b3a6cc; --faint: #9589ac;
   --accent: #b18cff; --accent-soft: #3a2a5c; --accent-text: #1b1028; --link: #c7aaff;
   --ok: #4fdc95; --ok-soft: #1c3a30; --degraded: #f6c96a; --degraded-soft: #3d321b;
   --critical: #ff6b8a; --critical-soft: #452033; --unknown: #8fb0ff; --unknown-soft: #262f52;
@@ -90,7 +90,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --bg: #050608; --side: #0e1115; --panel: #0b0d10; --panel-2: #111418; --border: #1b1f25; --border-strong: #2a3038;
-    --text: #e9edf1; --muted: #8a94a1; --faint: #565f6b;
+    --text: #e9edf1; --muted: #8a94a1; --faint: #79818b;
     --accent: #2dd4bf; --accent-soft: #0e2a27; --accent-text: #04221d; --link: #5eead4;
     --ok: #2fe3a0; --ok-soft: #0c271d; --degraded: #ffb547; --degraded-soft: #2e230e; --critical: #ff4f6e; --critical-soft: #34131c;
     --unknown: #a98bff; --unknown-soft: #201a38; --pending: #8a94a1; --pending-soft: #15191e; --maint: #5fa8ff; --maint-soft: #102037;
@@ -120,7 +120,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .brand { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 8px 16px; font-weight: 750; font-size: 18px; letter-spacing: .2px; color: var(--text); text-align: center; }
 .brand img { width: 84px; height: 84px; object-fit: contain; }
 .brand .edition { font-weight: 500; font-size: 12px; letter-spacing: 0; margin-top: 2px; }
-.side .foot .host { font-size: 11px; opacity: .8; }
+.side .foot .host { font-size: 11px; }
 .nav a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; color: var(--text); font-weight: 500; }
 .nav a:hover { background: var(--panel-2); text-decoration: none; }
 .nav a.on { background: var(--accent-soft); color: var(--link); font-weight: 600; }
@@ -144,11 +144,13 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .shell.mini .nav a { justify-content: center; padding-inline: 0; position: relative; }
 .shell.mini .nav .count { position: absolute; inset-block-start: 0; inset-inline-end: 2px; margin: 0; font-size: 10px; padding: 0 5px; min-width: 0; }
 .side, .top { background: color-mix(in srgb, var(--panel) 82%, transparent); backdrop-filter: blur(14px); }
-.verdict { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; font-weight: 650; font-size: 12.5px; white-space: nowrap; background: var(--ok-soft); color: var(--ok); }
+.verdict { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 999px; font-weight: 650; font-size: 12.5px; white-space: nowrap; background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 70%, var(--text)); }
 .verdict:hover { text-decoration: none; }
 .verdict i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
-.verdict.critical { background: var(--critical-soft); color: var(--critical); } .verdict.warn { background: var(--degraded-soft); color: var(--degraded); }
-.verdict.held { background: var(--maint-soft); color: var(--maint); }
+/* Status colours are mixed toward the text colour where they are text, so
+   they keep 4.5:1 on their soft backgrounds in light and dark tones alike. */
+.verdict.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 70%, var(--text)); } .verdict.warn { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 55%, var(--text)); }
+.verdict.held { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 70%, var(--text)); }
 .verdict.unknown { background: color-mix(in srgb, var(--faint) 18%, transparent); color: var(--muted); }
 .rdot.setup { background: var(--degraded); }
 .top-sub { color: var(--muted); font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -196,7 +198,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .right { text-align: end; }
 .nowrap { white-space: nowrap; }
 .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.err-text { color: var(--critical); }
+.err-text { color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
 .ok-text { color: var(--ok); }
 .warn-text { color: var(--degraded); }
 .crit-text { color: var(--critical); }
@@ -220,7 +222,7 @@ pre.report { margin: 0; white-space: pre-wrap; word-break: break-word; font: 13p
 .pill.unknown { background: var(--unknown-soft); color: var(--unknown); }
 .pill.maintenance { background: var(--maint-soft); color: var(--maint); }
 .pill.unreachable { background: var(--pending-soft); color: var(--muted); }
-.pill.soft { opacity: .75; border: 1px dashed currentColor; }
+.pill.soft { border: 1px dashed currentColor; }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; background: var(--pending); }
 .dot.ok { background: var(--ok); } .dot.degraded { background: var(--degraded); } .dot.critical { background: var(--critical); }
 .dot.unknown { background: var(--unknown); } .dot.maintenance { background: var(--maint); } .dot.paused { background: var(--faint); } .dot.unreachable { background: var(--muted); }
@@ -280,7 +282,7 @@ textarea { resize: vertical; }
 .btn:disabled { opacity: .55; cursor: default; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .btn.primary:hover { filter: brightness(1.07); }
-.btn.danger { color: var(--critical); border-color: var(--critical); }
+.btn.danger { color: color-mix(in srgb, var(--critical) 75%, var(--text)); border-color: var(--critical); }
 .btn.danger.solid { background: var(--critical); color: #fff; }
 .btn.ghost { border-color: transparent; background: transparent; }
 .btn.sm { padding: 3px 9px; font-size: 12.5px; }
@@ -291,7 +293,7 @@ select.btn { width: auto; }
 .seg button.on { background: var(--accent); color: var(--accent-text); }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { border: 1px solid var(--border-strong); background: var(--panel); border-radius: 14px; padding: 3px 11px; cursor: pointer; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; }
-.chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--link); font-weight: 600; }
+.chip.on { border-color: var(--accent); background: var(--accent-soft); color: color-mix(in srgb, var(--link) 75%, var(--text)); font-weight: 600; }
 .chip b { font-weight: 700; }
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .tabs a, .tabs button { padding: 8px 14px; border: 0; background: none; cursor: pointer; color: var(--muted); font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
@@ -393,6 +395,8 @@ body.public { background: var(--bg); }
 .pub .mon:last-child { border-bottom: 0; }
 .pub .beats { height: 28px; }
 .pub footer { text-align: center; color: var(--muted); font-size: 12px; }
+/* Links inside running text are underlined, not told apart by colour alone. */
+p a:not(.btn), .pub footer a { text-decoration: underline; text-underline-offset: 2px; }
 .pub .pre { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px; }
 .pub .past { margin: 0; padding-inline-start: 18px; display: flex; flex-direction: column; gap: 8px; }
 .pub .sub { gap: 8px; flex-wrap: wrap; }
@@ -544,7 +548,7 @@ button.search { cursor: text; font: inherit; text-align: start; }
 .ob { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 @media (max-width: 1000px) { .ob { grid-template-columns: 1fr; } }
 .ob-step { display: flex; gap: 12px; padding: 14px; border-radius: 12px; border: 1.5px solid var(--degraded); background: var(--panel-2); }
-.ob-step.done { opacity: .7; border-color: var(--ok); }
+.ob-step.done { border-color: var(--ok); }
 .ob-n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 800; background: var(--degraded-soft); color: var(--degraded); }
 .ob-step.done .ob-n { background: var(--ok-soft); color: var(--ok); }
 .ob-b { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 8px; }
@@ -583,17 +587,19 @@ tr.risk-high td:first-child { box-shadow: inset 3px 0 0 var(--degraded); }
    block rather than a tinted label; rows are striped and the header is a
    plain bar so long service lists stay easy to follow. */
 .pill { border-radius: 4px; padding: 1px 8px; text-transform: uppercase; letter-spacing: .04em; font-size: 11px; }
-.pill.ok { background: var(--ok); color: var(--on-status); }
+/* Solid blocks are shaded toward the text colour (darker on light tones,
+   lighter on dark ones) so their label keeps 4.5:1. */
+.pill.ok { background: color-mix(in srgb, var(--ok) 80%, var(--text)); color: var(--on-status); }
 .pill.degraded { background: var(--degraded); color: var(--on-degraded); }
-.pill.critical { background: var(--critical); color: var(--on-status); }
-.pill.unknown { background: var(--unknown); color: var(--on-status); }
-.pill.maintenance { background: var(--maint); color: var(--on-status); }
+.pill.critical { background: color-mix(in srgb, var(--critical) 85%, var(--text)); color: var(--on-status); }
+.pill.unknown { background: color-mix(in srgb, var(--unknown) 85%, var(--text)); color: var(--on-status); }
+.pill.maintenance { background: color-mix(in srgb, var(--maint) 85%, var(--text)); color: var(--on-status); }
 .pill.soft { background: transparent; }
-.pill.soft.ok { color: var(--ok); }
-.pill.soft.degraded { color: var(--degraded); }
-.pill.soft.critical { color: var(--critical); }
-.pill.soft.unknown { color: var(--unknown); }
-.pill.soft.maintenance { color: var(--maint); }
+.pill.soft.ok { color: color-mix(in srgb, var(--ok) 70%, var(--text)); }
+.pill.soft.degraded { color: color-mix(in srgb, var(--degraded) 55%, var(--text)); }
+.pill.soft.critical { color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
+.pill.soft.unknown { color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
+.pill.soft.maintenance { color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
 .tbl th { background: var(--panel-2); border-bottom: 1px solid var(--border-strong); }
 .tbl tbody tr:nth-child(even) td { background: var(--stripe); }
 .tbl tr.critical td { background: color-mix(in srgb, var(--critical) 6%, transparent); }
@@ -605,7 +611,7 @@ tr.risk-high td:first-child { box-shadow: inset 3px 0 0 var(--degraded); }
    which work on any of those shades. */
 .side { background: var(--side, var(--panel)); backdrop-filter: none; border-inline-end-color: var(--border); }
 .nav a:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
-.nav a.on { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--link); }
+.nav a.on { background: color-mix(in srgb, var(--accent) 16%, transparent); color: color-mix(in srgb, var(--link) 75%, var(--text)); }
 .side .foot select { background: var(--panel); }
 .nav a.on { box-shadow: inset 3px 0 0 var(--accent); }
 [dir="rtl"] .nav a.on { box-shadow: inset -3px 0 0 var(--accent); }

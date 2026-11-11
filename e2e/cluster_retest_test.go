@@ -128,8 +128,13 @@ func nodeOnline(master *server, node string) bool {
 
 func makeStandby(t *testing.T, master, s *server, node string) {
 	t.Helper()
+	makeStandbyAt(t, master, s, node, fmt.Sprintf("https://127.0.0.1:%d", s.port))
+}
+
+func makeStandbyAt(t *testing.T, master, s *server, node, url string) {
+	t.Helper()
 	t0 := time.Now().Add(-time.Second)
-	if code := master.call("PUT", "/api/v1/nodes/"+node, map[string]any{"title": node, "standby": fmt.Sprintf("https://127.0.0.1:%d", s.port)}, nil); code != 200 {
+	if code := master.call("PUT", "/api/v1/nodes/"+node, map[string]any{"title": node, "standby": url}, nil); code != 200 {
 		t.Fatalf("set standby %s: %d", node, code)
 	}
 	waitLong(t, s.name+" to copy the state", 90*time.Second, func() bool {

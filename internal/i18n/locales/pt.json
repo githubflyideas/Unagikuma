@@ -752,6 +752,7 @@
 "ui.ov.lan_targets": "Alvos da LAN",
 "ui.ov.wan_targets": "Alvos da Internet",
 "ui.ov.n_targets": "{n} alvos",
+"ui.ov.n_targets_one": "{n} alvo",
 "ui.ov.break_gateway": "Gateway inacessível",
 "ui.ov.break_uplink_self": "Saída caída · verificações suspensas",
 "ui.ov.break_uplink_node": "Inacessível deste local",

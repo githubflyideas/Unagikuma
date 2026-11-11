@@ -752,6 +752,7 @@
 "ui.ov.lan_targets": "LAN-Ziele",
 "ui.ov.wan_targets": "Internet-Ziele",
 "ui.ov.n_targets": "{n} Ziele",
+"ui.ov.n_targets_one": "{n} Ziel",
 "ui.ov.break_gateway": "Gateway nicht erreichbar",
 "ui.ov.break_uplink_self": "Uplink unterbrochen · Prüfungen angehalten",
 "ui.ov.break_uplink_node": "Von diesem Standort nicht erreichbar",

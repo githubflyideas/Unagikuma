@@ -172,7 +172,7 @@ type ReachView struct {
 	Promoting uint64 `json:"promoting,omitempty"`
 }
 
-// CapReplica: the node is a full server keeping a copy of the master's
+// CapReplica means the node is a full server keeping a copy of the master's
 // state (a replica), not a probe-only agent.
 const CapReplica = "replica"
 

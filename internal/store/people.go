@@ -187,10 +187,10 @@ func (s *Store) People() ([]Person, error) {
 	return out, crows.Err()
 }
 
-// ErrContactTaken: the address already belongs to someone else.
+// ErrContactTaken means the address already belongs to someone else.
 var ErrContactTaken = errors.New("address already belongs to another person")
 
-// ErrNoAddress: a person needs at least one address to be reached at.
+// ErrNoAddress means a person needs at least one address to be reached at.
 var ErrNoAddress = errors.New("a contact needs at least one valid e-mail address or phone number")
 
 // ValidContact reports whether v is a usable address of the kind: an

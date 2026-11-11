@@ -12,12 +12,12 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/keywords"
 )
 
-// Run executes one check. It never panics and returns within the spec's
-// timeout plus a small slack.
 // CheckTypes are the check types this build runs. Nodes announce them
 // when they connect, so a master never hands a node a check it lacks.
 var CheckTypes = []string{"HTTP", "TCP", "PING", "UDP", "EXEC", "DOCKER", "DOMAIN"}
 
+// Run executes one check. It never panics and returns within the spec's
+// timeout plus a small slack.
 func Run(ctx context.Context, s Spec) (r Result) {
 	defer func() {
 		if v := recover(); v != nil {

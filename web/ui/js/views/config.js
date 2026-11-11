@@ -242,7 +242,7 @@ function ImportTab() {
           <ul class="small">${prev.notes.map(n => html`<li>${n}</li>`)}</ul></div></div>`}
         ${userList.length > 0 && html`<p class="small" style=${{ margin: 0 }}>${t('ui.import.users_will', { role: t('ui.user.role.' + role), area: area.trim() || '*' })}
           <span class="ltr"> ${userList.map(u => u.username + (u.active ? '' : ' ✕')).join(', ')}</span></p>`}
-        <pre class="code">${prev.text}</pre>
+        <pre class="code" tabindex="0">${prev.text}</pre>
       </div></div>`}
   </div>`;
 }
