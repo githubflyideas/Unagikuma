@@ -130,6 +130,7 @@ var defs = []Def{
 	{Key: "cluster.peer-interval", Kind: Duration, Default: "10s", Min: "2s", Max: "5m", Desc: "how often every node checks that it can reach the other nodes (majority node status)", DescZH: "每个节点多久检查一次能否连接其他节点（多数派判断节点状态）"},
 	{Key: "cluster.replica-after", Kind: Duration, Default: "1m", Min: "10s", Max: "1h", Desc: "no effect since 2.2: every site checks and alerts on its own at all times; kept so older settings load", DescZH: "自 2.2 起不再生效：每个站点始终独立检查和告警；保留只为兼容旧设置"},
 	{Key: "cluster.emergency-after", Kind: Duration, Default: "3m", Min: "30s", Max: "1h", Desc: "no effect since 2.2: there are no agents; a site that loses the master says so itself; kept so older settings load", DescZH: "自 2.2 起不再生效：已没有 Agent，站点联系不上主节点时会自己通知；保留只为兼容旧设置"},
+	{Key: "cluster.join-rate", Kind: Rate, Default: "30/m", Desc: "join, rejoin and retire requests, and node requests without a valid token, per client IP (kept apart from sign-ins)", DescZH: "每个来源 IP 的加入、重新加入、退位请求及未带有效令牌的节点请求速率（与登录分开计算）"},
 	{Key: "cluster.join-code-ttl", Kind: Duration, Default: "1h", Min: "5m", Max: "7d", Desc: "how long a join code can be used", DescZH: "加入码的有效期"},
 	{Key: "cluster.ping-interval", Kind: Duration, Default: "20s", Min: "100ms", Max: "5m", Desc: "how often the master pings each agent; three missed intervals end the session", DescZH: "Master 多久 ping 一次 Agent；连续三个周期没有响应则断开会话"},
 	{Key: "cluster.max-message", Kind: Int, Default: "8388608", Min: "65536", Max: "268435456", Desc: "largest agent protocol message in bytes", DescZH: "Agent 协议单条消息的最大字节数"},

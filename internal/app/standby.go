@@ -238,6 +238,31 @@ func (a *App) Standby() StandbyState {
 // with.
 var ErrNoState = errors.New("this server holds no copy of the master's state: it is not a standby, or has not fetched it yet")
 
+// ErrPromoteBusy means a promote on this node is already under way.
+var ErrPromoteBusy = errors.New("a promote is already under way on this node")
+
+// knownTerm is the highest master term this node has seen: in the copy of
+// the master's state, from the master it follows, as a master itself, or
+// in the notice that replaced it. A member that once was master and handed
+// the role back keeps an old copy and a fresh agent, so the copy alone can
+// be behind the cluster; a promote from it would take a term the running
+// cluster already passed and be undone when the old master comes back.
+func (a *App) knownTerm(meta StandbyState, ag *cluster.Agent) uint64 {
+	t := max(meta.Term, a.Term())
+	if ag != nil {
+		t = max(t, ag.Term())
+	}
+	if s := a.SupersededBy(); s != nil {
+		t = max(t, s.Term)
+	}
+	a.am.mu.Lock()
+	if a.am.member != nil {
+		t = max(t, a.am.member.Term)
+	}
+	a.am.mu.Unlock()
+	return t
+}
+
 // ErrPromoteRefused means a reachable master already holds term >= the
 // term this promote would take (Rule 1 / BUG-11).
 var ErrPromoteRefused = errors.New("another master is already running at an equal or higher term; promote refused")
@@ -311,11 +336,9 @@ func (a *App) PromoteForce(ctx context.Context, term uint64, author string, forc
 	if _, err := os.Stat(a.dataPath(standbyDir, stateFile)); err != nil {
 		return 0, ErrNoState
 	}
+	known := a.knownTerm(meta, ag)
 	if term == 0 {
-		term = meta.Term + 1
-		if ag != nil {
-			term = max(meta.Term, ag.Term()) + 1
-		}
+		term = known + 1
 	}
 	// Remember peer listens before restart so the new master and any
 	// concurrent promoter can discover each other after heal.
@@ -325,9 +348,9 @@ func (a *App) PromoteForce(ctx context.Context, term uint64, author string, forc
 		// A promote is for a master that is gone. One still connected, or
 		// answering at the term this copy came from, is alive.
 		if ag != nil && ag.Status().Connected {
-			return 0, &ErrMasterAlive{Master: ag.Status().Server, Term: max(meta.Term, ag.Term())}
+			return 0, &ErrMasterAlive{Master: ag.Status().Server, Term: known}
 		}
-		if peer, t, ok := a.competingMaster(max(meta.Term, 1)); ok {
+		if peer, t, ok := a.competingMaster(max(known, 1)); ok {
 			if t >= term {
 				return 0, &PromoteRefused{Peer: peer, Term: t}
 			}
@@ -335,16 +358,24 @@ func (a *App) PromoteForce(ctx context.Context, term uint64, author string, forc
 		}
 	}
 	if manual {
+		// Shown to peers until the restart, so a member promoted at the
+		// same time refuses instead of becoming a second master.
+		if !a.promoting.CompareAndSwap(0, term) {
+			return 0, ErrPromoteBusy
+		}
 		if err := a.waitPromoteGuard(ctx, term); err != nil {
+			a.promoting.Store(0)
 			return 0, err
 		}
 	}
 
 	if peer, t, ok := a.competingMaster(term); ok {
+		a.promoting.Store(0)
 		a.log.Warn("promote refused: another master is already running", "peer", peer, "term", t, "want", term)
 		return 0, &PromoteRefused{Peer: peer, Term: t}
 	}
 	if err := writePromote(a.opts.DataDir, term, a.now()); err != nil {
+		a.promoting.Store(0)
 		return 0, err
 	}
 	a.log.Warn("taking over as master: restarting", "term", term, "by", author)
@@ -365,12 +396,9 @@ func PromoteOffline(dir string, now time.Time) (uint64, StandbyState, error) {
 	if err != nil || json.Unmarshal(b, &meta) != nil || meta.Key == "" {
 		return 0, meta, ErrNoState
 	}
-	term := meta.Term + 1
-	if m, err := readMembershipTerm(dir); err == nil && m >= term {
-		term = m + 1
-	}
 	a := &App{opts: Options{DataDir: dir, Now: time.Now}}
 	a.loadMembership()
+	term := a.knownTerm(meta, nil) + 1
 	pki, err := loadSitePKI(dir, now)
 	if err != nil {
 		return 0, meta, err
@@ -380,18 +408,6 @@ func PromoteOffline(dir string, now time.Time) (uint64, StandbyState, error) {
 		return 0, meta, err
 	}
 	return term, meta, writePromote(dir, term, now)
-}
-
-func readMembershipTerm(dir string) (uint64, error) {
-	b, err := os.ReadFile(filepath.Join(dir, agentFile))
-	if err != nil {
-		return 0, err
-	}
-	var m Membership
-	if err := json.Unmarshal(b, &m); err != nil {
-		return 0, err
-	}
-	return m.Term, nil
 }
 
 // applyPromote runs at start, before anything is opened: a standby told
@@ -675,7 +691,7 @@ func (a *App) AcceptRetire(n cluster.RetireNotice) error {
 func (a *App) waitPromoteGuard(ctx context.Context, term uint64) error {
 	deadline := time.Now().Add(promoteDelayFn())
 	for {
-		if peer, t, ok := a.competingMaster(term); ok {
+		if peer, t, ok := a.competingPromote(term); ok {
 			return &PromoteRefused{Peer: peer, Term: t}
 		}
 		left := time.Until(deadline)

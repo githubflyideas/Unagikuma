@@ -449,9 +449,11 @@ unagikuma import checkmate --dry-run monitors.json
 unagikuma import gatus --dry-run config.yaml
 ```
 
-HTTP checks come over: name, group, address, method, interval, paused state and the expected status codes, plus TLS and redirect settings, headers, request body and Checkmate's bearer token, which are stored as secrets. For Gatus, an endpoint must have exactly one `[STATUS] == N` condition. Anything that would not behave the same here (other check types, body or response-time conditions, alerting, proxies, addresses with a query string or credentials) is listed and stops the whole import, so nothing is half-imported: change it in the source file or add it by hand. A name that is already used here also stops it; rename the source monitor. No accounts or notification channels are created. The file may be up to 1 MiB.
+HTTP checks come over: name, group, address, method, interval, paused state and the expected status codes, plus TLS and redirect settings, headers, request body and Checkmate's bearer token, which are stored as secrets. For Gatus, an endpoint must have exactly one `[STATUS] == N` condition. Anything that would not behave the same here (other check types, body or response-time conditions, alerting, proxies, addresses with a query string or credentials) is listed and stops the whole import, so nothing is half-imported: change it in the source file or add it by hand. A name that is already used here for a different check also stops it; rename the source monitor. No accounts or notification channels are created. The file may be up to 1 MiB.
 
 **The report.** All of them print a summary (imported / needs a look / not imported), a table of what was imported, and for each item that needs a look or was not imported the reason and what to do. The same report is saved as text and Markdown in `<data>/import-reports/`. The new records go in one block at the end of `monitors.conf`, in sections headed by where they came from; `title=` keeps the original names. The web UI does the same under **Configuration › Import**. Options: `--area SECTION` puts the monitors in a section, `--role` sets the role of imported accounts, `--report DIR` saves the report elsewhere. Exit status: 0 done (or nothing new), 1 failed (nothing changed), 2 wrong usage.
+
+Over the API, `POST /api/v1/import/{kuma|nagios|checkmate|gatus}` with the file as the body answers with the preview and changes nothing; send the same body to `…?apply=1` to import. `area=` and `role=` work as the options above.
 
 ## Forgot your password?
 
@@ -480,6 +482,8 @@ unagikuma audit verify|export   check the audit log for tampering, or export it
 unagikuma report incident ID     write an incident's report (Markdown, HTML or JSON)
 unagikuma version
 ```
+
+`unagikuma probe` exits 0 when the check is up, 1 when it is down and 2 for a warning (a certificate inside its warning days, loss above the threshold). It uses the default thresholds, not the server's `$SET` lines; pass `cert-days=` or `cert-critical-days=` for others.
 
 Main server flags: `--data DIR` (or `UNAGIKUMA_DATA`), `--listen ADDR` (or `UNAGIKUMA_LISTEN`, default `:8077`), `--tls-cert`/`--tls-key`, `--base-url` for links in notifications, `--heartbeat-url` for an external dead man's switch (for example healthchecks.io), `--trusted-proxy CIDR,...` when running behind a reverse proxy, `--audit-retention 730d` for how long the audit log is kept at least. The port answers plain HTTP and TLS; with `--tls-cert` the UI uses your certificate and plain requests are redirected to https.
 

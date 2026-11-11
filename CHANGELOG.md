@@ -1,5 +1,19 @@
 # Changelog
 
+## v2.6.4 — unreleased
+
+**Fixed**
+- A master replaced by the same-term tie-break, whose first rejoin request was refused (for example by the rate limit), retries every 15 seconds, also after a restart. The retry loop never ran, so such a node stayed outside the cluster.
+- Two members promoted at the same moment no longer both become master. A member waiting to take over shows it to its peers; the higher term goes ahead, and at the same term the smaller node name, and the other promote is refused.
+- A member that was master once and handed the role back promotes to a term above the cluster's, so its take-over is not undone when the old master returns. A forced promote from such a member is no longer refused either.
+- A configuration whose revision counts 1, 2, 3 … can be edited in the console and over the API. The first edit moves it to a date revision, which used to be refused as a jump of more than 1000000.
+- `unagikuma probe` reports a warning (a certificate inside its warning days, loss above the threshold) as `warn` and exits 2; it used to say `ok`.
+- `unagikuma restore` accepts its flags after the archive too.
+
+**Changed**
+- Joining, rejoining, retiring and node requests without a valid token have their own rate limit per address, `cluster.join-rate` (30 a minute), apart from sign-ins. Several nodes joining one after another from one address no longer run into the five sign-ins a minute.
+- A preview from `POST /api/v1/import/{source}` carries an `Unagikuma-Import` header that says to send the same body with `?apply=1` to import. The manual describes the API import.
+
 ## v2.6.3 — 2026-11-11
 
 **Fixed**

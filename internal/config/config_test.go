@@ -455,6 +455,19 @@ func TestCheckSerial(t *testing.T) {
 	if CheckSerial(7, 6) != nil || CheckSerial(1, 0) != nil {
 		t.Fatal("good serials rejected")
 	}
+	// A file that counts 1, 2, 3 … stays editable: an edit made by
+	// unagikuma moves it to a date serial.
+	next, _, err := NextSerial(1, time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC))
+	if err != nil || next != 2026111101 {
+		t.Fatalf("NextSerial(1)=%d %v", next, err)
+	}
+	if err := CheckSerial(next, 1); err != nil {
+		t.Fatalf("moving a counted serial to a date: %v", err)
+	}
+	// A mistyped date is still caught.
+	if CheckSerial(2026111101+2_000_000, 2026111101) == nil {
+		t.Fatal("a jump between date serials was accepted")
+	}
 }
 
 func TestDiffAndClassify(t *testing.T) {

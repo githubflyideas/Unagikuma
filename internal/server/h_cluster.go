@@ -40,7 +40,7 @@ func (s *Server) agentJoin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, Errorf(http.StatusForbidden, CodeForbidden, "joining requires TLS"))
 		return
 	}
-	if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
+	if ok, wait := s.joins.Allow(s.ip(r), s.now()); !ok {
 		writeError(w, rateLimited(wait))
 		return
 	}

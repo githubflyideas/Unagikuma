@@ -86,6 +86,11 @@ func runRestore(args []string) error {
 	passFile := fs.String("passphrase-file", "", "passphrase of an encrypted backup (or set UNAGIKUMA_BACKUP_PASSPHRASE)")
 	force := fs.Bool("force", false, "replace an existing installation (stop the server first)")
 	_ = fs.Parse(args)
+	// Flags may also follow the archive: "restore x.ukbackup --data DIR".
+	if rest := fs.Args(); len(rest) > 1 {
+		_ = fs.Parse(rest[1:])
+		_ = fs.Parse(append([]string{"--"}, append([]string{rest[0]}, fs.Args()...)...))
+	}
 	if fs.NArg() != 1 {
 		return errors.New("usage: unagikuma restore [--data DIR] [--passphrase-file F] [--force] ARCHIVE")
 	}

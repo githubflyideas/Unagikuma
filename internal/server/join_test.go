@@ -114,8 +114,8 @@ sw      IN PING 10.9.9.1
 
 func (e *env) nodeViewsForTest() []nodeView { return e.srv.nodeViews() }
 
-// A node using its own token is not held to the login limiter, which the
-// people signing in from the same address share: only failed tokens count.
+// A node using its own token is not rate-limited: only failed tokens count,
+// against cluster.join-rate (30 a minute, 10 at once), not the sign-ins.
 func TestAgentRequestsCountOnlyFailedTokens(t *testing.T) {
 	master := tlsEnv(t, testBind)
 	var added struct {
@@ -142,10 +142,30 @@ func TestAgentRequestsCountOnlyFailedTokens(t *testing.T) {
 		}
 	}
 	limited := false
-	for range 10 {
+	for range 20 {
 		limited = limited || get("uka_wrong") == http.StatusTooManyRequests
 	}
 	if !limited {
 		t.Fatal("guessing tokens must be rate-limited")
+	}
+}
+
+// Cluster requests without a token have a budget of their own: a burst of
+// failed node requests from one address does not lock its people out of
+// signing in, and the other way round.
+func TestClusterRequestsDoNotUseTheSignInBudget(t *testing.T) {
+	master := tlsEnv(t, testBind)
+	cl := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}, Timeout: 5 * time.Second}
+	for range 20 {
+		req, _ := http.NewRequest("GET", strings.Replace(master.ts.URL, "http://", "https://", 1)+cluster.StatePath, nil)
+		req.Header.Set("Authorization", "Bearer uka_wrong")
+		resp, err := cl.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+	}
+	if c := master.do("POST", "/api/v1/session", map[string]string{"username": "admin", "password": "wrong-password"}, nil); c != http.StatusUnauthorized {
+		t.Fatalf("sign-in after failed node requests: %d, want 401", c)
 	}
 }

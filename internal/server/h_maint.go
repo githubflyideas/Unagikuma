@@ -180,6 +180,8 @@ func (s *Server) kumaImport(w http.ResponseWriter, r *http.Request) (any, error)
 		if err != nil {
 			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 		}
+		// Only a preview: say how to import, for callers that are not the UI.
+		w.Header().Set("Unagikuma-Import", "preview; send the same body with ?apply=1 to import")
 		return res, nil
 	}
 	st, res, users, err := s.app.ImportKuma(data, authOf(r).user, o)

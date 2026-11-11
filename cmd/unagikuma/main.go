@@ -574,7 +574,13 @@ func runProbe(args []string) error {
 	}
 	app.ApplyProbeDefaults(&spec, cfg.Tunables)
 	res := probe.Run(context.Background(), spec)
-	fmt.Printf("%s %s → %s (%s) in %s, depth %s\n%s\n", m.Type, spec.Target, res.Vote, res.Reason, res.Latency.Round(time.Microsecond), res.Depth, res.Detail)
+	vote := string(res.Vote)
+	if res.Vote == probe.VoteOK && res.Degraded {
+		// A certificate inside its warning days, packet loss above the
+		// threshold: up, but not well. Scripts see it in the exit code.
+		vote = "warn"
+	}
+	fmt.Printf("%s %s → %s (%s) in %s, depth %s\n%s\n", m.Type, spec.Target, vote, res.Reason, res.Latency.Round(time.Microsecond), res.Depth, res.Detail)
 	if ev := res.Evidence; ev != nil {
 		for _, f := range ev.Decoded {
 			fmt.Printf("  %-12s %s\n", f.Name, f.Value)
@@ -590,8 +596,11 @@ func runProbe(args []string) error {
 			fmt.Printf("  %-16s %.3f\n", k, res.Metrics[k])
 		}
 	}
-	if res.Vote == probe.VoteFail {
+	switch {
+	case res.Vote == probe.VoteFail:
 		os.Exit(1)
+	case vote == "warn":
+		os.Exit(2)
 	}
 	return nil
 }

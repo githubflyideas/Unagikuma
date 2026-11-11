@@ -100,6 +100,8 @@ type App struct {
 	// rejoinSeen rejects replayed CA-signed rejoin-offer requests.
 	rejoinOnce sync.Once
 	rejoinSeen rejoinSeen
+	// promoting is the term a manual promote is waiting to take (0: none).
+	promoting atomic.Uint64
 
 	pubMu   sync.RWMutex
 	publish func(typ string, v any)
@@ -486,10 +488,11 @@ func (a *App) Run(ctx context.Context) error {
 		a.persistPeerListens()
 		a.every(ctx, 30*time.Second, a.persistPeerListens)
 	})
-	run(func() {
-		a.every(ctx, 10*time.Second, a.watchForeignMasters)
-		a.every(ctx, 15*time.Second, a.watchSupersededRejoin)
-	})
+	run(func() { a.every(ctx, 10*time.Second, a.watchForeignMasters) })
+	// every blocks, so the rejoin retry needs a loop of its own: in the
+	// same one as watchForeignMasters it never ran, and a replaced master
+	// whose first rejoin failed stayed outside the cluster.
+	run(func() { a.every(ctx, 15*time.Second, a.watchSupersededRejoin) })
 	run(func() {
 		a.every(ctx, time.Hour, func() {
 			ts := a.cfg.current().Config.Tunables

@@ -21,7 +21,7 @@ func (s *Server) agentMerge(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Only failures count against the address: a node merging often
 		// must not crowd out its own state copies.
-		if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
+		if ok, wait := s.joins.Allow(s.ip(r), s.now()); !ok {
 			writeError(w, rateLimited(wait))
 			return
 		}
@@ -55,7 +55,7 @@ func (s *Server) agentDiverged(w http.ResponseWriter, r *http.Request) {
 	m := s.app.Cluster()
 	node, err := m.AuthAgent(r)
 	if err != nil {
-		if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
+		if ok, wait := s.joins.Allow(s.ip(r), s.now()); !ok {
 			writeError(w, rateLimited(wait))
 			return
 		}

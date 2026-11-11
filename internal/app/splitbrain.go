@@ -19,7 +19,7 @@ const peersFile = "cluster-peers.json"
 // and role, so peers can detect a concurrent promote.
 func (a *App) FullReachView() cluster.ReachView {
 	node, reach := a.ReachView()
-	v := cluster.ReachView{Node: node, Reach: reach}
+	v := cluster.ReachView{Node: node, Reach: reach, Promoting: a.promoting.Load()}
 	if a.isMember() {
 		v.Role = "replica"
 		a.am.mu.Lock()
@@ -205,6 +205,27 @@ func (a *App) competingMaster(wantTerm uint64) (peer string, term uint64, ok boo
 		}
 		if rv.Term >= wantTerm {
 			return rv.Node, rv.Term, true
+		}
+	}
+	return "", 0, false
+}
+
+// competingPromote is competingMaster that also sees members still waiting
+// to take over. Two members promoted at the same moment both pass a check
+// for masters, since neither has restarted yet; the higher term wins, and
+// at the same term the smaller name, the tie-break masters use.
+func (a *App) competingPromote(wantTerm uint64) (peer string, term uint64, ok bool) {
+	self := a.nodeName()
+	for _, addr := range a.peerListenAddrs() {
+		rv, reach := a.probeReach(addr)
+		if !reach || rv.Node == "" || rv.Node == self {
+			continue
+		}
+		if rv.Role == "master" && rv.Term >= wantTerm {
+			return rv.Node, rv.Term, true
+		}
+		if p := rv.Promoting; p > wantTerm || (p == wantTerm && rv.Node < self) {
+			return rv.Node, p, true
 		}
 	}
 	return "", 0, false

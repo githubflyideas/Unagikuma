@@ -686,13 +686,20 @@ func serialDate(s uint32) (time.Time, bool) {
 	return t, true
 }
 
-// CheckSerial validates a new serial against the active one.
+// CheckSerial validates a new serial against the active one. The limit on
+// a jump catches a mistyped date; it does not apply when a file that
+// counted 1, 2, 3 … moves to a date serial, which is what an edit made in
+// the console or the API does (NextSerial), so such a file stays editable.
 func CheckSerial(newSerial, active uint32) error {
+	_, activeDated := serialDate(active)
+	_, newDated := serialDate(newSerial)
 	switch {
 	case newSerial == 0:
 		return errors.New("the revision must be at least 1")
 	case active != 0 && newSerial < active:
 		return fmt.Errorf("revision %d is lower than the active %d (use history → rollback to go back)", newSerial, active)
+	case active != 0 && !activeDated && newDated:
+		return nil
 	case active != 0 && uint64(newSerial) > uint64(active)+1_000_000:
 		return fmt.Errorf("revision %d jumps more than 1000000 above the active %d (typo?)", newSerial, active)
 	}

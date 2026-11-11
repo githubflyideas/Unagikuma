@@ -45,6 +45,7 @@ type Server struct {
 	now       func() time.Time
 	api       *ratelimit.Keyed
 	login     *ratelimit.Keyed
+	joins     *ratelimit.Keyed // cluster requests not yet authenticated
 	push      *ratelimit.Keyed
 	subs      *ratelimit.Keyed // public status page subscriptions, per IP
 
@@ -113,6 +114,8 @@ func New(a *app.App, o Options) *Server {
 	pr, pb := rate("api.push-rate")
 	s.api = ratelimit.NewKeyed(ar, ab, 0)
 	s.login = ratelimit.NewKeyed(lr, 3, 0)
+	jr, _ := rate("cluster.join-rate")
+	s.joins = ratelimit.NewKeyed(jr, 10, 0)
 	s.push = ratelimit.NewKeyed(pr, pb, 0)
 	sr, _ := rate("statuspage.subscribe-rate")
 	s.subs = ratelimit.NewKeyed(sr, 3, 0)

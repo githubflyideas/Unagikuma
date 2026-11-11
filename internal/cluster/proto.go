@@ -167,6 +167,9 @@ type ReachView struct {
 	// Role is "master" or "replica"; empty on older nodes.
 	Term uint64 `json:"term,omitempty"`
 	Role string `json:"role,omitempty"`
+	// Promoting is the term a manual promote on this node is waiting to
+	// take, so two members promoting at the same time can see each other.
+	Promoting uint64 `json:"promoting,omitempty"`
 }
 
 // CapReplica: the node is a full server keeping a copy of the master's

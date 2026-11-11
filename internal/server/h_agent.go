@@ -7,19 +7,20 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/cluster"
 )
 
-// agentAllowed rate-limits a node's request by the login limiter, but only
-// when its token does not authenticate: a token is a credential and must
-// not be guessable at network speed, while a node using its own must not
-// share a budget of five a minute with the people signing in from the same
-// address — its connects and state copies would be refused, a standby's
-// copy right after a burst of configuration changes above all.
+// agentAllowed rate-limits a node's request, but only when its token does
+// not authenticate: a token is a credential and must not be guessable at
+// network speed, while a node using its own must not be refused its
+// connects and state copies. Unauthenticated cluster requests have a budget
+// of their own (cluster.join-rate), apart from people signing in: several
+// nodes behind one address, joining one after another, used up the five a
+// minute of the sign-in page and were refused.
 func (s *Server) agentAllowed(w http.ResponseWriter, r *http.Request) bool {
 	if m := s.app.Cluster(); m != nil {
 		if _, err := m.AuthAgent(r); err == nil {
 			return true
 		}
 	}
-	if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
+	if ok, wait := s.joins.Allow(s.ip(r), s.now()); !ok {
 		writeError(w, rateLimited(wait))
 		return false
 	}
@@ -43,7 +44,7 @@ func (s *Server) agentState(w http.ResponseWriter, r *http.Request) {
 // agentRetire takes the signed notice of the master that replaced this
 // one: it steps down.
 func (s *Server) agentRetire(w http.ResponseWriter, r *http.Request) {
-	if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
+	if ok, wait := s.joins.Allow(s.ip(r), s.now()); !ok {
 		writeError(w, rateLimited(wait))
 		return
 	}
@@ -66,7 +67,7 @@ func (s *Server) agentRetire(w http.ResponseWriter, r *http.Request) {
 // agentRejoinOffer lets a superseded master that still holds the cluster CA
 // key obtain a join code and return as a replica without a restart.
 func (s *Server) agentRejoinOffer(w http.ResponseWriter, r *http.Request) {
-	if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
+	if ok, wait := s.joins.Allow(s.ip(r), s.now()); !ok {
 		writeError(w, rateLimited(wait))
 		return
 	}
