@@ -313,14 +313,15 @@ func promoteAfterRoundTrip(t *testing.T, freeze bool) {
 // (rate limit). It keeps retrying, in the same process and after a
 // restart, and joins once the limit lets it through.
 func TestRetestRejoinRetriesAfterRefusal(t *testing.T) {
-	// early: the master is lost right after the standby is set, and
-	// learns it was replaced from the new master's notice. settled: it ran
-	// a while first, and finds the new master itself when it starts.
+	// early: the master is lost right after the standby is set, before it
+	// saved the standby's own identity; it recognises the new master by
+	// the cluster CA. settled: it ran a while first and knows the
+	// standby. Either way it finds the new master itself when it starts.
 	for _, tc := range []struct {
 		name string
 		wait time.Duration
 		path string
-	}{{"early", 0, "could not rejoin the new master as a replica"}, {"settled", 8 * time.Second, "stepping down at start"}} {
+	}{{"early", 0, "stepping down at start"}, {"settled", 8 * time.Second, "stepping down at start"}} {
 		t.Run(tc.name, func(t *testing.T) { rejoinAfterRefusal(t, tc.wait, tc.path) })
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"testing"
@@ -102,5 +103,51 @@ func TestReachShowsAPromoteUnderWay(t *testing.T) {
 	a.promoting.Store(4)
 	if v := a.FullReachView(); v.Promoting != 4 {
 		t.Fatalf("promoting=%d, want 4", v.Promoting)
+	}
+}
+
+// A promote sent again after the first one took effect (a client that
+// timed out and retried) is refused: a second take-over would raise the
+// term and forget which master this one replaced.
+func TestPromoteOnTheMasterIsRefused(t *testing.T) {
+	a, _, _, _ := newApp(t, testConfig)
+	defer a.Store().Close()
+	standbyCopy(t, a, 2)
+	if err := os.WriteFile(a.dataPath(termFile), []byte("3\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.Promote(context.Background(), 0, "tester"); !errors.Is(err, ErrAlreadyMaster) {
+		t.Fatalf("promote on the master: %v", err)
+	}
+	if _, err := os.Stat(a.dataPath(promoteFile)); err == nil {
+		t.Fatal("a promote was written")
+	}
+}
+
+// A peer that is down or hangs is not asked a second time through the
+// cluster CA: each look at it would cost two timeouts.
+func TestReachFallbackOnlyForAPeerThatAnswered(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed := ln.Addr().String()
+	ln.Close()
+	_, err = reach(closed, cluster.PinnedTLSConfig("sha256:00"))
+	if err == nil || answered(err) {
+		t.Fatalf("refused connection counted as an answer: %v", err)
+	}
+	hang, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hang.Close() // accepts in the kernel, never speaks TLS
+	t0 := time.Now()
+	_, err = reach(hang.Addr().String(), cluster.PinnedTLSConfig("sha256:00"))
+	if err == nil || answered(err) {
+		t.Fatalf("a peer that hangs counted as an answer after %s: %v", time.Since(t0), err)
+	}
+	if !answered(errors.New("tls: certificate does not match")) {
+		t.Fatal("a certificate mismatch must be retried through the CA")
 	}
 }

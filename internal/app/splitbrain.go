@@ -5,12 +5,15 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/cluster"
@@ -152,11 +155,13 @@ func (a *App) peerListenAddrs() []string {
 func (a *App) probeReach(addr string) (cluster.ReachView, bool) {
 	pins, expected := a.peerTrust(addr)
 	rv, err := reach(addr, cluster.PinnedPeerTLSConfig(pins...))
-	if err != nil && a.pki != nil {
+	if err != nil && a.pki != nil && answered(err) {
 		// The peer's own identity may be unknown here (lost, never saved,
 		// or saved under another address). A master that took over this
 		// cluster holds its CA and proves it on the agent name, so the
-		// cluster CA alone recognises it.
+		// cluster CA alone recognises it. Only a peer that answered is
+		// asked again: one that is down or hangs would cost a second
+		// timeout on every look, and a promote waits for those.
 		rv, err = reach(addr, cluster.PinnedTLSConfig(a.pki.Fingerprint()))
 	}
 	if err != nil {
@@ -166,6 +171,21 @@ func (a *App) probeReach(addr string) (cluster.ReachView, bool) {
 		return cluster.ReachView{}, false
 	}
 	return rv, true
+}
+
+// answered says whether a failed Reach got as far as the peer: not a
+// timeout, and not a connection refused or a host that cannot be reached.
+func answered(err error) bool {
+	var ne net.Error
+	if errors.As(err, &ne) && ne.Timeout() {
+		return false
+	}
+	for _, e := range []error{context.DeadlineExceeded, syscall.ECONNREFUSED, syscall.EHOSTUNREACH, syscall.ENETUNREACH} {
+		if errors.Is(err, e) {
+			return false
+		}
+	}
+	return true
 }
 
 func reach(addr string, tc *tls.Config) (cluster.ReachView, error) {

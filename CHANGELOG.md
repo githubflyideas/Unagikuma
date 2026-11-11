@@ -4,6 +4,7 @@
 
 **Fixed**
 - A master that restarts after a take-over joins the new master within a few seconds, also when it never learnt the new master's own identity. It checks the new master through the cluster CA and looks for it every 2 seconds for the first two minutes. It used to need about a minute, and both machines acted as master until then.
+- A promote sent to a server that is already the master (for example a request repeated after a client timeout) is refused. It used to take over again at a higher term and forget which master it had replaced, so that master's rejoin was refused as a duplicate node name.
 - A bare `standby=127.0.0.1:8077` is accepted again: it is read as `https://127.0.0.1:8077`, with a `standby_scheme_added` warning. 2.6.5 refused such a file and would not start.
 - `POST /api/v1/people/lookup` no longer lists an empty issue when nobody would be notified. The case is a separate `no_recipients` field.
 - `POST /api/v1/incidents/{id}/silence` accepts the duration wrapped as `{"record": {"duration_s": …}}` as well as flat. A wrapped and a flat duration that differ are refused.

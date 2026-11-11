@@ -238,6 +238,10 @@ func (a *App) Standby() StandbyState {
 // with.
 var ErrNoState = errors.New("this server holds no copy of the master's state: it is not a standby, or has not fetched it yet")
 
+// ErrAlreadyMaster means a promote was asked of the master itself, for
+// example a request sent again after the first one took effect.
+var ErrAlreadyMaster = errors.New("this server is already the master")
+
 // ErrPromoteBusy means a promote on this node is already under way.
 var ErrPromoteBusy = errors.New("a promote is already under way on this node")
 
@@ -323,6 +327,11 @@ func (e *ErrMasterAlive) Error() string {
 // PromoteForce is Promote; with force a manual promote goes ahead even
 // though the current master answers (for a master that runs but is broken).
 func (a *App) PromoteForce(ctx context.Context, term uint64, author string, force bool) (uint64, error) {
+	if !a.isMember() && a.SupersededBy() == nil && a.Term() > 0 {
+		// Taking over again would raise the term and forget which master
+		// this one replaced, so that master could no longer rejoin.
+		return 0, ErrAlreadyMaster
+	}
 	a.am.mu.Lock()
 	ag := a.am.agent
 	a.am.mu.Unlock()
