@@ -11,7 +11,7 @@ import (
 // followMasterAsReplica asks the winning master at addr for a join code and
 // demotes into a replica. Never auto-promotes; preserves local site-pauses
 // and ACKs because demote only joins and reapplies config overlays.
-func (a *App) followMasterAsReplica(addr, peerName string) {
+func (a *App) followMasterAsReplica(addr string) {
 	if a.isMember() {
 		return
 	}
@@ -22,10 +22,6 @@ func (a *App) followMasterAsReplica(addr, peerName string) {
 		return
 	}
 	want := a.nodeName()
-	if s := a.SupersededBy(); s != nil && s.By != "" && peerName == "" {
-		peerName = s.By
-	}
-	_ = peerName
 	req, err := a.pki.SignRejoin(want, a.now())
 	if err != nil {
 		a.log.Warn("cannot sign rejoin request", "err", err)
@@ -50,11 +46,11 @@ func (a *App) followMasterAsReplica(addr, peerName string) {
 }
 
 // tryFollowAfterSupersede kicks a background attempt to rejoin the winner.
-func (a *App) tryFollowAfterSupersede(addr, peerName string) {
+func (a *App) tryFollowAfterSupersede(addr string) {
 	go func() {
 		// Brief pause so the winner finishes promote bookkeeping.
 		time.Sleep(2 * time.Second)
-		a.followMasterAsReplica(addr, peerName)
+		a.followMasterAsReplica(addr)
 	}()
 }
 
@@ -63,17 +59,12 @@ func (a *App) watchSupersededRejoin() {
 	if a.isMember() || a.SupersededBy() == nil {
 		return
 	}
-	addrs := a.peerListenAddrs()
-	if s := a.SupersededBy(); s != nil && s.By != "" {
-		// Prefer probing named peers first when we only have listens.
-		_ = s
-	}
-	for _, addr := range addrs {
+	for _, addr := range a.peerListenAddrs() {
 		rv, ok := a.probeReach(addr)
 		if !ok || rv.Role != "master" {
 			continue
 		}
-		a.followMasterAsReplica(addr, rv.Node)
+		a.followMasterAsReplica(addr)
 		if a.isMember() {
 			return
 		}

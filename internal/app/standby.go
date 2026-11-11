@@ -662,7 +662,7 @@ func (a *App) AcceptRetire(n cluster.RetireNotice) error {
 			if !ok || rv.Role != "master" {
 				continue
 			}
-			a.followMasterAsReplica(addr, rv.Node)
+			a.followMasterAsReplica(addr)
 			if a.isMember() {
 				return
 			}

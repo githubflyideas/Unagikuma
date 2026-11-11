@@ -59,14 +59,14 @@ func (a *App) watchForeignMasters() {
 			a.log.Warn("another master has a higher term; stepping down", "peer", rv.Node, "term", rv.Term, "addr", addr)
 			a.engine.TwoMasters(rv.Node, rv.Term)
 			a.supersede(rv.Term, rv.Node)
-			a.tryFollowAfterSupersede(addr, rv.Node)
+			a.tryFollowAfterSupersede(addr)
 			return
 		case rv.Term == myTerm && rv.Node < self:
 			a.log.Warn("another master has the same term and wins the name tie-break; stepping down", "peer", rv.Node, "term", rv.Term, "addr", addr)
 			a.engine.TwoMasters(rv.Node, rv.Term)
 			// Bump past the tie so agents prefer the winner once it is the only master.
 			a.supersede(rv.Term+1, rv.Node)
-			a.tryFollowAfterSupersede(addr, rv.Node)
+			a.tryFollowAfterSupersede(addr)
 			return
 		case rv.Term == myTerm && rv.Node > self:
 			a.engine.TwoMasters(rv.Node, rv.Term)
@@ -233,7 +233,7 @@ func (a *App) probeForeignMastersAtStart() {
 		if rv.Term > myTerm {
 			a.log.Warn("another master has a higher term; stepping down at start", "peer", rv.Node, "term", rv.Term, "addr", addr)
 			a.supersede(rv.Term, rv.Node)
-			a.tryFollowAfterSupersede(addr, rv.Node)
+			a.tryFollowAfterSupersede(addr)
 			return
 		}
 	}
