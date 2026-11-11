@@ -207,19 +207,10 @@ func Write(ctx context.Context, w io.Writer, db DB, o Options) (Manifest, error)
 // Restore unpacks an archive into dataDir (the configuration file to
 // configPath). Archives made before 2.6 name it monitors.bind.
 // Existing files are replaced only with force. The server must not run.
-func Restore(r io.Reader, dataDir, configPath, passphrase string, force bool) (Manifest, error) {
-	var m Manifest
-	br := bufio.NewReader(r)
-	in := io.Reader(br)
-	if head, _ := br.Peek(len(magic)); string(head) == magic || string(head) == string(legacyMagic) {
-		if passphrase == "" {
-			return m, errors.New("this backup is encrypted: a passphrase is needed")
-		}
-		dr, err := newDecReader(br, passphrase)
-		if err != nil {
-			return m, err
-		}
-		in = dr
+func Restore(r io.Reader, dataDir, configPath, passphrase string, force bool) (m Manifest, err error) {
+	in, err := openArchive(r, passphrase)
+	if err != nil {
+		return m, err
 	}
 	gz, err := gzip.NewReader(in)
 	if err != nil {
@@ -235,86 +226,32 @@ func Restore(r io.Reader, dataDir, configPath, passphrase string, force bool) (M
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
 		return m, err
 	}
-	allowed := map[string]bool{"core.db": true, "history.db": true, configEntry: true, legacyConfigEntry: true, "manifest.json": true}
+	u := &unpacker{dataDir: dataDir, configPath: configPath, m: &m, allowed: map[string]bool{"core.db": true, "history.db": true, configEntry: true, legacyConfigEntry: true, "manifest.json": true}}
 	for _, k := range append(keyFiles, idFiles...) {
-		allowed[k] = true
+		u.allowed[k] = true
 	}
-	tr := tar.NewReader(gz)
-	type staged struct{ tmp, dst string }
-	var done []staged
-	cleanup := func() {
-		for _, s := range done {
-			os.Remove(s.tmp)
-		}
-	}
-	for {
-		h, err := tr.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
+	defer func() {
 		if err != nil {
-			cleanup()
-			return m, fmt.Errorf("damaged backup: %w", err)
+			u.cleanup()
 		}
-		theme := themeEntry.MatchString(h.Name)
-		if (!allowed[h.Name] && !theme) || h.Typeflag != tar.TypeReg || (theme && h.Size > maxThemeFile) {
-			cleanup()
-			return m, fmt.Errorf("unexpected entry %q in backup", h.Name)
-		}
-		if h.Name == "manifest.json" {
-			if err := json.NewDecoder(io.LimitReader(tr, 1<<20)).Decode(&m); err != nil {
-				cleanup()
-				return m, fmt.Errorf("manifest: %w", err)
-			}
-			continue
-		}
-		dst := filepath.Join(dataDir, filepath.FromSlash(h.Name))
-		isConfig := h.Name == configEntry || h.Name == legacyConfigEntry
-		if isConfig {
-			dst = configPath
-		}
-		if !isConfig && strings.Contains(h.Name, "/") {
-			parent := filepath.Dir(dst)
-			if fi, err := os.Lstat(parent); err == nil && fi.Mode()&os.ModeSymlink != 0 {
-				cleanup()
-				return m, errors.New("restore identity directory must not be a symlink")
-			}
-			if err := os.MkdirAll(parent, 0700); err != nil {
-				cleanup()
-				return m, err
-			}
-		}
-		tmp := dst + ".restore"
-		f, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(h.Mode)&0o640|0o600)
-		if err != nil {
-			cleanup()
-			return m, err
-		}
-		_, err = io.Copy(f, tr)
-		f.Close()
-		done = append(done, staged{tmp, dst})
-		if err != nil {
-			cleanup()
-			return m, fmt.Errorf("damaged backup: %w", err)
-		}
+	}()
+	if err := u.unpack(tar.NewReader(gz)); err != nil {
+		return m, err
 	}
 	if m.Format == 0 {
-		cleanup()
 		return m, errors.New("not a unagikuma backup (no manifest)")
 	}
 	if m.Format > format {
-		cleanup()
 		return m, fmt.Errorf("backup format %d is newer than this unagikuma understands", m.Format)
 	}
 	// Everything is unpacked and checked: put it in place. Stale WAL
 	// files of the replaced databases would otherwise be replayed.
-	for _, s := range done {
+	for _, s := range u.done {
 		if strings.HasSuffix(s.dst, ".db") {
 			os.Remove(s.dst + "-wal")
 			os.Remove(s.dst + "-shm")
 		}
 		if err := os.Rename(s.tmp, s.dst); err != nil {
-			cleanup()
 			return m, err
 		}
 	}
@@ -322,6 +259,91 @@ func Restore(r io.Reader, dataDir, configPath, passphrase string, force bool) (M
 		return m, err
 	}
 	return m, nil
+}
+
+// openArchive returns the gzip stream of an archive, decrypting it when it
+// is encrypted.
+func openArchive(r io.Reader, passphrase string) (io.Reader, error) {
+	br := bufio.NewReader(r)
+	if head, _ := br.Peek(len(magic)); string(head) != magic && string(head) != string(legacyMagic) {
+		return br, nil
+	}
+	if passphrase == "" {
+		return nil, errors.New("this backup is encrypted: a passphrase is needed")
+	}
+	return newDecReader(br, passphrase)
+}
+
+// unpacker writes an archive's files next to where they go; nothing is
+// replaced until every entry has been read and checked.
+type unpacker struct {
+	dataDir, configPath string
+	m                   *Manifest
+	allowed             map[string]bool
+	done                []stagedFile
+}
+
+type stagedFile struct{ tmp, dst string }
+
+func (u *unpacker) cleanup() {
+	for _, s := range u.done {
+		os.Remove(s.tmp)
+	}
+}
+
+func (u *unpacker) unpack(tr *tar.Reader) error {
+	for {
+		h, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("damaged backup: %w", err)
+		}
+		if err := u.entry(h, tr); err != nil {
+			return err
+		}
+	}
+}
+
+// entry stages one file of the archive, or reads the manifest.
+func (u *unpacker) entry(h *tar.Header, tr *tar.Reader) error {
+	theme := themeEntry.MatchString(h.Name)
+	if (!u.allowed[h.Name] && !theme) || h.Typeflag != tar.TypeReg || (theme && h.Size > maxThemeFile) {
+		return fmt.Errorf("unexpected entry %q in backup", h.Name)
+	}
+	if h.Name == "manifest.json" {
+		if err := json.NewDecoder(io.LimitReader(tr, 1<<20)).Decode(u.m); err != nil {
+			return fmt.Errorf("manifest: %w", err)
+		}
+		return nil
+	}
+	dst := filepath.Join(u.dataDir, filepath.FromSlash(h.Name))
+	isConfig := h.Name == configEntry || h.Name == legacyConfigEntry
+	if isConfig {
+		dst = u.configPath
+	}
+	if !isConfig && strings.Contains(h.Name, "/") {
+		parent := filepath.Dir(dst)
+		if fi, err := os.Lstat(parent); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+			return errors.New("restore identity directory must not be a symlink")
+		}
+		if err := os.MkdirAll(parent, 0700); err != nil {
+			return err
+		}
+	}
+	tmp := dst + ".restore"
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(h.Mode)&0o640|0o600)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(f, tr)
+	f.Close()
+	u.done = append(u.done, stagedFile{tmp, dst})
+	if err != nil {
+		return fmt.Errorf("damaged backup: %w", err)
+	}
+	return nil
 }
 
 // Encrypted archives: magic, salt and nonce prefix, then chunks of up to

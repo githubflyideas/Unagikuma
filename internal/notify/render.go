@@ -49,8 +49,23 @@ func Render(m *Message) (title, body string) {
 const productName = "Unagikuma"
 
 func render(m *Message) (title, body string) {
-	lang := m.Lang
-	kind := i18n.T(lang, "msg.kind."+m.Kind)
+	if m.Kind == "STATUS" {
+		// A status page's message to its subscribers: their words only.
+		return sanitize(m.Title, 200), sanitize(m.Body, 8000)
+	}
+	head := strings.Join(messagePrefix(m), " ")
+	if head != "" {
+		head += " "
+	}
+	switch m.Kind {
+	case "SYSTEM", "DIGEST", "REPORT", "TEST", "DRILL", "CHANGE":
+		return renderNotice(m, kindIcon(m), head)
+	}
+	return renderMonitor(m, kindIcon(m), head)
+}
+
+// kindIcon is the mark at the start of a title.
+func kindIcon(m *Message) string {
 	icon := kindIcons[m.Kind]
 	if m.Priority == "low" && m.Kind != "RECOVERY" {
 		icon = "🟡"
@@ -58,42 +73,47 @@ func render(m *Message) (title, body string) {
 	if m.Kind == "SYSTEM" && m.Status == "ok" {
 		icon = kindIcons["RECOVERY"] // a system problem that is over
 	}
+	return icon
+}
+
+// messagePrefix are the marks before a title: late, a drill, the site.
+func messagePrefix(m *Message) []string {
 	var prefix []string
 	if m.Delayed > 0 {
-		prefix = append(prefix, i18n.T(lang, "msg.delayed", "minutes", int(m.Delayed.Minutes())))
+		prefix = append(prefix, i18n.T(m.Lang, "msg.delayed", "minutes", int(m.Delayed.Minutes())))
 	}
 	if m.DryRun {
-		prefix = append(prefix, i18n.T(lang, "msg.drill"))
+		prefix = append(prefix, i18n.T(m.Lang, "msg.drill"))
 	}
 	// Only a cluster names sites (a single machine sends none), and there
 	// every machine is named, the master too, even when it kept the
 	// product's own name.
-	if m.Site != "" && m.Kind != "STATUS" {
+	if m.Site != "" {
 		prefix = append(prefix, "["+sanitize(m.Site, 60)+"]")
 	}
-	if m.Kind == "STATUS" {
-		// A status page's message to its subscribers: their words only.
-		return sanitize(m.Title, 200), sanitize(m.Body, 8000)
+	return prefix
+}
+
+// renderNotice renders a message that is not about one monitor.
+func renderNotice(m *Message, icon, head string) (title, body string) {
+	lang := m.Lang
+	title = fmt.Sprintf("%s %s[Unagikuma] %s", icon, head, sanitize(m.Title, 200))
+	body = sanitize(m.Body, 4000)
+	if m.Kind == "TEST" && body == "" {
+		body = i18n.T(lang, "msg.test_body", "instance", m.Instance)
 	}
-	head := strings.Join(prefix, " ")
-	if head != "" {
-		head += " "
+	if m.Instance != "" && m.Kind != "TEST" {
+		body = strings.TrimSpace(body + "\n" + i18n.T(lang, "msg.instance", "instance", m.Instance))
 	}
-	switch m.Kind {
-	case "SYSTEM", "DIGEST", "REPORT", "TEST", "DRILL", "CHANGE":
-		title = fmt.Sprintf("%s %s[Unagikuma] %s", icon, head, sanitize(m.Title, 200))
-		body = sanitize(m.Body, 4000)
-		if m.Kind == "TEST" && body == "" {
-			body = i18n.T(lang, "msg.test_body", "instance", m.Instance)
-		}
-		if m.Instance != "" && m.Kind != "TEST" {
-			body = strings.TrimSpace(body + "\n" + i18n.T(lang, "msg.instance", "instance", m.Instance))
-		}
-		if m.Site != "" {
-			body = strings.TrimSpace(body + "\n" + i18n.T(lang, "msg.site", "site", sanitize(m.Site, 60)))
-		}
-		return title, body
+	if m.Site != "" {
+		body = strings.TrimSpace(body + "\n" + i18n.T(lang, "msg.site", "site", sanitize(m.Site, 60)))
 	}
+	return title, body
+}
+
+// renderMonitor renders a problem or a recovery of one monitor.
+func renderMonitor(m *Message, icon, head string) (title, body string) {
+	lang := m.Lang
 	status := ""
 	if m.Status != "" {
 		status = i18n.T(lang, "status."+m.Status)
@@ -107,7 +127,7 @@ func render(m *Message) (title, body string) {
 	if strings.TrimSpace(t) == "" {
 		t = m.Monitor
 	}
-	title = strings.TrimSpace(icon + " " + head + i18n.T(lang, tkey, "kind", kind, "title", t, "monitor", m.Monitor, "status", status))
+	title = strings.TrimSpace(icon + " " + head + i18n.T(lang, tkey, "kind", i18n.T(lang, "msg.kind."+m.Kind), "title", t, "monitor", m.Monitor, "status", status))
 	if m.Kind != "RECOVERY" && m.Count > 0 {
 		if m.Max > 0 {
 			title += " (" + i18n.T(lang, "msg.count", "count", m.Count, "max", m.Max) + ")"
@@ -125,19 +145,7 @@ func render(m *Message) (title, body string) {
 		}
 		lines = append(lines, i18n.N(lang, "msg.down_for", m.Count, "duration", i18n.Duration(m.Duration, lang), "count", m.Count))
 	} else {
-		reason := i18n.T(lang, "reason."+m.Reason)
-		if d := sanitize(i18n.Detail(lang, m.Detail), detailCap); d != "" && !strings.EqualFold(d, reason) {
-			reason += " — " + d // not "timeout — timeout"
-		}
-		lines = append(lines, i18n.T(lang, "msg.reason", "reason", reason))
-		if m.Quorum != "" {
-			lines = append(lines, i18n.T(lang, "msg.quorum", "quorum", m.Quorum))
-		}
-		start := m.Time.Add(-m.Duration)
-		lines = append(lines, i18n.T(lang, "msg.started", "time", start.Format("2006-01-02 15:04:05"), "duration", i18n.Duration(m.Duration, lang)))
-		if m.Body != "" {
-			lines = append(lines, sanitize(m.Body, detailCap))
-		}
+		lines = append(lines, problemLines(m)...)
 	}
 	if m.Observations != nil {
 		lines = append(lines, i18n.T(lang, "msg.observations", "table", m.Observations.Summary(), "gateway", m.Observations.Gateway, "uplink", m.Observations.Uplink))
@@ -152,4 +160,23 @@ func render(m *Message) (title, body string) {
 		lines = append(lines, i18n.T(lang, "msg.site", "site", sanitize(m.Site, 60)))
 	}
 	return title, strings.Join(lines, "\n")
+}
+
+// problemLines say why a monitor fails and since when.
+func problemLines(m *Message) []string {
+	lang := m.Lang
+	reason := i18n.T(lang, "reason."+m.Reason)
+	if d := sanitize(i18n.Detail(lang, m.Detail), detailCap); d != "" && !strings.EqualFold(d, reason) {
+		reason += " — " + d // not "timeout — timeout"
+	}
+	lines := []string{i18n.T(lang, "msg.reason", "reason", reason)}
+	if m.Quorum != "" {
+		lines = append(lines, i18n.T(lang, "msg.quorum", "quorum", m.Quorum))
+	}
+	start := m.Time.Add(-m.Duration)
+	lines = append(lines, i18n.T(lang, "msg.started", "time", start.Format("2006-01-02 15:04:05"), "duration", i18n.Duration(m.Duration, lang)))
+	if m.Body != "" {
+		lines = append(lines, sanitize(m.Body, detailCap))
+	}
+	return lines
 }

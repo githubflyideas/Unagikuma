@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/githubflyideas/unagikuma/internal/store"
 )
 
 // The managers' summary (/summary): how available the services were over
@@ -79,10 +81,9 @@ func (s *Server) summary(w http.ResponseWriter, r *http.Request) (any, error) {
 	default:
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "range is 7d, 30d or 90d")
 	}
-	cfg := s.app.EffectiveConfig()
 	var names []string
 	titles := map[string]string{}
-	for _, m := range cfg.Monitors {
+	for _, m := range s.app.EffectiveConfig().Monitors {
 		if seesMonitor(r, m.Name) {
 			names = append(names, m.Name)
 			t := m.Title
@@ -103,38 +104,73 @@ func (s *Server) summary(w http.ResponseWriter, r *http.Request) (any, error) {
 	}
 	summaryCache.Unlock()
 
-	st := s.app.Store()
 	from := now.Add(-d)
-	out := summaryJSON{Range: key, From: from, To: now, Now: s.summaryNow(r, titles), Days: []summaryDay{}, Attention: []summaryItem{}, Recent: []summaryIncident{}}
-
-	ratio := func(up, down float64) *float64 {
-		if up+down <= 0 {
-			return nil
-		}
-		v := up / (up + down)
-		return &v
+	b := &summaryBuild{s: s, st: s.app.Store(), names: names, titles: titles, from: from, to: now, d: d}
+	b.out = summaryJSON{Range: key, From: from, To: now, Now: s.summaryNow(r, titles), Days: []summaryDay{}, Attention: []summaryItem{}, Recent: []summaryIncident{}}
+	if err := b.uptime(); err != nil {
+		return nil, err
 	}
+	if err := b.days(); err != nil {
+		return nil, err
+	}
+	b.responseTimes()
+	b.recent(r)
+	out := b.out
+
+	summaryCache.Lock()
+	if summaryCache.m == nil || len(summaryCache.m) > 64 {
+		summaryCache.m = map[string]summaryEntry{}
+	}
+	summaryCache.m[ck] = summaryEntry{at: now, v: out}
+	summaryCache.Unlock()
+	return out, nil
+}
+
+// summaryBuild works out one summary for the monitors a reader sees.
+type summaryBuild struct {
+	s        *Server
+	st       *store.Store
+	names    []string
+	titles   map[string]string
+	from, to time.Time
+	d        time.Duration
+	out      summaryJSON
+}
+
+// availability is the share of up time, or nil without any.
+func availability(up, down float64) *float64 {
+	if up+down <= 0 {
+		return nil
+	}
+	v := up / (up + down)
+	return &v
+}
+
+// uptime adds up the period and the one before, and picks the five
+// services that need attention most.
+func (b *summaryBuild) uptime() error {
+	st, from, now, d := b.st, b.from, b.to, b.d
 	counts, _ := st.IncidentCounts(from, now)
 	prevCounts, _ := st.IncidentCounts(from.Add(-d), from)
 	var up, down, pUp, pDown float64
 	var worst []summaryItem
-	for _, n := range names {
+	for _, n := range b.names {
 		u, err := st.UptimeOf(n, from, now)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		p, err := st.UptimeOf(n, from.Add(-d), from)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		up, down, pUp, pDown = up+u.UpS, down+u.DownS, pUp+p.UpS, pDown+p.DownS
-		out.Incidents += counts[n]
-		out.PrevIncident += prevCounts[n]
-		if r := s.shownRatio(u); r != nil && (*r < 1 || counts[n] > 0) {
-			worst = append(worst, summaryItem{Name: n, Title: titles[n], Ratio: r, DownS: u.DownS, Count: counts[n]})
+		b.out.Incidents += counts[n]
+		b.out.PrevIncident += prevCounts[n]
+		if r := b.s.shownRatio(u); r != nil && (*r < 1 || counts[n] > 0) {
+			worst = append(worst, summaryItem{Name: n, Title: b.titles[n], Ratio: r, DownS: u.DownS, Count: counts[n]})
 		}
 	}
-	out.Ratio, out.PrevRatio, out.DownS = ratio(up, down), ratio(pUp, pDown), down
+	b.out.Ratio, b.out.PrevRatio, b.out.DownS = availability(up, down), availability(pUp, pDown), down
 	sort.SliceStable(worst, func(i, j int) bool {
 		if *worst[i].Ratio != *worst[j].Ratio {
 			return *worst[i].Ratio < *worst[j].Ratio
@@ -144,81 +180,89 @@ func (s *Server) summary(w http.ResponseWriter, r *http.Request) (any, error) {
 	if len(worst) > 5 {
 		worst = worst[:5]
 	}
-	out.Attention = append(out.Attention, worst...)
+	b.out.Attention = append(b.out.Attention, worst...)
+	return nil
+}
 
-	// One point per day, in the server's time zone, oldest first.
-	days := int(d / (24 * time.Hour))
+// days gives one point per day, in the server's time zone, oldest first.
+func (b *summaryBuild) days() error {
+	now := b.to
+	days := int(b.d / (24 * time.Hour))
 	loc := now.Location()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	for i := days - 1; i >= 0; i-- {
 		a := today.AddDate(0, 0, -i)
-		b := a.AddDate(0, 0, 1)
-		if b.After(now) {
-			b = now
+		end := a.AddDate(0, 0, 1)
+		if end.After(now) {
+			end = now
 		}
 		var du, dd float64
-		for _, n := range names {
-			u, err := st.UptimeOf(n, a, b)
+		for _, n := range b.names {
+			u, err := b.st.UptimeOf(n, a, end)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			du, dd = du+u.UpS, dd+u.DownS
 		}
-		out.Days = append(out.Days, summaryDay{Day: a, Ratio: ratio(du, dd)})
+		b.out.Days = append(b.out.Days, summaryDay{Day: a, Ratio: availability(du, dd)})
 	}
+	return nil
+}
 
-	// Response times over the period, for the monitors this reader sees.
-	if its, err := st.IncidentTimesBetween(from, now); err == nil {
-		var ackN, resN int
-		var ackSum, resSum float64
-		for _, it := range its {
-			if _, ok := titles[it.Monitor]; !ok {
-				continue
-			}
-			if !it.FirstAck.IsZero() {
-				ackN++
-				ackSum += it.FirstAck.Sub(it.Opened).Seconds()
-			}
-			if !it.Resolved.IsZero() {
-				resN++
-				resSum += it.Resolved.Sub(it.Opened).Seconds()
-			}
+// responseTimes are the mean times to acknowledge and to resolve over the
+// period, for the monitors this reader sees.
+func (b *summaryBuild) responseTimes() {
+	its, err := b.st.IncidentTimesBetween(b.from, b.to)
+	if err != nil {
+		return
+	}
+	var ackN, resN int
+	var ackSum, resSum float64
+	for _, it := range its {
+		if _, ok := b.titles[it.Monitor]; !ok {
+			continue
 		}
-		if ackN > 0 {
-			out.MTTA = ackSum / float64(ackN)
+		if !it.FirstAck.IsZero() {
+			ackN++
+			ackSum += it.FirstAck.Sub(it.Opened).Seconds()
 		}
-		if resN > 0 {
-			out.MTTR = resSum / float64(resN)
+		if !it.Resolved.IsZero() {
+			resN++
+			resSum += it.Resolved.Sub(it.Opened).Seconds()
 		}
 	}
+	if ackN > 0 {
+		b.out.MTTA = ackSum / float64(ackN)
+	}
+	if resN > 0 {
+		b.out.MTTR = resSum / float64(resN)
+	}
+}
 
-	if page, err := st.IncidentsOf("all", "", teamOf(r).list(), 0, 40, s.historySite(r)); err == nil {
-		for _, row := range page.Items {
-			if row.Kind != "normal" || row.State.Drill {
-				continue
-			}
-			if _, ok := titles[row.Monitor]; !ok {
-				continue
-			}
-			it := summaryIncident{Title: titles[row.Monitor], Monitor: row.Monitor, Opened: row.State.OpenedAt}
-			if !row.State.ResolvedAt.IsZero() {
-				t := row.State.ResolvedAt
-				it.Resolved = &t
-			}
-			out.Recent = append(out.Recent, it)
-			if len(out.Recent) == 8 {
-				break
-			}
+// recent lists the last eight real incidents of the monitors this reader
+// sees.
+func (b *summaryBuild) recent(r *http.Request) {
+	page, err := b.st.IncidentsOf("all", "", teamOf(r).list(), 0, 40, b.s.historySite(r))
+	if err != nil {
+		return
+	}
+	for _, row := range page.Items {
+		if row.Kind != "normal" || row.State.Drill {
+			continue
+		}
+		if _, ok := b.titles[row.Monitor]; !ok {
+			continue
+		}
+		it := summaryIncident{Title: b.titles[row.Monitor], Monitor: row.Monitor, Opened: row.State.OpenedAt}
+		if !row.State.ResolvedAt.IsZero() {
+			t := row.State.ResolvedAt
+			it.Resolved = &t
+		}
+		b.out.Recent = append(b.out.Recent, it)
+		if len(b.out.Recent) == 8 {
+			break
 		}
 	}
-
-	summaryCache.Lock()
-	if summaryCache.m == nil || len(summaryCache.m) > 64 {
-		summaryCache.m = map[string]summaryEntry{}
-	}
-	summaryCache.m[ck] = summaryEntry{at: now, v: out}
-	summaryCache.Unlock()
-	return out, nil
 }
 
 // summaryNow is the state right now (never cached).
