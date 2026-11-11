@@ -222,42 +222,12 @@ func (a *App) engineConfig(cfg *config.Config) engine.Config {
 	ec.SourceNode = cfg.MName
 	ec.ObservationSites = map[string][]string{}
 	for _, m := range cfg.Monitors {
-		ec.ObservationSites[m.Name] = participants(m.Nodes, cfg.MName, selfProbes, probers)
-		spec, err := ProbeSpec(m, resolve)
-		certDefaults(&spec, cfg.Tunables)
-		pingDefaults(&spec, cfg.Tunables)
-		depth := string(probe.DepthOf(spec))
-		weak := depth == string(keywords.L1) || (m.UDP != nil && m.UDP.Entry != nil && m.UDP.Entry.Stateful)
-		ms := engine.MonitorSpec{
-			Name: m.Name, Title: m.Title, Group: m.Group, Probe: spec, Depth: depth, Policy: m.Policy,
-			Interval: m.Interval, Retry: m.Retry, Attempts: m.Attempts, RecoverAttempts: m.RecoverAttempts,
-			SlowAfter: m.Degraded, Paused: m.Disabled, DefHash: m.DefHash, Parents: m.Parents,
-			Host: m.HostKey(), Address: m.Host(), Area: m.Area, Ping: m.Type == "PING",
-			Quorum:  engine.QuorumRule{Spec: m.Quorum, OnNodeLoss: m.OnNodeLoss, OnInsufficient: m.OnInsufficient, Weak: weak},
-			Handler: m.Opts["handler"], Team: m.Team,
-		}
-		if len(ec.Nodes) > 0 && m.Type != "PUSH" {
-			ms.Nodes = participants(m.Nodes, cfg.MName, selfProbes, probers)
-			ms.PartialEscalate = m.PartialEscalate
-			// A node with a wrong clock cannot judge a time server or how
-			// close a certificate is to expiry.
-			ms.TimeSensitive = spec.Opts["cert-days"] != "" && spec.Opts["cert-days"] != "0" ||
-				spec.Opts["cert-critical-days"] != "" && spec.Opts["cert-critical-days"] != "0" || (m.UDP != nil && m.UDP.Keyword == "ntp")
-		}
-		if m.Scope == "lan" || m.Scope == "wan" {
-			ms.Scope = netscope.Scope(m.Scope)
-		}
-		for _, t := range m.Tags {
-			ms.Tags = append(ms.Tags, t.String())
-		}
+		sites := participants(m.Nodes, cfg.MName, selfProbes, probers)
+		ms := monitorSpec(m, cfg, resolve, len(ec.Nodes) > 0, sites)
 		if m.Type == "PUSH" {
-			ms.Push, ms.PushPeriod, ms.PushGrace = true, m.Period, m.Grace
-			ms.Nodes = append([]string(nil), m.Nodes...)
-			ec.ObservationSites[m.Name] = append([]string(nil), m.Nodes...)
+			sites = append([]string(nil), m.Nodes...)
 		}
-		if err != nil {
-			ms.SecretError = err.Error()
-		}
+		ec.ObservationSites[m.Name] = sites
 		ec.Monitors = append(ec.Monitors, ms)
 	}
 	for _, mt := range cfg.Maints {
@@ -266,63 +236,119 @@ func (a *App) engineConfig(cfg *config.Config) engine.Config {
 	ec.Maints = append(ec.Maints, a.changeWindows(cfg)...)
 	leftOut := map[string][]directory.Issue{}
 	for _, c := range cfg.Channels {
-		opts := map[string]string{}
-		for k, v := range c.Opts {
-			rv, err := resolve(v)
-			if err != nil {
-				a.log.Warn("channel reference", "channel", c.Name, "err", err)
-			}
-			opts[k] = rv
-		}
-		cs := engine.ChannelSpec{Channel: notify.Channel{Name: c.Name, Kind: c.Kind, Opts: opts}, Retries: c.Retries, Members: c.Members}
-		if key, kind, ok := directory.AddressKey(c.Kind); ok {
-			// Recipients go through the contact directory: @handles become
-			// addresses, people who left and dead addresses are dropped.
-			send, issues := a.Directory().Resolve(kind, opts[key])
-			opts[key] = strings.Join(send, ",")
-			if keep := a.Directory().TakesReport(kind, send); len(keep) != len(send) {
-				ro := maps.Clone(opts)
-				ro[key] = strings.Join(keep, ",")
-				cs.ReportOpts = ro
-				cs.NoReport = len(keep) == 0
-			}
-			if len(send) == 0 {
-				cs.NoRecipients = "nobody to send to: no recipient is an active contact (see Alerting › Contacts)"
-			}
-			for _, i := range issues {
-				if i.Address != "" {
-					leftOut[c.Name] = append(leftOut[c.Name], i)
-				}
-			}
-		}
-		if c.Period != "" {
-			if p := cfg.FindPeriod(strings.TrimPrefix(c.Period, "!")); p != nil {
-				cs.Period, cs.Outside = &p.Spec, strings.HasPrefix(c.Period, "!")
-			}
-		}
-		if c.NoReport {
-			cs.NoReport = true
-		}
-		cs.Scope, cs.Family, cs.OnLink, cs.ByName = channelReach(c.Kind, opts)
-		ec.Channels[c.Name] = cs
+		ec.Channels[c.Name] = a.channelSpec(cfg, c, resolve, leftOut)
 	}
 	a.leftOut.Store(&leftOut)
 	for _, p := range cfg.Policies {
-		ec.Policies[p.Name] = engine.PolicySpec{Name: p.Name, Chain: p.Chain, Mode: p.Mode, Notify: engine.NotifyPolicy{
-			Max: p.Max, Repeat: p.Repeat, Delay: p.Delay, ReopenWindow: p.ReopenWindow, Recovery: p.Recovery,
-			NotifyDegraded: p.NotifyDegraded, DegradedMax: degradedMax, AckExpire: p.AckExpire,
-			AckClearOnChange: p.AckClearOnChange, RecoveryAfterAck: p.RecoveryAfterAck,
-		}}
-		ps := ec.Policies[p.Name]
-		ps.Network, ps.Mute = p.Network, p.Mute
-		for _, x := range p.Escalate {
-			ps.Escalate = append(ps.Escalate, engine.EscalationStep{After: x.After, Channels: x.Channels})
-		}
-		ec.Policies[p.Name] = ps
+		ec.Policies[p.Name] = policySpec(p, degradedMax)
 	}
 	a.addManagerNotices(cfg, &ec)
 	a.addTeamFallbacks(cfg, &ec)
 	ec.ReportTeams = reportTeams(cfg, ec.Policies)
+	localAnchors(cfg, &ec)
+	return ec
+}
+
+// monitorSpec translates one monitor. clustered says the file names remote
+// nodes; sites are the nodes that take part in judging it.
+func monitorSpec(m *config.Monitor, cfg *config.Config, resolve func(string) (string, error), clustered bool, sites []string) engine.MonitorSpec {
+	spec, err := ProbeSpec(m, resolve)
+	certDefaults(&spec, cfg.Tunables)
+	pingDefaults(&spec, cfg.Tunables)
+	depth := string(probe.DepthOf(spec))
+	weak := depth == string(keywords.L1) || (m.UDP != nil && m.UDP.Entry != nil && m.UDP.Entry.Stateful)
+	ms := engine.MonitorSpec{
+		Name: m.Name, Title: m.Title, Group: m.Group, Probe: spec, Depth: depth, Policy: m.Policy,
+		Interval: m.Interval, Retry: m.Retry, Attempts: m.Attempts, RecoverAttempts: m.RecoverAttempts,
+		SlowAfter: m.Degraded, Paused: m.Disabled, DefHash: m.DefHash, Parents: m.Parents,
+		Host: m.HostKey(), Address: m.Host(), Area: m.Area, Ping: m.Type == "PING",
+		Quorum:  engine.QuorumRule{Spec: m.Quorum, OnNodeLoss: m.OnNodeLoss, OnInsufficient: m.OnInsufficient, Weak: weak},
+		Handler: m.Opts["handler"], Team: m.Team,
+	}
+	if clustered && m.Type != "PUSH" {
+		ms.Nodes = append([]string(nil), sites...)
+		ms.PartialEscalate = m.PartialEscalate
+		// A node with a wrong clock cannot judge a time server or how
+		// close a certificate is to expiry.
+		ms.TimeSensitive = spec.Opts["cert-days"] != "" && spec.Opts["cert-days"] != "0" ||
+			spec.Opts["cert-critical-days"] != "" && spec.Opts["cert-critical-days"] != "0" || (m.UDP != nil && m.UDP.Keyword == "ntp")
+	}
+	if m.Scope == "lan" || m.Scope == "wan" {
+		ms.Scope = netscope.Scope(m.Scope)
+	}
+	for _, t := range m.Tags {
+		ms.Tags = append(ms.Tags, t.String())
+	}
+	if m.Type == "PUSH" {
+		ms.Push, ms.PushPeriod, ms.PushGrace = true, m.Period, m.Grace
+		ms.Nodes = append([]string(nil), m.Nodes...)
+	}
+	if err != nil {
+		ms.SecretError = err.Error()
+	}
+	return ms
+}
+
+// channelSpec translates one channel, resolving secrets and recipients.
+// Recipients left out are recorded in leftOut.
+func (a *App) channelSpec(cfg *config.Config, c *config.Channel, resolve func(string) (string, error), leftOut map[string][]directory.Issue) engine.ChannelSpec {
+	opts := map[string]string{}
+	for k, v := range c.Opts {
+		rv, err := resolve(v)
+		if err != nil {
+			a.log.Warn("channel reference", "channel", c.Name, "err", err)
+		}
+		opts[k] = rv
+	}
+	cs := engine.ChannelSpec{Channel: notify.Channel{Name: c.Name, Kind: c.Kind, Opts: opts}, Retries: c.Retries, Members: c.Members}
+	if key, kind, ok := directory.AddressKey(c.Kind); ok {
+		// Recipients go through the contact directory: @handles become
+		// addresses, people who left and dead addresses are dropped.
+		send, issues := a.Directory().Resolve(kind, opts[key])
+		opts[key] = strings.Join(send, ",")
+		if keep := a.Directory().TakesReport(kind, send); len(keep) != len(send) {
+			ro := maps.Clone(opts)
+			ro[key] = strings.Join(keep, ",")
+			cs.ReportOpts = ro
+			cs.NoReport = len(keep) == 0
+		}
+		if len(send) == 0 {
+			cs.NoRecipients = "nobody to send to: no recipient is an active contact (see Alerting › Contacts)"
+		}
+		for _, i := range issues {
+			if i.Address != "" {
+				leftOut[c.Name] = append(leftOut[c.Name], i)
+			}
+		}
+	}
+	if c.Period != "" {
+		if p := cfg.FindPeriod(strings.TrimPrefix(c.Period, "!")); p != nil {
+			cs.Period, cs.Outside = &p.Spec, strings.HasPrefix(c.Period, "!")
+		}
+	}
+	if c.NoReport {
+		cs.NoReport = true
+	}
+	cs.Scope, cs.Family, cs.OnLink, cs.ByName = channelReach(c.Kind, opts)
+	return cs
+}
+
+// policySpec translates one notification policy.
+func policySpec(p *config.Policy, degradedMax int) engine.PolicySpec {
+	ps := engine.PolicySpec{Name: p.Name, Chain: p.Chain, Mode: p.Mode, Notify: engine.NotifyPolicy{
+		Max: p.Max, Repeat: p.Repeat, Delay: p.Delay, ReopenWindow: p.ReopenWindow, Recovery: p.Recovery,
+		NotifyDegraded: p.NotifyDegraded, DegradedMax: degradedMax, AckExpire: p.AckExpire,
+		AckClearOnChange: p.AckClearOnChange, RecoveryAfterAck: p.RecoveryAfterAck,
+	}}
+	ps.Network, ps.Mute = p.Network, p.Mute
+	for _, x := range p.Escalate {
+		ps.Escalate = append(ps.Escalate, engine.EscalationStep{After: x.After, Channels: x.Channels})
+	}
+	return ps
+}
+
+// localAnchors sets this server's own network anchors.
+func localAnchors(cfg *config.Config, ec *engine.Config) {
 	for _, n := range cfg.Nodes {
 		if n.Name != cfg.MName {
 			continue
@@ -335,7 +361,6 @@ func (a *App) engineConfig(cfg *config.Config) engine.Config {
 			ec.Anchors = append(ec.Anchors, engine.AnchorSpec{Kind: engine.AnchorWAN, Addr: x})
 		}
 	}
-	return ec
 }
 
 // clusterNodes fills the engine's node list with the remote nodes and

@@ -114,6 +114,39 @@ type App struct {
 
 // New opens the store, loads the configuration and prepares the engine.
 func New(o Options) (*App, error) {
+	o, err := withDefaults(o)
+	if err != nil {
+		return nil, err
+	}
+	a := &App{opts: o, log: o.Log, started: o.Now(), publish: func(string, any) {}, restart: make(chan struct{})}
+	if promoted, err := applyPromote(o.DataDir, o.ConfigPath); err != nil {
+		return nil, fmt.Errorf("taking over as master: %w", err)
+	} else if promoted {
+		o.Log.Warn("this server took over as master with the state of the previous one")
+	}
+	for _, step := range []func() error{a.openStore, a.newMaster, a.migrateFiles, a.loadState, a.restoreEngine} {
+		if err := step(); err != nil {
+			if a.store != nil {
+				a.store.Close()
+			}
+			return nil, err
+		}
+	}
+	a.recordVersion()
+	a.heartbeat = &engine.Heartbeat{
+		Client:    &http.Client{Transport: &http.Transport{Proxy: http.ProxyFromEnvironment}},
+		URL:       a.heartbeatURL,
+		Interval:  func() time.Duration { return a.cfg.current().Config.Tunables.Duration("heartbeat.interval") },
+		Timeout:   func() time.Duration { return a.cfg.current().Config.Tunables.Duration("heartbeat.timeout") },
+		Now:       o.Now,
+		UserAgent: "unagikuma/" + a.instance(),
+	}
+	return a, nil
+}
+
+// withDefaults fills in the options left out, and renames a configuration
+// file from before 2.6.
+func withDefaults(o Options) (Options, error) {
 	if o.Log == nil {
 		o.Log = slog.Default()
 	}
@@ -127,7 +160,7 @@ func New(o Options) (*App, error) {
 		o.ConfigPath = filepath.Join(o.DataDir, config.FileName)
 		// Releases before 2.6 called the file monitors.conf.
 		if moved, err := config.MigrateFileName(filepath.Join(o.DataDir, config.LegacyFileName), o.ConfigPath); err != nil {
-			return nil, fmt.Errorf("renaming %s to %s: %w", config.LegacyFileName, config.FileName, err)
+			return o, fmt.Errorf("renaming %s to %s: %w", config.LegacyFileName, config.FileName, err)
 		} else if moved {
 			o.Log.Info("configuration file renamed", "from", config.LegacyFileName, "to", config.FileName)
 		}
@@ -135,23 +168,23 @@ func New(o Options) (*App, error) {
 	if o.Probe == nil {
 		o.Probe = probe.Run
 	}
-	a := &App{opts: o, log: o.Log, started: o.Now(), publish: func(string, any) {}, restart: make(chan struct{})}
-	if promoted, err := applyPromote(o.DataDir, o.ConfigPath); err != nil {
-		return nil, fmt.Errorf("taking over as master: %w", err)
-	} else if promoted {
-		o.Log.Warn("this server took over as master with the state of the previous one")
-	}
+	return o, nil
+}
+
+// openStore opens the databases, the secret key, the themes, the licence
+// and the cluster identity.
+func (a *App) openStore() error {
+	o := a.opts
 	st, err := store.Open(o.DataDir, store.Options{Log: o.Log, Now: o.Now})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	a.store = st
 	st.SetAuditRetention(o.AuditRetention)
 	a.afterPromote()
 	kek, err := store.LoadOrCreateKey(o.DataDir)
 	if err != nil {
-		st.Close()
-		return nil, err
+		return err
 	}
 	a.secrets = st.Secrets(kek)
 	ring := license.Release()
@@ -160,16 +193,18 @@ func New(o Options) (*App, error) {
 	}
 	a.themes = branding.NewStore(o.DataDir)
 	if a.license, err = license.OpenWith(o.DataDir, ring); err != nil {
-		st.Close()
-		return nil, err
+		return err
 	}
 	a.sender = &notify.Sender{Log: o.Log, Instance: a.instance(), Client: &http.Client{Transport: &http.Transport{Proxy: nil, ForceAttemptHTTP2: true, DialContext: (&net.Dialer{Timeout: 10 * time.Second}).DialContext},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 	a.cfg = &configManager{app: a, path: o.ConfigPath}
-	if a.pki, err = loadSitePKI(o.DataDir, o.Now()); err != nil {
-		st.Close()
-		return nil, err
-	}
+	a.pki, err = loadSitePKI(o.DataDir, o.Now())
+	return err
+}
+
+// newMaster creates the master end of the cluster protocol and the engine.
+func (a *App) newMaster() error {
+	o, st := a.opts, a.store
 	a.master = cluster.NewMaster(cluster.MasterOptions{
 		Auth:  func(token, addr string) (string, error) { return st.AgentNodeByToken(token, addr) },
 		Known: a.isAgentNode,
@@ -208,27 +243,33 @@ func New(o Options) (*App, error) {
 		InContainer: netscope.InContainer(), Remote: a.master, Log: o.Log,
 	})
 	a.master.SetSink(a.engine)
+	return nil
+}
+
+// migrateFiles renames files from older releases and moves policies and
+// push receivers to their current form.
+func (a *App) migrateFiles() error {
 	for _, p := range [][2]string{{a.dataPath(replicaDir, legacyReplicaConfig), a.dataPath(replicaDir, replicaConfig)}, {a.dataPath(legacySiteLocalFile), a.dataPath(siteLocalFile)}} {
 		if _, err := config.MigrateFileName(p[0], p[1]); err != nil {
-			st.Close()
-			return nil, err
+			return err
 		}
 	}
-	for _, path := range []string{o.ConfigPath, a.dataPath(replicaDir, replicaConfig)} {
+	for _, path := range []string{a.opts.ConfigPath, a.dataPath(replicaDir, replicaConfig)} {
 		if err := a.migratePushReceivers(path); err != nil {
-			st.Close()
-			return nil, err
+			return err
 		}
 	}
-	if err := a.migratePoliciesToTeams(o.ConfigPath); err != nil {
-		st.Close()
-		return nil, err
-	}
+	return a.migratePoliciesToTeams(a.opts.ConfigPath)
+}
+
+// loadState loads the membership, the replica copy and the configuration,
+// and moves the databases to this site's records.
+func (a *App) loadState() error {
+	st := a.store
 	a.loadMembership()
 	a.loadReplica()
 	if err := a.cfg.load(); err != nil {
-		st.Close()
-		return nil, err
+		return err
 	}
 	migrationCfg := a.EffectiveConfig()
 	if migrationCfg == nil {
@@ -240,23 +281,24 @@ func New(o Options) (*App, error) {
 	}
 	_ = st.SetSetting("source_node", source)
 	if err := st.MigrateIndependentSite(source, len(migrationCfg.Nodes) > 0); err != nil {
-		st.Close()
-		return nil, fmt.Errorf("site migration: %w", err)
+		return fmt.Errorf("site migration: %w", err)
 	}
-	if _, err := os.Stat(a.dataPath(".db-epoch-reset")); err == nil {
-		if err := st.RotateDBEpoch(source); err != nil {
-			st.Close()
-			return nil, err
-		}
-		if err := os.Remove(a.dataPath(".db-epoch-reset")); err != nil {
-			st.Close()
-			return nil, err
-		}
-		if err := st.Audit(auditEntry("system.restore_epoch", "system", map[string]any{"site": a.nodeName()})); err != nil {
-			st.Close()
-			return nil, err
-		}
+	if _, err := os.Stat(a.dataPath(".db-epoch-reset")); err != nil {
+		return nil
 	}
+	if err := st.RotateDBEpoch(source); err != nil {
+		return err
+	}
+	if err := os.Remove(a.dataPath(".db-epoch-reset")); err != nil {
+		return err
+	}
+	return st.Audit(auditEntry("system.restore_epoch", "system", map[string]any{"site": a.nodeName()}))
+}
+
+// restoreEngine gives the engine its states and incidents back and applies
+// the configuration.
+func (a *App) restoreEngine() error {
+	st := a.store
 	states, _ := st.States()
 	incidents, _ := st.OpenIncidents()
 	intents, _ := st.PendingIntents()
@@ -270,23 +312,21 @@ func New(o Options) (*App, error) {
 		// A brand-new installation was not "restarted".
 		a.engine.StartupNotice(st.PrevClean, st.PrevBeat)
 	}
-	if v := a.opts.Version; v != "" {
-		if prev, _ := st.Setting("version"); prev != v {
-			if prev != "" {
-				_ = st.Audit(store.AuditEntry{Actor: "system", Action: "system.upgrade", Detail: map[string]any{"from": prev, "to": v}})
-			}
-			_ = st.SetSetting("version", v)
+	return nil
+}
+
+// recordVersion audits an upgrade.
+func (a *App) recordVersion() {
+	v := a.opts.Version
+	if v == "" {
+		return
+	}
+	if prev, _ := a.store.Setting("version"); prev != v {
+		if prev != "" {
+			_ = a.store.Audit(store.AuditEntry{Actor: "system", Action: "system.upgrade", Detail: map[string]any{"from": prev, "to": v}})
 		}
+		_ = a.store.SetSetting("version", v)
 	}
-	a.heartbeat = &engine.Heartbeat{
-		Client:    &http.Client{Transport: &http.Transport{Proxy: http.ProxyFromEnvironment}},
-		URL:       a.heartbeatURL,
-		Interval:  func() time.Duration { return a.cfg.current().Config.Tunables.Duration("heartbeat.interval") },
-		Timeout:   func() time.Duration { return a.cfg.current().Config.Tunables.Duration("heartbeat.timeout") },
-		Now:       o.Now,
-		UserAgent: "unagikuma/" + a.instance(),
-	}
-	return a, nil
 }
 
 // SetPublisher installs the live-event broadcaster (the SSE hub).

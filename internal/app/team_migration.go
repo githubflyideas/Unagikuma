@@ -37,45 +37,72 @@ func (a *App) migratePoliciesToTeams(path string) error {
 	if c == nil || config.HasErrors(d) {
 		return nil
 	}
-	written := map[string]*config.Policy{}
+	m := &policyMigration{f: f, c: c, written: map[string]*config.Policy{}, teamPolicy: map[string]string{}}
 	for _, p := range c.Policies {
 		if !p.Implicit && p.Team == "" && !p.Mute {
-			written[p.Name] = p
+			m.written[p.Name] = p
 		}
 	}
-	if len(written) == 0 {
+	if len(m.written) == 0 {
 		return nil
 	}
-	simple := func(p *config.Policy) bool {
-		if p == nil || len(p.Chain) == 0 {
+	for _, step := range []func() error{m.teams, m.systemChannels, m.monitors} {
+		if err := step(); err != nil {
+			return err
+		}
+	}
+	if !m.changed {
+		return nil
+	}
+	m.dropUnused(path, a.validators())
+	return a.writeMigration(path, text, m)
+}
+
+// policyMigration turns policies that only list channels into team
+// channels.
+type policyMigration struct {
+	f          *config.File
+	c          *config.Config
+	written    map[string]*config.Policy
+	teamPolicy map[string]string
+	changed    bool
+}
+
+// simplePolicy lists channels and nothing else (mode aside).
+func simplePolicy(p *config.Policy) bool {
+	if p == nil || len(p.Chain) == 0 {
+		return false
+	}
+	for k := range p.Opts {
+		if k != "chain" && k != "mode" {
 			return false
 		}
-		for k := range p.Opts {
-			if k != "chain" && k != "mode" {
-				return false
-			}
-		}
-		return true
 	}
-	changed := false
-	set := func(name string, opts map[string]string) error {
-		changed = true
-		return f.SetOpts(name, opts)
-	}
-	def := written["default"]
-	// Teams: their policy, or "default", becomes their channels.
-	teamPolicy := map[string]string{}
-	for _, t := range c.AllTeams() {
+	return true
+}
+
+func (m *policyMigration) set(name string, opts map[string]string) error {
+	m.changed = true
+	return m.f.SetOpts(name, opts)
+}
+
+func (m *policyMigration) upsertTeam(t config.Team) error {
+	m.changed = true
+	return m.f.UpsertRecord(teamRecord(m.f, t))
+}
+
+// teams: their policy, or "default", becomes their channels.
+func (m *policyMigration) teams() error {
+	for _, t := range m.c.AllTeams() {
 		pol := t.Policy
 		if pol == "" {
 			pol = "default"
 		}
-		teamPolicy[t.Name] = pol
-		p := written[pol]
-		if len(t.Channels) > 0 || !simple(p) {
+		m.teamPolicy[t.Name] = pol
+		p := m.written[pol]
+		if len(t.Channels) > 0 || !simplePolicy(p) {
 			if t.Legacy { // managers=/operators=/viewers= become members=
-				changed = true
-				if err := f.UpsertRecord(teamRecord(f, *t)); err != nil {
+				if err := m.upsertTeam(*t); err != nil {
 					return err
 				}
 			}
@@ -86,66 +113,79 @@ func (a *App) migratePoliciesToTeams(path string) error {
 		if next.Mode == "fallback" {
 			next.Mode = ""
 		}
-		changed = true
-		if err := f.UpsertRecord(teamRecord(f, next)); err != nil {
+		if err := m.upsertTeam(next); err != nil {
 			return err
 		}
 	}
-	// System channels.
-	hasSystem := false
-	for _, ch := range c.Channels {
-		hasSystem = hasSystem || ch.System
-	}
-	if sys := written["system"]; !hasSystem {
-		src := sys
-		if src == nil {
-			src = def
-		}
-		if simple(src) {
-			for _, ch := range src.Chain {
-				if cc := c.FindChannel(ch); cc != nil && cc.Kind != "group" {
-					if err := set(ch, map[string]string{"system": "yes"}); err != nil {
-						return err
-					}
-				}
-			}
+	return nil
+}
+
+// systemChannels: without any, the channels of the system policy (or of
+// default) become them.
+func (m *policyMigration) systemChannels() error {
+	for _, ch := range m.c.Channels {
+		if ch.System {
+			return nil
 		}
 	}
-	// Monitors.
-	for _, m := range c.Monitors {
-		v, own := m.Opts["policy"]
-		if !own {
-			continue
-		}
-		switch {
-		case v == "system":
-			if err := set(m.Name, map[string]string{"policy": "", "system-channel": "yes"}); err != nil {
-				return err
-			}
-		case v == teamPolicy[m.TeamOf()] && simple(written[v]):
-			if err := set(m.Name, map[string]string{"policy": ""}); err != nil {
-				return err
-			}
-		}
+	src := m.written["system"]
+	if src == nil {
+		src = m.written["default"]
 	}
-	if !changed {
+	if !simplePolicy(src) {
 		return nil
 	}
-	// Simple policies nothing refers to any more.
-	for name, p := range written {
-		if !simple(p) {
-			continue
-		}
-		before := f.Bytes()
-		if err := f.DeleteRecord(name); err != nil {
-			continue
-		}
-		if _, _, d := config.Load(path, f.Bytes(), a.validators()); config.HasErrors(d) {
-			nf, _ := config.Parse(path, before)
-			f = nf
+	for _, ch := range src.Chain {
+		if cc := m.c.FindChannel(ch); cc != nil && cc.Kind != "group" {
+			if err := m.set(ch, map[string]string{"system": "yes"}); err != nil {
+				return err
+			}
 		}
 	}
-	serial, _, err := config.NextSerial(c.Serial, a.now())
+	return nil
+}
+
+// monitors drop policy= where their team now does the same.
+func (m *policyMigration) monitors() error {
+	for _, mon := range m.c.Monitors {
+		v, own := mon.Opts["policy"]
+		var err error
+		switch {
+		case !own:
+		case v == "system":
+			err = m.set(mon.Name, map[string]string{"policy": "", "system-channel": "yes"})
+		case v == m.teamPolicy[mon.TeamOf()] && simplePolicy(m.written[v]):
+			err = m.set(mon.Name, map[string]string{"policy": ""})
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// dropUnused deletes the simple policies nothing refers to any more.
+func (m *policyMigration) dropUnused(path string, o config.Options) {
+	for name, p := range m.written {
+		if !simplePolicy(p) {
+			continue
+		}
+		before := m.f.Bytes()
+		if err := m.f.DeleteRecord(name); err != nil {
+			continue
+		}
+		if _, _, d := config.Load(path, m.f.Bytes(), o); config.HasErrors(d) {
+			nf, _ := config.Parse(path, before)
+			m.f = nf
+		}
+	}
+}
+
+// writeMigration raises the revision, keeps the old file next to the new
+// one and audits the change.
+func (a *App) writeMigration(path string, text []byte, m *policyMigration) error {
+	f := m.f
+	serial, _, err := config.NextSerial(m.c.Serial, a.now())
 	if err != nil {
 		return err
 	}
@@ -168,7 +208,7 @@ func (a *App) migratePoliciesToTeams(path string) error {
 		return err
 	}
 	var names []string
-	for n := range written {
+	for n := range m.written {
 		names = append(names, n)
 	}
 	return a.store.Audit(auditEntry("config.team_channels_migration", "system", map[string]any{"file": path, "policies": strings.Join(names, ",")}))
