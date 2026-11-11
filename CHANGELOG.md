@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.6.4 — unreleased
+## v2.6.4 — 2026-11-11
 
 **Fixed**
 - A master replaced by the same-term tie-break, whose first rejoin request was refused (for example by the rate limit), retries every 15 seconds, also after a restart. The retry loop never ran, so such a node stayed outside the cluster.
