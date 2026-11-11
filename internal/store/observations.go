@@ -130,19 +130,8 @@ func (s *Store) SiteObservationCursor(node string) (string, int64) {
 
 // ApplySiteObservationDelta accepts only a directly authenticated source's rows.
 func (s *Store) ApplySiteObservationDelta(node string, d observation.Delta) error {
-	epoch, err := hex.DecodeString(d.Epoch)
-	if err != nil || len(epoch) != 16 || d.NodeID != node || len(d.Rows) > 256 || d.Cursor < 0 {
-		return fmt.Errorf("invalid observation source")
-	}
-	prevSeq := int64(0)
-	for _, o := range d.Rows {
-		if o.NodeID != node || o.Epoch != d.Epoch || o.Seq <= prevSeq || o.Seq > d.Cursor || o.IntervalMS <= 0 || o.AgeMS < 0 || o.AgeMS > int64(365*24*time.Hour/time.Millisecond) || o.MonitorID == "" || len(o.Error) > 2048 {
-			return fmt.Errorf("invalid observation row")
-		}
-		if o.Status != "up" && o.Status != "down" && o.Status != "unknown" {
-			return fmt.Errorf("invalid observation status")
-		}
-		prevSeq = o.Seq
+	if err := validDelta(node, d); err != nil {
+		return err
 	}
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
@@ -185,6 +174,26 @@ func (s *Store) ApplySiteObservationDelta(node string, d observation.Delta) erro
 	}
 	return tx.Commit()
 }
+
+// validDelta checks that a delta comes from node, is in order and is sane.
+func validDelta(node string, d observation.Delta) error {
+	epoch, err := hex.DecodeString(d.Epoch)
+	if err != nil || len(epoch) != 16 || d.NodeID != node || len(d.Rows) > 256 || d.Cursor < 0 {
+		return fmt.Errorf("invalid observation source")
+	}
+	prevSeq := int64(0)
+	for _, o := range d.Rows {
+		if o.NodeID != node || o.Epoch != d.Epoch || o.Seq <= prevSeq || o.Seq > d.Cursor || o.IntervalMS <= 0 || o.AgeMS < 0 || o.AgeMS > int64(365*24*time.Hour/time.Millisecond) || o.MonitorID == "" || len(o.Error) > 2048 {
+			return fmt.Errorf("invalid observation row")
+		}
+		if o.Status != "up" && o.Status != "down" && o.Status != "unknown" {
+			return fmt.Errorf("invalid observation status")
+		}
+		prevSeq = o.Seq
+	}
+	return nil
+}
+
 func (s *Store) SiteObservationSnapshot(monitor, defhash string, sites []string, now time.Time) (*observation.Snapshot, error) {
 	if len(sites) == 0 {
 		return nil, nil

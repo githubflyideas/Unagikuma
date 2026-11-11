@@ -250,18 +250,7 @@ func (s *Store) Merge(b MergeBatch) (MergeResult, error) {
 		return res, err
 	}
 	defer tx.Rollback()
-	incMap := map[int64]int64{}
-	lookupInc := func(origin int64) int64 {
-		if origin == 0 {
-			return 0
-		}
-		if id, ok := incMap[origin]; ok {
-			return id
-		}
-		var id int64
-		_ = tx.QueryRow(`SELECT local_id FROM merged WHERE site=? AND tbl='incidents' AND origin_id=?`, MergeScope(b.Site, b.Epoch), origin).Scan(&id)
-		return id
-	}
+	m := &merger{tx: tx, b: b, scope: MergeScope(b.Site, b.Epoch), incMap: map[int64]int64{}, res: &res}
 	for _, t := range []string{"incidents", "events", "decisions", "deliveries", "audit", "evidence", "acks"} {
 		rows := b.Tables[t]
 		if len(rows) == 0 {
@@ -271,106 +260,7 @@ func (s *Store) Merge(b MergeBatch) (MergeResult, error) {
 		if err != nil {
 			return res, err
 		}
-		last := marks[t]
-		for _, r := range rows {
-			origin := num(r["id"])
-			if origin <= marks[t] {
-				res.Skipped[t]++
-				continue
-			}
-			last = max(last, origin)
-			if t == "audit" {
-				if _, err := tx.Exec(`INSERT OR IGNORE INTO site_audit(site,term,origin_id,at,actor,action,target,area,detail,addr,risk,prev,hash)
-					VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`, MergeScope(b.Site, b.Epoch), b.Term, origin, num(r["at"]), str(r["actor"]), str(r["action"]),
-					str(r["target"]), str(r["area"]), str(r["detail"]), str(r["addr"]), str(r["risk"]), str(r["prev"]), str(r["hash"])); err != nil {
-					return res, fmt.Errorf("merge audit: %w", err)
-				}
-				res.Added[t]++
-				continue
-			}
-			row := map[string]any{}
-			for k, v := range r {
-				if k != "id" && have[k] {
-					row[k] = v
-				}
-			}
-			row["site"] = b.Site
-			if t != "incidents" && num(row["original_id"]) == 0 {
-				row["original_id"] = origin
-			}
-			if str(row["source_epoch"]) == "" {
-				row["source_epoch"] = b.Epoch
-			}
-			switch t {
-			case "incidents":
-				if num(row["source_id"]) == 0 {
-					row["source_id"] = origin
-				}
-				if node := str(row["source_node"]); node != "" && node != b.Site {
-					return res, errors.New("incident source differs from authenticated site")
-				}
-				row["source_node"] = b.Site
-				if str(row["source_epoch"]) == "" {
-					if str(row["source_epoch"]) == "" {
-						row["source_epoch"] = b.Epoch
-					}
-				}
-				row["term"] = int64(b.Term)
-				row["closed"] = 1 // the other site's view: history here, never reopened
-			case "evidence":
-				if str(row["source_epoch"]) == "" {
-					row["source_epoch"] = b.Epoch
-				}
-				if num(row["original_id"]) == 0 {
-					row["original_id"] = origin
-				}
-			case "acks":
-				if str(row["source_epoch"]) == "" {
-					row["source_epoch"] = b.Epoch
-				}
-				if num(row["original_id"]) == 0 {
-					row["original_id"] = origin
-				}
-				row["incident_id"] = lookupInc(num(r["incident_id"]))
-			case "decisions", "deliveries":
-				row["incident_id"] = lookupInc(num(r["incident_id"]))
-			}
-			if t == "incidents" && str(row["source_epoch"]) != "" {
-				var prior int64
-				if err := tx.QueryRow(`SELECT id FROM incidents WHERE source_node=? AND source_epoch=? AND source_id=? LIMIT 1`, b.Site, str(row["source_epoch"]), num(row["source_id"])).Scan(&prior); err == nil {
-					incMap[origin] = prior
-					if _, err := tx.Exec(`INSERT OR IGNORE INTO merged(site,tbl,origin_id,local_id) VALUES(?,'incidents',?,?)`, MergeScope(b.Site, b.Epoch), origin, prior); err != nil {
-						return res, err
-					}
-					res.Skipped[t]++
-					continue
-				} else if err != sql.ErrNoRows {
-					return res, err
-				}
-			}
-			if t != "incidents" {
-				var exists int
-				if err := tx.QueryRow("SELECT 1 FROM "+t+" WHERE site=? AND source_epoch=? AND original_id=? LIMIT 1", b.Site, str(row["source_epoch"]), num(row["original_id"])).Scan(&exists); err == nil {
-					res.Skipped[t]++
-					continue
-				} else if err != sql.ErrNoRows {
-					return res, err
-				}
-			}
-			id, err := insertRow(tx, t, row)
-			if err != nil {
-				return res, fmt.Errorf("merge %s: %w", t, err)
-			}
-			if t == "incidents" {
-				incMap[origin] = id
-				if _, err := tx.Exec(`INSERT OR IGNORE INTO merged(site,tbl,origin_id,local_id) VALUES(?,?,?,?)`, MergeScope(b.Site, b.Epoch), t, origin, id); err != nil {
-					return res, err
-				}
-			}
-			res.Added[t]++
-		}
-		if _, err := tx.Exec(`INSERT INTO merge_marks(site,tbl,last_id) VALUES(?,?,?)
-			ON CONFLICT(site,tbl) DO UPDATE SET last_id=max(last_id,excluded.last_id)`, MergeScope(b.Site, b.Epoch), t, last); err != nil {
+		if err := m.table(t, rows, have, marks[t]); err != nil {
 			return res, err
 		}
 	}
@@ -381,6 +271,145 @@ func (s *Store) Merge(b MergeBatch) (MergeResult, error) {
 		return res, err
 	}
 	return res, s.mergeRounds(b, marks["rounds"], &res)
+}
+
+// merger adds one batch's rows inside one transaction.
+type merger struct {
+	tx     *sql.Tx
+	b      MergeBatch
+	scope  string
+	incMap map[int64]int64 // the site's incident ids → ids here
+	res    *MergeResult
+}
+
+// lookupInc finds the incident here that a row of the site points at.
+func (m *merger) lookupInc(origin int64) int64 {
+	if origin == 0 {
+		return 0
+	}
+	if id, ok := m.incMap[origin]; ok {
+		return id
+	}
+	var id int64
+	_ = m.tx.QueryRow(`SELECT local_id FROM merged WHERE site=? AND tbl='incidents' AND origin_id=?`, m.scope, origin).Scan(&id)
+	return id
+}
+
+// table adds the rows of one table above the mark and moves the mark.
+func (m *merger) table(t string, rows []map[string]any, have map[string]bool, mark int64) error {
+	last := mark
+	for _, r := range rows {
+		origin := num(r["id"])
+		if origin <= mark {
+			m.res.Skipped[t]++
+			continue
+		}
+		last = max(last, origin)
+		added, err := m.row(t, r, have, origin)
+		if err != nil {
+			return err
+		}
+		if added {
+			m.res.Added[t]++
+		} else {
+			m.res.Skipped[t]++
+		}
+	}
+	_, err := m.tx.Exec(`INSERT INTO merge_marks(site,tbl,last_id) VALUES(?,?,?)
+			ON CONFLICT(site,tbl) DO UPDATE SET last_id=max(last_id,excluded.last_id)`, m.scope, t, last)
+	return err
+}
+
+// row adds one row and reports whether it was new.
+func (m *merger) row(t string, r map[string]any, have map[string]bool, origin int64) (bool, error) {
+	b := m.b
+	if t == "audit" {
+		if _, err := m.tx.Exec(`INSERT OR IGNORE INTO site_audit(site,term,origin_id,at,actor,action,target,area,detail,addr,risk,prev,hash)
+					VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`, m.scope, b.Term, origin, num(r["at"]), str(r["actor"]), str(r["action"]),
+			str(r["target"]), str(r["area"]), str(r["detail"]), str(r["addr"]), str(r["risk"]), str(r["prev"]), str(r["hash"])); err != nil {
+			return false, fmt.Errorf("merge audit: %w", err)
+		}
+		return true, nil
+	}
+	row, err := m.localRow(t, r, have, origin)
+	if err != nil {
+		return false, err
+	}
+	if dup, err := m.seen(t, row, origin); err != nil || dup {
+		return false, err
+	}
+	id, err := insertRow(m.tx, t, row)
+	if err != nil {
+		return false, fmt.Errorf("merge %s: %w", t, err)
+	}
+	if t == "incidents" {
+		m.incMap[origin] = id
+		if _, err := m.tx.Exec(`INSERT OR IGNORE INTO merged(site,tbl,origin_id,local_id) VALUES(?,?,?,?)`, m.scope, t, origin, id); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// localRow turns the site's row into one for this database.
+func (m *merger) localRow(t string, r map[string]any, have map[string]bool, origin int64) (map[string]any, error) {
+	b := m.b
+	row := map[string]any{}
+	for k, v := range r {
+		if k != "id" && have[k] {
+			row[k] = v
+		}
+	}
+	row["site"] = b.Site
+	if t != "incidents" && num(row["original_id"]) == 0 {
+		row["original_id"] = origin
+	}
+	if str(row["source_epoch"]) == "" {
+		row["source_epoch"] = b.Epoch
+	}
+	switch t {
+	case "incidents":
+		if num(row["source_id"]) == 0 {
+			row["source_id"] = origin
+		}
+		if node := str(row["source_node"]); node != "" && node != b.Site {
+			return nil, errors.New("incident source differs from authenticated site")
+		}
+		row["source_node"] = b.Site
+		row["term"] = int64(b.Term)
+		row["closed"] = 1 // the other site's view: history here, never reopened
+	case "acks", "decisions", "deliveries":
+		row["incident_id"] = m.lookupInc(num(r["incident_id"]))
+	}
+	return row, nil
+}
+
+// seen reports whether the row is already here under another mark, as
+// after a restore. An incident seen before is remembered for the rows
+// that point at it.
+func (m *merger) seen(t string, row map[string]any, origin int64) (bool, error) {
+	b := m.b
+	var err error
+	if t == "incidents" {
+		if str(row["source_epoch"]) == "" {
+			return false, nil
+		}
+		var prior int64
+		if err = m.tx.QueryRow(`SELECT id FROM incidents WHERE source_node=? AND source_epoch=? AND source_id=? LIMIT 1`, b.Site, str(row["source_epoch"]), num(row["source_id"])).Scan(&prior); err == nil {
+			m.incMap[origin] = prior
+			_, err = m.tx.Exec(`INSERT OR IGNORE INTO merged(site,tbl,origin_id,local_id) VALUES(?,'incidents',?,?)`, m.scope, origin, prior)
+			return err == nil, err
+		}
+	} else {
+		var exists int
+		if err = m.tx.QueryRow("SELECT 1 FROM "+t+" WHERE site=? AND source_epoch=? AND original_id=? LIMIT 1", b.Site, str(row["source_epoch"]), num(row["original_id"])).Scan(&exists); err == nil {
+			return true, nil
+		}
+	}
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return false, err
 }
 
 func (s *Store) mergeRounds(b MergeBatch, mark int64, res *MergeResult) error {
