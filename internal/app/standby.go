@@ -271,6 +271,8 @@ var ErrPromoteRefused = errors.New("another master is already running at an equa
 type PromoteRefused struct {
 	Peer string
 	Term uint64
+	// Racing: the peer is not master yet but taking over at the same time.
+	Racing bool
 }
 
 func (e *PromoteRefused) Error() string {
@@ -508,7 +510,7 @@ func applyPromote(dir, configPath string) (bool, error) {
 	if err := os.WriteFile(filepath.Join(dir, promotedFile), pb, 0o600); err != nil {
 		return false, err
 	}
-	for _, name := range []string{agentFile, agentTokenFile, supersededFile, promoteFile} {
+	for _, name := range []string{agentFile, agentTokenFile, supersededFile, promoteFile, pendingRejoinFile} {
 		_ = os.Remove(filepath.Join(dir, name))
 	}
 	if len(prev) > 0 {
@@ -691,8 +693,8 @@ func (a *App) AcceptRetire(n cluster.RetireNotice) error {
 func (a *App) waitPromoteGuard(ctx context.Context, term uint64) error {
 	deadline := time.Now().Add(promoteDelayFn())
 	for {
-		if peer, t, ok := a.competingPromote(term); ok {
-			return &PromoteRefused{Peer: peer, Term: t}
+		if peer, t, racing, ok := a.competingPromote(term); ok {
+			return &PromoteRefused{Peer: peer, Term: t, Racing: racing}
 		}
 		left := time.Until(deadline)
 		if left <= 0 {

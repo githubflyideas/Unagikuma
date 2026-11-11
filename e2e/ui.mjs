@@ -163,7 +163,12 @@ await step('a team member sees only their team', async () => {
   await tp.click('.auth .btn.primary');
   await tp.waitForSelector('nav.nav');
   const nav = await tp.$$eval('nav.nav a', (as) => as.map((a) => a.getAttribute('href')));
-  if (nav.join(' ') !== '#/ #/monitors #/problems #/events') throw new Error('menu: ' + nav.join(' '));
+  // Settings is there for their own password: the Account tab only.
+  if (nav.join(' ') !== '#/ #/monitors #/problems #/events #/settings') throw new Error('menu: ' + nav.join(' '));
+  await tp.goto(base + '/#/settings');
+  await tp.waitForSelector('.tabs a');
+  const tabs = await tp.$$eval('.tabs a', (as) => as.map((a) => a.getAttribute('href')));
+  if (tabs.join(' ') !== '#/settings/account') throw new Error('settings tabs: ' + tabs.join(' '));
   const mons = await tp.evaluate(async () => (await (await fetch('/api/v1/monitors')).json()).items.map((m) => m.name));
   if (mons.join(',') !== 'same-check-b') throw new Error('monitors: ' + mons.join(','));
   for (const [route, sel] of [['#/', '.fp-scroll'], ['#/monitors', '.mon-list, .tbl, .hive'], ['#/problems', '.page'], ['#/events', '.page'], ['#/monitors/same-check-b', '.mon-head']]) {

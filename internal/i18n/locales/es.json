@@ -729,6 +729,7 @@
 "ui.ha.promote": "Tomar el relevo como maestro",
 "ui.ha.promote_confirm": "¿Hacer maestro a este servidor con su copia del estado? Hágalo solo si el maestro en {master} ha caído definitivamente o se sustituye. El servidor se reinicia.",
 "ui.ha.promote_refused": "Ya hay otro maestro ({peer}, término {term}) en ejecución; promoción rechazada.",
+"ui.ha.promote_racing": "{peer} está asumiendo ahora el papel de maestro (término {term}); se rechazó esta promoción para que no haya dos maestros.",
 "ui.ha.promote_hint": "Si el maestro desaparece, este servidor puede tomar el relevo con su copia del estado.",
 "ui.ha.promoting": "Tomando el relevo (término {term}); la página se reconecta tras el reinicio",
 "ui.ha.superseded": "Solo cambia la autoridad de configuración; se conservan la supervisión y los incidentes locales.",

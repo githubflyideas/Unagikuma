@@ -486,7 +486,10 @@ func (a *App) Run(ctx context.Context) error {
 	})
 	run(func() {
 		a.persistPeerListens()
-		a.every(ctx, 30*time.Second, a.persistPeerListens)
+		// Often, so a master lost soon after a standby joined already
+		// knows the standby's identity when it comes back; the files are
+		// written only when they change.
+		a.every(ctx, 5*time.Second, a.persistPeerListens)
 	})
 	run(func() { a.every(ctx, 10*time.Second, a.watchForeignMasters) })
 	// every blocks, so the rejoin retry needs a loop of its own: in the

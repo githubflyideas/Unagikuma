@@ -222,9 +222,14 @@ func (a *App) demote(n cluster.RetireNotice) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	if _, err := a.JoinCluster(ctx, JoinOptions{Code: n.Join, Node: n.Node, Title: n.Node, Author: "system"}); err != nil {
-		a.log.Warn("could not rejoin the new master as a replica", "err", err)
+		// Kept and tried again (watchSupersededRejoin) while the code is
+		// valid: the new master may only have been busy, and it may not
+		// send another offer.
+		a.log.Warn("could not rejoin the new master as a replica; will retry", "err", err)
+		a.savePendingRejoin(n)
 		return
 	}
+	_ = os.Remove(a.dataPath(pendingRejoinFile))
 	a.log.Warn("this replaced master now follows the new one as a replica", "node", n.Node)
 	_ = a.store.Audit(auditEntry("cluster.demoted", "system", map[string]any{"node": n.Node, "term": n.Term}))
 	a.Reapply()

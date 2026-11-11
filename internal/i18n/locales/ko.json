@@ -722,6 +722,7 @@
 "ui.ha.promote": "마스터 인계",
 "ui.ha.promote_confirm": "보관한 상태 사본으로 이 서버를 마스터로 만들까요? {master}의 마스터가 완전히 다운되었거나 교체할 때만 실행하십시오. 재시작합니다.",
 "ui.ha.promote_refused": "다른 마스터({peer}, 텀 {term})가 이미 실행 중이어서 승격이 거부되었습니다.",
+"ui.ha.promote_racing": "{peer}가 지금 마스터로 승격 중입니다(텀 {term}). 마스터가 둘이 되지 않도록 이 승격은 거부되었습니다.",
 "ui.ha.promote_hint": "마스터가 완전히 사라지면 이 서버가 상태 사본으로 인계할 수 있습니다.",
 "ui.ha.promoting": "인계 중(임기 {term}), 재시작 후 페이지가 다시 연결됩니다",
 "ui.ha.superseded": "설정 권한만 이전하며 로컬 모니터링과 사건 상태는 유지됩니다.",

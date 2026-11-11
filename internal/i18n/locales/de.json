@@ -729,6 +729,7 @@
 "ui.ha.promote": "Als Master übernehmen",
 "ui.ha.promote_confirm": "Diesen Server mit seiner Kopie zum Master machen? Nur wenn der Master {master} endgültig ausgefallen ist oder ersetzt wird. Der Server startet neu.",
 "ui.ha.promote_refused": "Ein anderer Master ({peer}, Term {term}) läuft bereits; Übernahme abgelehnt.",
+"ui.ha.promote_racing": "{peer} übernimmt gerade die Master-Rolle (Term {term}); diese Übernahme wurde abgelehnt, damit es keine zwei Master gibt.",
 "ui.ha.promote_hint": "Fällt der Master endgültig aus, kann dieser Server mit seiner Kopie übernehmen.",
 "ui.ha.promoting": "Übernahme läuft (Amtszeit {term}); die Seite verbindet sich nach dem Neustart neu",
 "ui.ha.superseded": "Nur die Konfigurationshoheit wechselt; lokale Überwachung und Vorfälle bleiben erhalten.",

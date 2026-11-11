@@ -722,6 +722,7 @@
 "ui.ha.promote": "接任主节点",
 "ui.ha.promote_confirm": "用本机保存的状态副本把本机设为主节点？仅在 {master} 的主节点已彻底宕机或要替换时操作。本机会重启。",
 "ui.ha.promote_refused": "集群中已有主节点（{peer}，任期 {term}）在运行，已拒绝提升。",
+"ui.ha.promote_racing": "节点 {peer} 正在接管为主节点（任期 {term}），为避免出现两个主节点，已拒绝本次提升。",
 "ui.ha.promote_hint": "主节点彻底失效时，本机可以用保存的主节点状态副本接任。",
 "ui.ha.promoting": "正在接任（任期 {term}），重启后页面会自动重连",
 "ui.ha.superseded": "仅转移配置管理权；本站监控和事件状态保持不变。",

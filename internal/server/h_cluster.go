@@ -119,7 +119,11 @@ func (s *Server) clusterPromote(w http.ResponseWriter, r *http.Request) (any, er
 		var refused *app.PromoteRefused
 		if errors.As(err, &refused) {
 			lang := i18n.Normalize(firstLang(r.Header.Get("Accept-Language")))
-			msg := i18n.T(lang, "ui.ha.promote_refused", "peer", refused.Peer, "term", refused.Term)
+			key := "ui.ha.promote_refused"
+			if refused.Racing {
+				key = "ui.ha.promote_racing"
+			}
+			msg := i18n.T(lang, key, "peer", refused.Peer, "term", refused.Term)
 			return nil, Errorf(http.StatusConflict, CodeConflict, "%s", msg)
 		}
 		return nil, Errorf(http.StatusConflict, CodeConflict, "%v", err)

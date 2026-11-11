@@ -43,8 +43,7 @@ func TestDialFallsBackToTheOtherFamily(t *testing.T) {
 
 // Ten redirects are followed, as the message says; the eleventh fails.
 func TestRedirectLimitIsTen(t *testing.T) {
-	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n, _ := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/r/"))
 		if n <= 0 {
 			w.Write([]byte("done"))

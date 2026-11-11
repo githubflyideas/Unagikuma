@@ -1,9 +1,11 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/githubflyideas/unagikuma/internal/cluster"
@@ -68,10 +70,15 @@ func (a *App) persistPeerIdentities() {
 	if len(peers) == 0 {
 		return
 	}
+	sort.Slice(peers, func(i, j int) bool { return peers[i].Addr < peers[j].Addr })
 	b, err := json.Marshal(peers)
-	if err == nil {
-		_ = writePeerAtomic(a.dataPath(peerIdentityFile), b)
+	if err != nil {
+		return
 	}
+	if old, _ := os.ReadFile(a.dataPath(peerIdentityFile)); bytes.Equal(old, b) {
+		return
+	}
+	_ = writePeerAtomic(a.dataPath(peerIdentityFile), b)
 }
 
 func writePeerAtomic(path string, b []byte) error {

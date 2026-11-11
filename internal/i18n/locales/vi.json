@@ -722,6 +722,7 @@
 "ui.ha.promote": "Tiếp quản làm máy chủ chính",
 "ui.ha.promote_confirm": "Đặt máy này làm máy chủ chính bằng bản sao trạng thái? Chỉ làm khi máy chủ chính {master} đã hỏng hẳn hoặc được thay. Máy sẽ khởi động lại.",
 "ui.ha.promote_refused": "Một master khác ({peer}, term {term}) đang chạy; từ chối promote.",
+"ui.ha.promote_racing": "{peer} đang tiếp quản vai trò master (term {term}); promote này bị từ chối để không có hai master.",
 "ui.ha.promote_hint": "Khi máy chủ chính mất hẳn, máy này có thể tiếp quản bằng bản sao trạng thái.",
 "ui.ha.promoting": "Đang tiếp quản (nhiệm kỳ {term}); trang sẽ kết nối lại sau khi khởi động lại",
 "ui.ha.superseded": "Chỉ chuyển quyền cấu hình; giữ nguyên giám sát và sự cố cục bộ.",

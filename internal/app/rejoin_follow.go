@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"strings"
 	"time"
 
@@ -54,9 +56,42 @@ func (a *App) tryFollowAfterSupersede(addr string) {
 	}()
 }
 
+// pendingRejoinFile keeps the new master's offer whose join failed.
+const pendingRejoinFile = "cluster-rejoin-pending.json"
+
+func (a *App) savePendingRejoin(n cluster.RetireNotice) {
+	b, err := json.Marshal(n)
+	if err == nil {
+		_ = os.WriteFile(a.dataPath(pendingRejoinFile), b, 0o600)
+	}
+}
+
+// retryPendingRejoin joins with a kept offer while its code is valid.
+func (a *App) retryPendingRejoin() {
+	b, err := os.ReadFile(a.dataPath(pendingRejoinFile))
+	if err != nil {
+		return
+	}
+	var n cluster.RetireNotice
+	if json.Unmarshal(b, &n) != nil {
+		_ = os.Remove(a.dataPath(pendingRejoinFile))
+		return
+	}
+	if info, err := cluster.DecodeJoin(n.Join); err != nil || !info.Expires.IsZero() && a.now().After(info.Expires) {
+		a.log.Warn("the new master's rejoin offer expired; asking it for a new one")
+		_ = os.Remove(a.dataPath(pendingRejoinFile))
+		return
+	}
+	a.demote(n)
+}
+
 // watchSupersededRejoin retries joining while this node is stuck replaced.
 func (a *App) watchSupersededRejoin() {
 	if a.isMember() || a.SupersededBy() == nil {
+		return
+	}
+	a.retryPendingRejoin()
+	if a.isMember() {
 		return
 	}
 	for _, addr := range a.peerListenAddrs() {

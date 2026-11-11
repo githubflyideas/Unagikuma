@@ -729,6 +729,7 @@
 "ui.ha.promote": "Take over as master",
 "ui.ha.promote_confirm": "Make this server the master with its copy of the state? Do this only when the master at {master} is down for good or is being replaced. This server restarts.",
 "ui.ha.promote_refused": "Another master ({peer}, term {term}) is already running; promote refused.",
+"ui.ha.promote_racing": "{peer} is taking over as master right now (term {term}); this promote was refused so there are not two masters.",
 "ui.ha.promote_hint": "When the master is gone for good, this server can take over with its copy of the master's state.",
 "ui.ha.promoting": "Taking over (term {term}); the page reconnects after the restart",
 "ui.ha.superseded": "Configuration authority changes; local monitoring and incident state are preserved.",

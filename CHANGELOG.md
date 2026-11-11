@@ -1,5 +1,19 @@
 # Changelog
 
+## v2.6.5 — unreleased
+
+**Fixed**
+- A replaced master that learns of the new master from its notice, and whose join is then refused (for example by the rate limit), keeps the offer and tries it again every 15 seconds while its code is valid, also after a restart. It used to stay outside the cluster.
+- A master keeps the identities of its standbys within seconds of their joining, not up to 30 seconds later. A master lost right after a standby joined could not recognise the new master when it came back, and waited for its notice.
+- A member refused because another member is taking over at the same time is told so, instead of being told that another master is already running.
+
+**Security**
+- Built with Go 1.27.4, which fixes an HTTP server crash in the standard library (GO-2026-6859).
+
+**Tests**
+- End-to-end tests run real clusters for the cases above: two promotes at once, a promote after a handover round trip (master killed or frozen), rejoining while refused and after a restart, several machines joining from one address, and editing a file whose revision counts 1, 2, 3.
+- The browser test expects the Settings entry that team members have had since 2.6.3 for their own password.
+
 ## v2.6.4 — 2026-11-11
 
 **Fixed**

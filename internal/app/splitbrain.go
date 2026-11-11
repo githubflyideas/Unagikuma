@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -184,6 +185,9 @@ func (a *App) persistPeerListens() {
 		return
 	}
 	b, _ := json.Marshal(addrs)
+	if old, _ := os.ReadFile(a.dataPath(peersFile)); bytes.Equal(old, b) {
+		return
+	}
 	_ = os.WriteFile(a.dataPath(peersFile), b, 0o644)
 }
 
@@ -214,7 +218,7 @@ func (a *App) competingMaster(wantTerm uint64) (peer string, term uint64, ok boo
 // to take over. Two members promoted at the same moment both pass a check
 // for masters, since neither has restarted yet; the higher term wins, and
 // at the same term the smaller name, the tie-break masters use.
-func (a *App) competingPromote(wantTerm uint64) (peer string, term uint64, ok bool) {
+func (a *App) competingPromote(wantTerm uint64) (peer string, term uint64, racing, ok bool) {
 	self := a.nodeName()
 	for _, addr := range a.peerListenAddrs() {
 		rv, reach := a.probeReach(addr)
@@ -222,13 +226,13 @@ func (a *App) competingPromote(wantTerm uint64) (peer string, term uint64, ok bo
 			continue
 		}
 		if rv.Role == "master" && rv.Term >= wantTerm {
-			return rv.Node, rv.Term, true
+			return rv.Node, rv.Term, false, true
 		}
 		if p := rv.Promoting; p > wantTerm || (p == wantTerm && rv.Node < self) {
-			return rv.Node, p, true
+			return rv.Node, p, true, true
 		}
 	}
-	return "", 0, false
+	return "", 0, false, false
 }
 
 // probeForeignMastersAtStart runs once before system notices fire for a

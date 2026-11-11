@@ -729,6 +729,7 @@
 "ui.ha.promote": "Assumir como mestre",
 "ui.ha.promote_confirm": "Tornar este servidor o mestre com sua cópia do estado? Só se o mestre em {master} caiu de vez ou será substituído. O servidor reinicia.",
 "ui.ha.promote_refused": "Outro mestre ({peer}, termo {term}) já está em execução; promoção recusada.",
+"ui.ha.promote_racing": "{peer} está assumindo agora como mestre (termo {term}); esta promoção foi recusada para não haver dois mestres.",
 "ui.ha.promote_hint": "Se o mestre sumir de vez, este servidor pode assumir com sua cópia do estado.",
 "ui.ha.promoting": "Assumindo (mandato {term}); a página reconecta após reiniciar",
 "ui.ha.superseded": "Só muda a autoridade de configuração; o monitoramento e os incidentes locais são preservados.",

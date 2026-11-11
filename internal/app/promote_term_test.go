@@ -79,7 +79,7 @@ func TestConcurrentPromotesLeaveOneMaster(t *testing.T) {
 		term, err := a.Promote(context.Background(), 0, "tester")
 		if tc.refused {
 			var refused *PromoteRefused
-			if !errors.As(err, &refused) || refused.Peer != tc.peer {
+			if !errors.As(err, &refused) || refused.Peer != tc.peer || !refused.Racing {
 				t.Errorf("%s promoting at %d: got term=%d err=%v, want refused", tc.peer, tc.term, term, err)
 			}
 			if a.promoting.Load() != 0 {

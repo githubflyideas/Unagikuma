@@ -56,7 +56,7 @@ jobs:
         env:
           UNAGIKUMA_E2E_UI: "1"
           UNAGIKUMA_E2E_OUT: ${{ runner.temp }}/e2e
-        run: mkdir -p "$UNAGIKUMA_E2E_OUT" && go test -tags e2e -count=1 -v ./e2e/
+        run: mkdir -p "$UNAGIKUMA_E2E_OUT" && go test -tags e2e -count=1 -v -timeout 20m ./e2e/
       - name: screenshots of failed steps
         if: failure()
         uses: actions/upload-artifact@v4
