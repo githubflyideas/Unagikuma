@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.6.5 — unreleased
+## v2.6.5 — 2026-11-11
 
 **Fixed**
 - A replaced master that learns of the new master from its notice, and whose join is then refused (for example by the rate limit), keeps the offer and tries it again every 15 seconds while its code is valid, also after a restart. It used to stay outside the cluster.
