@@ -262,15 +262,33 @@ func (k *kumaImport) groupPath(m *kumaMonitor) string {
 }
 
 func (k *kumaImport) convert(existing *config.Config) {
-	res := k.res
-	type pending struct {
-		spec  *config.RecordSpec
-		item  int
-		set   []int64
-		group string
+	c := &kumaConvert{k: k, existing: existing, used: map[int64]bool{}, usedBySkipped: map[int64]bool{},
+		groupsUsed: map[string]bool{}, chanName: map[int64]string{}}
+	ordered := k.orderedMonitors()
+	for i := range ordered {
+		if ordered[i].Type != "group" {
+			c.monitor(&ordered[i])
+		}
 	}
-	var mons []pending
-	used, usedBySkipped := map[int64]bool{}, map[int64]bool{}
+	c.emptyGroups()
+	c.channels()
+	c.policies()
+	c.sections()
+	k.maintenances(existing)
+	k.statusPages(existing)
+	k.accounts()
+	res := k.res
+	res.Info = append(res.Info,
+		"Past checks, uptime history and incidents stay in Uptime Kuma: history starts fresh here.",
+		"Credentials (tokens, passwords, webhook addresses) are stored as encrypted secrets, not in the configuration file.")
+	if k.bk.APIKeys > 0 || k.bk.Incidents > 0 {
+		res.Info = append(res.Info, "API keys, status page incidents, settings and two-factor login are not carried over.")
+	}
+}
+
+// orderedMonitors sorts the monitors by group, monitors outside groups
+// last, then by name.
+func (k *kumaImport) orderedMonitors() []kumaMonitor {
 	ordered := append([]kumaMonitor(nil), k.bk.MonitorList...)
 	sort.SliceStable(ordered, func(i, j int) bool {
 		gi, gj := k.groupPath(&ordered[i]), k.groupPath(&ordered[j])
@@ -282,67 +300,99 @@ func (k *kumaImport) convert(existing *config.Config) {
 		}
 		return strings.ToLower(ordered[i].Name) < strings.ToLower(ordered[j].Name)
 	})
-	groupsUsed := map[string]bool{}
-	for i := range ordered {
-		m := &ordered[i]
-		if m.Type == "group" {
-			continue
+	return ordered
+}
+
+// kumaConvert carries one conversion from monitors to channels, policies
+// and sections.
+type kumaConvert struct {
+	k                   *kumaImport
+	existing            *config.Config
+	mons                []kumaPending
+	used, usedBySkipped map[int64]bool
+	groupsUsed          map[string]bool
+	chanName            map[int64]string
+	chans, policyRecs   []config.RecordSpec
+}
+
+type kumaPending struct {
+	spec  *config.RecordSpec
+	item  int
+	set   []int64
+	group string
+}
+
+func notificationIDs(m *kumaMonitor) []int64 {
+	var set []int64
+	for id, on := range m.Notifications {
+		if n, err := strconv.ParseInt(id, 10, 64); err == nil && on {
+			set = append(set, n)
 		}
-		group := k.groupPath(m)
-		it := Item{Kind: "monitor", Source: m.Name, Type: kumaTypeLabel(m.Type), Target: kumaTarget(m), Group: group, Status: StatusImported}
-		spec := k.monitorSpec(m, &it)
-		if spec == nil {
-			it.Status = StatusLeftOut
-			res.add(it)
-			continue
-		}
-		key := checkKey(spec.Type, spec.Target, optMap(spec.Opts))
-		if spec.Type == "PUSH" {
-			key = "PUSH|" + strings.ToLower(m.Name) // nothing to compare but the name
-		}
-		if prev, dup := k.have[key]; dup {
-			k.names.release(spec.Name)
-			delete(k.res.PushTokens, spec.Name)
-			k.monName[m.ID] = prev
-			if group != "" {
-				groupsUsed[group] = true
-			}
-			for id, on := range m.Notifications {
-				if n, err := strconv.ParseInt(id, 10, 64); err == nil && on {
-					usedBySkipped[n] = true
-				}
-			}
-			dup := Item{Kind: "monitor", Source: m.Name, Name: prev, Type: it.Type, Target: it.Target, Group: group, Status: StatusSkipped,
-				Why: "The same check is already here as " + prev + "."}
-			if existing == nil || !existing.HasName(prev) {
-				dup.Status, dup.Why = StatusMerged, "It checks the same thing as "+prev+", so it was imported once, as "+prev+"."
-			}
-			res.add(dup)
-			continue
-		}
-		k.have[key] = spec.Name
-		k.monName[m.ID] = spec.Name
-		if group != "" {
-			spec.Opts = append(spec.Opts, config.Opt{Key: "group", Value: group})
-			groupsUsed[group] = true
-		}
-		if !m.Active {
-			spec.Opts = append(spec.Opts, config.Opt{Key: "disabled", Value: "yes"})
-			it.attention("It was paused in Uptime Kuma, so it is imported paused.", "Resume it when you want it checked.")
-		}
-		var set []int64
-		for id, on := range m.Notifications {
-			if n, err := strconv.ParseInt(id, 10, 64); err == nil && on {
-				set = append(set, n)
-				used[n] = true
-			}
-		}
-		sort.Slice(set, func(a, b int) bool { return set[a] < set[b] })
-		it.Name = spec.Name
-		res.add(it)
-		mons = append(mons, pending{spec, len(res.Items) - 1, set, group})
 	}
-	// Empty groups have nothing to carry over: say so.
+	sort.Slice(set, func(a, b int) bool { return set[a] < set[b] })
+	return set
+}
+
+func (c *kumaConvert) monitor(m *kumaMonitor) {
+	k, res := c.k, c.k.res
+	group := k.groupPath(m)
+	it := Item{Kind: "monitor", Source: m.Name, Type: kumaTypeLabel(m.Type), Target: kumaTarget(m), Group: group, Status: StatusImported}
+	spec := k.monitorSpec(m, &it)
+	if spec == nil {
+		it.Status = StatusLeftOut
+		res.add(it)
+		return
+	}
+	key := checkKey(spec.Type, spec.Target, optMap(spec.Opts))
+	if spec.Type == "PUSH" {
+		key = "PUSH|" + strings.ToLower(m.Name) // nothing to compare but the name
+	}
+	if prev, dup := k.have[key]; dup {
+		c.duplicate(m, spec, it, group, prev)
+		return
+	}
+	k.have[key] = spec.Name
+	k.monName[m.ID] = spec.Name
+	if group != "" {
+		spec.Opts = append(spec.Opts, config.Opt{Key: "group", Value: group})
+		c.groupsUsed[group] = true
+	}
+	if !m.Active {
+		spec.Opts = append(spec.Opts, config.Opt{Key: "disabled", Value: "yes"})
+		it.attention("It was paused in Uptime Kuma, so it is imported paused.", "Resume it when you want it checked.")
+	}
+	set := notificationIDs(m)
+	for _, n := range set {
+		c.used[n] = true
+	}
+	it.Name = spec.Name
+	res.add(it)
+	c.mons = append(c.mons, kumaPending{spec, len(res.Items) - 1, set, group})
+}
+
+// duplicate records a monitor that checks the same thing as prev.
+func (c *kumaConvert) duplicate(m *kumaMonitor, spec *config.RecordSpec, it Item, group, prev string) {
+	k := c.k
+	k.names.release(spec.Name)
+	delete(k.res.PushTokens, spec.Name)
+	k.monName[m.ID] = prev
+	if group != "" {
+		c.groupsUsed[group] = true
+	}
+	for _, n := range notificationIDs(m) {
+		c.usedBySkipped[n] = true
+	}
+	dup := Item{Kind: "monitor", Source: m.Name, Name: prev, Type: it.Type, Target: it.Target, Group: group, Status: StatusSkipped,
+		Why: "The same check is already here as " + prev + "."}
+	if c.existing == nil || !c.existing.HasName(prev) {
+		dup.Status, dup.Why = StatusMerged, "It checks the same thing as "+prev+", so it was imported once, as "+prev+"."
+	}
+	k.res.add(dup)
+}
+
+// emptyGroups lists the groups with nothing to carry over.
+func (c *kumaConvert) emptyGroups() {
+	k := c.k
 	for _, m := range k.bk.MonitorList {
 		if m.Type != "group" {
 			continue
@@ -353,79 +403,83 @@ func (k *kumaImport) convert(existing *config.Config) {
 		}
 		path += strings.TrimSpace(m.Name)
 		hasChild := false
-		for g := range groupsUsed {
+		for g := range c.groupsUsed {
 			if g == path || strings.HasPrefix(g, path+" / ") {
 				hasChild = true
 			}
 		}
 		if !hasChild {
-			res.add(Item{Kind: "group", Source: path, Status: StatusLeftOut, Why: "The group has no monitors that were imported.",
+			k.res.add(Item{Kind: "group", Source: path, Status: StatusLeftOut, Why: "The group has no monitors that were imported.",
 				Todo: "Nothing to do: groups appear here as soon as a monitor uses them (group=)."})
 		}
 	}
+}
 
-	// Channels the imported monitors use; the others are listed.
-	chanName := map[int64]string{}
-	var chans []config.RecordSpec
+// channels converts the channels the imported monitors use and lists the
+// others.
+func (c *kumaConvert) channels() {
+	k, res := c.k, c.k.res
 	var unused []string
 	unusedName := ""
-	addUnused := func() {
-		if len(unused) == 0 {
-			return
-		}
-		it := Item{Kind: "channel", Source: unusedName, Status: StatusLeftOut,
-			Why: "No imported monitor uses it.", Todo: "Add it under Alerting › Channels if you still need it."}
-		if len(unused) > 1 {
-			it.Kind, it.Source = "channels", strings.Join(unused, ", ")
-			it.Why, it.Todo = "No imported monitor uses them.", "Add them under Alerting › Channels if you still need them."
-		}
-		res.add(it)
-	}
 	for _, n := range k.bk.NotificationList {
-		if !used[n.ID] && usedBySkipped[n.ID] {
+		switch {
+		case !c.used[n.ID] && c.usedBySkipped[n.ID]:
 			res.add(Item{Kind: "channel", Source: n.Name, Type: kumaChannelLabel(n), Status: StatusSkipped,
 				Why: "Only monitors that are already here use it; they keep their notifications."})
-			continue
-		}
-		if !used[n.ID] {
+		case !c.used[n.ID]:
 			unused = append(unused, n.Name+" ("+kumaChannelLabel(n)+")")
 			unusedName = n.Name
-			continue
+		default:
+			c.channel(n)
 		}
-		it := Item{Kind: "channel", Source: n.Name, Type: kumaChannelLabel(n), Status: StatusImported}
-		spec := k.channel(n, existing, &it)
-		if spec == nil {
-			if it.Status == StatusImported {
-				it.Status = StatusLeftOut
-			}
-			res.add(it)
-			continue
-		}
-		chanName[n.ID] = spec.Name
-		it.Name = spec.Name
-		if it.Status != StatusSkipped {
-			chans = append(chans, *spec)
-			res.Channels++
+	}
+	if len(unused) == 0 {
+		return
+	}
+	it := Item{Kind: "channel", Source: unusedName, Status: StatusLeftOut,
+		Why: "No imported monitor uses it.", Todo: "Add it under Alerting › Channels if you still need it."}
+	if len(unused) > 1 {
+		it.Kind, it.Source = "channels", strings.Join(unused, ", ")
+		it.Why, it.Todo = "No imported monitor uses them.", "Add them under Alerting › Channels if you still need them."
+	}
+	res.add(it)
+}
+
+func (c *kumaConvert) channel(n kumaNotification) {
+	res := c.k.res
+	it := Item{Kind: "channel", Source: n.Name, Type: kumaChannelLabel(n), Status: StatusImported}
+	spec := c.k.channel(n, c.existing, &it)
+	if spec == nil {
+		if it.Status == StatusImported {
+			it.Status = StatusLeftOut
 		}
 		res.add(it)
+		return
 	}
+	c.chanName[n.ID] = spec.Name
+	it.Name = spec.Name
+	if it.Status != StatusSkipped {
+		c.chans = append(c.chans, *spec)
+		res.Channels++
+	}
+	res.add(it)
+}
 
-	addUnused()
-
-	// Policies: one per distinct set of channels, named after them.
+// policies gives each imported monitor the policy of its set of channels:
+// one per distinct set, named after them.
+func (c *kumaConvert) policies() {
+	k, res := c.k, c.k.res
 	policyOf := map[string]string{}
-	var policies []config.RecordSpec
-	for _, pm := range mons {
-		var set []string
-		var lost []string
+	for _, pm := range c.mons {
+		var set, lost []string
 		for _, id := range pm.set {
-			if chanName[id] != "" {
-				set = append(set, chanName[id])
-			} else {
-				for _, n := range k.bk.NotificationList {
-					if n.ID == id {
-						lost = append(lost, n.Name)
-					}
+			if c.chanName[id] != "" {
+				set = append(set, c.chanName[id])
+				continue
+			}
+			for _, n := range k.bk.NotificationList {
+				if n.ID == id {
+					lost = append(lost, n.Name)
 				}
 			}
 		}
@@ -437,7 +491,7 @@ func (k *kumaImport) convert(existing *config.Config) {
 			key := strings.Join(set, ",")
 			p, ok := policyOf[key]
 			if !ok {
-				p = k.policy(set, existing, &policies)
+				p = k.policy(set, c.existing, &c.policyRecs)
 				policyOf[key] = p
 			}
 			pm.spec.Opts = append(pm.spec.Opts, config.Opt{Key: "policy", Value: p})
@@ -446,13 +500,17 @@ func (k *kumaImport) convert(existing *config.Config) {
 		}
 		pm.spec.Area = k.o.Area
 	}
+}
 
-	// Sections: shared records first, then the monitors by group.
-	sortSection(chans)
-	res.sections = append(res.sections, section{title: "Notification channels (from Uptime Kuma notifications)", recs: chans, shared: true})
-	res.sections = append(res.sections, section{title: "Notification policies: the channels each monitor notifies", recs: policies, shared: true})
+// sections orders the records: shared ones first, then the monitors by
+// group.
+func (c *kumaConvert) sections() {
+	res := c.k.res
+	sortSection(c.chans)
+	res.sections = append(res.sections, section{title: "Notification channels (from Uptime Kuma notifications)", recs: c.chans, shared: true})
+	res.sections = append(res.sections, section{title: "Notification policies: the channels each monitor notifies", recs: c.policyRecs, shared: true})
 	var cur *section
-	for _, pm := range mons {
+	for _, pm := range c.mons {
 		title := "Uptime Kuma group: " + pm.group
 		if pm.group == "" {
 			title = "Not in a group"
@@ -463,15 +521,6 @@ func (k *kumaImport) convert(existing *config.Config) {
 		}
 		cur.recs = append(cur.recs, *pm.spec)
 		res.Monitors++
-	}
-	k.maintenances(existing)
-	k.statusPages(existing)
-	k.accounts()
-	res.Info = append(res.Info,
-		"Past checks, uptime history and incidents stay in Uptime Kuma: history starts fresh here.",
-		"Credentials (tokens, passwords, webhook addresses) are stored as encrypted secrets, not in the configuration file.")
-	if k.bk.APIKeys > 0 || k.bk.Incidents > 0 {
-		res.Info = append(res.Info, "API keys, status page incidents, settings and two-factor login are not carried over.")
 	}
 }
 
@@ -603,197 +652,286 @@ func (k *kumaImport) monitorSpec(m *kumaMonitor, it *Item) *config.RecordSpec {
 		it.Todo = "If you still need it, add it by hand as a normal check and decide what “up” should mean."
 		return nil
 	}
-	name := k.names.take(m.Name, fallbackName(m))
-	spec := &config.RecordSpec{Name: name}
-	var opts []config.Opt
-	add := func(key, v string) {
-		if v != "" {
-			opts = append(opts, config.Opt{Key: key, Value: v})
-		}
-	}
-	switch m.Type {
-	case "http", "keyword", "json-query", "real-browser":
-		if m.URL == "" || m.URL == "https://" || m.URL == "http://" {
-			k.names.release(name)
-			it.Why, it.Todo = "It has no URL.", "Add it by hand with the address to check."
-			return nil
-		}
-		spec.Type, spec.Target = "HTTP", m.URL
-		it.Type = "HTTP"
-		if m.Method != "" && !strings.EqualFold(m.Method, "GET") {
-			add("method", strings.ToUpper(m.Method))
-		}
-		add("body", m.Body)
-		if len(m.AcceptedStatus) > 0 && !(len(m.AcceptedStatus) == 1 && m.AcceptedStatus[0] == "200-299") {
-			add("expect", strings.Join(m.AcceptedStatus, ","))
-		}
-		if m.Type == "keyword" {
-			add("keyword", m.Keyword)
-			if m.InvertKeyword {
-				add("absent", "yes")
-			}
-			it.Type = "HTTP keyword"
-		}
-		if m.Type == "json-query" {
-			it.Type = "HTTP JSON"
-			add("json-path", m.JSONPath)
-			switch op := m.JSONOp; op {
-			case "", "==":
-				add("json-expect", m.ExpectedValue)
-			case ">", ">=", "<", "<=", "!=":
-				if _, err := strconv.ParseFloat(m.ExpectedValue, 64); err == nil && op != "!=" {
-					add("json-expect-num", op+m.ExpectedValue)
-				} else {
-					it.attention("The JSON comparison “"+op+" "+m.ExpectedValue+"” has no equivalent; only the path is checked.", "Set json-expect= or json-expect-num= on it.")
-				}
-			default:
-				it.attention("The JSON comparison “"+op+" "+m.ExpectedValue+"” has no equivalent; only the path is checked.", "Set json-expect= or json-expect-num= on it.")
-			}
-		}
-		if m.Type == "real-browser" {
-			it.attention("Uptime Kuma loaded it in a browser; here it is a plain HTTP check (no JavaScript).", "")
-		}
-		if m.IgnoreTLS {
-			add("insecure", "yes")
-		}
-		if m.MaxRedirects != nil && *m.MaxRedirects == 0 {
-			add("no-follow", "yes")
-		}
-		if bool(m.ExpiryNotify) && strings.HasPrefix(m.URL, "https://") {
-			add("cert-days", "62")
-		}
-		switch {
-		case m.BasicUser != "" && (m.AuthMethod == "" || m.AuthMethod == "basic"):
-			add("basic", k.secret(name, "basic", m.BasicUser+":"+m.BasicPass))
-		case m.AuthMethod == "bearer" && m.Bearer != "":
-			add("bearer", k.secret(name, "bearer", m.Bearer))
-		case m.AuthMethod != "" && m.AuthMethod != "basic" && m.AuthMethod != "bearer":
-			it.attention("Its "+m.AuthMethod+" login was not carried over.", "Add the login by hand (basic=, bearer= or a header).")
-		}
-		if m.Headers != "" && m.Headers != "{}" && m.Headers != "null" {
-			var h map[string]any
-			if json.Unmarshal([]byte(m.Headers), &h) != nil {
-				it.attention("Its request headers are not valid JSON and were left out.", "Add them by hand as header.NAME=value.")
-			} else {
-				keys := make([]string, 0, len(h))
-				for key := range h {
-					keys = append(keys, key)
-				}
-				sort.Strings(keys)
-				for _, hk := range keys {
-					v := fmt.Sprint(h[hk])
-					hkey := "header." + strings.ToLower(hk)
-					if !optKeyOK(hkey) {
-						it.attention("Header “"+hk+"” has a name that cannot be written here.", "Add it by hand.")
-						continue
-					}
-					if isCredentialHeader(hk) {
-						add(hkey, k.secret(name, strings.ToLower(hk), v))
-					} else {
-						add(hkey, v)
-					}
-				}
-			}
-		}
-		if m.ProxyID != nil {
-			if p, ok := k.bk.Proxies[*m.ProxyID]; ok && p.Host != "" {
-				add("proxy", p.Protocol+"://"+net.JoinHostPort(p.Host, strconv.Itoa(p.Port)))
-				if p.Auth {
-					it.attention("Its proxy needs a login, which was not carried over.", "Put the login in the proxy URL (http://user:password@host:port).")
-				}
-			}
-		}
-	case "port":
-		spec.Type, spec.Target = "TCP", net.JoinHostPort(m.Hostname, strconv.Itoa(m.Port))
-	case "smtp":
-		spec.Type, spec.Target = "TCP", net.JoinHostPort(m.Hostname, strconv.Itoa(max(m.Port, 25)))
-		it.Type = "TCP port"
-		it.attention("Imported as a check that the mail port answers; the SMTP conversation is not checked.", "")
-	case "ping":
-		spec.Type, spec.Target = "PING", m.Hostname
-	case "tailscale-ping":
-		spec.Type, spec.Target = "PING", m.Hostname
-		it.Type = "Ping"
-		it.attention("It is pinged directly, not through Tailscale.", "Run Unagikuma (or a probe node) on a machine in your tailnet if the name only resolves there.")
-	case "snmp":
-		spec.Type, spec.Target = "SNMP", m.Hostname
-		if m.Port > 0 && m.Port != 161 {
-			spec.Target = net.JoinHostPort(m.Hostname, strconv.Itoa(m.Port))
-		}
-		if m.RadiusPassword != "" { // Uptime Kuma keeps the community there
-			add("community", k.secret(name, "community", m.RadiusPassword))
-		}
-		it.attention("It checks that the device answers SNMP; the OID value comparison is not carried over.", "")
-	case "dns":
-		server := m.DNSResolveServer
-		if server == "" {
-			server = "1.1.1.1"
-			it.attention("Uptime Kuma asked the system's resolver; this check asks 1.1.1.1.", "Change the target to your own DNS server if that is what you meant to watch.")
-		}
-		if i := strings.Index(server, ","); i >= 0 {
-			server = strings.TrimSpace(server[:i])
-		}
-		spec.Type, spec.Target = "DNS", server
-		if m.Port > 0 && m.Port != 53 {
-			spec.Target = net.JoinHostPort(server, strconv.Itoa(m.Port))
-		}
-		add("query", m.Hostname)
-		if m.DNSResolveType != "" && m.DNSResolveType != "A" {
-			add("qtype", m.DNSResolveType)
-		}
-	case "postgres", "mysql", "redis":
-		typ, target, extra, password, why := fromConnString(m.Type, m.DBConn, m.Hostname, m.Port)
-		if why != "" {
-			k.names.release(name)
-			it.Why, it.Todo = "Its "+why+".", "Add it by hand."
-			return nil
-		}
-		spec.Type, spec.Target = typ, target
-		for _, kv := range extra {
-			add(kv[0], kv[1])
-		}
-		if password != "" {
-			add("password", k.secret(name, "password", password))
-		}
-	case "docker":
-		if m.DockerContainer == "" {
-			k.names.release(name)
-			it.Why, it.Todo = "It names no container.", "Add it by hand."
-			return nil
-		}
-		spec.Type, spec.Target = "DOCKER", m.DockerContainer
-		if m.DockerHost != nil {
-			it.attention("It is checked through the Docker socket of the machine that runs the check, not a remote Docker host.", "Run a probe node on the Docker host if the container is elsewhere.")
-		}
-	case "grpc-keyword":
-		target := strings.TrimPrefix(strings.TrimPrefix(m.GRPCURL, "https://"), "http://")
-		if target == "" {
-			k.names.release(name)
-			it.Why, it.Todo = "It has no gRPC address.", "Add it by hand."
-			return nil
-		}
-		spec.Type, spec.Target = "GRPC", target
-		add("service", m.GRPCService)
-		if m.GRPCTLS {
-			add("tls", "yes")
-		}
-		it.attention("It uses the standard gRPC health check instead of a keyword match.", "")
-	case "push":
-		spec.Type = "PUSH"
-		add("period", humanDur(max(m.Interval, 20)))
-		if m.PushToken != "" {
-			k.res.PushTokens[name] = m.PushToken
-		} else {
-			it.attention("Its push URL changes.", "Point the sender at the push URL shown on the monitor.")
-		}
-	default:
-		k.names.release(name)
-		it.Why = "Unagikuma has no “" + m.Type + "” check."
-		it.Todo = "Add a similar check by hand (HTTP, TCP, ping or a script check)."
+	b := &kumaSpec{k: k, m: m, it: it}
+	b.name = k.names.take(m.Name, fallbackName(m))
+	b.spec = &config.RecordSpec{Name: b.name}
+	if !b.byType() {
 		return nil
 	}
+	b.common()
+	b.spec.Opts = b.opts
+	return b.spec
+}
+
+// kumaSpec builds the record of one Uptime Kuma monitor.
+type kumaSpec struct {
+	k    *kumaImport
+	m    *kumaMonitor
+	it   *Item
+	name string
+	spec *config.RecordSpec
+	opts []config.Opt
+}
+
+func (b *kumaSpec) add(key, v string) {
+	if v != "" {
+		b.opts = append(b.opts, config.Opt{Key: key, Value: v})
+	}
+}
+
+// drop gives the name back and says why the monitor is not imported.
+func (b *kumaSpec) drop(why, todo string) bool {
+	b.k.names.release(b.name)
+	b.it.Why, b.it.Todo = why, todo
+	return false
+}
+
+func (b *kumaSpec) target(typ, target string) {
+	b.spec.Type, b.spec.Target = typ, target
+}
+
+// byType fills the type, target and type-specific options; false means the
+// monitor is not imported.
+func (b *kumaSpec) byType() bool {
+	m := b.m
+	switch m.Type {
+	case "http", "keyword", "json-query", "real-browser":
+		return b.http()
+	case "port":
+		b.target("TCP", net.JoinHostPort(m.Hostname, strconv.Itoa(m.Port)))
+	case "smtp":
+		b.target("TCP", net.JoinHostPort(m.Hostname, strconv.Itoa(max(m.Port, 25))))
+		b.it.Type = "TCP port"
+		b.it.attention("Imported as a check that the mail port answers; the SMTP conversation is not checked.", "")
+	case "ping":
+		b.target("PING", m.Hostname)
+	case "tailscale-ping":
+		b.target("PING", m.Hostname)
+		b.it.Type = "Ping"
+		b.it.attention("It is pinged directly, not through Tailscale.", "Run Unagikuma (or a probe node) on a machine in your tailnet if the name only resolves there.")
+	case "snmp":
+		b.snmp()
+	case "dns":
+		b.dns()
+	case "postgres", "mysql", "redis":
+		return b.database()
+	case "docker":
+		return b.docker()
+	case "grpc-keyword":
+		return b.grpc()
+	case "push":
+		b.push()
+	default:
+		return b.drop("Unagikuma has no “"+m.Type+"” check.", "Add a similar check by hand (HTTP, TCP, ping or a script check).")
+	}
+	return true
+}
+
+func (b *kumaSpec) http() bool {
+	m, it := b.m, b.it
+	if m.URL == "" || m.URL == "https://" || m.URL == "http://" {
+		return b.drop("It has no URL.", "Add it by hand with the address to check.")
+	}
+	b.target("HTTP", m.URL)
+	it.Type = "HTTP"
+	if m.Method != "" && !strings.EqualFold(m.Method, "GET") {
+		b.add("method", strings.ToUpper(m.Method))
+	}
+	b.add("body", m.Body)
+	if len(m.AcceptedStatus) > 0 && !(len(m.AcceptedStatus) == 1 && m.AcceptedStatus[0] == "200-299") {
+		b.add("expect", strings.Join(m.AcceptedStatus, ","))
+	}
+	switch m.Type {
+	case "keyword":
+		b.add("keyword", m.Keyword)
+		if m.InvertKeyword {
+			b.add("absent", "yes")
+		}
+		it.Type = "HTTP keyword"
+	case "json-query":
+		it.Type = "HTTP JSON"
+		b.add("json-path", m.JSONPath)
+		b.jsonCompare()
+	case "real-browser":
+		it.attention("Uptime Kuma loaded it in a browser; here it is a plain HTTP check (no JavaScript).", "")
+	}
+	if m.IgnoreTLS {
+		b.add("insecure", "yes")
+	}
+	if m.MaxRedirects != nil && *m.MaxRedirects == 0 {
+		b.add("no-follow", "yes")
+	}
+	if bool(m.ExpiryNotify) && strings.HasPrefix(m.URL, "https://") {
+		b.add("cert-days", "62")
+	}
+	b.httpAuth()
+	b.httpHeaders()
+	b.httpProxy()
+	return true
+}
+
+func (b *kumaSpec) jsonCompare() {
+	m := b.m
+	switch op := m.JSONOp; op {
+	case "", "==":
+		b.add("json-expect", m.ExpectedValue)
+		return
+	case ">", ">=", "<", "<=":
+		if _, err := strconv.ParseFloat(m.ExpectedValue, 64); err == nil {
+			b.add("json-expect-num", op+m.ExpectedValue)
+			return
+		}
+	}
+	b.it.attention("The JSON comparison “"+m.JSONOp+" "+m.ExpectedValue+"” has no equivalent; only the path is checked.", "Set json-expect= or json-expect-num= on it.")
+}
+
+func (b *kumaSpec) httpAuth() {
+	m := b.m
+	switch {
+	case m.BasicUser != "" && (m.AuthMethod == "" || m.AuthMethod == "basic"):
+		b.add("basic", b.k.secret(b.name, "basic", m.BasicUser+":"+m.BasicPass))
+	case m.AuthMethod == "bearer" && m.Bearer != "":
+		b.add("bearer", b.k.secret(b.name, "bearer", m.Bearer))
+	case m.AuthMethod != "" && m.AuthMethod != "basic" && m.AuthMethod != "bearer":
+		b.it.attention("Its "+m.AuthMethod+" login was not carried over.", "Add the login by hand (basic=, bearer= or a header).")
+	}
+}
+
+func (b *kumaSpec) httpHeaders() {
+	raw := b.m.Headers
+	if raw == "" || raw == "{}" || raw == "null" {
+		return
+	}
+	var h map[string]any
+	if json.Unmarshal([]byte(raw), &h) != nil {
+		b.it.attention("Its request headers are not valid JSON and were left out.", "Add them by hand as header.NAME=value.")
+		return
+	}
+	keys := make([]string, 0, len(h))
+	for key := range h {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, hk := range keys {
+		v := fmt.Sprint(h[hk])
+		hkey := "header." + strings.ToLower(hk)
+		switch {
+		case !optKeyOK(hkey):
+			b.it.attention("Header “"+hk+"” has a name that cannot be written here.", "Add it by hand.")
+		case isCredentialHeader(hk):
+			b.add(hkey, b.k.secret(b.name, strings.ToLower(hk), v))
+		default:
+			b.add(hkey, v)
+		}
+	}
+}
+
+func (b *kumaSpec) httpProxy() {
+	if b.m.ProxyID == nil {
+		return
+	}
+	p, ok := b.k.bk.Proxies[*b.m.ProxyID]
+	if !ok || p.Host == "" {
+		return
+	}
+	b.add("proxy", p.Protocol+"://"+net.JoinHostPort(p.Host, strconv.Itoa(p.Port)))
+	if p.Auth {
+		b.it.attention("Its proxy needs a login, which was not carried over.", "Put the login in the proxy URL (http://user:password@host:port).")
+	}
+}
+
+func (b *kumaSpec) snmp() {
+	m := b.m
+	b.target("SNMP", m.Hostname)
+	if m.Port > 0 && m.Port != 161 {
+		b.spec.Target = net.JoinHostPort(m.Hostname, strconv.Itoa(m.Port))
+	}
+	if m.RadiusPassword != "" { // Uptime Kuma keeps the community there
+		b.add("community", b.k.secret(b.name, "community", m.RadiusPassword))
+	}
+	b.it.attention("It checks that the device answers SNMP; the OID value comparison is not carried over.", "")
+}
+
+func (b *kumaSpec) dns() {
+	m := b.m
+	server := m.DNSResolveServer
+	if server == "" {
+		server = "1.1.1.1"
+		b.it.attention("Uptime Kuma asked the system's resolver; this check asks 1.1.1.1.", "Change the target to your own DNS server if that is what you meant to watch.")
+	}
+	if i := strings.Index(server, ","); i >= 0 {
+		server = strings.TrimSpace(server[:i])
+	}
+	b.target("DNS", server)
+	if m.Port > 0 && m.Port != 53 {
+		b.spec.Target = net.JoinHostPort(server, strconv.Itoa(m.Port))
+	}
+	b.add("query", m.Hostname)
+	if m.DNSResolveType != "" && m.DNSResolveType != "A" {
+		b.add("qtype", m.DNSResolveType)
+	}
+}
+
+func (b *kumaSpec) database() bool {
+	m := b.m
+	typ, target, extra, password, why := fromConnString(m.Type, m.DBConn, m.Hostname, m.Port)
+	if why != "" {
+		return b.drop("Its "+why+".", "Add it by hand.")
+	}
+	b.target(typ, target)
+	for _, kv := range extra {
+		b.add(kv[0], kv[1])
+	}
+	if password != "" {
+		b.add("password", b.k.secret(b.name, "password", password))
+	}
+	return true
+}
+
+func (b *kumaSpec) docker() bool {
+	m := b.m
+	if m.DockerContainer == "" {
+		return b.drop("It names no container.", "Add it by hand.")
+	}
+	b.target("DOCKER", m.DockerContainer)
+	if m.DockerHost != nil {
+		b.it.attention("It is checked through the Docker socket of the machine that runs the check, not a remote Docker host.", "Run a probe node on the Docker host if the container is elsewhere.")
+	}
+	return true
+}
+
+func (b *kumaSpec) grpc() bool {
+	m := b.m
+	target := strings.TrimPrefix(strings.TrimPrefix(m.GRPCURL, "https://"), "http://")
+	if target == "" {
+		return b.drop("It has no gRPC address.", "Add it by hand.")
+	}
+	b.target("GRPC", target)
+	b.add("service", m.GRPCService)
+	if m.GRPCTLS {
+		b.add("tls", "yes")
+	}
+	b.it.attention("It uses the standard gRPC health check instead of a keyword match.", "")
+	return true
+}
+
+func (b *kumaSpec) push() {
+	m := b.m
+	b.spec.Type = "PUSH"
+	b.add("period", humanDur(max(m.Interval, 20)))
+	if m.PushToken != "" {
+		b.k.res.PushTokens[b.name] = m.PushToken
+	} else {
+		b.it.attention("Its push URL changes.", "Point the sender at the push URL shown on the monitor.")
+	}
+}
+
+// common adds what every monitor carries: title, description, tags and
+// the timing.
+func (b *kumaSpec) common() {
+	m := b.m
 	desc := strings.TrimSpace(m.Description)
-	if name != m.Name {
+	if b.name != m.Name {
 		title := strings.TrimSpace(m.Name)
 		if r := []rune(title); len(r) > 64 {
 			title = string(r[:63]) + "…"
@@ -801,30 +939,29 @@ func (k *kumaImport) monitorSpec(m *kumaMonitor, it *Item) *config.RecordSpec {
 				desc = strings.TrimSpace(m.Name)
 			}
 		}
-		add("title", title)
+		b.add("title", title)
 	}
-	add("description", desc)
+	b.add("description", desc)
 	if tags := kumaTags(m.Tags); tags != "" {
-		add("tags", tags)
+		b.add("tags", tags)
 	}
-	if m.Type != "push" {
-		if m.Interval > 0 {
-			spec.Interval = humanDur(m.Interval)
-		}
-		if m.RetryInterval > 0 && m.RetryInterval != m.Interval {
-			add("retry", humanDur(m.RetryInterval))
-		}
-		add("attempts", strconv.Itoa(m.MaxRetries+1))
-		if m.Timeout > 0 {
-			t := m.Timeout
-			if m.Interval > 0 && t >= float64(m.Interval) {
-				t = float64(m.Interval) * 0.8
-			}
-			add("timeout", strconv.FormatFloat(t, 'f', -1, 64)+"s")
-		}
+	if m.Type == "push" {
+		return
 	}
-	spec.Opts = opts
-	return spec
+	if m.Interval > 0 {
+		b.spec.Interval = humanDur(m.Interval)
+	}
+	if m.RetryInterval > 0 && m.RetryInterval != m.Interval {
+		b.add("retry", humanDur(m.RetryInterval))
+	}
+	b.add("attempts", strconv.Itoa(m.MaxRetries+1))
+	if m.Timeout > 0 {
+		t := m.Timeout
+		if m.Interval > 0 && t >= float64(m.Interval) {
+			t = float64(m.Interval) * 0.8
+		}
+		b.add("timeout", strconv.FormatFloat(t, 'f', -1, 64)+"s")
+	}
 }
 
 func kumaTags(tags []kumaTag) string {
@@ -883,261 +1020,313 @@ func (k *kumaImport) channel(n kumaNotification, existing *config.Config, it *It
 		it.Why, it.Todo = "Its settings could not be read.", "Add it by hand under Alerting › Channels."
 		return nil
 	}
-	str := func(key string) string {
-		switch v := c[key].(type) {
-		case string:
-			return strings.TrimSpace(v)
-		case float64:
-			return strconv.FormatFloat(v, 'f', -1, 64)
-		case bool:
-			return strconv.FormatBool(v)
-		}
-		return ""
-	}
-	typ := str("type")
-	kind := map[string]string{"telegram": "telegram", "slack": "slack", "discord": "discord", "webhook": "webhook", "feishu": "feishu",
-		"DingDing": "dingtalk", "WeCom": "wecom", "smtp": "email", "ntfy": "webhook:ntfy", "gotify": "webhook:gotify", "pushover": "webhook:pushover",
-		"teams": "webhook:teams", "PagerDuty": "webhook:pagerduty", "matrix": "webhook:matrix", "mattermost": "webhook:mattermost",
-		"GoogleChat": "webhook:googlechat", "Bark": "webhook:bark", "ServerChan": "webhook:serverchan", "PushPlus": "webhook:pushplus",
-		"Opsgenie": "webhook:opsgenie"}[typ]
+	ch := &kumaChannel{k: k, c: c, it: it}
+	typ := ch.str("type")
+	kind := kumaChannelKinds[typ]
 	if kind == "" {
 		it.Why = "Unagikuma cannot send to “" + typ + "”."
 		it.Todo = "Pick a similar channel under Alerting › Channels (a webhook reaches most services), then add it to the monitor's policy."
 		return nil
 	}
-	name := slug(n.Name)
-	if existing != nil && name != "" {
-		if ch := existing.FindChannel(name); ch != nil && channelKind(ch) == kind {
+	if name := slug(n.Name); existing != nil && name != "" {
+		if have := existing.FindChannel(name); have != nil && channelKind(have) == kind {
 			it.Status, it.Name = StatusSkipped, name
 			it.Why = "A " + it.Type + " channel named " + name + " is already here; the imported monitors use it."
 			return &config.RecordSpec{Name: name}
 		}
 	}
-	name = k.names.take(n.Name, strings.TrimPrefix(kind, "webhook:"))
-	var opts []config.Opt
-	secret := func(key, value string) {
-		if value != "" {
-			opts = append(opts, config.Opt{Key: key, Value: k.secret(name, key, value)})
-		}
-	}
-	plain := func(key, value string) {
-		if value != "" {
-			opts = append(opts, config.Opt{Key: key, Value: value})
-		}
-	}
-	missing := func(fields ...string) bool {
-		for _, f := range fields {
-			if str(f) == "" {
-				k.names.release(name)
-				it.Why, it.Todo = "Its settings are incomplete ("+f+" is empty).", "Add it by hand under Alerting › Channels."
-				return true
-			}
-		}
-		return false
-	}
-	switch typ {
-	case "telegram":
-		if missing("telegramBotToken", "telegramChatID") {
-			return nil
-		}
-		secret("token", str("telegramBotToken"))
-		plain("chat", str("telegramChatID"))
-		if s := str("telegramServerUrl"); s != "" && s != "https://api.telegram.org" {
-			plain("api", s)
-		}
-	case "slack":
-		if missing("slackwebhookURL") {
-			return nil
-		}
-		secret("url", str("slackwebhookURL"))
-		if str("slackchannel") != "" {
-			it.attention("Messages go to the webhook's own channel; the channel override ("+str("slackchannel")+") is not used.", "")
-		}
-	case "discord":
-		if missing("discordWebhookUrl") {
-			return nil
-		}
-		secret("url", str("discordWebhookUrl"))
-	case "webhook":
-		if missing("webhookURL") {
-			return nil
-		}
-		if u, err := url.Parse(str("webhookURL")); err == nil && (u.RawQuery != "" || u.User != nil) {
-			secret("url", str("webhookURL")) // a token in the address
-		} else {
-			plain("url", str("webhookURL"))
-		}
-		switch str("webhookContentType") {
-		case "form-data":
-			plain("content-type", "form")
-		}
-		it.attention("The message body differs from Uptime Kuma's.", "Check that the receiving side understands it (Alerting › Channels › Test).")
-		if str("webhookContentType") == "custom" {
-			it.attention("Its custom body template was not carried over (the template language differs).", "Write the body again under Alerting › Channels (body=).")
-		}
-		if h := str("webhookAdditionalHeaders"); h != "" {
-			var hs map[string]any
-			if json.Unmarshal([]byte(h), &hs) == nil {
-				keys := make([]string, 0, len(hs))
-				for hk := range hs {
-					keys = append(keys, hk)
-				}
-				sort.Strings(keys)
-				for _, hk := range keys {
-					key := "header." + strings.ToLower(hk)
-					if !optKeyOK(key) {
-						continue
-					}
-					if isCredentialHeader(hk) {
-						secret(key, fmt.Sprint(hs[hk]))
-					} else {
-						plain(key, fmt.Sprint(hs[hk]))
-					}
-				}
-			}
-		}
-	case "feishu":
-		if missing("feishuWebHookUrl") {
-			return nil
-		}
-		secret("url", str("feishuWebHookUrl"))
-	case "DingDing":
-		if missing("webHookUrl") {
-			return nil
-		}
-		secret("url", str("webHookUrl"))
-		secret("secret", str("secretKey"))
-	case "WeCom":
-		if missing("weComBotKey") {
-			return nil
-		}
-		secret("url", "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key="+str("weComBotKey"))
-	case "smtp":
-		if missing("smtpHost", "smtpTo") {
-			return nil
-		}
-		plain("host", str("smtpHost"))
-		plain("port", str("smtpPort"))
-		plain("username", str("smtpUsername"))
-		secret("password", str("smtpPassword"))
-		from := str("smtpFrom")
-		if from == "" {
-			from = str("smtpUsername")
-		}
-		plain("from", from)
-		to := str("smtpTo")
-		for _, x := range []string{str("smtpCC"), str("smtpBCC")} {
-			if x != "" {
-				to += "," + x
-			}
-		}
-		plain("to", strings.ReplaceAll(to, " ", ""))
-		switch {
-		case str("smtpSecure") == "true":
-			plain("tls", "tls")
-		case str("smtpIgnoreTLSError") == "true":
-			it.attention("Uptime Kuma ignored certificate errors for this mail server; Unagikuma checks them.", "")
-		}
-		if str("smtpCC") != "" || str("smtpBCC") != "" {
-			it.attention("Copy (CC/BCC) addresses are sent to as normal recipients.", "")
-		}
-		if str("customSubject") != "" || str("customBody") != "" {
-			it.attention("Its custom subject and body were not carried over.", "Edit the message templates under Notices & status if needed.")
-		}
-	case "ntfy":
-		if missing("ntfytopic") {
-			return nil
-		}
-		if s := str("ntfyserverurl"); s != "" && s != "https://ntfy.sh" {
-			plain("server", strings.TrimRight(s, "/"))
-		}
-		plain("topic", str("ntfytopic"))
-		secret("token", str("ntfyaccesstoken"))
-		if str("ntfyusername") != "" {
-			it.attention("Its user name and password login was not carried over.", "Use an access token (token=).")
-		}
-	case "gotify":
-		if missing("gotifyserverurl", "gotifyapplicationToken") {
-			return nil
-		}
-		plain("server", strings.TrimRight(str("gotifyserverurl"), "/"))
-		secret("token", str("gotifyapplicationToken"))
-	case "pushover":
-		if missing("pushoverapptoken", "pushoveruserkey") {
-			return nil
-		}
-		secret("token", str("pushoverapptoken"))
-		secret("user-key", str("pushoveruserkey"))
-	case "teams":
-		if missing("webhookUrl") {
-			return nil
-		}
-		secret("url", str("webhookUrl"))
-		it.attention("Microsoft Teams channels here use a Workflows webhook.", "If this is an old Office 365 connector URL, create a Workflows webhook and replace it.")
-	case "PagerDuty":
-		if missing("pagerdutyIntegrationKey") {
-			return nil
-		}
-		secret("routing-key", str("pagerdutyIntegrationKey"))
-	case "matrix":
-		if missing("homeserverUrl", "accessToken", "internalRoomId") {
-			return nil
-		}
-		plain("homeserver", strings.TrimRight(str("homeserverUrl"), "/"))
-		secret("token", str("accessToken"))
-		plain("room", str("internalRoomId"))
-	case "mattermost":
-		if missing("mattermostWebhookUrl") {
-			return nil
-		}
-		secret("url", str("mattermostWebhookUrl"))
-	case "GoogleChat":
-		if missing("googleChatWebhookURL") {
-			return nil
-		}
-		secret("url", str("googleChatWebhookURL"))
-	case "Bark":
-		if missing("barkEndpoint") {
-			return nil
-		}
-		u, err := url.Parse(str("barkEndpoint"))
-		if err != nil || u.Host == "" {
-			k.names.release(name)
-			it.Why, it.Todo = "Its Bark address could not be read.", "Add it by hand under Alerting › Channels."
-			return nil
-		}
-		key := strings.Trim(u.Path, "/")
-		u.Path = ""
-		plain("server", u.String())
-		secret("device-key", key)
-	case "ServerChan":
-		if missing("serverChanSendKey") {
-			return nil
-		}
-		secret("sendkey", str("serverChanSendKey"))
-	case "PushPlus":
-		if missing("pushPlusSendKey") {
-			return nil
-		}
-		secret("token", str("pushPlusSendKey"))
-	case "Opsgenie":
-		if missing("opsgenieApiKey") {
-			return nil
-		}
-		secret("api-key", str("opsgenieApiKey"))
-		if r := str("opsgenieRegion"); r != "" {
-			plain("region", strings.ToLower(r))
-		}
+	ch.name = k.names.take(n.Name, strings.TrimPrefix(kind, "webhook:"))
+	if !ch.fill(typ) {
+		return nil
 	}
 	if !n.Active {
 		it.attention("It was turned off in Uptime Kuma; here it is on.", "Remove it from the policy if it should stay quiet.")
 	}
-	it.Target = channelTarget(kind, opts)
+	it.Target = channelTarget(kind, ch.opts)
 	if p, ok := strings.CutPrefix(kind, "webhook:"); ok {
 		// Presets are webhooks with preset= in the file.
-		return &config.RecordSpec{Name: name, Type: "CHANNEL", Target: "webhook", Opts: append([]config.Opt{{Key: "preset", Value: p}}, opts...)}
+		return &config.RecordSpec{Name: ch.name, Type: "CHANNEL", Target: "webhook", Opts: append([]config.Opt{{Key: "preset", Value: p}}, ch.opts...)}
 	}
-	return &config.RecordSpec{Name: name, Type: "CHANNEL", Target: kind, Opts: opts}
+	return &config.RecordSpec{Name: ch.name, Type: "CHANNEL", Target: kind, Opts: ch.opts}
+}
+
+// kumaChannelKinds maps Uptime Kuma notification types to channel kinds.
+var kumaChannelKinds = map[string]string{"telegram": "telegram", "slack": "slack", "discord": "discord", "webhook": "webhook", "feishu": "feishu",
+	"DingDing": "dingtalk", "WeCom": "wecom", "smtp": "email", "ntfy": "webhook:ntfy", "gotify": "webhook:gotify", "pushover": "webhook:pushover",
+	"teams": "webhook:teams", "PagerDuty": "webhook:pagerduty", "matrix": "webhook:matrix", "mattermost": "webhook:mattermost",
+	"GoogleChat": "webhook:googlechat", "Bark": "webhook:bark", "ServerChan": "webhook:serverchan", "PushPlus": "webhook:pushplus",
+	"Opsgenie": "webhook:opsgenie"}
+
+// kumaField is one setting copied as it is: to option key, from Kuma field.
+type kumaField struct {
+	key, field       string
+	secret, required bool
+}
+
+// kumaPlainChannels are the kinds whose settings are copied field by field.
+var kumaPlainChannels = map[string][]kumaField{
+	"discord":    {{"url", "discordWebhookUrl", true, true}},
+	"feishu":     {{"url", "feishuWebHookUrl", true, true}},
+	"DingDing":   {{"url", "webHookUrl", true, true}, {"secret", "secretKey", true, false}},
+	"pushover":   {{"token", "pushoverapptoken", true, true}, {"user-key", "pushoveruserkey", true, true}},
+	"PagerDuty":  {{"routing-key", "pagerdutyIntegrationKey", true, true}},
+	"mattermost": {{"url", "mattermostWebhookUrl", true, true}},
+	"GoogleChat": {{"url", "googleChatWebhookURL", true, true}},
+	"ServerChan": {{"sendkey", "serverChanSendKey", true, true}},
+	"PushPlus":   {{"token", "pushPlusSendKey", true, true}},
+}
+
+// kumaChannel builds the record of one Uptime Kuma notification.
+type kumaChannel struct {
+	k    *kumaImport
+	c    map[string]any
+	it   *Item
+	name string
+	opts []config.Opt
+}
+
+func (ch *kumaChannel) str(key string) string {
+	switch v := ch.c[key].(type) {
+	case string:
+		return strings.TrimSpace(v)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(v)
+	}
+	return ""
+}
+
+func (ch *kumaChannel) secret(key, value string) {
+	if value != "" {
+		ch.opts = append(ch.opts, config.Opt{Key: key, Value: ch.k.secret(ch.name, key, value)})
+	}
+}
+
+func (ch *kumaChannel) plain(key, value string) {
+	if value != "" {
+		ch.opts = append(ch.opts, config.Opt{Key: key, Value: value})
+	}
+}
+
+// missing reports the first empty field among fields, and gives the name
+// back.
+func (ch *kumaChannel) missing(fields ...string) bool {
+	for _, f := range fields {
+		if ch.str(f) == "" {
+			ch.drop("Its settings are incomplete ("+f+" is empty).", "Add it by hand under Alerting › Channels.")
+			return true
+		}
+	}
+	return false
+}
+
+func (ch *kumaChannel) drop(why, todo string) {
+	ch.k.names.release(ch.name)
+	ch.it.Why, ch.it.Todo = why, todo
+}
+
+// fill copies the settings of a notification of type typ; false means it
+// is not imported.
+func (ch *kumaChannel) fill(typ string) bool {
+	if fields, ok := kumaPlainChannels[typ]; ok {
+		var need []string
+		for _, f := range fields {
+			if f.required {
+				need = append(need, f.field)
+			}
+		}
+		if ch.missing(need...) {
+			return false
+		}
+		for _, f := range fields {
+			if f.secret {
+				ch.secret(f.key, ch.str(f.field))
+			} else {
+				ch.plain(f.key, ch.str(f.field))
+			}
+		}
+		return true
+	}
+	fill, ok := map[string]func() bool{
+		"telegram": ch.telegram, "slack": ch.slack, "webhook": ch.webhook, "WeCom": ch.wecom, "smtp": ch.smtp,
+		"ntfy": ch.ntfy, "gotify": ch.gotify, "teams": ch.teams, "matrix": ch.matrix, "Bark": ch.bark, "Opsgenie": ch.opsgenie,
+	}[typ]
+	return !ok || fill()
+}
+
+func (ch *kumaChannel) telegram() bool {
+	if ch.missing("telegramBotToken", "telegramChatID") {
+		return false
+	}
+	ch.secret("token", ch.str("telegramBotToken"))
+	ch.plain("chat", ch.str("telegramChatID"))
+	if s := ch.str("telegramServerUrl"); s != "" && s != "https://api.telegram.org" {
+		ch.plain("api", s)
+	}
+	return true
+}
+
+func (ch *kumaChannel) slack() bool {
+	if ch.missing("slackwebhookURL") {
+		return false
+	}
+	ch.secret("url", ch.str("slackwebhookURL"))
+	if ch.str("slackchannel") != "" {
+		ch.it.attention("Messages go to the webhook's own channel; the channel override ("+ch.str("slackchannel")+") is not used.", "")
+	}
+	return true
+}
+
+func (ch *kumaChannel) webhook() bool {
+	if ch.missing("webhookURL") {
+		return false
+	}
+	if u, err := url.Parse(ch.str("webhookURL")); err == nil && (u.RawQuery != "" || u.User != nil) {
+		ch.secret("url", ch.str("webhookURL")) // a token in the address
+	} else {
+		ch.plain("url", ch.str("webhookURL"))
+	}
+	if ch.str("webhookContentType") == "form-data" {
+		ch.plain("content-type", "form")
+	}
+	ch.it.attention("The message body differs from Uptime Kuma's.", "Check that the receiving side understands it (Alerting › Channels › Test).")
+	if ch.str("webhookContentType") == "custom" {
+		ch.it.attention("Its custom body template was not carried over (the template language differs).", "Write the body again under Alerting › Channels (body=).")
+	}
+	var hs map[string]any
+	if h := ch.str("webhookAdditionalHeaders"); h == "" || json.Unmarshal([]byte(h), &hs) != nil {
+		return true
+	}
+	keys := make([]string, 0, len(hs))
+	for hk := range hs {
+		keys = append(keys, hk)
+	}
+	sort.Strings(keys)
+	for _, hk := range keys {
+		key := "header." + strings.ToLower(hk)
+		switch {
+		case !optKeyOK(key):
+		case isCredentialHeader(hk):
+			ch.secret(key, fmt.Sprint(hs[hk]))
+		default:
+			ch.plain(key, fmt.Sprint(hs[hk]))
+		}
+	}
+	return true
+}
+
+func (ch *kumaChannel) wecom() bool {
+	if ch.missing("weComBotKey") {
+		return false
+	}
+	ch.secret("url", "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key="+ch.str("weComBotKey"))
+	return true
+}
+
+func (ch *kumaChannel) smtp() bool {
+	if ch.missing("smtpHost", "smtpTo") {
+		return false
+	}
+	ch.plain("host", ch.str("smtpHost"))
+	ch.plain("port", ch.str("smtpPort"))
+	ch.plain("username", ch.str("smtpUsername"))
+	ch.secret("password", ch.str("smtpPassword"))
+	from := ch.str("smtpFrom")
+	if from == "" {
+		from = ch.str("smtpUsername")
+	}
+	ch.plain("from", from)
+	to := ch.str("smtpTo")
+	for _, x := range []string{ch.str("smtpCC"), ch.str("smtpBCC")} {
+		if x != "" {
+			to += "," + x
+		}
+	}
+	ch.plain("to", strings.ReplaceAll(to, " ", ""))
+	switch {
+	case ch.str("smtpSecure") == "true":
+		ch.plain("tls", "tls")
+	case ch.str("smtpIgnoreTLSError") == "true":
+		ch.it.attention("Uptime Kuma ignored certificate errors for this mail server; Unagikuma checks them.", "")
+	}
+	if ch.str("smtpCC") != "" || ch.str("smtpBCC") != "" {
+		ch.it.attention("Copy (CC/BCC) addresses are sent to as normal recipients.", "")
+	}
+	if ch.str("customSubject") != "" || ch.str("customBody") != "" {
+		ch.it.attention("Its custom subject and body were not carried over.", "Edit the message templates under Notices & status if needed.")
+	}
+	return true
+}
+
+func (ch *kumaChannel) ntfy() bool {
+	if ch.missing("ntfytopic") {
+		return false
+	}
+	if s := ch.str("ntfyserverurl"); s != "" && s != "https://ntfy.sh" {
+		ch.plain("server", strings.TrimRight(s, "/"))
+	}
+	ch.plain("topic", ch.str("ntfytopic"))
+	ch.secret("token", ch.str("ntfyaccesstoken"))
+	if ch.str("ntfyusername") != "" {
+		ch.it.attention("Its user name and password login was not carried over.", "Use an access token (token=).")
+	}
+	return true
+}
+
+func (ch *kumaChannel) gotify() bool {
+	if ch.missing("gotifyserverurl", "gotifyapplicationToken") {
+		return false
+	}
+	ch.plain("server", strings.TrimRight(ch.str("gotifyserverurl"), "/"))
+	ch.secret("token", ch.str("gotifyapplicationToken"))
+	return true
+}
+
+func (ch *kumaChannel) teams() bool {
+	if ch.missing("webhookUrl") {
+		return false
+	}
+	ch.secret("url", ch.str("webhookUrl"))
+	ch.it.attention("Microsoft Teams channels here use a Workflows webhook.", "If this is an old Office 365 connector URL, create a Workflows webhook and replace it.")
+	return true
+}
+
+func (ch *kumaChannel) matrix() bool {
+	if ch.missing("homeserverUrl", "accessToken", "internalRoomId") {
+		return false
+	}
+	ch.plain("homeserver", strings.TrimRight(ch.str("homeserverUrl"), "/"))
+	ch.secret("token", ch.str("accessToken"))
+	ch.plain("room", ch.str("internalRoomId"))
+	return true
+}
+
+func (ch *kumaChannel) bark() bool {
+	if ch.missing("barkEndpoint") {
+		return false
+	}
+	u, err := url.Parse(ch.str("barkEndpoint"))
+	if err != nil || u.Host == "" {
+		ch.drop("Its Bark address could not be read.", "Add it by hand under Alerting › Channels.")
+		return false
+	}
+	key := strings.Trim(u.Path, "/")
+	u.Path = ""
+	ch.plain("server", u.String())
+	ch.secret("device-key", key)
+	return true
+}
+
+func (ch *kumaChannel) opsgenie() bool {
+	if ch.missing("opsgenieApiKey") {
+		return false
+	}
+	ch.secret("api-key", ch.str("opsgenieApiKey"))
+	if r := ch.str("opsgenieRegion"); r != "" {
+		ch.plain("region", strings.ToLower(r))
+	}
+	return true
 }
 
 // channelTarget describes where a channel sends, without credentials.
@@ -1161,133 +1350,164 @@ func channelTarget(kind string, opts []config.Opt) string {
 // maintenances maps Kuma maintenance windows to MAINT records.
 func (k *kumaImport) maintenances(existing *config.Config) {
 	var recs []config.RecordSpec
-	days := []string{"sun", "mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 	for _, mt := range k.bk.Maintenances {
-		label := map[string]string{"recurring-weekday": "weekly", "recurring-day-of-month": "monthly", "recurring-interval": "every few days",
-			"cron": "cron", "single": "once", "manual": "manual"}[mt.Strategy]
-		it := Item{Kind: "maintenance", Source: mt.Title, Type: label, Status: StatusImported}
-		var names []string
-		for _, id := range mt.Monitors {
-			if n := k.monName[id]; n != "" {
-				names = append(names, n)
-			}
+		if rec := k.maintenance(mt, existing); rec != nil {
+			recs = append(recs, *rec)
 		}
-		sort.Strings(names)
-		if len(names) == 0 {
-			it.Status, it.Why = StatusLeftOut, "None of its monitors was imported."
-			it.Todo = "Nothing to do, or add a window by hand under Monitors › Maintenance."
-			k.res.add(it)
-			continue
-		}
-		var opts []config.Opt
-		add := func(key, v string) {
-			if v != "" {
-				opts = append(opts, config.Opt{Key: key, Value: v})
-			}
-		}
-		add("select", "name:"+strings.Join(names, ","))
-		dur := mt.Duration
-		hm := func(s string) string {
-			if len(s) >= 5 {
-				return s[:5]
-			}
-			return s
-		}
-		if dur <= 0 && mt.StartTime != "" && mt.EndTime != "" {
-			if a, err1 := time.Parse("15:04", hm(mt.StartTime)); err1 == nil {
-				if b, err2 := time.Parse("15:04", hm(mt.EndTime)); err2 == nil {
-					d := b.Sub(a)
-					if d <= 0 {
-						d += 24 * time.Hour
-					}
-					dur = int(d.Seconds())
-				}
-			}
-		}
-		switch mt.Strategy {
-		case "recurring-weekday":
-			var ws []int
-			_ = json.Unmarshal([]byte(mt.Weekdays), &ws)
-			var list []string
-			for _, d := range ws {
-				if d >= 0 && d <= 7 {
-					list = append(list, days[d])
-				}
-			}
-			if len(list) == 0 || mt.StartTime == "" || dur <= 0 {
-				it.Status = StatusLeftOut
-			} else {
-				add("every", strings.Join(list, ","))
-				add("start", hm(mt.StartTime))
-				add("duration", humanDur(dur))
-			}
-		case "recurring-day-of-month", "recurring-interval", "cron":
-			if mt.Cron != "" && dur > 0 {
-				add("cron", mt.Cron)
-				add("duration", humanDur(dur))
-				if mt.Strategy == "recurring-interval" && mt.IntervalDay > 1 {
-					it.attention(fmt.Sprintf("Uptime Kuma repeated it every %d days; here it repeats on the same schedule every day.", mt.IntervalDay), "Adjust cron= if that matters.")
-				}
-			} else {
-				it.Status = StatusLeftOut
-			}
-		case "single":
-			start, err := time.Parse("2006-01-02 15:04:05", mt.StartDate)
-			end, err2 := time.Parse("2006-01-02 15:04:05", mt.EndDate)
-			if err != nil || err2 != nil || !end.After(start) {
-				it.Status = StatusLeftOut
-			} else if end.Before(k.o.now()) {
-				it.Status, it.Why, it.Todo = StatusLeftOut, "It is over (it ended "+end.Format("2006-01-02 15:04")+").", "Nothing to do."
-			} else {
-				add("at", start.Format("2006-01-02 15:04"))
-				add("duration", humanDur(int(end.Sub(start).Seconds())))
-			}
-		case "manual":
-			it.Status = StatusLeftOut
-			it.Why = "It is switched on and off by hand, which has no schedule to copy."
-			if mt.Active {
-				it.Why += " It was on when exported."
-			}
-			it.Todo = "Silence the monitors (Problems › Silence) or announce the work under Notices & status › Changes."
-		default:
-			it.Status = StatusLeftOut
-		}
-		if it.Status == StatusLeftOut {
-			if it.Why == "" {
-				it.Why, it.Todo = "Its schedule could not be read.", "Add the window by hand under Monitors › Maintenance."
-			}
-			k.res.add(it)
-			continue
-		}
-		if !mt.Active {
-			it.attention("It was turned off in Uptime Kuma; here it is active.", "Delete it if it is no longer needed.")
-		}
-		if mt.Zone != "" && mt.Zone != "SAME_AS_SERVER" && mt.Zone != "UTC" {
-			it.attention("Uptime Kuma used the time zone "+mt.Zone+"; here it uses the server's time zone.", "Check the start time.")
-		}
-		if existing != nil {
-			for _, x := range existing.Maints {
-				if x.Title == mt.Title {
-					it.Status, it.Name, it.Why = StatusSkipped, x.Name, "A maintenance window with this title is already here."
-					it.Todo = ""
-				}
-			}
-		}
-		if it.Status == StatusSkipped {
-			k.res.add(it)
-			continue
-		}
-		name := k.names.take(mt.Title, "maintenance")
-		it.Name, it.Target = name, optMap(opts)["every"]+optMap(opts)["cron"]+optMap(opts)["at"]
-		if it.Target != "" {
-			it.Target += ", " + optMap(opts)["duration"]
-		}
-		recs = append(recs, config.RecordSpec{Name: name, Type: "MAINT", Target: mt.Title, Opts: opts})
-		k.res.add(it)
 	}
 	if len(recs) > 0 {
 		k.res.sections = append(k.res.sections, section{title: "Maintenance windows (from Uptime Kuma)", recs: recs, shared: true})
 	}
+}
+
+var kumaMaintLabels = map[string]string{"recurring-weekday": "weekly", "recurring-day-of-month": "monthly", "recurring-interval": "every few days",
+	"cron": "cron", "single": "once", "manual": "manual"}
+
+// maintenance converts one window; nil when it is not imported (the item
+// says why).
+func (k *kumaImport) maintenance(mt kumaMaint, existing *config.Config) *config.RecordSpec {
+	it := Item{Kind: "maintenance", Source: mt.Title, Type: kumaMaintLabels[mt.Strategy], Status: StatusImported}
+	var names []string
+	for _, id := range mt.Monitors {
+		if n := k.monName[id]; n != "" {
+			names = append(names, n)
+		}
+	}
+	sort.Strings(names)
+	if len(names) == 0 {
+		it.Status, it.Why = StatusLeftOut, "None of its monitors was imported."
+		it.Todo = "Nothing to do, or add a window by hand under Monitors › Maintenance."
+		k.res.add(it)
+		return nil
+	}
+	opts := []config.Opt{{Key: "select", Value: "name:" + strings.Join(names, ",")}}
+	opts = append(opts, k.maintSchedule(mt, &it)...)
+	if it.Status == StatusLeftOut {
+		if it.Why == "" {
+			it.Why, it.Todo = "Its schedule could not be read.", "Add the window by hand under Monitors › Maintenance."
+		}
+		k.res.add(it)
+		return nil
+	}
+	if !mt.Active {
+		it.attention("It was turned off in Uptime Kuma; here it is active.", "Delete it if it is no longer needed.")
+	}
+	if mt.Zone != "" && mt.Zone != "SAME_AS_SERVER" && mt.Zone != "UTC" {
+		it.attention("Uptime Kuma used the time zone "+mt.Zone+"; here it uses the server's time zone.", "Check the start time.")
+	}
+	if existing != nil {
+		for _, x := range existing.Maints {
+			if x.Title == mt.Title {
+				it.Status, it.Name, it.Why = StatusSkipped, x.Name, "A maintenance window with this title is already here."
+				it.Todo = ""
+			}
+		}
+	}
+	if it.Status == StatusSkipped {
+		k.res.add(it)
+		return nil
+	}
+	name := k.names.take(mt.Title, "maintenance")
+	om := optMap(opts)
+	it.Name, it.Target = name, om["every"]+om["cron"]+om["at"]
+	if it.Target != "" {
+		it.Target += ", " + om["duration"]
+	}
+	k.res.add(it)
+	return &config.RecordSpec{Name: name, Type: "MAINT", Target: mt.Title, Opts: opts}
+}
+
+// hhmm keeps the hours and minutes of a "15:04:05" time.
+func hhmm(s string) string {
+	if len(s) >= 5 {
+		return s[:5]
+	}
+	return s
+}
+
+// maintDuration is the window's length in seconds, from its duration or
+// its start and end times.
+func maintDuration(mt kumaMaint) int {
+	if mt.Duration > 0 || mt.StartTime == "" || mt.EndTime == "" {
+		return mt.Duration
+	}
+	a, err1 := time.Parse("15:04", hhmm(mt.StartTime))
+	b, err2 := time.Parse("15:04", hhmm(mt.EndTime))
+	if err1 != nil || err2 != nil {
+		return mt.Duration
+	}
+	d := b.Sub(a)
+	if d <= 0 {
+		d += 24 * time.Hour
+	}
+	return int(d.Seconds())
+}
+
+// maintSchedule returns the schedule options of a window, or marks the
+// item left out.
+func (k *kumaImport) maintSchedule(mt kumaMaint, it *Item) []config.Opt {
+	dur := maintDuration(mt)
+	var opts []config.Opt
+	add := func(key, v string) {
+		if v != "" {
+			opts = append(opts, config.Opt{Key: key, Value: v})
+		}
+	}
+	switch mt.Strategy {
+	case "recurring-weekday":
+		days := []string{"sun", "mon", "tue", "wed", "thu", "fri", "sat", "sun"}
+		var ws []int
+		_ = json.Unmarshal([]byte(mt.Weekdays), &ws)
+		var list []string
+		for _, d := range ws {
+			if d >= 0 && d <= 7 {
+				list = append(list, days[d])
+			}
+		}
+		if len(list) == 0 || mt.StartTime == "" || dur <= 0 {
+			it.Status = StatusLeftOut
+			return nil
+		}
+		add("every", strings.Join(list, ","))
+		add("start", hhmm(mt.StartTime))
+		add("duration", humanDur(dur))
+	case "recurring-day-of-month", "recurring-interval", "cron":
+		if mt.Cron == "" || dur <= 0 {
+			it.Status = StatusLeftOut
+			return nil
+		}
+		add("cron", mt.Cron)
+		add("duration", humanDur(dur))
+		if mt.Strategy == "recurring-interval" && mt.IntervalDay > 1 {
+			it.attention(fmt.Sprintf("Uptime Kuma repeated it every %d days; here it repeats on the same schedule every day.", mt.IntervalDay), "Adjust cron= if that matters.")
+		}
+	case "single":
+		return k.maintOnce(mt, it)
+	case "manual":
+		it.Status = StatusLeftOut
+		it.Why = "It is switched on and off by hand, which has no schedule to copy."
+		if mt.Active {
+			it.Why += " It was on when exported."
+		}
+		it.Todo = "Silence the monitors (Problems › Silence) or announce the work under Notices & status › Changes."
+	default:
+		it.Status = StatusLeftOut
+	}
+	return opts
+}
+
+func (k *kumaImport) maintOnce(mt kumaMaint, it *Item) []config.Opt {
+	start, err := time.Parse("2006-01-02 15:04:05", mt.StartDate)
+	end, err2 := time.Parse("2006-01-02 15:04:05", mt.EndDate)
+	switch {
+	case err != nil || err2 != nil || !end.After(start):
+		it.Status = StatusLeftOut
+		return nil
+	case end.Before(k.o.now()):
+		it.Status, it.Why, it.Todo = StatusLeftOut, "It is over (it ended "+end.Format("2006-01-02 15:04")+").", "Nothing to do."
+		return nil
+	}
+	return []config.Opt{{Key: "at", Value: start.Format("2006-01-02 15:04")}, {Key: "duration", Value: humanDur(int(end.Sub(start).Seconds()))}}
 }
 
 // statusPages maps Kuma status pages to STATUSPAGE records.

@@ -431,26 +431,55 @@ type nagMon struct {
 }
 
 func (n *nagios) convert(area string) {
-	res := n.res
-	var mons []*nagMon
-	byHost := map[string][]*nagMon{}
+	c := &nagConvert{n: n, byHost: map[string][]*nagMon{}}
 	hosts := append([]*nagObj(nil), n.hosts...)
 	sort.SliceStable(hosts, func(i, j int) bool { return hosts[i].vals["host_name"] < hosts[j].vals["host_name"] })
 	// Hosts first: services name them as parents.
 	for _, h := range hosts {
-		v := h.vals
-		it := Item{Kind: "monitor", Source: v["host_name"], Group: n.hostGroup(v["host_name"]), Status: StatusImported}
-		spec := n.hostSpec(v, &it)
-		if spec == nil {
-			res.add(it)
-			continue
-		}
-		res.add(it)
-		m := &nagMon{spec: spec, policy: n.policy(v, "host", len(res.Items)-1), host: v["host_name"], item: len(res.Items) - 1, isHost: true}
-		mons = append(mons, m)
-		byHost[m.host] = append(byHost[m.host], m)
+		c.host(h)
 	}
-	// Parents and host dependencies.
+	c.parents()
+	c.services()
+	// Shared records, then one section per host.
+	sortSection(n.periodRecs)
+	sortSection(n.channelRecs)
+	sortSection(n.policyRecs)
+	n.res.sections = append(n.res.sections,
+		section{title: "Time periods (from Nagios timeperiods)", recs: n.periodRecs, shared: true},
+		section{title: "Notification channels (from Nagios contacts and contact groups)", recs: n.channelRecs, shared: true},
+		section{title: "Notification policies: who each monitor notifies, and how often", recs: n.policyRecs, shared: true})
+	for _, h := range hosts {
+		c.hostSection(h, area)
+	}
+	n.leftOvers()
+}
+
+// nagConvert carries the monitors of one Nagios conversion, by host.
+type nagConvert struct {
+	n      *nagios
+	mons   []*nagMon
+	byHost map[string][]*nagMon
+}
+
+func (c *nagConvert) keep(m *nagMon) {
+	c.mons = append(c.mons, m)
+	c.byHost[m.host] = append(c.byHost[m.host], m)
+}
+
+func (c *nagConvert) host(h *nagObj) {
+	n, res, v := c.n, c.n.res, h.vals
+	it := Item{Kind: "monitor", Source: v["host_name"], Group: n.hostGroup(v["host_name"]), Status: StatusImported}
+	spec := n.hostSpec(v, &it)
+	res.add(it)
+	if spec == nil {
+		return
+	}
+	c.keep(&nagMon{spec: spec, policy: n.policy(v, "host", len(res.Items)-1), host: v["host_name"], item: len(res.Items) - 1, isHost: true})
+}
+
+// parents sets parent= from the hosts' parents and host dependencies.
+func (c *nagConvert) parents() {
+	n, res := c.n, c.n.res
 	extraParents := map[string][]string{}
 	for _, d := range n.deps {
 		for _, dep := range splitList(d.vals["dependent_host_name"]) {
@@ -461,123 +490,127 @@ func (n *nagios) convert(area string) {
 				Why: "Dependencies between host groups were not converted.", Todo: "Set parent= on the dependent monitors."})
 		}
 	}
-	for _, m := range mons {
+	for _, m := range c.mons {
 		h := n.hostByName[m.host]
 		var parents []string
 		seen := map[string]bool{}
 		for _, p := range append(splitList(h.vals["parents"]), extraParents[m.host]...) {
-			if pm := n.hostMon[p]; pm != "" && pm != m.spec.Name && !seen[pm] {
+			pm := n.hostMon[p]
+			switch {
+			case pm == "":
+				res.Items[m.item].attention("Its parent "+p+" is not defined.", "")
+			case pm != m.spec.Name && !seen[pm]:
 				seen[pm] = true
 				parents = append(parents, pm)
-			} else if pm == "" {
-				res.Items[m.item].attention("Its parent "+p+" is not defined.", "")
 			}
 		}
 		if len(parents) > 0 {
 			m.spec.Opts = append(m.spec.Opts, config.Opt{Key: "parent", Value: strings.Join(parents, ",")})
 		}
 	}
+}
+
+func (c *nagConvert) services() {
+	n, res := c.n, c.n.res
 	sgOf := n.serviceGroupsOf()
 	limited := false
 	for _, s := range n.services {
 		hosts := n.hostsOf(s.vals)
-		desc := s.vals["service_description"]
 		if len(hosts) == 0 {
-			res.add(Item{Kind: "service", Source: desc, Status: StatusLeftOut,
+			res.add(Item{Kind: "service", Source: s.vals["service_description"], Status: StatusLeftOut,
 				Why:  "It is not attached to any host that is defined (" + strings.TrimSpace(s.vals["host_name"]+" "+s.vals["hostgroup_name"]) + ").",
 				Todo: "Nothing to do if that host is gone; otherwise add the check by hand."})
 			continue
 		}
 		for _, host := range hosts {
-			h := n.hostByName[host]
-			if h == nil {
-				res.add(Item{Kind: "monitor", Source: host + " / " + desc, Status: StatusLeftOut,
-					Why: "Host " + host + " is not defined.", Todo: "Nothing to do if that host is gone; otherwise add the check by hand."})
-				continue
-			}
-			if len(mons) >= maxImported {
+			if len(c.mons) >= maxImported && n.hostByName[host] != nil {
 				limited = true
 				break
 			}
-			v := map[string]string{}
-			for k, x := range s.vals {
-				v[k] = x
-			}
-			// Services without contacts inherit the host's.
-			if v["contacts"] == "" && v["contact_groups"] == "" {
-				v["contacts"], v["contact_groups"] = h.vals["contacts"], h.vals["contact_groups"]
-			}
-			it := Item{Kind: "monitor", Source: host + " / " + desc, Group: n.hostGroup(host), Status: StatusImported}
-			spec := n.serviceSpec(v, h.vals, &it)
-			if spec == nil {
-				res.add(it)
-				continue
-			}
-			groups := append(splitList(v["servicegroups"]), sgOf[host+"\x00"+desc]...)
-			var tags []string
-			seen := map[string]bool{}
-			for _, g := range groups {
-				if t := slug(g); t != "" && !seen[t] {
-					seen[t] = true
-					tags = append(tags, t)
-				}
-			}
-			if len(tags) > 0 {
-				sort.Strings(tags)
-				spec.Opts = append(spec.Opts, config.Opt{Key: "tags", Value: strings.Join(tags, ",")})
-			}
-			res.add(it)
-			m := &nagMon{spec: spec, policy: n.policy(v, "service", len(res.Items)-1), host: host, item: len(res.Items) - 1}
-			mons = append(mons, m)
-			byHost[host] = append(byHost[host], m)
+			c.service(s, host, sgOf)
 		}
 	}
 	if limited {
 		res.add(Item{Kind: "service", Source: "the rest", Status: StatusLeftOut, Why: fmt.Sprintf("Only the first %d checks are imported at once.", maxImported),
 			Todo: "Import the configuration in parts (one directory at a time)."})
 	}
-	// Shared records, then one section per host.
-	sortSection(n.periodRecs)
-	sortSection(n.channelRecs)
-	sortSection(n.policyRecs)
-	res.sections = append(res.sections,
-		section{title: "Time periods (from Nagios timeperiods)", recs: n.periodRecs, shared: true},
-		section{title: "Notification channels (from Nagios contacts and contact groups)", recs: n.channelRecs, shared: true},
-		section{title: "Notification policies: who each monitor notifies, and how often", recs: n.policyRecs, shared: true})
-	for _, h := range hosts {
-		host := h.vals["host_name"]
-		ms := byHost[host]
-		if len(ms) == 0 {
-			continue
-		}
-		sort.SliceStable(ms, func(i, j int) bool {
-			if ms[i].isHost != ms[j].isHost {
-				return ms[i].isHost
-			}
-			return ms[i].spec.Name < ms[j].spec.Name
-		})
-		title := "Host " + host
-		if a := h.vals["alias"]; a != "" && a != host {
-			title += " (" + a + ")"
-		}
-		if addr := h.vals["address"]; addr != "" && addr != host {
-			title += ", " + addr
-		}
-		if g := n.hostGroup(host); g != "" {
-			title += ", group " + g
-		}
-		sec := section{title: title}
-		for _, m := range ms {
-			if m.policy != "" {
-				m.spec.Opts = append(m.spec.Opts, config.Opt{Key: "policy", Value: m.policy})
-			}
-			m.spec.Area = area
-			sec.recs = append(sec.recs, *m.spec)
-			res.Monitors++
-		}
-		res.sections = append(res.sections, sec)
+}
+
+// service imports one service of one host.
+func (c *nagConvert) service(s *nagObj, host string, sgOf map[string][]string) {
+	n, res := c.n, c.n.res
+	desc := s.vals["service_description"]
+	h := n.hostByName[host]
+	if h == nil {
+		res.add(Item{Kind: "monitor", Source: host + " / " + desc, Status: StatusLeftOut,
+			Why: "Host " + host + " is not defined.", Todo: "Nothing to do if that host is gone; otherwise add the check by hand."})
+		return
 	}
-	n.leftOvers()
+	v := map[string]string{}
+	for k, x := range s.vals {
+		v[k] = x
+	}
+	// Services without contacts inherit the host's.
+	if v["contacts"] == "" && v["contact_groups"] == "" {
+		v["contacts"], v["contact_groups"] = h.vals["contacts"], h.vals["contact_groups"]
+	}
+	it := Item{Kind: "monitor", Source: host + " / " + desc, Group: n.hostGroup(host), Status: StatusImported}
+	spec := n.serviceSpec(v, h.vals, &it)
+	if spec == nil {
+		res.add(it)
+		return
+	}
+	var tags []string
+	seen := map[string]bool{}
+	for _, g := range append(splitList(v["servicegroups"]), sgOf[host+"\x00"+desc]...) {
+		if t := slug(g); t != "" && !seen[t] {
+			seen[t] = true
+			tags = append(tags, t)
+		}
+	}
+	if len(tags) > 0 {
+		sort.Strings(tags)
+		spec.Opts = append(spec.Opts, config.Opt{Key: "tags", Value: strings.Join(tags, ",")})
+	}
+	res.add(it)
+	c.keep(&nagMon{spec: spec, policy: n.policy(v, "service", len(res.Items)-1), host: host, item: len(res.Items) - 1})
+}
+
+// hostSection writes the section of one host: the host check first, then
+// its services by name.
+func (c *nagConvert) hostSection(h *nagObj, area string) {
+	n, res := c.n, c.n.res
+	host := h.vals["host_name"]
+	ms := c.byHost[host]
+	if len(ms) == 0 {
+		return
+	}
+	sort.SliceStable(ms, func(i, j int) bool {
+		if ms[i].isHost != ms[j].isHost {
+			return ms[i].isHost
+		}
+		return ms[i].spec.Name < ms[j].spec.Name
+	})
+	title := "Host " + host
+	if a := h.vals["alias"]; a != "" && a != host {
+		title += " (" + a + ")"
+	}
+	if addr := h.vals["address"]; addr != "" && addr != host {
+		title += ", " + addr
+	}
+	if g := n.hostGroup(host); g != "" {
+		title += ", group " + g
+	}
+	sec := section{title: title}
+	for _, m := range ms {
+		if m.policy != "" {
+			m.spec.Opts = append(m.spec.Opts, config.Opt{Key: "policy", Value: m.policy})
+		}
+		m.spec.Area = area
+		sec.recs = append(sec.recs, *m.spec)
+		res.Monitors++
+	}
+	res.sections = append(res.sections, sec)
 }
 
 // leftOvers reports what the import does not convert.
@@ -863,92 +896,15 @@ func (n *nagios) command(call string, host, svc map[string]string, handler bool)
 	if !ok {
 		return "", "the command " + parts[0] + " is not defined"
 	}
-	addr := host["address"]
-	if addr == "" {
-		addr = host["host_name"]
+	x := &macros{n: n, parts: parts, host: host, svc: svc, handler: handler, addr: host["address"]}
+	if x.addr == "" {
+		x.addr = host["host_name"]
 	}
-	custom := func(vals map[string]string, name string) (string, bool) {
-		for k, v := range vals {
-			if strings.HasPrefix(k, "_") && strings.EqualFold(k[1:], name) {
-				return v, true
-			}
-		}
-		return "", false
-	}
-	var unknown []string
-	var subst func(string, int) string
-	subst = func(s string, depth int) string {
-		return macroRe.ReplaceAllStringFunc(s, func(m string) string {
-			name := m[1 : len(m)-1]
-			switch {
-			case strings.HasPrefix(name, "ARG"):
-				if i, err := strconv.Atoi(name[3:]); err == nil && i < len(parts) {
-					if depth == 0 {
-						return subst(parts[i], 1)
-					}
-					return parts[i]
-				}
-				return ""
-			case strings.HasPrefix(name, "USER"):
-				v, ok := n.resources[name]
-				switch {
-				case name == "USER1" || ok && strings.HasPrefix(v, "/"):
-					return "" // a plugin directory: plugins are looked up by name
-				case ok:
-					sn, have := n.userSecrets[name]
-					if !have {
-						sn = "nagios_" + strings.ToLower(name)
-						for i := 2; n.o.SecretExists != nil && n.o.SecretExists(sn); i++ {
-							sn = "nagios_" + strings.ToLower(name) + "_" + strconv.Itoa(i)
-						}
-						n.userSecrets[name] = sn
-						n.res.Secrets[sn] = v
-					}
-					return "${secret:" + sn + "}"
-				}
-				unknown = append(unknown, m)
-				return m
-			case name == "HOSTADDRESS":
-				return addr
-			case name == "HOSTNAME":
-				return host["host_name"]
-			case name == "HOSTALIAS":
-				return host["alias"]
-			case name == "SERVICEDESC" || name == "TIMEOUT":
-				return m
-			case strings.HasPrefix(name, "_HOST"):
-				if v, ok := custom(host, name[5:]); ok {
-					return v
-				}
-			case strings.HasPrefix(name, "_SERVICE"):
-				if v, ok := custom(svc, name[8:]); ok {
-					return v
-				}
-			case handler && (name == "SERVICESTATE" || name == "SERVICESTATETYPE" || name == "SERVICEATTEMPT" ||
-				name == "HOSTSTATE" || name == "HOSTSTATETYPE" || name == "HOSTATTEMPT"):
-				return "$" + strings.Replace(name, "HOST", "SERVICE", 1) + "$"
-			}
-			unknown = append(unknown, m)
-			return m
-		})
-	}
-	line = subst(line, 0)
-	if len(unknown) > 0 {
-		var whys []string
-		for _, u := range unknown {
-			name := u[1 : len(u)-1]
-			switch {
-			case strings.HasPrefix(name, "USER") && len(n.resources) == 0:
-				whys = append(whys, "it uses "+u+", and no resource file (resource.cfg) with the $USERn$ values was read: import nagios.cfg instead of single files")
-			case strings.HasPrefix(name, "USER"):
-				whys = append(whys, "it uses "+u+", which is not set in the resource file")
-			case strings.HasPrefix(name, "_HOST"):
-				whys = append(whys, "it uses "+u+", but host "+host["host_name"]+" has no _"+name[5:]+" custom variable")
-			case strings.HasPrefix(name, "_SERVICE"):
-				whys = append(whys, "it uses "+u+", but the service has no _"+name[8:]+" custom variable")
-			default:
-				whys = append(whys, "it uses "+u+", which cannot be filled in here")
-			}
+	line = x.expand(line, 0)
+	if len(x.unknown) > 0 {
+		whys := make([]string, 0, len(x.unknown))
+		for _, u := range x.unknown {
+			whys = append(whys, n.unknownMacro(u, host))
 		}
 		return "", strings.Join(whys, "; ")
 	}
@@ -963,6 +919,111 @@ func (n *nagios) command(call string, host, svc map[string]string, handler bool)
 		}
 	}
 	return strings.Join(words, " "), ""
+}
+
+// macros fills in the macros of one command call.
+type macros struct {
+	n         *nagios
+	parts     []string
+	host, svc map[string]string
+	addr      string
+	handler   bool
+	unknown   []string
+}
+
+func (x *macros) expand(s string, depth int) string {
+	return macroRe.ReplaceAllStringFunc(s, func(m string) string {
+		if v, ok := x.macro(m, depth); ok {
+			return v
+		}
+		x.unknown = append(x.unknown, m)
+		return m
+	})
+}
+
+var handlerStates = map[string]bool{"SERVICESTATE": true, "SERVICESTATETYPE": true, "SERVICEATTEMPT": true,
+	"HOSTSTATE": true, "HOSTSTATETYPE": true, "HOSTATTEMPT": true}
+
+// macro is the value of the macro m ("$NAME$"); ok is false when it
+// cannot be filled in.
+func (x *macros) macro(m string, depth int) (string, bool) {
+	name := m[1 : len(m)-1]
+	switch {
+	case strings.HasPrefix(name, "ARG"):
+		i, err := strconv.Atoi(name[3:])
+		switch {
+		case err != nil || i >= len(x.parts):
+			return "", true
+		case depth == 0:
+			return x.expand(x.parts[i], 1), true
+		}
+		return x.parts[i], true
+	case strings.HasPrefix(name, "USER"):
+		return x.user(name)
+	case name == "HOSTADDRESS":
+		return x.addr, true
+	case name == "HOSTNAME":
+		return x.host["host_name"], true
+	case name == "HOSTALIAS":
+		return x.host["alias"], true
+	case name == "SERVICEDESC" || name == "TIMEOUT":
+		return m, true
+	case strings.HasPrefix(name, "_HOST"):
+		return customVar(x.host, name[5:])
+	case strings.HasPrefix(name, "_SERVICE"):
+		return customVar(x.svc, name[8:])
+	case x.handler && handlerStates[name]:
+		return "$" + strings.Replace(name, "HOST", "SERVICE", 1) + "$", true
+	}
+	return "", false
+}
+
+// user resolves $USERn$: a plugin directory is dropped (plugins are looked
+// up by name), any other value becomes a secret.
+func (x *macros) user(name string) (string, bool) {
+	n := x.n
+	v, ok := n.resources[name]
+	switch {
+	case name == "USER1" || ok && strings.HasPrefix(v, "/"):
+		return "", true
+	case !ok:
+		return "", false
+	}
+	sn, have := n.userSecrets[name]
+	if !have {
+		sn = "nagios_" + strings.ToLower(name)
+		for i := 2; n.o.SecretExists != nil && n.o.SecretExists(sn); i++ {
+			sn = "nagios_" + strings.ToLower(name) + "_" + strconv.Itoa(i)
+		}
+		n.userSecrets[name] = sn
+		n.res.Secrets[sn] = v
+	}
+	return "${secret:" + sn + "}", true
+}
+
+func customVar(vals map[string]string, name string) (string, bool) {
+	for k, v := range vals {
+		if strings.HasPrefix(k, "_") && strings.EqualFold(k[1:], name) {
+			return v, true
+		}
+	}
+	return "", false
+}
+
+// unknownMacro says why the macro u could not be filled in.
+func (n *nagios) unknownMacro(u string, host map[string]string) string {
+	name := u[1 : len(u)-1]
+	switch {
+	case strings.HasPrefix(name, "USER") && len(n.resources) == 0:
+		return "it uses " + u + ", and no resource file (resource.cfg) with the $USERn$ values was read: import nagios.cfg instead of single files"
+	case strings.HasPrefix(name, "USER"):
+		return "it uses " + u + ", which is not set in the resource file"
+	case strings.HasPrefix(name, "_HOST"):
+		return "it uses " + u + ", but host " + host["host_name"] + " has no _" + name[5:] + " custom variable"
+	case strings.HasPrefix(name, "_SERVICE"):
+		return "it uses " + u + ", but the service has no _" + name[8:] + " custom variable"
+	}
+	return "it uses " + u + ", which cannot be filled in here"
 }
 
 // shellWords splits a command line the way Nagios's shell would, without
@@ -1048,214 +1109,265 @@ func (n *nagios) check(call string, host, svc map[string]string, it *Item) (typ,
 	if line == "" {
 		return "", "", nil, capitalize(why) + "."
 	}
-	raw := shellWords(line)
-	plugin := raw[0]
-	// Options passed together in one quoted $ARGn$ ('-S -u /x') are read
-	// one by one, the way they were meant.
-	var args []string
-	for _, w := range raw[1:] {
-		if strings.HasPrefix(w, "-") && strings.ContainsAny(w, " \t") {
-			args = append(args, shellWords(w)...)
-		} else if w != "" {
-			args = append(args, w)
+	c := newNagiosCheck(n, line, host, svc, it)
+	if fn, ok := map[string]func() (string, string, string, bool){
+		"check_ping": c.ping, "check_icmp": c.ping, "check_fping": c.ping,
+		"check_http": c.http, "check_curl": c.http,
+		"check_tcp": c.tcp, "check_udp": c.udp,
+		"check_dns": c.dns, "check_dig": c.dns,
+		"check_ntp": c.ntp, "check_ntp_time": c.ntp, "check_ntp_peer": c.ntp, "check_time": c.ntp,
+		"check_snmp": c.snmp, "check_mysql": c.mysql, "check_pgsql": c.pgsql, "check_dummy": c.dummy,
+	}[c.plugin]; ok {
+		if typ, target, why, handled := fn(); handled {
+			if why != "" {
+				return "", "", nil, why
+			}
+			return typ, target, c.opts, ""
 		}
 	}
-	addr := host["address"]
-	if addr == "" {
-		addr = host["host_name"]
-	}
-	add := func(k, v string) {
-		if v != "" {
-			opts = append(opts, config.Opt{Key: k, Value: v})
-		}
-	}
-	const valued = " H I u p s e j w c t C a A k P l d D 4 6 r R T b f m M N o O "
-	f := flags(args, valued+"hostname IPaddress url uri port string expect method warning critical timeout certificate expect-address query-address server database logname username user password community oid header regex ")
-	h := pick(f, "I", "IPaddress", "H", "hostname")
-	if h == "" {
-		h = addr
-		for _, a := range args { // check_ssh HOST: the host as the last word
-			if !strings.HasPrefix(a, "-") && a == addr {
-				h = a
-			}
-		}
-	}
-	switch plugin {
-	case "check_ping", "check_icmp", "check_fping":
-		return "PING", h, nil, ""
-	case "check_http", "check_curl":
-		vhost := pick(f, "H", "hostname")
-		ip := pick(f, "I", "IPaddress")
-		hostHeader := ""
-		switch {
-		case vhost == "":
-			vhost = h
-		case ip != "" && ip != vhost && !strings.Contains(vhost, "."):
-			// -H web1 -I 10.0.0.5: connect to the address, send the name.
-			hostHeader, vhost = vhost, ip
-		}
-		scheme, port := "http", pick(f, "p", "port")
-		if _, ok := f["S"]; ok {
-			scheme = "https"
-		}
-		if _, ok := f["ssl"]; ok {
-			scheme = "https"
-		}
-		hostport := vhost
-		if port != "" && !(scheme == "http" && port == "80") && !(scheme == "https" && port == "443") {
-			hostport = net.JoinHostPort(vhost, port)
-		} else if strings.Contains(vhost, ":") {
-			hostport = "[" + vhost + "]"
-		}
-		uri := pick(f, "u", "url", "uri")
-		if strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://") {
-			target = uri
-		} else {
-			if !strings.HasPrefix(uri, "/") {
-				uri = "/" + uri
-			}
-			target = scheme + "://" + hostport + uri
-		}
-		add("host", hostHeader)
-		add("keyword", pick(f, "s", "string"))
-		if r := pick(f, "r", "regex", "ereg"); r != "" {
-			add("keyword-regex", r)
-		}
-		if _, ok := f["invert-regex"]; ok {
-			add("absent", "yes")
-		}
-		if e := pick(f, "e", "expect"); e != "" {
-			var codes []string
-			for _, x := range strings.Split(e, ",") {
-				c := strings.TrimSpace(x)
-				if after, ok := strings.CutPrefix(c, "HTTP/1.1 "); ok {
-					c = after
-				} else if after, ok := strings.CutPrefix(c, "HTTP/1.0 "); ok {
-					c = after
-				}
-				if len(c) >= 3 && c[0] >= '1' && c[0] <= '5' {
-					if _, err := strconv.Atoi(c[:3]); err == nil {
-						codes = append(codes, c[:3])
-					}
-				}
-			}
-			add("expect", strings.Join(codes, ","))
-		}
-		if m := pick(f, "j", "method"); m != "" && !strings.EqualFold(m, "GET") {
-			add("method", strings.ToUpper(m))
-		}
-		add("body", pick(f, "P", "post"))
-		if c := pick(f, "C", "certificate"); c != "" {
-			days, crit, _ := strings.Cut(c, ",")
-			add("cert-days", days)
-			add("cert-critical-days", crit)
-		}
-		if a := pick(f, "a", "authorization"); a != "" {
-			sn := n.secretName(n.names.peek(host["host_name"]+"-"+svc["service_description"]), "basic")
-			n.res.Secrets[sn] = a
-			add("basic", "${secret:"+sn+"}")
-		}
-		for _, hv := range strings.Split(pick(f, "k", "header"), "\n") {
-			if k, v, ok := strings.Cut(hv, ":"); ok && optKeyOK("header."+strings.ToLower(strings.TrimSpace(k))) {
-				add("header."+strings.ToLower(strings.TrimSpace(k)), strings.TrimSpace(v))
-			}
-		}
-		if _, ok := f["f"]; !ok {
-			add("no-follow", "yes")
-			if e := optMap(opts)["expect"]; e == "" {
-				add("expect", "200-399")
-			}
-		} else if f["f"] != "follow" && f["f"] != "sticky" && f["f"] != "stickyport" {
-			add("no-follow", "yes")
-		}
-		return "HTTP", target, opts, ""
-	case "check_tcp":
-		port := pick(f, "p", "port")
-		if port == "" {
-			return "", "", nil, "check_tcp has no port (-p)."
-		}
-		return "TCP", net.JoinHostPort(h, port), opts, ""
-	case "check_udp":
-		port := pick(f, "p", "port")
-		if port == "" {
-			return "", "", nil, "check_udp has no port (-p)."
-		}
-		it.attention("check_udp sent a fixed string; this UDP check speaks the protocol of the port when it knows it.", "")
-		return "UDP", net.JoinHostPort(h, port), opts, ""
-	case "check_dns", "check_dig":
-		query := pick(f, "H", "hostname", "l", "lookup")
-		server := pick(f, "s", "server")
-		if plugin == "check_dig" {
-			server = pick(f, "H", "hostname")
-			query = pick(f, "l", "lookup")
-		}
-		if server == "" {
-			return "", "", nil, "check_dns without -s asks the system's resolver, and this DNS check needs a server to ask."
-		}
-		if query == "" {
-			return "", "", nil, "It names no record to look up."
-		}
-		add("query", query)
-		add("expect", strings.ReplaceAll(pick(f, "a", "expect-address"), " ", ""))
-		if t := pick(f, "q", "querytype", "T", "record_type"); t != "" && !strings.EqualFold(t, "A") {
-			add("qtype", strings.ToUpper(t))
-		}
-		return "DNS", server, opts, ""
-	case "check_ntp", "check_ntp_time", "check_ntp_peer", "check_time":
-		return "NTP", h, nil, ""
-	case "check_snmp":
-		oid := pick(f, "o", "oid")
-		_, thresholds := f["w"]
-		_, crit := f["c"]
-		_, match := f["s"]
-		_, regex := f["r"]
-		if (oid == "" || strings.HasPrefix(oid, "sysUpTime") || strings.HasPrefix(oid, ".1.3.6.1.2.1.1.3") || strings.HasPrefix(oid, "1.3.6.1.2.1.1.3")) &&
-			!thresholds && !crit && !match && !regex {
-			if c := pick(f, "C", "community"); c != "" {
-				sn := n.secretName(n.names.peek(host["host_name"]+"-"+svc["service_description"]), "community")
-				n.res.Secrets[sn] = c
-				add("community", "${secret:"+sn+"}")
-			}
-			return "SNMP", h, opts, ""
-		}
-	case "check_mysql":
-		port := pick(f, "P", "port")
-		if port == "" {
-			port = "3306"
-		}
-		add("user", pick(f, "u", "username", "user"))
-		add("database", pick(f, "d", "database"))
-		if p := pick(f, "p", "password"); p != "" {
-			sn := n.secretName(n.names.peek(host["host_name"]+"-"+svc["service_description"]), "password")
-			n.res.Secrets[sn] = p
-			add("password", "${secret:"+sn+"}")
-		}
-		return "MYSQL", net.JoinHostPort(h, port), opts, ""
-	case "check_pgsql":
-		port := pick(f, "P", "port")
-		if port == "" {
-			port = "5432"
-		}
-		add("user", pick(f, "l", "logname"))
-		add("database", pick(f, "d", "database"))
-		if p := pick(f, "p", "password"); p != "" {
-			sn := n.secretName(n.names.peek(host["host_name"]+"-"+svc["service_description"]), "password")
-			n.res.Secrets[sn] = p
-			add("password", "${secret:"+sn+"}")
-		}
-		return "POSTGRES", net.JoinHostPort(h, port), opts, ""
-	case "check_dummy":
-		return "", "", nil, "check_dummy always returns the same state; there is nothing to check."
-	}
-	if port, ok := plainPorts[plugin]; ok {
-		if p := pick(f, "p", "port"); p != "" {
+	if port, ok := plainPorts[c.plugin]; ok {
+		if p := pick(c.f, "p", "port"); p != "" {
 			port = p
 		}
-		return "TCP", net.JoinHostPort(h, port), nil, ""
+		return "TCP", net.JoinHostPort(c.h, port), nil, ""
 	}
 	// Anything else runs the same plugin.
-	add("address", addr)
-	return "EXEC", line, opts, ""
+	c.add("address", c.addr)
+	return "EXEC", line, c.opts, ""
+}
+
+// nagiosCheck turns one Nagios plugin call into a check here.
+type nagiosCheck struct {
+	n         *nagios
+	plugin    string
+	args      []string
+	f         map[string]string
+	addr, h   string
+	host, svc map[string]string
+	it        *Item
+	opts      []config.Opt
+}
+
+func newNagiosCheck(n *nagios, line string, host, svc map[string]string, it *Item) *nagiosCheck {
+	raw := shellWords(line)
+	c := &nagiosCheck{n: n, plugin: raw[0], host: host, svc: svc, it: it}
+	// Options passed together in one quoted $ARGn$ ('-S -u /x') are read
+	// one by one, the way they were meant.
+	for _, w := range raw[1:] {
+		if strings.HasPrefix(w, "-") && strings.ContainsAny(w, " \t") {
+			c.args = append(c.args, shellWords(w)...)
+		} else if w != "" {
+			c.args = append(c.args, w)
+		}
+	}
+	c.addr = host["address"]
+	if c.addr == "" {
+		c.addr = host["host_name"]
+	}
+	const valued = " H I u p s e j w c t C a A k P l d D 4 6 r R T b f m M N o O "
+	c.f = flags(c.args, valued+"hostname IPaddress url uri port string expect method warning critical timeout certificate expect-address query-address server database logname username user password community oid header regex ")
+	c.h = pick(c.f, "I", "IPaddress", "H", "hostname")
+	if c.h == "" {
+		c.h = c.addr
+		for _, a := range c.args { // check_ssh HOST: the host as the last word
+			if !strings.HasPrefix(a, "-") && a == c.addr {
+				c.h = a
+			}
+		}
+	}
+	return c
+}
+
+func (c *nagiosCheck) add(k, v string) {
+	if v != "" {
+		c.opts = append(c.opts, config.Opt{Key: k, Value: v})
+	}
+}
+
+// secret stores value as a secret named after the service and refers to it.
+func (c *nagiosCheck) secret(key, kind, value string) {
+	if value == "" {
+		return
+	}
+	sn := c.n.secretName(c.n.names.peek(c.host["host_name"]+"-"+c.svc["service_description"]), kind)
+	c.n.res.Secrets[sn] = value
+	c.add(key, "${secret:"+sn+"}")
+}
+
+func (c *nagiosCheck) ping() (string, string, string, bool) { return "PING", c.h, "", true }
+
+func (c *nagiosCheck) ntp() (string, string, string, bool) { return "NTP", c.h, "", true }
+
+func (c *nagiosCheck) dummy() (string, string, string, bool) {
+	return "", "", "check_dummy always returns the same state; there is nothing to check.", true
+}
+
+func (c *nagiosCheck) tcp() (string, string, string, bool) {
+	port := pick(c.f, "p", "port")
+	if port == "" {
+		return "", "", "check_tcp has no port (-p).", true
+	}
+	return "TCP", net.JoinHostPort(c.h, port), "", true
+}
+
+func (c *nagiosCheck) udp() (string, string, string, bool) {
+	port := pick(c.f, "p", "port")
+	if port == "" {
+		return "", "", "check_udp has no port (-p).", true
+	}
+	c.it.attention("check_udp sent a fixed string; this UDP check speaks the protocol of the port when it knows it.", "")
+	return "UDP", net.JoinHostPort(c.h, port), "", true
+}
+
+func (c *nagiosCheck) http() (string, string, string, bool) {
+	f := c.f
+	vhost := pick(f, "H", "hostname")
+	ip := pick(f, "I", "IPaddress")
+	hostHeader := ""
+	switch {
+	case vhost == "":
+		vhost = c.h
+	case ip != "" && ip != vhost && !strings.Contains(vhost, "."):
+		// -H web1 -I 10.0.0.5: connect to the address, send the name.
+		hostHeader, vhost = vhost, ip
+	}
+	c.add("host", hostHeader)
+	c.add("keyword", pick(f, "s", "string"))
+	if r := pick(f, "r", "regex", "ereg"); r != "" {
+		c.add("keyword-regex", r)
+	}
+	if _, ok := f["invert-regex"]; ok {
+		c.add("absent", "yes")
+	}
+	if e := pick(f, "e", "expect"); e != "" {
+		c.add("expect", strings.Join(nagiosStatusCodes(e), ","))
+	}
+	if m := pick(f, "j", "method"); m != "" && !strings.EqualFold(m, "GET") {
+		c.add("method", strings.ToUpper(m))
+	}
+	c.add("body", pick(f, "P", "post"))
+	if cert := pick(f, "C", "certificate"); cert != "" {
+		days, crit, _ := strings.Cut(cert, ",")
+		c.add("cert-days", days)
+		c.add("cert-critical-days", crit)
+	}
+	c.secret("basic", "basic", pick(f, "a", "authorization"))
+	for _, hv := range strings.Split(pick(f, "k", "header"), "\n") {
+		if k, v, ok := strings.Cut(hv, ":"); ok && optKeyOK("header."+strings.ToLower(strings.TrimSpace(k))) {
+			c.add("header."+strings.ToLower(strings.TrimSpace(k)), strings.TrimSpace(v))
+		}
+	}
+	follow, ok := f["f"]
+	switch {
+	case !ok:
+		c.add("no-follow", "yes")
+		if e := optMap(c.opts)["expect"]; e == "" {
+			c.add("expect", "200-399")
+		}
+	case follow != "follow" && follow != "sticky" && follow != "stickyport":
+		c.add("no-follow", "yes")
+	}
+	return "HTTP", nagiosURL(f, vhost), "", true
+}
+
+// nagiosURL is the address check_http asks for.
+func nagiosURL(f map[string]string, vhost string) string {
+	uri := pick(f, "u", "url", "uri")
+	if strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://") {
+		return uri
+	}
+	scheme, port := "http", pick(f, "p", "port")
+	if _, ok := f["S"]; ok {
+		scheme = "https"
+	}
+	if _, ok := f["ssl"]; ok {
+		scheme = "https"
+	}
+	hostport := vhost
+	if port != "" && !(scheme == "http" && port == "80") && !(scheme == "https" && port == "443") {
+		hostport = net.JoinHostPort(vhost, port)
+	} else if strings.Contains(vhost, ":") {
+		hostport = "[" + vhost + "]"
+	}
+	if !strings.HasPrefix(uri, "/") {
+		uri = "/" + uri
+	}
+	return scheme + "://" + hostport + uri
+}
+
+// nagiosStatusCodes reads check_http's -e ("HTTP/1.1 200,302") as codes.
+func nagiosStatusCodes(e string) []string {
+	var codes []string
+	for _, x := range strings.Split(e, ",") {
+		c := strings.TrimSpace(x)
+		if after, ok := strings.CutPrefix(c, "HTTP/1.1 "); ok {
+			c = after
+		} else if after, ok := strings.CutPrefix(c, "HTTP/1.0 "); ok {
+			c = after
+		}
+		if len(c) >= 3 && c[0] >= '1' && c[0] <= '5' {
+			if _, err := strconv.Atoi(c[:3]); err == nil {
+				codes = append(codes, c[:3])
+			}
+		}
+	}
+	return codes
+}
+
+func (c *nagiosCheck) dns() (string, string, string, bool) {
+	query := pick(c.f, "H", "hostname", "l", "lookup")
+	server := pick(c.f, "s", "server")
+	if c.plugin == "check_dig" {
+		server = pick(c.f, "H", "hostname")
+		query = pick(c.f, "l", "lookup")
+	}
+	if server == "" {
+		return "", "", "check_dns without -s asks the system's resolver, and this DNS check needs a server to ask.", true
+	}
+	if query == "" {
+		return "", "", "It names no record to look up.", true
+	}
+	c.add("query", query)
+	c.add("expect", strings.ReplaceAll(pick(c.f, "a", "expect-address"), " ", ""))
+	if t := pick(c.f, "q", "querytype", "T", "record_type"); t != "" && !strings.EqualFold(t, "A") {
+		c.add("qtype", strings.ToUpper(t))
+	}
+	return "DNS", server, "", true
+}
+
+// snmp imports a plain "does it answer" check; one with thresholds, a
+// match or another OID runs the plugin itself (handled is false).
+func (c *nagiosCheck) snmp() (string, string, string, bool) {
+	oid := pick(c.f, "o", "oid")
+	for _, k := range []string{"w", "c", "s", "r"} {
+		if _, ok := c.f[k]; ok {
+			return "", "", "", false
+		}
+	}
+	if oid != "" && !strings.HasPrefix(oid, "sysUpTime") && !strings.HasPrefix(oid, ".1.3.6.1.2.1.1.3") && !strings.HasPrefix(oid, "1.3.6.1.2.1.1.3") {
+		return "", "", "", false
+	}
+	c.secret("community", "community", pick(c.f, "C", "community"))
+	return "SNMP", c.h, "", true
+}
+
+func (c *nagiosCheck) mysql() (string, string, string, bool) {
+	return c.database("MYSQL", "3306", pick(c.f, "u", "username", "user"))
+}
+
+func (c *nagiosCheck) pgsql() (string, string, string, bool) {
+	return c.database("POSTGRES", "5432", pick(c.f, "l", "logname"))
+}
+
+func (c *nagiosCheck) database(typ, defPort, user string) (string, string, string, bool) {
+	port := pick(c.f, "P", "port")
+	if port == "" {
+		port = defPort
+	}
+	c.add("user", user)
+	c.add("database", pick(c.f, "d", "database"))
+	c.secret("password", "password", pick(c.f, "p", "password"))
+	return typ, net.JoinHostPort(c.h, port), "", true
 }
 
 // secretName picks an unused secret name for a record's credential.
@@ -1282,20 +1394,7 @@ func (n *namer) peek(display string) string {
 // policy returns the policy for an object's contacts and notification
 // settings, creating channels, groups, periods and the policy as needed.
 func (n *nagios) policy(v map[string]string, kind string, item int) string {
-	var chain []string
-	seen := map[string]bool{}
-	for _, c := range splitList(v["contacts"]) {
-		if ch := n.contactChannel(c, kind); ch != "" && !seen[ch] {
-			seen[ch] = true
-			chain = append(chain, ch)
-		}
-	}
-	for _, g := range splitList(v["contact_groups"]) {
-		if ch := n.groupChannel(g, kind); ch != "" && !seen[ch] {
-			seen[ch] = true
-			chain = append(chain, ch)
-		}
-	}
+	chain := n.contactChain(v, kind)
 	if len(chain) == 0 {
 		return ""
 	}
@@ -1303,29 +1402,9 @@ func (n *nagios) policy(v map[string]string, kind string, item int) string {
 		n.res.Items[item].attention("Notifications were turned off for it in Nagios, so it has no policy.", "")
 		return ""
 	}
-	sort.Strings(chain)
-	var opts []config.Opt
-	opts = append(opts, config.Opt{Key: "chain", Value: strings.Join(chain, ",")}, config.Opt{Key: "mode", Value: "all"})
-	unit := 60.0
-	if f, err := strconv.ParseFloat(v["interval_length"], 64); err == nil && f > 0 {
-		unit = f
-	}
-	repeat := ""
-	if f, err := strconv.ParseFloat(v["notification_interval"], 64); err == nil {
-		if f == 0 {
-			opts = append(opts, config.Opt{Key: "max", Value: "1"})
-			repeat = "once"
-		} else if s := int(f * unit); s >= 60 {
-			repeat = humanDur(s)
-			opts = append(opts, config.Opt{Key: "repeat", Value: repeat})
-		}
-	}
-	if f, err := strconv.ParseFloat(v["first_notification_delay"], 64); err == nil && f > 0 {
-		opts = append(opts, config.Opt{Key: "delay", Value: humanDur(int(f * unit))})
-	}
-	if no := v["notification_options"]; no != "" && !strings.Contains(no, "r") && no != "n" {
-		opts = append(opts, config.Opt{Key: "recovery", Value: "no"})
-	}
+	opts := []config.Opt{{Key: "chain", Value: strings.Join(chain, ",")}, {Key: "mode", Value: "all"}}
+	timing, repeat := nagiosTiming(v)
+	opts = append(opts, timing...)
 	var key strings.Builder
 	for _, o := range opts {
 		key.WriteString(o.Key + "=" + o.Value + " ")
@@ -1341,18 +1420,7 @@ func (n *nagios) policy(v map[string]string, kind string, item int) string {
 			}
 		}
 	}
-	base := "notify-" + strings.Join(chain, "-")
-	if len(base) > 40 {
-		base = "notify-" + chain[0] + "-and-" + strconv.Itoa(len(chain)-1) + "-more"
-	}
-	// Policies differing only in timing are told apart by it.
-	for _, other := range n.policyOf {
-		if strings.HasPrefix(other, base) && repeat != "" {
-			base += "-" + repeat
-			break
-		}
-	}
-	p := n.names.take(base, "notify")
+	p := n.names.take(n.policyBase(chain, repeat), "notify")
 	n.policyOf[key.String()] = p
 	n.policyRecs = append(n.policyRecs, config.RecordSpec{Name: p, Type: "POLICY", Opts: opts})
 	what := "sends to " + strings.Join(chain, ", ")
@@ -1361,6 +1429,67 @@ func (n *nagios) policy(v map[string]string, kind string, item int) string {
 	}
 	n.res.add(Item{Kind: "policy", Source: p, Name: p, Target: what, Status: StatusImported})
 	return p
+}
+
+// contactChain is the sorted channels of a host's or service's contacts
+// and contact groups.
+func (n *nagios) contactChain(v map[string]string, kind string) []string {
+	var chain []string
+	seen := map[string]bool{}
+	add := func(ch string) {
+		if ch != "" && !seen[ch] {
+			seen[ch] = true
+			chain = append(chain, ch)
+		}
+	}
+	for _, c := range splitList(v["contacts"]) {
+		add(n.contactChannel(c, kind))
+	}
+	for _, g := range splitList(v["contact_groups"]) {
+		add(n.groupChannel(g, kind))
+	}
+	sort.Strings(chain)
+	return chain
+}
+
+// nagiosTiming turns Nagios's notification timing into policy options;
+// repeat is "once", the repeat interval, or "".
+func nagiosTiming(v map[string]string) (opts []config.Opt, repeat string) {
+	unit := 60.0
+	if f, err := strconv.ParseFloat(v["interval_length"], 64); err == nil && f > 0 {
+		unit = f
+	}
+	if f, err := strconv.ParseFloat(v["notification_interval"], 64); err == nil {
+		if f == 0 {
+			opts = append(opts, config.Opt{Key: "max", Value: "1"})
+			repeat = "once"
+		} else if s := int(f * unit); s >= 60 {
+			repeat = humanDur(s)
+			opts = append(opts, config.Opt{Key: "repeat", Value: repeat})
+		}
+	}
+	if f, err := strconv.ParseFloat(v["first_notification_delay"], 64); err == nil && f > 0 {
+		opts = append(opts, config.Opt{Key: "delay", Value: humanDur(int(f * unit))})
+	}
+	if no := v["notification_options"]; no != "" && !strings.Contains(no, "r") && no != "n" {
+		opts = append(opts, config.Opt{Key: "recovery", Value: "no"})
+	}
+	return opts, repeat
+}
+
+// policyBase names a policy after its channels; policies differing only in
+// timing are told apart by it.
+func (n *nagios) policyBase(chain []string, repeat string) string {
+	base := "notify-" + strings.Join(chain, "-")
+	if len(base) > 40 {
+		base = "notify-" + chain[0] + "-and-" + strconv.Itoa(len(chain)-1) + "-more"
+	}
+	for _, other := range n.policyOf {
+		if strings.HasPrefix(other, base) && repeat != "" {
+			return base + "-" + repeat
+		}
+	}
+	return base
 }
 
 // sameRecord reports whether an existing record has these options.

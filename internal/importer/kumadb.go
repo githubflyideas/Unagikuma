@@ -57,20 +57,42 @@ func readKumaDB(data, wal []byte) (*kumaBackup, []KumaUser, error) {
 	if err != nil {
 		return nil, nil, errors.New("this database has no Uptime Kuma monitor table: is it kuma.db, and was it copied completely?")
 	}
-	notifs, _ := rowsOf(db, "notification")
-	links, _ := rowsOf(db, "monitor_notification")
-	tags, _ := rowsOf(db, "tag")
-	mtags, _ := rowsOf(db, "monitor_tag")
-	users, _ := rowsOf(db, "user")
-
 	bk := &kumaBackup{FromDB: true, Proxies: map[int64]kumaProxy{}}
 	bk.Version = versionOf(db)
 	proxies, _ := rowsOf(db, "proxy")
 	for _, p := range proxies {
 		bk.Proxies[p.int("id")] = kumaProxy{Protocol: p.str("protocol"), Host: p.str("host"), Port: int(p.int("port")), Auth: p.bool("auth")}
 	}
+	bk.Maintenances = kumaDBMaintenances(db)
+	bk.StatusPages = kumaDBStatusPages(db)
+	if inc, _ := rowsOf(db, "incident"); inc != nil {
+		bk.Incidents = len(inc)
+	}
+	if keys, _ := rowsOf(db, "api_key"); keys != nil {
+		bk.APIKeys = len(keys)
+	}
+	notifs, _ := rowsOf(db, "notification")
+	for _, n := range notifs {
+		bk.NotificationList = append(bk.NotificationList, kumaNotification{ID: n.int("id"), Name: n.str("name"), Config: n.str("config"), Active: flag(n.bool("active")), IsDefault: flag(n.bool("is_default"))})
+	}
+	bk.MonitorList = kumaDBMonitors(db, monitors)
+	users, _ := rowsOf(db, "user")
+	var out []KumaUser
+	for _, u := range users {
+		if name := u.str("username"); name != "" {
+			out = append(out, KumaUser{Username: name, Hash: u.str("password"), Active: u.bool("active")})
+		}
+	}
+	if len(bk.MonitorList) == 0 && len(out) == 0 {
+		return nil, nil, errors.New("the Uptime Kuma database has no monitors and no users")
+	}
+	return bk, out, nil
+}
+
+func kumaDBMaintenances(db *sql.DB) []kumaMaint {
 	maints, _ := rowsOf(db, "maintenance")
 	mm, _ := rowsOf(db, "monitor_maintenance")
+	var out []kumaMaint
 	for _, r := range maints {
 		mt := kumaMaint{ID: r.int("id"), Title: r.str("title"), Description: r.str("description"), Strategy: r.str("strategy"), Active: r.bool("active"),
 			StartDate: r.str("start_date"), EndDate: r.str("end_date"), StartTime: r.str("start_time"), EndTime: r.str("end_time"),
@@ -81,14 +103,19 @@ func readKumaDB(data, wal []byte) (*kumaBackup, []KumaUser, error) {
 				mt.Monitors = append(mt.Monitors, l.int("monitor_id"))
 			}
 		}
-		bk.Maintenances = append(bk.Maintenances, mt)
+		out = append(out, mt)
 	}
+	return out
+}
+
+func kumaDBStatusPages(db *sql.DB) []kumaStatusPage {
 	pages, _ := rowsOf(db, "status_page")
 	groups, _ := rowsOf(db, "group")
 	mg, _ := rowsOf(db, "monitor_group")
 	cnames, _ := rowsOf(db, "status_page_cname")
 	sort.SliceStable(groups, func(i, j int) bool { return groups[i].int("weight") < groups[j].int("weight") })
 	sort.SliceStable(mg, func(i, j int) bool { return mg[i].int("weight") < mg[j].int("weight") })
+	var out []kumaStatusPage
 	for _, p := range pages {
 		sp := kumaStatusPage{Slug: p.str("slug"), Title: p.str("title"), Description: p.str("description"), Password: p.str("password") != ""}
 		for _, c := range cnames {
@@ -108,17 +135,15 @@ func readKumaDB(data, wal []byte) (*kumaBackup, []KumaUser, error) {
 			}
 			sp.Groups = append(sp.Groups, pg)
 		}
-		bk.StatusPages = append(bk.StatusPages, sp)
+		out = append(out, sp)
 	}
-	if inc, _ := rowsOf(db, "incident"); inc != nil {
-		bk.Incidents = len(inc)
-	}
-	if keys, _ := rowsOf(db, "api_key"); keys != nil {
-		bk.APIKeys = len(keys)
-	}
-	for _, n := range notifs {
-		bk.NotificationList = append(bk.NotificationList, kumaNotification{ID: n.int("id"), Name: n.str("name"), Config: n.str("config"), Active: flag(n.bool("active")), IsDefault: flag(n.bool("is_default"))})
-	}
+	return out
+}
+
+func kumaDBMonitors(db *sql.DB, monitors []row) []kumaMonitor {
+	links, _ := rowsOf(db, "monitor_notification")
+	tags, _ := rowsOf(db, "tag")
+	mtags, _ := rowsOf(db, "monitor_tag")
 	tagName := map[int64]string{}
 	for _, t := range tags {
 		tagName[t.int("id")] = t.str("name")
@@ -136,6 +161,7 @@ func readKumaDB(data, wal []byte) (*kumaBackup, []KumaUser, error) {
 		m := t.int("monitor_id")
 		tagsOf[m] = append(tagsOf[m], kumaTag{Name: tagName[t.int("tag_id")], Value: t.str("value")})
 	}
+	var out []kumaMonitor
 	for _, r := range monitors {
 		id := r.int("id")
 		m := kumaMonitor{
@@ -152,38 +178,28 @@ func readKumaDB(data, wal []byte) (*kumaBackup, []KumaUser, error) {
 			ExpiryNotify: flag(r.bool("expiry_notification")), Notifications: notifOf[id], Tags: tagsOf[id],
 			AuthMethod: r.str("auth_method"), Bearer: r.str("bearer_token"), JSONOp: r.str("json_path_operator"), PushToken: r.str("push_token"),
 			SNMPVersion: r.str("snmp_version"), SNMPOID: r.str("snmp_oid"), RadiusPassword: r.str("radius_password"),
+			ProxyID: r.optInt("proxy_id"), DockerHost: r.optInt("docker_host"), Parent: r.optInt("parent"),
 		}
-		if v, ok := r["proxy_id"]; ok && v != nil {
-			p := r.int("proxy_id")
-			m.ProxyID = &p
-		}
-		if v, ok := r["maxredirects"]; ok && v != nil {
-			n := int(r.int("maxredirects"))
-			m.MaxRedirects = &n
-		}
-		if v, ok := r["docker_host"]; ok && v != nil {
-			h := r.int("docker_host")
-			m.DockerHost = &h
-		}
-		if v, ok := r["parent"]; ok && v != nil {
-			p := r.int("parent")
-			m.Parent = &p
+		if n := r.optInt("maxredirects"); n != nil {
+			v := int(*n)
+			m.MaxRedirects = &v
 		}
 		if s := r.str("accepted_statuscodes_json"); s != "" {
 			_ = json.Unmarshal([]byte(s), &m.AcceptedStatus)
 		}
-		bk.MonitorList = append(bk.MonitorList, m)
+		out = append(out, m)
 	}
-	var out []KumaUser
-	for _, u := range users {
-		if name := u.str("username"); name != "" {
-			out = append(out, KumaUser{Username: name, Hash: u.str("password"), Active: u.bool("active")})
-		}
+	return out
+}
+
+// optInt is the value of a nullable integer column, nil for NULL or a
+// missing column.
+func (r row) optInt(key string) *int64 {
+	if v, ok := r[key]; !ok || v == nil {
+		return nil
 	}
-	if len(bk.MonitorList) == 0 && len(out) == 0 {
-		return nil, nil, errors.New("the Uptime Kuma database has no monitors and no users")
-	}
-	return bk, out, nil
+	n := r.int(key)
+	return &n
 }
 
 // versionOf guesses the Uptime Kuma version from its schema: 2.x keeps
