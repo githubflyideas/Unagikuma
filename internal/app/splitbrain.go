@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/cluster"
@@ -174,18 +173,15 @@ func (a *App) probeReach(addr string) (cluster.ReachView, bool) {
 }
 
 // answered says whether a failed Reach got as far as the peer: not a
-// timeout, and not a connection refused or a host that cannot be reached.
+// timeout, and not a connection that could not be made (refused, no route;
+// the error codes differ between systems, the dial step does not).
 func answered(err error) bool {
 	var ne net.Error
-	if errors.As(err, &ne) && ne.Timeout() {
+	if errors.As(err, &ne) && ne.Timeout() || errors.Is(err, context.DeadlineExceeded) {
 		return false
 	}
-	for _, e := range []error{context.DeadlineExceeded, syscall.ECONNREFUSED, syscall.EHOSTUNREACH, syscall.ENETUNREACH} {
-		if errors.Is(err, e) {
-			return false
-		}
-	}
-	return true
+	var op *net.OpError
+	return !errors.As(err, &op) || op.Op != "dial"
 }
 
 func reach(addr string, tc *tls.Config) (cluster.ReachView, error) {

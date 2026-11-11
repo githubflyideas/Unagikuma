@@ -66,7 +66,8 @@ func TestAgentEndToEnd(t *testing.T) {
 	waitFor(t, "control connection and local monitoring", 10*time.Second, func() bool {
 		r, _ := a.Engine().Row("web")
 		nodes := a.Engine().Nodes()
-		return r.Status == "ok" && len(nodes) == 1 && nodes[0].Online
+		// The node reports its configuration just after it connects.
+		return r.Status == "ok" && len(nodes) == 1 && nodes[0].Online && nodes[0].Serial == a.Config().Serial
 	})
 	nodes := a.Engine().Nodes()
 	if len(nodes) != 1 || !nodes[0].Online || nodes[0].Serial != a.Config().Serial || nodes[0].Version != "e2e" {
