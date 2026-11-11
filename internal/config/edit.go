@@ -311,15 +311,14 @@ func (f *File) UpsertRecord(r RecordSpec) error {
 	if err := r.check(); err != nil {
 		return err
 	}
-	if _, old := f.findRecord(r.Name); old != nil {
+	s, old := f.findRecord(r.Name)
+	if old != nil {
 		same := strings.EqualFold(old.Type, r.Type) || IsMonitorType(strings.ToUpper(old.Type)) && IsMonitorType(strings.ToUpper(r.Type))
 		if !same {
 			return fmt.Errorf("%w: %s is a %s", ErrNameTaken, r.Name, strings.ToUpper(old.Type))
 		}
 	}
-	ls := f.lines()
-	cr := f.eol()
-	if s, _ := f.findRecord(r.Name); s != nil && r.MoveArea && IsMonitorType(r.Type) && f.areaOf(s) != r.Area {
+	if s != nil && r.MoveArea && IsMonitorType(r.Type) && f.areaOf(s) != r.Area {
 		if r.Comment == "" {
 			r.Comment = s.Comment
 		}
@@ -329,27 +328,53 @@ func (f *File) UpsertRecord(r RecordSpec) error {
 		r.MoveArea = false
 		return f.UpsertRecord(r)
 	}
-	if s, old := f.findRecord(r.Name); s != nil {
-		if r.Comment == "" || r.Comment == s.Comment {
-			return f.setLines(f.patchRecord(s, *old, r))
-		}
-		out := append([]string{}, ls[:s.StartLine-1]...)
-		out = append(out, r.Render()+cr)
-		out = append(out, ls[s.EndLine:]...)
-		return f.setLines(out)
+	if s != nil {
+		return f.replaceRecord(s, *old, r)
 	}
-	// Insert after the last record of the same group (group=) or family
-	// in the wanted section; when there is none, before the maintenance
-	// windows and status pages (or at the end), opening the section if
-	// the file ends in another one.
+	ls, cr := f.lines(), f.eol()
+	at, prev, scopeLine := f.insertPoint(r)
+	var add []string
+	if scopeLine != "" {
+		add = append(add, scopeLine+cr)
+	}
+	line := r.Render()
+	if prev != nil && prev.StartLine == prev.EndLine && add == nil {
+		line = alignLike(ls[prev.StartLine-1], r)
+	}
+	out := append([]string{}, ls[:at]...)
+	out = append(out, add...)
+	out = append(out, line+cr)
+	out = append(out, ls[at:]...)
+	return f.setLines(out)
+}
+
+// replaceRecord changes a record in place: patched when its comment stays,
+// written anew otherwise.
+func (f *File) replaceRecord(s *Stmt, old Record, r RecordSpec) error {
+	if r.Comment == "" || r.Comment == s.Comment {
+		return f.setLines(f.patchRecord(s, old, r))
+	}
+	ls := f.lines()
+	out := append([]string{}, ls[:s.StartLine-1]...)
+	out = append(out, r.Render()+f.eol())
+	out = append(out, ls[s.EndLine:]...)
+	return f.setLines(out)
+}
+
+// insertPoint is where a new record goes: after the last record of the
+// same group (group=) or family in the wanted section; when there is none,
+// before the maintenance windows and status pages (or at the end). prev is
+// the record it follows, and scopeLine the $SCOPE line that opens the
+// section first when the file ends in another one.
+func (f *File) insertPoint(r RecordSpec) (at int, prev *Stmt, scopeLine string) {
 	group := ""
 	for _, o := range r.Opts {
 		if o.Key == "group" {
 			group = o.Value
 		}
 	}
-	at, inGroup, before, area, endArea := -1, -1, -1, "", ""
-	var prev, groupPrev *Stmt
+	at, inGroup, before, area := -1, -1, -1, ""
+	var groupPrev *Stmt
 	anySection := !IsMonitorType(r.Type) // only monitors belong to sections
 	for i := range f.Stmts {
 		s := &f.Stmts[i]
@@ -374,35 +399,26 @@ func (f *File) UpsertRecord(r RecordSpec) error {
 		}
 	}
 	if inGroup >= 0 {
-		at, prev = inGroup, groupPrev // aligned like its group's records
+		return inGroup, groupPrev, "" // aligned like its group's records
 	}
-	endArea = area
-	var add []string
-	if at < 0 && before >= 0 && r.Area == "" {
-		at = before
+	if at >= 0 {
+		return at, prev, ""
 	}
-	if at < 0 {
-		at = len(ls)
-		for at > 0 && strings.TrimSpace(ls[at-1]) == "" {
-			at--
+	if before >= 0 && r.Area == "" {
+		return before, nil, ""
+	}
+	ls := f.lines()
+	at = len(ls)
+	for at > 0 && strings.TrimSpace(ls[at-1]) == "" {
+		at--
+	}
+	if !anySection && area != r.Area {
+		scopeLine = "$SCOPE " + r.Area
+		if r.Area == "" {
+			scopeLine = "$SCOPE *"
 		}
-		if !anySection && endArea != r.Area {
-			spec := r.Area
-			if spec == "" {
-				spec = "*"
-			}
-			add = append(add, "$SCOPE "+spec+cr)
-		}
 	}
-	line := r.Render()
-	if prev != nil && prev.StartLine == prev.EndLine && add == nil {
-		line = alignLike(ls[prev.StartLine-1], r)
-	}
-	out := append([]string{}, ls[:at]...)
-	out = append(out, add...)
-	out = append(out, line+cr)
-	out = append(out, ls[at:]...)
-	return f.setLines(out)
+	return at, nil, scopeLine
 }
 
 func optValue(r Record, key string) string {

@@ -160,10 +160,18 @@ func (v selVal) contains(s string) bool {
 	return strings.Contains(strings.ToLower(s), v.text)
 }
 
+// selFields are the terms that compare one field of the monitor exactly.
+var selFields = map[string]func(*Monitor) string{
+	"name": func(m *Monitor) string { return m.Name }, "host": (*Monitor).Host, "device": (*Monitor).HostKey,
+	"group": func(m *Monitor) string { return m.Group }, "policy": func(m *Monitor) string { return m.Policy },
+	"region": func(m *Monitor) string { return m.Region }, "area": func(m *Monitor) string { return m.Area },
+}
+
 func (t selTerm) matchOne(m *Monitor, v selVal) bool {
+	if field, ok := selFields[t.key]; ok {
+		return v.is(field(m))
+	}
 	switch t.key {
-	case "name":
-		return v.is(m.Name)
 	case "title":
 		return v.contains(m.Title)
 	case "type":
@@ -172,45 +180,46 @@ func (t selTerm) matchOne(m *Monitor, v selVal) bool {
 		return m.UDP != nil && v.is(m.UDP.Keyword)
 	case "port":
 		return strconv.Itoa(m.Port()) == v.text
-	case "host":
-		return v.is(m.Host())
-	case "device":
-		return v.is(m.HostKey())
 	case "cidr":
 		a, err := netip.ParseAddr(strings.Trim(m.Host(), "[]"))
 		return err == nil && v.cidr.Contains(a.Unmap())
-	case "group":
-		return v.is(m.Group)
-	case "policy":
-		return v.is(m.Policy)
 	case "team":
 		return v.is(m.Team) || v.is(m.TeamOf())
-	case "region":
-		return v.is(m.Region)
-	case "area":
-		return v.is(m.Area)
 	case "node":
-		if len(m.Nodes) == 0 {
-			return true // checked by every node
-		}
-		for _, n := range m.Nodes {
-			if v.is(n) {
-				return true
-			}
-		}
-		return false
+		return matchNode(m, v)
 	case "tag":
-		key, val, hasVal := strings.Cut(v.text, ":")
-		if !hasVal {
-			key, val, hasVal = strings.Cut(v.text, "=")
-		}
-		for _, tg := range m.Tags {
-			if strings.EqualFold(tg.Key, key) && (!hasVal || strings.EqualFold(tg.Value, val)) {
-				return true
-			}
-		}
-		return false
+		return matchTag(m, v)
 	}
+	return matchText(m, v)
+}
+
+func matchNode(m *Monitor, v selVal) bool {
+	if len(m.Nodes) == 0 {
+		return true // checked by every node
+	}
+	for _, n := range m.Nodes {
+		if v.is(n) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchTag(m *Monitor, v selVal) bool {
+	key, val, hasVal := strings.Cut(v.text, ":")
+	if !hasVal {
+		key, val, hasVal = strings.Cut(v.text, "=")
+	}
+	for _, tg := range m.Tags {
+		if strings.EqualFold(tg.Key, key) && (!hasVal || strings.EqualFold(tg.Value, val)) {
+			return true
+		}
+	}
+	return false
+}
+
+// matchText is free text: the name, title, target, description or a tag.
+func matchText(m *Monitor, v selVal) bool {
 	for _, s := range []string{m.Name, m.Title, m.Target, m.Description} {
 		if v.contains(s) {
 			return true

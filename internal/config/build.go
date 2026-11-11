@@ -100,202 +100,237 @@ func Load(path string, src []byte, opt Options) (*File, *Config, []Diagnostic) {
 }
 
 func (b *builder) build() {
-	var (
-		soaSeen      bool
-		recordSeen   bool
-		globalOnce   = map[string]Pos{}
-		defaults     []Opt
-		setOverrides = map[string]string{}
-		setPos       = map[string]Pos{}
-		monitorRecs  []monitorRec
-		scope        *scopeDir
-		later        []Record // NODE and POLICY: built once $SET is known
-		maintRecs    []Record // MAINT: built once the monitors are known
-	)
+	st := &buildState{globalOnce: map[string]Pos{}, setOverrides: map[string]string{}, setPos: map[string]Pos{}}
 	for i := range b.f.Stmts {
 		s := &b.f.Stmts[i]
-		if len(s.Tokens) == 0 {
-			continue
-		}
-		if s.isDirective() {
-			d := s.directive()
-			pos := s.Tokens[0].Pos
-			// $VERSION may come first: it says how to read the rest.
-			if !soaSeen && d.Name != "VERSION" && d.Name != "FILE" {
-				b.errf(pos, "soa_first", "the file header ($FILE) must come first")
-			}
-			switch d.Name {
-			case "FILE":
-				if soaSeen {
-					b.errf(pos, "duplicate_soa", "only one file header ($FILE or SOA) is allowed")
-					continue
-				}
-				if recordSeen {
-					b.errf(pos, "soa_first", "the file header ($FILE) must come first")
-				}
-				soaSeen = true
-				b.fileHeader(d)
-			case "QUORUM", "DIALECT":
-				if p, dup := globalOnce[d.Name]; dup {
-					b.errf(pos, "duplicate_directive", "$%s already set at line %d", d.Name, p.Line)
-					continue
-				}
-				globalOnce[d.Name] = pos
-				if recordSeen {
-					b.errf(pos, "directive_order", "$%s must come before the first record", d.Name)
-				}
-				if len(d.Args) != 1 {
-					b.errf(pos, "syntax", "$%s takes exactly one value", d.Name)
-					continue
-				}
-				v := d.Args[0].Text
-				if d.Name == "QUORUM" {
-					if err := ValidateQuorum(v); err != nil {
-						b.errf(d.Args[0].Pos, "invalid_value", "%v", err)
-					}
-					b.cfg.Quorum = v
-				} else {
-					dl, err := keywords.ParseDialect(v)
-					if err != nil {
-						b.errf(d.Args[0].Pos, "invalid_value", "%v", err)
-					}
-					b.cfg.Dialect = dl
-				}
-			case "SET":
-				for _, t := range d.Args {
-					k, v, ok := t.option()
-					if !ok {
-						b.errf(t.Pos, "syntax", "$SET expects key=value")
-						continue
-					}
-					if p, dup := setPos[k]; dup {
-						b.errf(t.Pos, "duplicate_tunable", "%s already set at line %d", k, p.Line)
-						continue
-					}
-					if _, err := tunables.New(map[string]string{k: v}); err != nil {
-						b.errf(t.Pos, "invalid_tunable", "%v", err)
-						continue
-					}
-					setOverrides[k], setPos[k] = v, t.Pos
-				}
-			case "TAG":
-				b.tagDirective(d)
-			case "DEFAULT":
-				defaults = nil
-				for _, t := range d.Args {
-					k, v, ok := t.option()
-					if !ok {
-						b.errf(t.Pos, "syntax", "$DEFAULT expects key=value")
-						continue
-					}
-					defaults = append(defaults, Opt{Key: k, Value: v, Pos: t.Pos})
-				}
-			case "SCOPE":
-				scope = b.scopeDirective(d)
-			case "VERSION":
-				// The syntax version this file is written in; files without
-				// it are version 1.
-				if p, dup := globalOnce[d.Name]; dup {
-					b.errf(pos, "duplicate_directive", "$%s already set at line %d", d.Name, p.Line)
-					continue
-				}
-				globalOnce[d.Name] = pos
-				if len(d.Args) != 1 || d.Args[0].Text != "1" {
-					b.errf(pos, "unsupported_version", "this release reads monitors.conf version 1; the file needs a newer unagikuma")
-				}
-			case "INCLUDE":
-				b.errf(pos, "unsupported", "$INCLUDE is not supported yet")
-			default:
-				if reservedDirectives[d.Name] {
-					b.errf(pos, "needs_newer", "$%s is reserved for a later version of unagikuma", d.Name)
-					continue
-				}
-				b.errf(pos, "unknown_directive", "unknown directive $%s", d.Name)
-			}
-			continue
-		}
-		r, diag := s.record()
-		if diag != nil {
-			b.diags = append(b.diags, *diag)
-			continue
-		}
-		if r.Type == "SOA" {
-			if soaSeen {
-				b.errf(r.TypePos, "duplicate_soa", "only one file header ($FILE or SOA) is allowed")
-				continue
-			}
-			if recordSeen {
-				b.errf(r.TypePos, "soa_first", "the file header must come first")
-			}
-			soaSeen = true
-			b.soa(r)
-			continue
-		}
-		if !soaSeen && !recordSeen {
-			b.errf(r.NamePos, "soa_first", "the file header ($FILE) must come first")
-		}
-		recordSeen = true
-		if !ValidName(r.Name) {
-			b.errf(r.NamePos, "invalid_name", "invalid name %q: letters, digits, '_', '.', '-'; must start with a letter or digit; at most 63 characters", r.Name)
-			continue
-		}
-		if p, dup := b.names[r.Name]; dup {
-			b.errf(r.NamePos, "duplicate_name", "name %q already used at line %d (names are unique across all record types)", r.Name, p.Line)
-			continue
-		}
-		b.names[r.Name] = r.NamePos
-		if dupKeys(r.Opts) != nil {
-			o := dupKeys(r.Opts)
-			b.errf(o.Pos, "duplicate_option", "option %s given twice", o.Key)
-			continue
-		}
-		if r.Interval != "" && !IsMonitorType(r.Type) {
-			b.warnf(r.Stmt.Tokens[1].Pos, "interval_ignored", "only monitors have an interval; %s ignores it", r.Type)
-		}
 		switch {
-		case IsMonitorType(r.Type):
-			monitorRecs = append(monitorRecs, monitorRec{r, append([]Opt(nil), defaults...), scope})
-		case r.Type == "NODE", r.Type == "POLICY":
-			later = append(later, r)
-		case r.Type == "CHANNEL":
-			b.channel(r)
-		case r.Type == "STATUSPAGE":
-			b.statusPage(r)
-		case r.Type == "MAINT":
-			maintRecs = append(maintRecs, r)
-		case r.Type == "PERIOD":
-			b.period(r)
-		case r.Type == "TEAM":
-			b.team(r)
-		case reservedTypes[r.Type]:
-			b.errf(r.TypePos, "needs_newer", "record type %s is reserved for a later version of unagikuma", r.Type)
+		case len(s.Tokens) == 0:
+		case s.isDirective():
+			b.directive(st, s)
 		default:
-			b.errf(r.TypePos, "unknown_type", "unknown record type %s", r.Type)
+			b.record(st, s)
 		}
 	}
-	if !soaSeen {
+	if !st.soaSeen {
 		b.errf(Pos{File: b.f.Path, Line: 1, Col: 1}, "missing_soa", "missing file header: start the file with $FILE revision=1")
 	}
-	ts, err := tunables.New(setOverrides)
+	ts, err := tunables.New(st.setOverrides)
 	if err != nil {
 		b.errf(Pos{File: b.f.Path, Line: 1, Col: 1}, "invalid_tunable", "%v", err)
 	}
 	b.cfg.Tunables = ts
-	for _, r := range later {
+	for _, r := range st.later {
 		if r.Type == "NODE" {
 			b.node(r)
 		} else {
 			b.policyRec(r)
 		}
 	}
-	for _, mr := range monitorRecs {
+	for _, mr := range st.monitorRecs {
 		b.monitor(mr.r, mr.defaults, mr.scope)
 	}
-	for _, r := range maintRecs {
+	for _, r := range st.maintRecs {
 		b.maint(r)
 	}
 	b.implicitPolicies()
 	b.crossRefs()
+}
+
+// buildState is what reading the file statement by statement carries.
+type buildState struct {
+	soaSeen, recordSeen bool
+	globalOnce          map[string]Pos
+	defaults            []Opt
+	setOverrides        map[string]string
+	setPos              map[string]Pos
+	monitorRecs         []monitorRec
+	scope               *scopeDir
+	later               []Record // NODE and POLICY: built once $SET is known
+	maintRecs           []Record // MAINT: built once the monitors are known
+}
+
+func (b *builder) directive(st *buildState, s *Stmt) {
+	d := s.directive()
+	pos := s.Tokens[0].Pos
+	// $VERSION may come first: it says how to read the rest.
+	if !st.soaSeen && d.Name != "VERSION" && d.Name != "FILE" {
+		b.errf(pos, "soa_first", "the file header ($FILE) must come first")
+	}
+	switch d.Name {
+	case "FILE":
+		if st.soaSeen {
+			b.errf(pos, "duplicate_soa", "only one file header ($FILE or SOA) is allowed")
+			return
+		}
+		if st.recordSeen {
+			b.errf(pos, "soa_first", "the file header ($FILE) must come first")
+		}
+		st.soaSeen = true
+		b.fileHeader(d)
+	case "QUORUM", "DIALECT":
+		b.onceDirective(st, d, pos)
+	case "SET":
+		b.setDirective(st, d)
+	case "TAG":
+		b.tagDirective(d)
+	case "DEFAULT":
+		st.defaults = nil
+		for _, t := range d.Args {
+			k, v, ok := t.option()
+			if !ok {
+				b.errf(t.Pos, "syntax", "$DEFAULT expects key=value")
+				continue
+			}
+			st.defaults = append(st.defaults, Opt{Key: k, Value: v, Pos: t.Pos})
+		}
+	case "SCOPE":
+		st.scope = b.scopeDirective(d)
+	case "VERSION":
+		// The syntax version this file is written in; files without it
+		// are version 1.
+		if p, dup := st.globalOnce[d.Name]; dup {
+			b.errf(pos, "duplicate_directive", "$%s already set at line %d", d.Name, p.Line)
+			return
+		}
+		st.globalOnce[d.Name] = pos
+		if len(d.Args) != 1 || d.Args[0].Text != "1" {
+			b.errf(pos, "unsupported_version", "this release reads monitors.conf version 1; the file needs a newer unagikuma")
+		}
+	case "INCLUDE":
+		b.errf(pos, "unsupported", "$INCLUDE is not supported yet")
+	default:
+		if reservedDirectives[d.Name] {
+			b.errf(pos, "needs_newer", "$%s is reserved for a later version of unagikuma", d.Name)
+			return
+		}
+		b.errf(pos, "unknown_directive", "unknown directive $%s", d.Name)
+	}
+}
+
+// onceDirective reads $QUORUM and $DIALECT, which are set once, before the
+// first record.
+func (b *builder) onceDirective(st *buildState, d Directive, pos Pos) {
+	if p, dup := st.globalOnce[d.Name]; dup {
+		b.errf(pos, "duplicate_directive", "$%s already set at line %d", d.Name, p.Line)
+		return
+	}
+	st.globalOnce[d.Name] = pos
+	if st.recordSeen {
+		b.errf(pos, "directive_order", "$%s must come before the first record", d.Name)
+	}
+	if len(d.Args) != 1 {
+		b.errf(pos, "syntax", "$%s takes exactly one value", d.Name)
+		return
+	}
+	v := d.Args[0].Text
+	if d.Name == "QUORUM" {
+		if err := ValidateQuorum(v); err != nil {
+			b.errf(d.Args[0].Pos, "invalid_value", "%v", err)
+		}
+		b.cfg.Quorum = v
+		return
+	}
+	dl, err := keywords.ParseDialect(v)
+	if err != nil {
+		b.errf(d.Args[0].Pos, "invalid_value", "%v", err)
+	}
+	b.cfg.Dialect = dl
+}
+
+func (b *builder) setDirective(st *buildState, d Directive) {
+	for _, t := range d.Args {
+		k, v, ok := t.option()
+		if !ok {
+			b.errf(t.Pos, "syntax", "$SET expects key=value")
+			continue
+		}
+		if p, dup := st.setPos[k]; dup {
+			b.errf(t.Pos, "duplicate_tunable", "%s already set at line %d", k, p.Line)
+			continue
+		}
+		if _, err := tunables.New(map[string]string{k: v}); err != nil {
+			b.errf(t.Pos, "invalid_tunable", "%v", err)
+			continue
+		}
+		st.setOverrides[k], st.setPos[k] = v, t.Pos
+	}
+}
+
+func (b *builder) record(st *buildState, s *Stmt) {
+	r, diag := s.record()
+	if diag != nil {
+		b.diags = append(b.diags, *diag)
+		return
+	}
+	if r.Type == "SOA" {
+		if st.soaSeen {
+			b.errf(r.TypePos, "duplicate_soa", "only one file header ($FILE or SOA) is allowed")
+			return
+		}
+		if st.recordSeen {
+			b.errf(r.TypePos, "soa_first", "the file header must come first")
+		}
+		st.soaSeen = true
+		b.soa(r)
+		return
+	}
+	if !st.soaSeen && !st.recordSeen {
+		b.errf(r.NamePos, "soa_first", "the file header ($FILE) must come first")
+	}
+	st.recordSeen = true
+	if !b.recordName(r) {
+		return
+	}
+	if r.Interval != "" && !IsMonitorType(r.Type) {
+		b.warnf(r.Stmt.Tokens[1].Pos, "interval_ignored", "only monitors have an interval; %s ignores it", r.Type)
+	}
+	switch {
+	case IsMonitorType(r.Type):
+		st.monitorRecs = append(st.monitorRecs, monitorRec{r, append([]Opt(nil), st.defaults...), st.scope})
+	case r.Type == "NODE", r.Type == "POLICY":
+		st.later = append(st.later, r)
+	case r.Type == "MAINT":
+		st.maintRecs = append(st.maintRecs, r)
+	default:
+		b.otherRecord(r)
+	}
+}
+
+// recordName checks a record's name and options before it is built.
+func (b *builder) recordName(r Record) bool {
+	if !ValidName(r.Name) {
+		b.errf(r.NamePos, "invalid_name", "invalid name %q: letters, digits, '_', '.', '-'; must start with a letter or digit; at most 63 characters", r.Name)
+		return false
+	}
+	if p, dup := b.names[r.Name]; dup {
+		b.errf(r.NamePos, "duplicate_name", "name %q already used at line %d (names are unique across all record types)", r.Name, p.Line)
+		return false
+	}
+	b.names[r.Name] = r.NamePos
+	if o := dupKeys(r.Opts); o != nil {
+		b.errf(o.Pos, "duplicate_option", "option %s given twice", o.Key)
+		return false
+	}
+	return true
+}
+
+func (b *builder) otherRecord(r Record) {
+	switch r.Type {
+	case "CHANNEL":
+		b.channel(r)
+	case "STATUSPAGE":
+		b.statusPage(r)
+	case "PERIOD":
+		b.period(r)
+	case "TEAM":
+		b.team(r)
+	default:
+		if reservedTypes[r.Type] {
+			b.errf(r.TypePos, "needs_newer", "record type %s is reserved for a later version of unagikuma", r.Type)
+			return
+		}
+		b.errf(r.TypePos, "unknown_type", "unknown record type %s", r.Type)
+	}
 }
 
 type monitorRec struct {
@@ -644,18 +679,9 @@ func (b *builder) plaintext(p Pos, kind string, values map[string]string) {
 
 func (b *builder) monitor(r Record, defaults []Opt, scope *scopeDir) {
 	m := &Monitor{Name: r.Name, Written: r.Type, Type: r.Type, Pos: r.NamePos, Lines: lines(r.Stmt), Opts: map[string]string{}}
-	optPos := map[string]Pos{}
-	for _, o := range defaults {
-		m.Opts[o.Key], optPos[o.Key] = o.Value, o.Pos
-	}
-	for _, o := range r.Opts {
-		m.Opts[o.Key], optPos[o.Key] = o.Value, o.Pos
-	}
-	pos := func(k string) Pos {
-		if p, ok := optPos[k]; ok {
-			return p
-		}
-		return r.NamePos
+	o := &monOpts{b: b, m: m, optPos: map[string]Pos{}, namePos: r.NamePos}
+	for _, x := range append(append([]Opt(nil), defaults...), r.Opts...) {
+		m.Opts[x.Key], o.optPos[x.Key] = x.Value, x.Pos
 	}
 	d := b.cfg.Defaults
 	m.Interval, m.Retry, m.Timeout, m.Attempts = d.Interval, d.Retry, d.Timeout, d.Attempts
@@ -673,79 +699,7 @@ func (b *builder) monitor(r Record, defaults []Opt, scope *scopeDir) {
 			m.Interval = iv
 		}
 	}
-	dur := func(k string, dst *time.Duration, allowOff bool) {
-		v, ok := m.Opts[k]
-		if !ok {
-			return
-		}
-		if allowOff && strings.EqualFold(v, "off") {
-			*dst = 0
-			return
-		}
-		x, err := tunables.ParseDuration(v)
-		if err != nil || x < 0 {
-			b.errf(pos(k), "invalid_duration", "%s: invalid duration %q", k, v)
-			return
-		}
-		*dst = x
-	}
-	num := func(k string, dst *int, lo, hi int) {
-		v, ok := m.Opts[k]
-		if !ok {
-			return
-		}
-		n, err := strconv.Atoi(v)
-		if err != nil || n < lo || n > hi {
-			b.errf(pos(k), "invalid_value", "%s must be an integer between %d and %d", k, lo, hi)
-			return
-		}
-		*dst = n
-	}
-	enum := func(k string, dst *string, allowed ...string) {
-		v, ok := m.Opts[k]
-		if !ok {
-			return
-		}
-		v = strings.ToLower(v)
-		if !contains(allowed, v) {
-			b.errf(pos(k), "invalid_value", "%s must be one of %s", k, strings.Join(allowed, ", "))
-			return
-		}
-		*dst = v
-	}
-	if v, ok := m.Opts["title"]; ok {
-		if v == "" || len([]rune(v)) > 64 {
-			b.errf(pos("title"), "invalid_value", "title must be 1 to 64 characters")
-		} else {
-			m.Title = v
-		}
-	}
-	m.Description, m.Group = m.Opts["description"], m.Opts["group"]
-	if v, ok := m.Opts["tags"]; ok {
-		tags, err := parseTags(v)
-		if err != nil {
-			b.errf(pos("tags"), "invalid_value", "%v", err)
-		}
-		m.Tags = tags
-	}
-	dur("retry", &m.Retry, false)
-	dur("timeout", &m.Timeout, false)
-	num("attempts", &m.Attempts, 1, 100)
-	num("recover-attempts", &m.RecoverAttempts, 1, 100)
-	enum("on-insufficient", &m.OnInsufficient, "unknown", "critical")
-	enum("on-filtered", &m.OnFiltered, "fail", "abstain")
-	enum("on-node-loss", &m.OnNodeLoss, "degrade", "unknown")
-	enum("scope", &m.Scope, "auto", "lan", "wan")
-	dur("partial-escalate", &m.PartialEscalate, true)
-	dur("degraded", &m.Degraded, false)
-	num("cert-days", &m.CertDays, 0, 3650)
-	num("cert-critical-days", &m.CertCritical, 0, 3650)
-	if v, ok := m.Opts["quorum"]; ok {
-		if err := ValidateQuorum(v); err != nil {
-			b.errf(pos("quorum"), "invalid_value", "%v", err)
-		}
-		m.Quorum = v
-	}
+	o.common()
 	if v, ok := m.Opts["policy"]; ok {
 		m.Policy = v
 	} else if scope != nil && scope.policy != "" {
@@ -754,10 +708,121 @@ func (b *builder) monitor(r Record, defaults []Opt, scope *scopeDir) {
 	if scope != nil {
 		m.Area = scope.spec
 	}
+	o.placement(scope)
+	o.flags()
+
+	b.target(m, r, explicitInterval)
+	b.monitorChecks(m, r)
+	m.MetaHash, m.ParamHash, m.DefHash = hashes(m)
+	b.cfg.Monitors = append(b.cfg.Monitors, m)
+}
+
+// monOpts reads the options of one monitor record.
+type monOpts struct {
+	b       *builder
+	m       *Monitor
+	optPos  map[string]Pos
+	namePos Pos
+}
+
+func (o *monOpts) pos(k string) Pos {
+	if p, ok := o.optPos[k]; ok {
+		return p
+	}
+	return o.namePos
+}
+
+func (o *monOpts) dur(k string, dst *time.Duration, allowOff bool) {
+	v, ok := o.m.Opts[k]
+	if !ok {
+		return
+	}
+	if allowOff && strings.EqualFold(v, "off") {
+		*dst = 0
+		return
+	}
+	x, err := tunables.ParseDuration(v)
+	if err != nil || x < 0 {
+		o.b.errf(o.pos(k), "invalid_duration", "%s: invalid duration %q", k, v)
+		return
+	}
+	*dst = x
+}
+
+func (o *monOpts) num(k string, dst *int, lo, hi int) {
+	v, ok := o.m.Opts[k]
+	if !ok {
+		return
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < lo || n > hi {
+		o.b.errf(o.pos(k), "invalid_value", "%s must be an integer between %d and %d", k, lo, hi)
+		return
+	}
+	*dst = n
+}
+
+func (o *monOpts) enum(k string, dst *string, allowed ...string) {
+	v, ok := o.m.Opts[k]
+	if !ok {
+		return
+	}
+	v = strings.ToLower(v)
+	if !contains(allowed, v) {
+		o.b.errf(o.pos(k), "invalid_value", "%s must be one of %s", k, strings.Join(allowed, ", "))
+		return
+	}
+	*dst = v
+}
+
+// common reads the options every monitor type has.
+func (o *monOpts) common() {
+	b, m := o.b, o.m
+	if v, ok := m.Opts["title"]; ok {
+		if v == "" || len([]rune(v)) > 64 {
+			b.errf(o.pos("title"), "invalid_value", "title must be 1 to 64 characters")
+		} else {
+			m.Title = v
+		}
+	}
+	m.Description, m.Group = m.Opts["description"], m.Opts["group"]
+	if v, ok := m.Opts["tags"]; ok {
+		tags, err := parseTags(v)
+		if err != nil {
+			b.errf(o.pos("tags"), "invalid_value", "%v", err)
+		}
+		m.Tags = tags
+	}
+	o.dur("retry", &m.Retry, false)
+	o.dur("timeout", &m.Timeout, false)
+	o.num("attempts", &m.Attempts, 1, 100)
+	o.num("recover-attempts", &m.RecoverAttempts, 1, 100)
+	o.enum("on-insufficient", &m.OnInsufficient, "unknown", "critical")
+	o.enum("on-filtered", &m.OnFiltered, "fail", "abstain")
+	o.enum("on-node-loss", &m.OnNodeLoss, "degrade", "unknown")
+	o.enum("scope", &m.Scope, "auto", "lan", "wan")
+	o.dur("partial-escalate", &m.PartialEscalate, true)
+	o.dur("degraded", &m.Degraded, false)
+	o.num("cert-days", &m.CertDays, 0, 3650)
+	o.num("cert-critical-days", &m.CertCritical, 0, 3650)
+	if v, ok := m.Opts["quorum"]; ok {
+		if err := ValidateQuorum(v); err != nil {
+			b.errf(o.pos("quorum"), "invalid_value", "%v", err)
+		}
+		m.Quorum = v
+	}
+}
+
+// placement decides which nodes check the monitor: nodes=, region=, or
+// the $SCOPE it is written under.
+func (o *monOpts) placement(scope *scopeDir) {
+	b, m := o.b, o.m
 	region, hasRegion := m.Opts["region"]
-	if v, ok := m.Opts["nodes"]; ok {
+	v, hasNodes := m.Opts["nodes"]
+	switch {
+	case hasNodes:
 		if hasRegion {
-			b.errf(pos("region"), "invalid_value", "%s: use nodes= or region=, not both", m.Name)
+			b.errf(o.pos("region"), "invalid_value", "%s: use nodes= or region=, not both", m.Name)
 		}
 		var entries []string
 		for _, n := range strings.Split(v, ",") {
@@ -765,23 +830,23 @@ func (b *builder) monitor(r Record, defaults []Opt, scope *scopeDir) {
 				entries = append(entries, n)
 			}
 		}
-		m.Nodes = b.expandNodes(entries, pos("nodes"))
+		m.Nodes = b.expandNodes(entries, o.pos("nodes"))
 		if len(entries) == 1 && strings.HasPrefix(entries[0], "region:") {
 			m.Region = strings.TrimPrefix(entries[0], "region:")
 		}
-	} else if hasRegion {
+	case hasRegion:
 		// region=NAME: the nodes of that region check it; region=global:
 		// every node, whatever $SCOPE it is written under.
 		switch region = strings.TrimSpace(region); {
 		case region == "" || region == RegionGlobal:
 			m.Region = RegionGlobal
 		case !ValidName(region):
-			b.errf(pos("region"), "invalid_value", "region must be a name or global")
+			b.errf(o.pos("region"), "invalid_value", "region must be a name or global")
 		default:
 			m.Region = region
-			m.Nodes = b.expandNodes([]string{"region:" + region}, pos("region"))
+			m.Nodes = b.expandNodes([]string{"region:" + region}, o.pos("region"))
 		}
-	} else if scope != nil {
+	case scope != nil:
 		m.Nodes = b.expandNodes(scope.nodes, scope.pos)
 		if r, ok := strings.CutPrefix(scope.spec, "region:"); ok {
 			m.Region = r
@@ -790,25 +855,25 @@ func (b *builder) monitor(r Record, defaults []Opt, scope *scopeDir) {
 	if m.Region == "" && len(m.Nodes) == 0 {
 		m.Region = RegionGlobal
 	}
-	for _, k := range []string{"authorized", "disabled", "share", "mute", "system-channel"} {
-		if v, ok := m.Opts[k]; ok {
-			x, err := parseBoolOpt(v)
-			if err != nil {
-				b.errf(pos(k), "invalid_value", "%s: %v", k, err)
-			}
-			switch k {
-			case "authorized":
-				m.Authorized = x
-			case "disabled":
-				m.Disabled = x
-			case "mute":
-				m.Mute = x
-			case "system-channel":
-				m.SystemChannel = x
-			default:
-				m.Share = x
-			}
+}
+
+// flags reads the yes/no options, the device, the team and the parents.
+func (o *monOpts) flags() {
+	b, m := o.b, o.m
+	// In the order they were always read, so diagnostics keep their order.
+	for _, f := range []struct {
+		key string
+		dst *bool
+	}{{"authorized", &m.Authorized}, {"disabled", &m.Disabled}, {"share", &m.Share}, {"mute", &m.Mute}, {"system-channel", &m.SystemChannel}} {
+		v, ok := m.Opts[f.key]
+		if !ok {
+			continue
 		}
+		x, err := parseBoolOpt(v)
+		if err != nil {
+			b.errf(o.pos(f.key), "invalid_value", "%s: %v", f.key, err)
+		}
+		*f.dst = x
 	}
 	if v, ok := m.Opts["device"]; ok {
 		m.Device = v
@@ -823,14 +888,15 @@ func (b *builder) monitor(r Record, defaults []Opt, scope *scopeDir) {
 				m.Parents = append(m.Parents, p)
 			}
 		}
-		m.parentPos = pos("parent")
+		m.parentPos = o.pos("parent")
 	}
 	if m.CertDays > 0 && m.CertCritical > 0 && m.CertCritical >= m.CertDays {
-		b.warnf(pos("cert-critical-days"), "invalid_value", "cert-critical-days should be lower than cert-days")
+		b.warnf(o.pos("cert-critical-days"), "invalid_value", "cert-critical-days should be lower than cert-days")
 	}
+}
 
-	b.target(m, r, explicitInterval)
-
+// monitorChecks gives the warnings and checks that need the whole monitor.
+func (b *builder) monitorChecks(m *Monitor, r Record) {
 	if m.Timeout >= m.Interval && m.Type != "PUSH" {
 		b.warnf(r.NamePos, "timeout_ge_interval", "timeout %s is not shorter than the interval %s", m.Timeout, m.Interval)
 	}
@@ -847,8 +913,6 @@ func (b *builder) monitor(r Record, defaults []Opt, scope *scopeDir) {
 	if m.Type == "HTTP" && m.Opts["basic"] != "" && m.Opts["bearer"] != "" {
 		b.warnf(r.NamePos, "conflicting_auth", "%s sets both basic= and bearer=: a request carries one Authorization header, and bearer= is the one sent", m.Name)
 	}
-	m.MetaHash, m.ParamHash, m.DefHash = hashes(m)
-	b.cfg.Monitors = append(b.cfg.Monitors, m)
 }
 
 // target parses and normalises the monitor target.
@@ -862,36 +926,8 @@ func (b *builder) target(m *Monitor, r Record, explicitInterval bool) {
 			}
 		}
 	}
-	switch m.Type {
-	case "PUSH":
-		if len(m.Nodes) == 0 {
-			m.Nodes = []string{b.cfg.MName}
-		}
-		if len(m.Nodes) != 1 {
-			b.errf(r.NamePos, "invalid_option", "PUSH requires exactly one receiving site")
-		}
-		if r.TargetOK && r.Target != "-" {
-			b.errf(p, "syntax", "PUSH takes no target")
-		}
-		m.Period = m.Interval
-		if v, ok := m.Opts["period"]; ok {
-			d, err := tunables.ParseDuration(v)
-			if err != nil || d <= 0 {
-				b.errf(r.NamePos, "invalid_duration", "period: invalid duration %q", v)
-			} else {
-				m.Period = d
-			}
-		}
-		m.Grace = b.cfg.Tunables.Duration("probe.push-grace")
-		if v, ok := m.Opts["grace"]; ok {
-			d, err := tunables.ParseDuration(v)
-			if err != nil || d < 0 {
-				b.errf(r.NamePos, "invalid_duration", "grace: invalid duration %q", v)
-			} else {
-				m.Grace = d
-			}
-		}
-		m.Interval = m.Period
+	if m.Type == "PUSH" {
+		b.pushTarget(m, r, p)
 		return
 	}
 	if !r.TargetOK || r.Target == "" {
@@ -915,59 +951,16 @@ func (b *builder) target(m *Monitor, r Record, explicitInterval bool) {
 			b.errf(p, "invalid_target", "PING target is a host name or address, without a port")
 		}
 	case "REDIS", "POSTGRES", "MYSQL", "GRPC":
-		// Service checks are TCP checks that speak the service's protocol.
-		host, port := strings.Trim(r.Target, "[]"), protoPorts[m.Type]
-		if h, pt, err := net.SplitHostPort(r.Target); err == nil {
-			host, port = h, pt
-		}
-		n, err := strconv.Atoi(port)
-		if host == "" || strings.ContainsAny(host, "/@") || err != nil || n < 1 || n > 65535 {
-			b.errf(p, "invalid_target", "%s target must be host or host:port", m.Type)
-			return
-		}
-		m.Opts["proto"] = strings.ToLower(m.Type)
-		m.Type, m.Target = "TCP", net.JoinHostPort(host, port)
+		b.serviceTarget(m, r, p)
 	case "DOMAIN":
-		// A registry lookup: hours apart is plenty, and registries limit
-		// how often they may be asked.
-		// (The target itself is checked with the other check options.)
-		if !explicitInterval {
-			m.Interval = 6 * time.Hour
-		} else if m.Interval < time.Hour {
-			b.errf(r.NamePos, "invalid_value", "DOMAIN checks at most hourly (interval %s)", m.Interval)
-		}
-		if _, ok := m.Opts["retry"]; !ok {
-			m.Retry = 10 * time.Minute
-		}
-		if _, ok := m.Opts["timeout"]; !ok {
-			m.Timeout = 20 * time.Second
-		}
+		b.domainTiming(m, r, explicitInterval)
 	case "DOCKER":
 		// A container on each probing node: local, never a path to the internet.
 		if _, ok := m.Opts["scope"]; !ok {
 			m.Scope = "lan"
 		}
 	case "DNS", "NTP", "SNMP", "SYSLOG":
-		kw := strings.ToLower(m.Type)
-		host, port := r.Target, ""
-		if h, pt, err := net.SplitHostPort(r.Target); err == nil {
-			host, port = h, pt
-		}
-		word := kw
-		if port != "" {
-			word = port
-		}
-		m.Type = "UDP"
-		b.udp(m, p, host, word, kw, explicitInterval)
-		if port != "" {
-			if _, ok := m.Opts["template"]; !ok && m.UDP != nil {
-				m.UDP.Template, m.UDP.Keyword = kw, kw
-				if e, ok := keywords.Lookup(kw); ok {
-					m.UDP.Entry, m.UDP.Depth = e, e.Depth
-				}
-			}
-		}
-		m.Target = net.JoinHostPort(host, strconv.Itoa(portOr(m.UDP)))
+		b.udpServiceTarget(m, r, p, explicitInterval)
 	case "UDP":
 		host, word, err := net.SplitHostPort(r.Target)
 		if err != nil || host == "" {
@@ -976,6 +969,97 @@ func (b *builder) target(m *Monitor, r Record, explicitInterval bool) {
 		}
 		b.udp(m, p, host, word, "", explicitInterval)
 	}
+}
+
+// pushTarget sets up a PUSH monitor: one receiving site, a period and a
+// grace time instead of a target.
+func (b *builder) pushTarget(m *Monitor, r Record, p Pos) {
+	if len(m.Nodes) == 0 {
+		m.Nodes = []string{b.cfg.MName}
+	}
+	if len(m.Nodes) != 1 {
+		b.errf(r.NamePos, "invalid_option", "PUSH requires exactly one receiving site")
+	}
+	if r.TargetOK && r.Target != "-" {
+		b.errf(p, "syntax", "PUSH takes no target")
+	}
+	m.Period = m.Interval
+	if v, ok := m.Opts["period"]; ok {
+		d, err := tunables.ParseDuration(v)
+		if err != nil || d <= 0 {
+			b.errf(r.NamePos, "invalid_duration", "period: invalid duration %q", v)
+		} else {
+			m.Period = d
+		}
+	}
+	m.Grace = b.cfg.Tunables.Duration("probe.push-grace")
+	if v, ok := m.Opts["grace"]; ok {
+		d, err := tunables.ParseDuration(v)
+		if err != nil || d < 0 {
+			b.errf(r.NamePos, "invalid_duration", "grace: invalid duration %q", v)
+		} else {
+			m.Grace = d
+		}
+	}
+	m.Interval = m.Period
+}
+
+// serviceTarget turns a service check into the TCP check that speaks the
+// service's protocol.
+func (b *builder) serviceTarget(m *Monitor, r Record, p Pos) {
+	host, port := strings.Trim(r.Target, "[]"), protoPorts[m.Type]
+	if h, pt, err := net.SplitHostPort(r.Target); err == nil {
+		host, port = h, pt
+	}
+	n, err := strconv.Atoi(port)
+	if host == "" || strings.ContainsAny(host, "/@") || err != nil || n < 1 || n > 65535 {
+		b.errf(p, "invalid_target", "%s target must be host or host:port", m.Type)
+		return
+	}
+	m.Opts["proto"] = strings.ToLower(m.Type)
+	m.Type, m.Target = "TCP", net.JoinHostPort(host, port)
+}
+
+// domainTiming: a registry lookup. Hours apart is plenty, and registries
+// limit how often they may be asked. (The target itself is checked with
+// the other check options.)
+func (b *builder) domainTiming(m *Monitor, r Record, explicitInterval bool) {
+	if !explicitInterval {
+		m.Interval = 6 * time.Hour
+	} else if m.Interval < time.Hour {
+		b.errf(r.NamePos, "invalid_value", "DOMAIN checks at most hourly (interval %s)", m.Interval)
+	}
+	if _, ok := m.Opts["retry"]; !ok {
+		m.Retry = 10 * time.Minute
+	}
+	if _, ok := m.Opts["timeout"]; !ok {
+		m.Timeout = 20 * time.Second
+	}
+}
+
+// udpServiceTarget turns DNS, NTP, SNMP and SYSLOG into the UDP check with
+// that protocol's template.
+func (b *builder) udpServiceTarget(m *Monitor, r Record, p Pos, explicitInterval bool) {
+	kw := strings.ToLower(m.Type)
+	host, port := r.Target, ""
+	if h, pt, err := net.SplitHostPort(r.Target); err == nil {
+		host, port = h, pt
+	}
+	word := kw
+	if port != "" {
+		word = port
+	}
+	m.Type = "UDP"
+	b.udp(m, p, host, word, kw, explicitInterval)
+	if port != "" {
+		if _, ok := m.Opts["template"]; !ok && m.UDP != nil {
+			m.UDP.Template, m.UDP.Keyword = kw, kw
+			if e, ok := keywords.Lookup(kw); ok {
+				m.UDP.Entry, m.UDP.Depth = e, e.Depth
+			}
+		}
+	}
+	m.Target = net.JoinHostPort(host, strconv.Itoa(portOr(m.UDP)))
 }
 
 // protoPorts are the default ports of the service checks.
@@ -1219,92 +1303,89 @@ func (b *builder) policyRec(r Record) {
 	p.Pos, p.Lines = r.NamePos, lines(r.Stmt)
 	for _, o := range r.Opts {
 		p.Opts[o.Key] = o.Value
-		dur := func(dst *time.Duration) {
-			d, err := tunables.ParseDuration(o.Value)
-			if err != nil || d < 0 {
-				b.errf(o.Pos, "invalid_duration", "%s: invalid duration %q", o.Key, o.Value)
-				return
-			}
-			*dst = d
-		}
-		flag := func(dst *bool) {
-			v, err := parseBoolOpt(o.Value)
-			if err != nil {
-				b.errf(o.Pos, "invalid_value", "%s: %v", o.Key, err)
-			}
-			*dst = v
-		}
-		switch o.Key {
-		case "chain":
-			for _, c := range strings.Split(o.Value, ",") {
-				if c = strings.TrimSpace(c); c != "" {
-					p.Chain = append(p.Chain, c)
-				}
-			}
-		case "network":
-			for _, c := range strings.Split(o.Value, ",") {
-				if c = strings.TrimSpace(c); c != "" {
-					p.Network = append(p.Network, c)
-				}
-			}
-		case "mode":
-			v := strings.ToLower(o.Value)
-			if v != "fallback" && v != "all" {
-				b.errf(o.Pos, "invalid_value", "mode must be fallback or all")
-			}
-			p.Mode = v
-		case "repeat":
-			dur(&p.Repeat)
-		case "delay":
-			dur(&p.Delay)
-		case "reopen-window":
-			dur(&p.ReopenWindow)
-		case "ack-expire":
-			dur(&p.AckExpire)
-		case "max":
-			n, err := strconv.Atoi(o.Value)
-			if err != nil || n < 0 || n > 1000 {
-				b.errf(o.Pos, "invalid_value", "max must be 0 (unlimited) to 1000")
-			}
-			p.Max = n
-			if n == 0 {
-				b.warnf(o.Pos, "unlimited_notifications", "max=0 sends notifications without limit")
-			}
-		case "recovery":
-			flag(&p.Recovery)
-		case "notify-degraded":
-			flag(&p.NotifyDegraded)
-		case "ack-clear-on-change":
-			flag(&p.AckClearOnChange)
-		case "recovery-after-ack":
-			flag(&p.RecoveryAfterAck)
-		case "escalate":
-			// escalate=30m:leader,2h:director+sms — after each delay, while
-			// the incident is open and unacknowledged.
-			var last time.Duration
-			for _, step := range strings.Split(o.Value, ",") {
-				after, chans, ok := strings.Cut(strings.TrimSpace(step), ":")
-				d, err := tunables.ParseDuration(after)
-				if !ok || err != nil || d <= 0 || chans == "" {
-					b.errf(o.Pos, "invalid_value", "escalate: %q must be DELAY:channel[+channel]", step)
-					continue
-				}
-				if d <= last {
-					b.errf(o.Pos, "invalid_value", "escalate: delays must increase")
-				}
-				last = d
-				p.Escalate = append(p.Escalate, Escalation{After: d, Channels: strings.Split(chans, "+")})
-			}
-		case "last-resort":
-			b.errf(o.Pos, "not_allowed", "last-resort can only be set in the server configuration, not in monitors.conf")
-		default:
-			b.errf(o.Pos, "unknown_option", "unknown POLICY option %s", o.Key)
-		}
+		b.policyOpt(p, o)
 	}
 	if len(p.Chain) == 0 {
 		b.errf(r.NamePos, "missing_option", "POLICY needs chain=channel[,channel...]")
 	}
 	b.cfg.Policies = append(b.cfg.Policies, p)
+}
+
+func splitNames(v string) []string {
+	var out []string
+	for _, c := range strings.Split(v, ",") {
+		if c = strings.TrimSpace(c); c != "" {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// policyOpt reads one POLICY option.
+func (b *builder) policyOpt(p *Policy, o Opt) {
+	if dst := map[string]*time.Duration{"repeat": &p.Repeat, "delay": &p.Delay, "reopen-window": &p.ReopenWindow, "ack-expire": &p.AckExpire}[o.Key]; dst != nil {
+		d, err := tunables.ParseDuration(o.Value)
+		if err != nil || d < 0 {
+			b.errf(o.Pos, "invalid_duration", "%s: invalid duration %q", o.Key, o.Value)
+			return
+		}
+		*dst = d
+		return
+	}
+	if dst := map[string]*bool{"recovery": &p.Recovery, "notify-degraded": &p.NotifyDegraded, "ack-clear-on-change": &p.AckClearOnChange, "recovery-after-ack": &p.RecoveryAfterAck}[o.Key]; dst != nil {
+		v, err := parseBoolOpt(o.Value)
+		if err != nil {
+			b.errf(o.Pos, "invalid_value", "%s: %v", o.Key, err)
+		}
+		*dst = v
+		return
+	}
+	switch o.Key {
+	case "chain":
+		p.Chain = append(p.Chain, splitNames(o.Value)...)
+	case "network":
+		p.Network = append(p.Network, splitNames(o.Value)...)
+	case "mode":
+		v := strings.ToLower(o.Value)
+		if v != "fallback" && v != "all" {
+			b.errf(o.Pos, "invalid_value", "mode must be fallback or all")
+		}
+		p.Mode = v
+	case "max":
+		n, err := strconv.Atoi(o.Value)
+		if err != nil || n < 0 || n > 1000 {
+			b.errf(o.Pos, "invalid_value", "max must be 0 (unlimited) to 1000")
+		}
+		p.Max = n
+		if n == 0 {
+			b.warnf(o.Pos, "unlimited_notifications", "max=0 sends notifications without limit")
+		}
+	case "escalate":
+		b.escalation(p, o)
+	case "last-resort":
+		b.errf(o.Pos, "not_allowed", "last-resort can only be set in the server configuration, not in monitors.conf")
+	default:
+		b.errf(o.Pos, "unknown_option", "unknown POLICY option %s", o.Key)
+	}
+}
+
+// escalation reads escalate=30m:leader,2h:director+sms: after each delay,
+// while the incident is open and unacknowledged.
+func (b *builder) escalation(p *Policy, o Opt) {
+	var last time.Duration
+	for _, step := range strings.Split(o.Value, ",") {
+		after, chans, ok := strings.Cut(strings.TrimSpace(step), ":")
+		d, err := tunables.ParseDuration(after)
+		if !ok || err != nil || d <= 0 || chans == "" {
+			b.errf(o.Pos, "invalid_value", "escalate: %q must be DELAY:channel[+channel]", step)
+			continue
+		}
+		if d <= last {
+			b.errf(o.Pos, "invalid_value", "escalate: delays must increase")
+		}
+		last = d
+		p.Escalate = append(p.Escalate, Escalation{After: d, Channels: strings.Split(chans, "+")})
+	}
 }
 
 func (b *builder) statusPage(r Record) {

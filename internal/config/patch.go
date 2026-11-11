@@ -18,76 +18,104 @@ type lineEdit struct {
 
 // patchRecord rewrites the statement of an existing record into r.
 func (f *File) patchRecord(s *Stmt, old Record, r RecordSpec) []string {
-	ls := f.lines()
+	p := &recordPatch{ls: f.lines()}
 	var toks []Token
 	for _, t := range s.Tokens {
 		if t.Paren == 0 {
 			toks = append(toks, t)
 		}
 	}
-	span := func(t Token) (int, int, int) {
-		ln := t.Pos.Line - 1
-		start := byteIndexOfCol(ls[ln], t.Pos.Col)
-		return ln, start, start + len(t.Raw)
+	i, last := p.head(toks, old, r)
+	p.options(toks[i:], last, r)
+	// Apply right to left within each line.
+	sort.Slice(p.edits, func(a, b int) bool {
+		if p.edits[a].line != p.edits[b].line {
+			return p.edits[a].line < p.edits[b].line
+		}
+		return p.edits[a].start > p.edits[b].start
+	})
+	out := append([]string(nil), p.ls...)
+	for _, e := range p.edits {
+		line := out[e.line]
+		out[e.line] = line[:e.start] + e.text + line[e.end:]
 	}
-	var edits []lineEdit
-	// replace swaps a token; aligned keeps the next token's column when
-	// the gap after it is wider than one space (columns lined up by hand).
-	replace := func(t Token, text string, aligned bool) {
-		if t.Raw == text {
+	return out
+}
+
+// recordPatch collects the edits that turn one statement into another.
+type recordPatch struct {
+	ls    []string
+	edits []lineEdit
+}
+
+func (p *recordPatch) span(t Token) (int, int, int) {
+	ln := t.Pos.Line - 1
+	start := byteIndexOfCol(p.ls[ln], t.Pos.Col)
+	return ln, start, start + len(t.Raw)
+}
+
+// replace swaps a token; aligned keeps the next token's column when the
+// gap after it is wider than one space (columns lined up by hand).
+func (p *recordPatch) replace(t Token, text string, aligned bool) {
+	if t.Raw == text {
+		return
+	}
+	ln, a, b := p.span(t)
+	line := p.ls[ln]
+	if aligned {
+		w := 0
+		for b+w < len(line) && line[b+w] == ' ' {
+			w++
+		}
+		if w > 1 && b+w < len(line) {
+			gap := max(1, w-(len(text)-len(t.Raw)))
+			p.edits = append(p.edits, lineEdit{ln, a, b + w, text + strings.Repeat(" ", gap)})
 			return
 		}
-		ln, a, b := span(t)
-		line := ls[ln]
-		if aligned {
-			w := 0
-			for b+w < len(line) && line[b+w] == ' ' {
-				w++
-			}
-			if w > 1 && b+w < len(line) {
-				gap := max(1, w-(len(text)-len(t.Raw)))
-				edits = append(edits, lineEdit{ln, a, b + w, text + strings.Repeat(" ", gap)})
-				return
-			}
-		}
-		edits = append(edits, lineEdit{ln, a, b, text})
 	}
-	remove := func(t Token) {
-		ln, a, b := span(t)
-		line := ls[ln]
-		for a > 0 && (line[a-1] == ' ' || line[a-1] == '\t') {
-			a--
-		}
-		if a == 0 { // first on its line: take the space after it instead
-			for b < len(line) && (line[b] == ' ' || line[b] == '\t') {
-				b++
-			}
-		}
-		edits = append(edits, lineEdit{ln, a, b, ""})
-	}
-	insertAfter := func(t Token, text string) {
-		ln, _, b := span(t)
-		edits = append(edits, lineEdit{ln, b, b, text})
-	}
+	p.edits = append(p.edits, lineEdit{ln, a, b, text})
+}
 
+func (p *recordPatch) remove(t Token) {
+	ln, a, b := p.span(t)
+	line := p.ls[ln]
+	for a > 0 && (line[a-1] == ' ' || line[a-1] == '\t') {
+		a--
+	}
+	if a == 0 { // first on its line: take the space after it instead
+		for b < len(line) && (line[b] == ' ' || line[b] == '\t') {
+			b++
+		}
+	}
+	p.edits = append(p.edits, lineEdit{ln, a, b, ""})
+}
+
+func (p *recordPatch) insertAfter(t Token, text string) {
+	ln, _, b := p.span(t)
+	p.edits = append(p.edits, lineEdit{ln, b, b, text})
+}
+
+// head patches name, interval, type and target; it returns the index of
+// the first option token and the last token kept.
+func (p *recordPatch) head(toks []Token, old Record, r RecordSpec) (int, Token) {
 	i := 0
 	nameTok := toks[i]
-	replace(nameTok, r.Name, true)
+	p.replace(nameTok, r.Name, true)
 	i++
 	if old.Interval != "" {
 		if r.Interval == "" {
-			remove(toks[i])
+			p.remove(toks[i])
 		} else {
-			replace(toks[i], r.Interval, true)
+			p.replace(toks[i], r.Interval, true)
 		}
 		i++
 	} else if r.Interval != "" {
-		insertAfter(nameTok, " "+r.Interval)
+		p.insertAfter(nameTok, " "+r.Interval)
 	}
 	i++ // IN
 	typeTok := toks[i]
 	if !strings.EqualFold(typeTok.Text, r.Type) {
-		replace(typeTok, strings.ToUpper(r.Type), true)
+		p.replace(typeTok, strings.ToUpper(r.Type), true)
 	}
 	last := typeTok
 	i++
@@ -95,15 +123,21 @@ func (f *File) patchRecord(s *Stmt, old Record, r RecordSpec) []string {
 		t := toks[i]
 		switch {
 		case r.Target == "":
-			remove(t)
+			p.remove(t)
 		case r.Target != old.Target:
-			replace(t, quoteLike(t.Raw, r.Target), false)
+			p.replace(t, quoteLike(t.Raw, r.Target), false)
 		}
 		last = t
 		i++
 	} else if r.Target != "" {
-		insertAfter(typeTok, " "+quote(r.Target))
+		p.insertAfter(typeTok, " "+quote(r.Target))
 	}
+	return i, last
+}
+
+// options changes values in place, removes options that are gone and adds
+// new ones after the last token.
+func (p *recordPatch) options(toks []Token, last Token, r RecordSpec) {
 	want := map[string][]string{}
 	var order []string
 	for _, o := range r.Opts {
@@ -112,8 +146,7 @@ func (f *File) patchRecord(s *Stmt, old Record, r RecordSpec) []string {
 		}
 		want[o.Key] = append(want[o.Key], o.Value)
 	}
-	for ; i < len(toks); i++ {
-		t := toks[i]
+	for _, t := range toks {
 		last = t
 		k, v, ok := t.option()
 		if !ok {
@@ -121,13 +154,13 @@ func (f *File) patchRecord(s *Stmt, old Record, r RecordSpec) []string {
 		}
 		vals := want[k]
 		if len(vals) == 0 {
-			remove(t)
+			p.remove(t)
 			continue
 		}
 		want[k] = vals[1:]
 		if vals[0] != v {
 			_, rawVal, _ := strings.Cut(t.Raw, "=")
-			replace(t, rawKey(t.Raw)+"="+quoteLike(rawVal, vals[0]), false)
+			p.replace(t, rawKey(t.Raw)+"="+quoteLike(rawVal, vals[0]), false)
 		}
 	}
 	var add strings.Builder
@@ -137,21 +170,8 @@ func (f *File) patchRecord(s *Stmt, old Record, r RecordSpec) []string {
 		}
 	}
 	if add.Len() > 0 {
-		insertAfter(last, add.String())
+		p.insertAfter(last, add.String())
 	}
-	// Apply right to left within each line.
-	sort.Slice(edits, func(a, b int) bool {
-		if edits[a].line != edits[b].line {
-			return edits[a].line < edits[b].line
-		}
-		return edits[a].start > edits[b].start
-	})
-	out := append([]string(nil), ls...)
-	for _, e := range edits {
-		line := out[e.line]
-		out[e.line] = line[:e.start] + e.text + line[e.end:]
-	}
-	return out
 }
 
 // rawKey is the option name as written (its case kept).
