@@ -116,12 +116,81 @@ func mysqlCheck(ctx context.Context, conn net.Conn, host string, o opts, r Resul
 		code, msg := myError(g)
 		return failKeep(r, ReasonAuthError, "MySQL refuses this host: %s (%d)", msg, code)
 	}
+	gr, problem := parseMyGreeting(g)
+	if problem != "" {
+		return failKeep(r, ReasonProtoError, "%s", problem)
+	}
+	user := o.str("user", "")
+	if user == "" {
+		r.Detail = "MySQL " + gr.version + " answers (no credentials given; login not tried)"
+		return r
+	}
+	want := uint32(myLongPassword | myProtocol41 | mySecureConn | myPluginAuth)
+	db := o.str("database", "")
+	if db != "" {
+		want |= myConnectWithDB
+	}
+	l := &myLogin{m: m, pass: o.str("password", ""), plugin: gr.plugin, salt: gr.salt, version: gr.version}
+	if o.on("ssl") {
+		if gr.caps&mySSL == 0 {
+			return failKeep(r, ReasonAssertFailed, "the server does not offer SSL")
+		}
+		want |= mySSL
+		if err := m.write(myHead(want)); err != nil {
+			return protoFail(r, "SSL request", err)
+		}
+		tc := tls.Client(conn, &tls.Config{ServerName: o.str("servername", host), InsecureSkipVerify: o.on("insecure")}) //nolint:gosec // opt-in
+		if err := tc.HandshakeContext(ctx); err != nil {
+			return failKeep(r, ReasonTLS, "TLS handshake failed: %v", rootErr(err))
+		}
+		m.c, m.br, l.secure = tc, bufio.NewReader(tc), true
+	}
+	auth := scramble(l.plugin, l.pass, l.salt)
+	resp := myHead(want)
+	resp = append(append(resp, user...), 0)
+	resp = append(append(resp, byte(len(auth))), auth...)
+	if db != "" {
+		resp = append(append(resp, db...), 0)
+	}
+	resp = append(append(resp, l.plugin...), 0)
+	if err := m.write(resp); err != nil {
+		return protoFail(r, "login", err)
+	}
+	for {
+		p, err := m.read()
+		if err != nil {
+			return protoFail(r, "login", err)
+		}
+		if res, done := l.reply(p, r); done {
+			return res
+		}
+	}
+}
+
+// myHead is the start of a handshake response with capabilities c.
+func myHead(c uint32) []byte {
+	b := binary.LittleEndian.AppendUint32(nil, c)
+	b = binary.LittleEndian.AppendUint32(b, myMaxPacket)
+	b = append(b, myCharsetUTF8MB4)
+	return append(b, make([]byte, 23)...)
+}
+
+// myGreeting is what the server's first packet says.
+type myGreeting struct {
+	version, plugin string
+	salt            []byte
+	caps            uint32
+}
+
+// parseMyGreeting reads a protocol 10 greeting; problem says what is wrong
+// with one that is not.
+func parseMyGreeting(g []byte) (gr myGreeting, problem string) {
 	if len(g) < 33 || g[0] != 10 {
-		return failKeep(r, ReasonProtoError, "not a MySQL greeting")
+		return gr, "not a MySQL greeting"
 	}
 	version, rest := cstr(g[1:])
 	if len(rest) < 4+8+1+2+1+2+2+1+10 {
-		return failKeep(r, ReasonProtoError, "short MySQL greeting")
+		return gr, "short MySQL greeting"
 	}
 	rest = rest[4:] // connection id
 	salt := append([]byte{}, rest[:8]...)
@@ -142,130 +211,113 @@ func mysqlCheck(ctx context.Context, conn net.Conn, host string, o opts, r Resul
 			plugin = p
 		}
 	}
-	user := o.str("user", "")
-	if user == "" {
-		r.Detail = "MySQL " + version + " answers (no credentials given; login not tried)"
-		return r
+	return myGreeting{version: version, plugin: plugin, salt: salt, caps: caps}, ""
+}
+
+// myLogin follows the server's replies to a login.
+type myLogin struct {
+	m               *mysqlConn
+	pass            string
+	plugin, version string
+	salt            []byte
+	secure          bool // the connection is TLS
+}
+
+// reply handles one packet of the login; done says the check is over.
+func (l *myLogin) reply(p []byte, r Result) (Result, bool) {
+	m := l.m
+	if len(p) == 0 {
+		return failKeep(r, ReasonProtoError, "empty reply"), true
 	}
-	want := uint32(myLongPassword | myProtocol41 | mySecureConn | myPluginAuth)
-	db := o.str("database", "")
-	if db != "" {
-		want |= myConnectWithDB
-	}
-	head := func(c uint32) []byte {
-		b := binary.LittleEndian.AppendUint32(nil, c)
-		b = binary.LittleEndian.AppendUint32(b, myMaxPacket)
-		b = append(b, myCharsetUTF8MB4)
-		return append(b, make([]byte, 23)...)
-	}
-	secure := false
-	if o.on("ssl") {
-		if caps&mySSL == 0 {
-			return failKeep(r, ReasonAssertFailed, "the server does not offer SSL")
+	switch p[0] {
+	case 0x00: // OK: logged in
+		return l.ping(r), true
+	case 0xff:
+		code, msg := myError(p)
+		if code == 1045 || code == 1044 || code == 1698 {
+			return failKeep(r, ReasonAuthError, "MySQL refused the login: %s", msg), true
 		}
-		want |= mySSL
-		if err := m.write(head(want)); err != nil {
-			return protoFail(r, "SSL request", err)
+		return failKeep(r, ReasonAssertFailed, "MySQL: %s (%d)", msg, code), true
+	case 0xfe: // auth switch
+		name, data := cstr(p[1:])
+		l.plugin, l.salt = name, bytes.TrimRight(data, "\x00")
+		if err := m.write(scramble(l.plugin, l.pass, l.salt)); err != nil {
+			return protoFail(r, "login", err), true
 		}
-		tc := tls.Client(conn, &tls.Config{ServerName: o.str("servername", host), InsecureSkipVerify: o.on("insecure")}) //nolint:gosec // opt-in
-		if err := tc.HandshakeContext(ctx); err != nil {
-			return failKeep(r, ReasonTLS, "TLS handshake failed: %v", rootErr(err))
-		}
-		m.c, m.br, secure = tc, bufio.NewReader(tc), true
+		return r, false
+	case 0x01: // more auth data (caching_sha2_password)
+		return l.moreAuth(p, r)
 	}
-	pass := o.str("password", "")
-	auth := scramble(plugin, pass, salt)
-	resp := head(want)
-	resp = append(append(resp, user...), 0)
-	resp = append(append(resp, byte(len(auth))), auth...)
-	if db != "" {
-		resp = append(append(resp, db...), 0)
+	return failKeep(r, ReasonProtoError, "unexpected reply 0x%02x", p[0]), true
+}
+
+// ping sends COM_PING once logged in.
+func (l *myLogin) ping(r Result) Result {
+	m := l.m
+	m.seq = 0
+	if err := m.write([]byte{0x0e}); err != nil { // COM_PING
+		return protoFail(r, "ping", err)
 	}
-	resp = append(append(resp, plugin...), 0)
-	if err := m.write(resp); err != nil {
-		return protoFail(r, "login", err)
+	q, err := m.read()
+	if err != nil {
+		return protoFail(r, "ping", err)
 	}
-	for {
-		p, err := m.read()
-		if err != nil {
-			return protoFail(r, "login", err)
-		}
-		if len(p) == 0 {
-			return failKeep(r, ReasonProtoError, "empty reply")
-		}
-		switch p[0] {
-		case 0x00: // OK: logged in
-			m.seq = 0
-			if err := m.write([]byte{0x0e}); err != nil { // COM_PING
-				return protoFail(r, "ping", err)
-			}
-			q, err := m.read()
-			if err != nil {
-				return protoFail(r, "ping", err)
-			}
-			if len(q) == 0 || q[0] != 0x00 {
-				code, msg := myError(q)
-				return failKeep(r, ReasonAssertFailed, "COM_PING failed: %s (%d)", msg, code)
-			}
-			m.seq = 0
-			_ = m.write([]byte{0x01}) // COM_QUIT
-			r.Detail = "MySQL " + version + ": login and ping ok"
-			return r
-		case 0xff:
-			code, msg := myError(p)
-			if code == 1045 || code == 1044 || code == 1698 {
-				return failKeep(r, ReasonAuthError, "MySQL refused the login: %s", msg)
-			}
-			return failKeep(r, ReasonAssertFailed, "MySQL: %s (%d)", msg, code)
-		case 0xfe: // auth switch
-			name, data := cstr(p[1:])
-			plugin, salt = name, bytes.TrimRight(data, "\x00")
-			if err := m.write(scramble(plugin, pass, salt)); err != nil {
-				return protoFail(r, "login", err)
-			}
-		case 0x01: // more auth data (caching_sha2_password)
-			if len(p) < 2 {
-				return failKeep(r, ReasonProtoError, "short auth data")
-			}
-			switch p[1] {
-			case 0x03: // fast auth ok; the OK packet follows
-			case 0x04: // full auth: the password in clear over TLS, else RSA
-				if secure {
-					err = m.write(append([]byte(pass), 0))
-				} else {
-					err = m.write([]byte{0x02}) // ask for the public key
-				}
-				if err != nil {
-					return protoFail(r, "login", err)
-				}
-			default:
-				if p[1] == '-' { // PEM public key
-					block, _ := pem.Decode(p[1:])
-					if block == nil {
-						return failKeep(r, ReasonProtoError, "bad server public key")
-					}
-					pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-					rk, ok := pub.(*rsa.PublicKey)
-					if err != nil || !ok {
-						return failKeep(r, ReasonProtoError, "bad server public key")
-					}
-					plain := append([]byte(pass), 0)
-					for i := range plain {
-						plain[i] ^= salt[i%len(salt)]
-					}
-					enc, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, rk, plain, nil) //nolint:gosec // MySQL's choice
-					if err != nil {
-						return failKeep(r, ReasonProtoError, "%v", err)
-					}
-					if err := m.write(enc); err != nil {
-						return protoFail(r, "login", err)
-					}
-					continue
-				}
-				return failKeep(r, ReasonProtoError, "unexpected auth data")
-			}
-		default:
-			return failKeep(r, ReasonProtoError, "unexpected reply 0x%02x", p[0])
-		}
+	if len(q) == 0 || q[0] != 0x00 {
+		code, msg := myError(q)
+		return failKeep(r, ReasonAssertFailed, "COM_PING failed: %s (%d)", msg, code)
 	}
+	m.seq = 0
+	_ = m.write([]byte{0x01}) // COM_QUIT
+	r.Detail = "MySQL " + l.version + ": login and ping ok"
+	return r
+}
+
+// moreAuth answers caching_sha2_password's extra round.
+func (l *myLogin) moreAuth(p []byte, r Result) (Result, bool) {
+	if len(p) < 2 {
+		return failKeep(r, ReasonProtoError, "short auth data"), true
+	}
+	var err error
+	switch {
+	case p[1] == 0x03: // fast auth ok; the OK packet follows
+	case p[1] == 0x04: // full auth: the password in clear over TLS, else RSA
+		if l.secure {
+			err = l.m.write(append([]byte(l.pass), 0))
+		} else {
+			err = l.m.write([]byte{0x02}) // ask for the public key
+		}
+	case p[1] == '-': // PEM public key
+		return l.rsaPassword(p[1:], r)
+	default:
+		return failKeep(r, ReasonProtoError, "unexpected auth data"), true
+	}
+	if err != nil {
+		return protoFail(r, "login", err), true
+	}
+	return r, false
+}
+
+// rsaPassword sends the password encrypted with the server's public key.
+func (l *myLogin) rsaPassword(key []byte, r Result) (Result, bool) {
+	block, _ := pem.Decode(key)
+	if block == nil {
+		return failKeep(r, ReasonProtoError, "bad server public key"), true
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	rk, ok := pub.(*rsa.PublicKey)
+	if err != nil || !ok {
+		return failKeep(r, ReasonProtoError, "bad server public key"), true
+	}
+	plain := append([]byte(l.pass), 0)
+	for i := range plain {
+		plain[i] ^= l.salt[i%len(l.salt)]
+	}
+	enc, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, rk, plain, nil) //nolint:gosec // MySQL's choice
+	if err != nil {
+		return failKeep(r, ReasonProtoError, "%v", err), true
+	}
+	if err := l.m.write(enc); err != nil {
+		return protoFail(r, "login", err), true
+	}
+	return r, false
 }

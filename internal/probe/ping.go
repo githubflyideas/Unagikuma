@@ -73,8 +73,6 @@ func runPing(ctx context.Context, s Spec) Result {
 	count, _ := o.intOpt("count", 3, 1, 20)
 	size, _ := o.intOpt("size", 32, 8, 1400)
 	gap, _ := o.durOpt("interval", 200*time.Millisecond)
-	lossMax, _ := o.percent("loss", 0)
-	rttMax, _ := o.durOpt("rtt", 0)
 
 	ip, err := resolve(ctx, s.Target, o)
 	if err != nil {
@@ -96,24 +94,21 @@ func runPing(ctx context.Context, s Spec) Result {
 	if dgram {
 		dst = &net.UDPAddr{IP: ip.AsSlice()}
 	}
-	proto, typ, reply := 1, icmp.Type(ipv4.ICMPTypeEcho), icmp.Type(ipv4.ICMPTypeEchoReply)
+	pg := &pinger{conn: conn, ip: ip, proto: 1, reply: icmp.Type(ipv4.ICMPTypeEchoReply), sent: map[int]time.Time{}, buf: make([]byte, 1500)}
+	typ := icmp.Type(ipv4.ICMPTypeEcho)
 	if v6 {
-		proto, typ, reply = 58, ipv6.ICMPTypeEchoRequest, ipv6.ICMPTypeEchoReply
+		pg.proto, typ, pg.reply = 58, ipv6.ICMPTypeEchoRequest, ipv6.ICMPTypeEchoReply
 	}
-	nonce := make([]byte, size)
-	_, _ = rand.Read(nonce)
-	id := int(nonce[0])<<8 | int(nonce[1])
-	sent := map[int]time.Time{}
-	var rtts []time.Duration
-	var unreachable string
+	pg.nonce = make([]byte, size)
+	_, _ = rand.Read(pg.nonce)
+	id := int(pg.nonce[0])<<8 | int(pg.nonce[1])
 	deadline, _ := ctx.Deadline()
 	readUntil := deadline
-	buf := make([]byte, 1500)
 	peer := netip.AddrPortFrom(ip, 0).Addr().String()
 	var lastReq []byte
 
 	for seq := 1; seq <= count; seq++ {
-		payload := append([]byte(nil), nonce...)
+		payload := append([]byte(nil), pg.nonce...)
 		payload[2], payload[3] = byte(seq>>8), byte(seq)
 		msg := icmp.Message{Type: typ, Body: &icmp.Echo{ID: id, Seq: seq, Data: payload}}
 		b, err := msg.Marshal(nil)
@@ -121,7 +116,7 @@ func runPing(ctx context.Context, s Spec) Result {
 			return abstain(ReasonInternal, "%v", err)
 		}
 		lastReq = b
-		sent[seq] = time.Now()
+		pg.sent[seq] = time.Now()
 		if _, err := conn.WriteTo(b, dst); err != nil {
 			r := classify(err, false, o)
 			r.Evidence = &Evidence{Peer: peer}
@@ -132,46 +127,81 @@ func runPing(ctx context.Context, s Spec) Result {
 		if seq == count || next.After(deadline) {
 			next = readUntil
 		}
-		for time.Now().Before(next) {
-			_ = conn.SetReadDeadline(next)
-			n, from, err := conn.ReadFrom(buf)
-			if err != nil {
-				var ne net.Error
-				if errors.As(err, &ne) && ne.Timeout() || errors.Is(err, os.ErrDeadlineExceeded) {
-					break
-				}
-				return abstain(ReasonPlatform, "ICMP read failed: %v", rootErr(err))
-			}
-			m, err := icmp.ParseMessage(proto, buf[:n])
-			if err != nil {
-				continue
-			}
-			switch body := m.Body.(type) {
-			case *icmp.Echo:
-				if m.Type != reply || !sameHost(from, ip) || len(body.Data) < 4 || !bytes.Equal(body.Data[4:], nonce[4:]) {
-					continue
-				}
-				q := int(body.Data[2])<<8 | int(body.Data[3])
-				if t0, ok := sent[q]; ok {
-					rtts = append(rtts, time.Since(t0))
-					delete(sent, q)
-				}
-			case *icmp.DstUnreach:
-				if len(body.Data) > 0 && bytes.Contains(body.Data, nonceTag(nonce)) {
-					unreachable = fmt.Sprintf("ICMP destination unreachable (code %d) from %v", m.Code, from)
-				}
-			}
-			if len(sent) == 0 && seq == count {
-				break
-			}
+		if err := pg.collect(next, seq == count); err != nil {
+			return abstain(ReasonPlatform, "ICMP read failed: %v", rootErr(err))
 		}
 		if ctx.Err() != nil {
 			break
 		}
 	}
+	r := pingVerdict(pg.rtts, count, pg.unreachable, o)
+	r.Evidence = newEvidence(peer, lastReq, nil)
+	return r
+}
+
+// pinger reads the replies to one run of echo requests.
+type pinger struct {
+	conn        net.PacketConn
+	ip          netip.Addr
+	proto       int
+	reply       icmp.Type
+	nonce       []byte
+	sent        map[int]time.Time // sequence → sent at, until answered
+	rtts        []time.Duration   // in arrival order
+	unreachable string
+	buf         []byte
+}
+
+// collect reads replies until next, or until every request is answered
+// when last. A read error other than the deadline is returned.
+func (pg *pinger) collect(next time.Time, last bool) error {
+	for time.Now().Before(next) {
+		_ = pg.conn.SetReadDeadline(next)
+		n, from, err := pg.conn.ReadFrom(pg.buf)
+		if err != nil {
+			var ne net.Error
+			if errors.As(err, &ne) && ne.Timeout() || errors.Is(err, os.ErrDeadlineExceeded) {
+				return nil
+			}
+			return err
+		}
+		if m, err := icmp.ParseMessage(pg.proto, pg.buf[:n]); err == nil {
+			pg.message(m, from)
+		}
+		if len(pg.sent) == 0 && last {
+			return nil
+		}
+	}
+	return nil
+}
+
+// message records an echo reply or a destination unreachable that quotes
+// one of this run's requests.
+func (pg *pinger) message(m *icmp.Message, from net.Addr) {
+	switch body := m.Body.(type) {
+	case *icmp.Echo:
+		if m.Type != pg.reply || !sameHost(from, pg.ip) || len(body.Data) < 4 || !bytes.Equal(body.Data[4:], pg.nonce[4:]) {
+			return
+		}
+		q := int(body.Data[2])<<8 | int(body.Data[3])
+		if t0, ok := pg.sent[q]; ok {
+			pg.rtts = append(pg.rtts, time.Since(t0))
+			delete(pg.sent, q)
+		}
+	case *icmp.DstUnreach:
+		if len(body.Data) > 0 && bytes.Contains(body.Data, nonceTag(pg.nonce)) {
+			pg.unreachable = fmt.Sprintf("ICMP destination unreachable (code %d) from %v", m.Code, from)
+		}
+	}
+}
+
+// pingVerdict judges count requests from the replies' round trips.
+func pingVerdict(rtts []time.Duration, count int, unreachable string, o opts) Result {
+	lossMax, _ := o.percent("loss", 0)
+	rttMax, _ := o.durOpt("rtt", 0)
 	received := len(rtts)
 	loss := 1 - float64(received)/float64(count)
-	r := Result{Metrics: map[string]float64{"ping.loss": loss}, Evidence: newEvidence(peer, lastReq, nil)}
+	r := Result{Metrics: map[string]float64{"ping.loss": loss}}
 	if received > 0 {
 		r.Metrics["ping.jitter_ms"] = jitter(rtts) // arrival order
 		sort.Slice(rtts, func(i, j int) bool { return rtts[i] < rtts[j] })

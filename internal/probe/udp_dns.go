@@ -259,16 +259,29 @@ func runDNS(ctx context.Context, p udpPlan, o opts) Result {
 	}
 	res.Evidence.Decoded = dec
 	if !content {
-		switch rcodeName(m.Rcode) {
-		case "NOERROR", "NXDOMAIN":
-			res.Vote, res.Reason, res.Detail = VoteOK, ReasonOK, "DNS server answers ("+rcodeName(m.Rcode)+")"
-		case "REFUSED":
-			res.Vote, res.Reason, res.Detail = VoteOK, ReasonProtoReject, "DNS server answers (REFUSED: alive, not serving this query)"
-		default:
-			res.Vote, res.Reason, res.Detail = VoteFail, ReasonProtoError, "DNS server replied "+rcodeName(m.Rcode)
-		}
+		dnsAlive(&res, m)
 		return res
 	}
+	dnsContent(&res, m, name, qtype, o)
+	return res
+}
+
+// dnsAlive judges a reply to the default query: any answer but a server
+// failure shows the server is up.
+func dnsAlive(res *Result, m dnsMsg) {
+	switch rcodeName(m.Rcode) {
+	case "NOERROR", "NXDOMAIN":
+		res.Vote, res.Reason, res.Detail = VoteOK, ReasonOK, "DNS server answers ("+rcodeName(m.Rcode)+")"
+	case "REFUSED":
+		res.Vote, res.Reason, res.Detail = VoteOK, ReasonProtoReject, "DNS server answers (REFUSED: alive, not serving this query)"
+	default:
+		res.Vote, res.Reason, res.Detail = VoteFail, ReasonProtoError, "DNS server replied "+rcodeName(m.Rcode)
+	}
+}
+
+// dnsContent judges a reply to the configured query against rcode=,
+// aa=, min-answers=, expect= and expect-all=.
+func dnsContent(res *Result, m dnsMsg, name string, qtype uint16, o opts) {
 	want := map[int]bool{}
 	for _, rc := range strings.Split(o.str("rcode", "NOERROR"), ",") {
 		if rc = strings.TrimSpace(strings.ToUpper(rc)); rc != "" {
@@ -281,6 +294,10 @@ func runDNS(ctx context.Context, p udpPlan, o opts) Result {
 	}
 	minAns, _ = o.intOpt("min-answers", minAns, 0, 1000)
 	res.Vote, res.Reason = VoteFail, ReasonAssertFailed
+	var texts []string
+	for _, a := range m.Answers {
+		texts = append(texts, a.Text)
+	}
 	switch {
 	case !want[m.Rcode]:
 		res.Detail = fmt.Sprintf("%s %s: %s", name, typeName(qtype), rcodeName(m.Rcode))
@@ -292,43 +309,47 @@ func runDNS(ctx context.Context, p udpPlan, o opts) Result {
 	case len(m.Answers) < minAns:
 		res.Detail = fmt.Sprintf("%d answers, expected at least %d", len(m.Answers), minAns)
 	default:
-		exp := o.str("expect", "")
-		matched := exp == ""
-		var texts []string
-		for _, a := range m.Answers {
-			texts = append(texts, a.Text)
-			if exp != "" && strings.Contains(a.Text, exp) {
-				matched = true
-			}
-		}
-		if !matched {
-			res.Detail = fmt.Sprintf("no answer contains %q (got %s)", exp, strings.Join(texts, ", "))
-			break
-		}
-		// expect-all: the answers are exactly this set, so an added or
-		// replaced record (a hijack, a stale entry) fails.
-		if all := o.str("expect-all", ""); all != "" {
-			want := map[string]bool{}
-			for _, v := range strings.Split(all, ",") {
-				if v = strings.TrimSuffix(strings.TrimSpace(v), "."); v != "" {
-					want[strings.ToLower(v)] = true
-				}
-			}
-			got := map[string]bool{}
-			for _, t := range texts {
-				got[strings.ToLower(strings.TrimSuffix(t, "."))] = true
-			}
-			same := len(got) == len(want)
-			for v := range want {
-				same = same && got[v]
-			}
-			if !same {
-				res.Detail = fmt.Sprintf("answers %s, expected exactly %s", strings.Join(texts, ", "), all)
-				break
-			}
+		if problem := answersProblem(texts, o.str("expect", ""), o.str("expect-all", "")); problem != "" {
+			res.Detail = problem
+			return
 		}
 		res.Vote, res.Reason = VoteOK, ReasonOK
 		res.Detail = fmt.Sprintf("%s %s: %s", name, typeName(qtype), strings.Join(texts, ", "))
 	}
-	return res
+}
+
+// answersProblem says what is wrong with the answers: none contains exp,
+// or (expect-all) they are not exactly the set all, so an added or
+// replaced record (a hijack, a stale entry) fails.
+func answersProblem(texts []string, exp, all string) string {
+	matched := exp == ""
+	for _, t := range texts {
+		if exp != "" && strings.Contains(t, exp) {
+			matched = true
+		}
+	}
+	if !matched {
+		return fmt.Sprintf("no answer contains %q (got %s)", exp, strings.Join(texts, ", "))
+	}
+	if all == "" {
+		return ""
+	}
+	want := map[string]bool{}
+	for _, v := range strings.Split(all, ",") {
+		if v = strings.TrimSuffix(strings.TrimSpace(v), "."); v != "" {
+			want[strings.ToLower(v)] = true
+		}
+	}
+	got := map[string]bool{}
+	for _, t := range texts {
+		got[strings.ToLower(strings.TrimSuffix(t, "."))] = true
+	}
+	same := len(got) == len(want)
+	for v := range want {
+		same = same && got[v]
+	}
+	if !same {
+		return fmt.Sprintf("answers %s, expected exactly %s", strings.Join(texts, ", "), all)
+	}
+	return ""
 }

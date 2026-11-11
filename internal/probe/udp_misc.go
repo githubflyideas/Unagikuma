@@ -234,37 +234,11 @@ func expandNonce(s string, got *[]byte) string {
 
 func runRaw(ctx context.Context, p udpPlan, o opts) Result {
 	retr, _ := o.intOpt("retransmit", 1, 0, 5)
-	var payload []byte
-	if v := o.str("send-hex", ""); v != "" {
-		payload, _ = decodeHex(expandNonce(v, nil))
-	} else if v := o.str("send", ""); v != "" {
-		payload = unescape(expandNonce(v, nil))
-	}
-	if len(payload) == 0 {
-		payload = []byte("unagikuma-probe\n")
-	}
+	payload := rawPayload(o)
 	if rawDepth(o) == "L1" && !o.has("src-port") && o.str("accept-from", "connected") == "connected" {
 		return runL1(ctx, p, o, payload)
 	}
-	var want []byte
-	if v := o.str("expect-hex", ""); v != "" {
-		want, _ = decodeHex(v)
-	} else if v := o.str("expect", ""); v != "" && v != "any" && v != "none" {
-		want = unescape(v)
-	}
-	re, _ := regexpOpt(o, "expect-regex")
-	wantLen, _ := o.intOpt("expect-len", 0, 1, 65535)
-	check := func(b []byte) (string, bool) {
-		switch {
-		case want != nil && !bytes.Contains(b, want):
-			return "reply does not contain the expected bytes", false
-		case re != nil && !re.Match(b):
-			return "reply does not match " + re.String(), false
-		case wantLen > 0 && len(b) != wantLen:
-			return fmt.Sprintf("reply is %d bytes, expected %d", len(b), wantLen), false
-		}
-		return "", true
-	}
+	check := rawCheck(o)
 	ip, err := resolve(ctx, p.host, o)
 	if err != nil {
 		return classify(err, true, o)
@@ -274,8 +248,6 @@ func runRaw(ctx context.Context, p udpPlan, o opts) Result {
 	var laddr *net.UDPAddr
 	if src > 0 {
 		laddr = &net.UDPAddr{Port: src}
-	}
-	if src > 0 {
 		// Two checks cannot use one source port at once: they take turns.
 		release, err := lockSourcePort(ctx, src)
 		if err != nil {
@@ -289,11 +261,8 @@ func runRaw(ctx context.Context, p udpPlan, o opts) Result {
 	if mode == "connected" {
 		c, err := net.DialUDP("udp", laddr, dst)
 		if err != nil {
-			if isPermission(err) {
-				return abstain(ReasonPrivilege, "cannot bind source port %d: %v", src, rootErr(err))
-			}
-			if src > 0 && isAddrInUse(err) {
-				return abstain(ReasonPortBusy, "source port %d is used by another program on this node", src)
+			if r, ok := bindFailed(err, src); ok {
+				return r
 			}
 			return classify(err, true, o)
 		}
@@ -306,11 +275,8 @@ func runRaw(ctx context.Context, p udpPlan, o opts) Result {
 	} else {
 		c, err := net.ListenUDP("udp", laddr)
 		if err != nil {
-			if isPermission(err) {
-				return abstain(ReasonPrivilege, "cannot bind source port %d: %v", src, rootErr(err))
-			}
-			if src > 0 && isAddrInUse(err) {
-				return abstain(ReasonPortBusy, "source port %d is used by another program on this node", src)
+			if r, ok := bindFailed(err, src); ok {
+				return r
 			}
 			return abstain(ReasonInternal, "cannot open a UDP socket: %v", err)
 		}
@@ -331,6 +297,55 @@ func runRaw(ctx context.Context, p udpPlan, o opts) Result {
 	}
 	res.Vote, res.Reason, res.Detail = VoteOK, ReasonOK, fmt.Sprintf("reply of %d bytes", len(resp))
 	return res
+}
+
+// rawPayload is the datagram a raw UDP check sends.
+func rawPayload(o opts) []byte {
+	var payload []byte
+	if v := o.str("send-hex", ""); v != "" {
+		payload, _ = decodeHex(expandNonce(v, nil))
+	} else if v := o.str("send", ""); v != "" {
+		payload = unescape(expandNonce(v, nil))
+	}
+	if len(payload) == 0 {
+		payload = []byte("unagikuma-probe\n")
+	}
+	return payload
+}
+
+// rawCheck returns the test a raw UDP reply must pass: what is wrong with
+// it, and whether it passed.
+func rawCheck(o opts) func([]byte) (string, bool) {
+	var want []byte
+	if v := o.str("expect-hex", ""); v != "" {
+		want, _ = decodeHex(v)
+	} else if v := o.str("expect", ""); v != "" && v != "any" && v != "none" {
+		want = unescape(v)
+	}
+	re, _ := regexpOpt(o, "expect-regex")
+	wantLen, _ := o.intOpt("expect-len", 0, 1, 65535)
+	return func(b []byte) (string, bool) {
+		switch {
+		case want != nil && !bytes.Contains(b, want):
+			return "reply does not contain the expected bytes", false
+		case re != nil && !re.Match(b):
+			return "reply does not match " + re.String(), false
+		case wantLen > 0 && len(b) != wantLen:
+			return fmt.Sprintf("reply is %d bytes, expected %d", len(b), wantLen), false
+		}
+		return "", true
+	}
+}
+
+// bindFailed explains a socket that could not take its source port.
+func bindFailed(err error, src int) (Result, bool) {
+	if isPermission(err) {
+		return abstain(ReasonPrivilege, "cannot bind source port %d: %v", src, rootErr(err)), true
+	}
+	if src > 0 && isAddrInUse(err) {
+		return abstain(ReasonPortBusy, "source port %d is used by another program on this node", src), true
+	}
+	return Result{}, false
 }
 
 // sourcePorts holds one token per fixed source port in use by a check.

@@ -81,30 +81,9 @@ func validateHTTP(target string, o opts) error {
 func runHTTP(ctx context.Context, s Spec) Result {
 	o := opts(s.Opts)
 	u, _ := url.Parse(s.Target)
-	method := strings.ToUpper(o.str("method", http.MethodGet))
-	var body io.Reader
-	if b := o.str("body", ""); b != "" {
-		body = strings.NewReader(b)
-	}
-	req, err := http.NewRequestWithContext(ctx, method, s.Target, body)
+	req, err := httpRequest(ctx, s.Target, o)
 	if err != nil {
 		return abstain(ReasonConfig, "cannot build the request: %v", err)
-	}
-	for k, v := range o {
-		if name, ok := strings.CutPrefix(k, "header."); ok {
-			req.Header.Set(name, v)
-		}
-	}
-	req.Header.Set("User-Agent", o.str("user-agent", "unagikuma"))
-	if h := o.str("host", ""); h != "" {
-		req.Host = h
-	}
-	if b := o.str("basic", ""); b != "" {
-		user, pass, _ := strings.Cut(b, ":")
-		req.SetBasicAuth(user, pass)
-	}
-	if t := o.str("bearer", ""); t != "" {
-		req.Header.Set("Authorization", "Bearer "+t)
 	}
 
 	// The transport may dial from its own goroutines (redirects); peer is
@@ -189,9 +168,45 @@ func runHTTP(ctx context.Context, s Spec) Result {
 		}
 		r = certAnnotate(r, o, resp.TLS.PeerCertificates[0], start)
 	}
+	return httpAssertions(r, o, resp.StatusCode, data)
+}
+
+// httpRequest builds the request a monitor describes.
+func httpRequest(ctx context.Context, target string, o opts) (*http.Request, error) {
+	method := strings.ToUpper(o.str("method", http.MethodGet))
+	var body io.Reader
+	if b := o.str("body", ""); b != "" {
+		body = strings.NewReader(b)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, target, body)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range o {
+		if name, ok := strings.CutPrefix(k, "header."); ok {
+			req.Header.Set(name, v)
+		}
+	}
+	req.Header.Set("User-Agent", o.str("user-agent", "unagikuma"))
+	if h := o.str("host", ""); h != "" {
+		req.Host = h
+	}
+	if b := o.str("basic", ""); b != "" {
+		user, pass, _ := strings.Cut(b, ":")
+		req.SetBasicAuth(user, pass)
+	}
+	if t := o.str("bearer", ""); t != "" {
+		req.Header.Set("Authorization", "Bearer "+t)
+	}
+	return req, nil
+}
+
+// httpAssertions checks the status and the body against expect=,
+// keyword=, absent=, keyword-regex= and json-path=.
+func httpAssertions(r Result, o opts, status int, data []byte) Result {
 	sm, _ := parseStatus(o.str("expect", ""))
-	if !sm.match(resp.StatusCode) {
-		return failKeep(r, ReasonHTTPStatus, "HTTP %d, expected %s", resp.StatusCode, sm.expr)
+	if !sm.match(status) {
+		return failKeep(r, ReasonHTTPStatus, "HTTP %d, expected %s", status, sm.expr)
 	}
 	if kw := o.str("keyword", ""); kw != "" && !strings.Contains(string(data), kw) {
 		return failKeep(r, ReasonAssertFailed, "keyword %q not found in the response", kw)
