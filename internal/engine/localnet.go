@@ -256,38 +256,7 @@ func (d *LocalNet) Observe(o Observation) {
 		}
 	}
 	if o.Family == 0 {
-		// The name did not resolve, so the family is unknown. When the
-		// resolver could not even be reached (a network-class failure),
-		// that is as much evidence of a dead uplink as a timeout — the
-		// usual picture of a host started without network — so it counts
-		// for every family. Otherwise each such monitor would alert on
-		// its own.
-		if !o.NetworkFail || o.Scope != netscope.WAN || o.Domain == "" {
-			return
-		}
-		// Only the families this host really reaches the internet over:
-		// a family known only from its gateway (IPv6 on a v4 network) would
-		// otherwise see nothing but these failures and call its uplink dead.
-		var fams []Family
-		for _, f := range d.families() {
-			for _, ds := range d.fam[f].domains {
-				if !ds.resolver {
-					fams = append(fams, f)
-					break
-				}
-			}
-		}
-		if len(fams) == 0 {
-			fams = d.families()
-		}
-		if len(fams) == 0 {
-			fams = []Family{FamilyV4}
-		}
-		for _, f := range fams {
-			oo := o
-			oo.Family, oo.ByName = f, false // the resolver failure is already recorded
-			d.Observe(oo)
-		}
+		d.observeUnresolved(o)
 		return
 	}
 	s := d.f(o.Family)
@@ -324,23 +293,59 @@ func (d *LocalNet) Observe(o Observation) {
 	case o.NetworkFail && s.uplink == nil && s.episodeStart.IsZero() && !o.At.Before(s.lastReachWAN):
 		// (A failure from before the last reply, observed late because
 		// rounds end out of order, does not start one: the next does.)
-		s.episodeStart = o.At
-		// Targets that were already failing are not evidence of a new
-		// local outage (a host that has been dead for days stays out) —
-		// unless they answered just before: a target that stopped a few
-		// moments ago, while another still answered, fell to the same cut.
-		s.preDead = map[string]bool{}
-		dead := func(reachable bool, last time.Time) bool {
-			return !reachable && (last.IsZero() || o.At.Sub(last) > d.cfg.Backdate)
-		}
-		for k, v := range s.domains {
-			if k != o.Domain && dead(v.reachable, v.lastReachable) {
-				s.preDead[k] = true
+		d.startEpisode(s, o, seenBefore && !wasReachable && (lastOK.IsZero() || o.At.Sub(lastOK) > d.cfg.Backdate))
+	}
+}
+
+// observeUnresolved handles a name that did not resolve, so its family is
+// unknown. When the resolver could not even be reached (a network-class
+// failure), that is as much evidence of a dead uplink as a timeout (the
+// usual picture of a host started without network), so it counts for
+// every family. Otherwise each such monitor would alert on its own.
+func (d *LocalNet) observeUnresolved(o Observation) {
+	if !o.NetworkFail || o.Scope != netscope.WAN || o.Domain == "" {
+		return
+	}
+	// Only the families this host really reaches the internet over: a
+	// family known only from its gateway (IPv6 on a v4 network) would
+	// otherwise see nothing but these failures and call its uplink dead.
+	var fams []Family
+	for _, f := range d.families() {
+		for _, ds := range d.fam[f].domains {
+			if !ds.resolver {
+				fams = append(fams, f)
+				break
 			}
 		}
-		if seenBefore && dead(wasReachable, lastOK) {
-			s.preDead[o.Domain] = true
+	}
+	if len(fams) == 0 {
+		fams = d.families()
+	}
+	if len(fams) == 0 {
+		fams = []Family{FamilyV4}
+	}
+	for _, f := range fams {
+		oo := o
+		oo.Family, oo.ByName = f, false // the resolver failure is already recorded
+		d.Observe(oo)
+	}
+}
+
+// startEpisode starts a possible local outage at o. Targets that were
+// already failing are not evidence of a new local outage (a host that has
+// been dead for days stays out), unless they answered just before: a
+// target that stopped a few moments ago, while another still answered,
+// fell to the same cut. selfDead says o's own domain was such a target.
+func (d *LocalNet) startEpisode(s *famState, o Observation, selfDead bool) {
+	s.episodeStart = o.At
+	s.preDead = map[string]bool{}
+	for k, v := range s.domains {
+		if k != o.Domain && !v.reachable && (v.lastReachable.IsZero() || o.At.Sub(v.lastReachable) > d.cfg.Backdate) {
+			s.preDead[k] = true
 		}
+	}
+	if selfDead {
+		s.preDead[o.Domain] = true
 	}
 }
 
@@ -543,64 +548,63 @@ func (d *LocalNet) evalUplink(fam Family, s *famState, now time.Time) []LocalNet
 	if s.gateway != nil && s.uplink == nil {
 		return nil // the router is down: that anomaly already covers wan
 	}
-	configured, anyOK, allDown := wanAnchorsState(s)
 	if s.uplink == nil {
-		enter, failing := false, 0
-		switch {
-		case configured && anyOK:
-			// A wan anchor answers: the uplink is fine.
-		case configured && allDown:
-			enter = true
-		case !s.episodeStart.IsZero() && !s.lastReachWAN.After(s.episodeStart):
-			// A reply stamped the same instant as the first failure (rounds
-			// started together) is not a reply after it.
-			addrKnown, addrFailing := false, 0
-			for k, ds := range s.domains {
-				if !ds.resolver && !s.preDead[k] && now.Sub(ds.lastAt) <= d.cfg.DomainTTL {
-					addrKnown = true
-				}
-				if ds.networkFail && !ds.lastAt.Before(s.episodeStart) && !s.preDead[k] {
-					failing++
-					if !ds.resolver {
-						addrFailing++
-					}
-				}
-			}
-			// Only names failing to resolve while the targets checked by
-			// address are not failing: that is the resolver (see evalDNS),
-			// not the uplink. Without such targets the resolver's failures
-			// are all the evidence there is.
-			enter = failing >= max(2, d.cfg.MinDomains) && (!addrKnown || addrFailing > 0)
-		}
-		if !enter {
-			return nil
-		}
-		since := s.episodeStart
-		if since.IsZero() || (configured && allDown) {
-			since = now
-		}
-		a := Anomaly{Kind: AnomalyUplink, Family: fam, Since: since, Suspected: !configured, Domains: failing}
-		s.uplink = &a
-		s.healthySince = time.Time{}
-		return []LocalNetEvent{{Enter: true, Anomaly: a, At: now}}
+		return d.enterUplink(fam, s, now)
 	}
-	// Exit: a wan anchor answers, or enough of the evidence domains answer
-	// again, continuously for ExitWindows windows.
-	recovered, total := 0, 0
+	return d.exitUplink(s, now)
+}
+
+func (d *LocalNet) enterUplink(fam Family, s *famState, now time.Time) []LocalNetEvent {
+	configured, anyOK, allDown := wanAnchorsState(s)
+	enter, failing := false, 0
+	switch {
+	case configured && anyOK:
+		// A wan anchor answers: the uplink is fine.
+	case configured && allDown:
+		enter = true
+	case !s.episodeStart.IsZero() && !s.lastReachWAN.After(s.episodeStart):
+		// A reply stamped the same instant as the first failure (rounds
+		// started together) is not a reply after it.
+		enter, failing = d.uplinkEvidence(s, now)
+	}
+	if !enter {
+		return nil
+	}
+	since := s.episodeStart
+	if since.IsZero() || (configured && allDown) {
+		since = now
+	}
+	a := Anomaly{Kind: AnomalyUplink, Family: fam, Since: since, Suspected: !configured, Domains: failing}
+	s.uplink = &a
+	s.healthySince = time.Time{}
+	return []LocalNetEvent{{Enter: true, Anomaly: a, At: now}}
+}
+
+// uplinkEvidence counts the domains failing since the episode started.
+// Only names failing to resolve while the targets checked by address are
+// not failing: that is the resolver (see evalDNS), not the uplink. Without
+// such targets the resolver's failures are all the evidence there is.
+func (d *LocalNet) uplinkEvidence(s *famState, now time.Time) (enter bool, failing int) {
+	addrKnown, addrFailing := false, 0
 	for k, ds := range s.domains {
-		if s.preDead[k] || now.Sub(ds.lastAt) > d.cfg.DomainTTL {
-			continue
+		if !ds.resolver && !s.preDead[k] && now.Sub(ds.lastAt) <= d.cfg.DomainTTL {
+			addrKnown = true
 		}
-		if ds.reference && !(ds.reachable && ds.lastAt.After(s.uplink.Since)) {
-			// Reference points are asked only when a target fails, so one
-			// that has not been asked since is no evidence either way.
-			continue
-		}
-		total++
-		if ds.reachable && ds.lastAt.After(s.uplink.Since) {
-			recovered++
+		if ds.networkFail && !ds.lastAt.Before(s.episodeStart) && !s.preDead[k] {
+			failing++
+			if !ds.resolver {
+				addrFailing++
+			}
 		}
 	}
+	return failing >= max(2, d.cfg.MinDomains) && (!addrKnown || addrFailing > 0), failing
+}
+
+// exitUplink ends the anomaly when a wan anchor answers, or enough of the
+// evidence domains answer again, continuously for ExitWindows windows.
+func (d *LocalNet) exitUplink(s *famState, now time.Time) []LocalNetEvent {
+	_, anyOK, _ := wanAnchorsState(s)
+	recovered, total := d.uplinkRecovery(s, now)
 	healthy := anyOK || (total > 0 && float64(recovered)/float64(total) >= d.cfg.ExitRatio)
 	if !healthy || s.gateway != nil {
 		s.healthySince = time.Time{}
@@ -615,6 +619,24 @@ func (d *LocalNet) evalUplink(fam Family, s *famState, now time.Time) []LocalNet
 	ev := LocalNetEvent{Anomaly: *s.uplink, At: now, Back: s.healthySince}
 	s.uplink, s.episodeStart, s.preDead, s.healthySince = nil, time.Time{}, nil, time.Time{}
 	return []LocalNetEvent{ev}
+}
+
+func (d *LocalNet) uplinkRecovery(s *famState, now time.Time) (recovered, total int) {
+	for k, ds := range s.domains {
+		if s.preDead[k] || now.Sub(ds.lastAt) > d.cfg.DomainTTL {
+			continue
+		}
+		if ds.reference && !(ds.reachable && ds.lastAt.After(s.uplink.Since)) {
+			// Reference points are asked only when a target fails, so one
+			// that has not been asked since is no evidence either way.
+			continue
+		}
+		total++
+		if ds.reachable && ds.lastAt.After(s.uplink.Since) {
+			recovered++
+		}
+	}
+	return recovered, total
 }
 
 func (d *LocalNet) evalDNS(now time.Time) []LocalNetEvent {
