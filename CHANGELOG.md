@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.6.6 — unreleased
+## v2.6.6 — 2026-11-11
 
 **Fixed**
 - A master that restarts after a take-over joins the new master within a few seconds, also when it never learnt the new master's own identity. It checks the new master through the cluster CA and looks for it every 2 seconds for the first two minutes. It used to need about a minute, and both machines acted as master until then.
