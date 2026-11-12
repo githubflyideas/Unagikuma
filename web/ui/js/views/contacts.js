@@ -31,6 +31,12 @@ function handleFrom(s) {
   return v || 'contact';
 }
 
+// viaOf is how a channel reaches a person: e-mail, a text message or a call.
+function viaOf(c) {
+  if (c.contact === 'email') return 'email';
+  return /-sms$/.test(c.kind || '') ? 'sms' : 'phone';
+}
+
 function list(v) { return String(v || '').split(',').map(x => x.trim()).filter(Boolean); }
 
 // PersonForm edits a contact: who they are, at least one address, and the
@@ -42,6 +48,9 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
   const has = { email: list(f.emails).length > 0, phone: list(f.phones).length > 0 };
   const toggle = (name) => setF({ ...f, notify: f.notify.includes(name) ? f.notify.filter(n => n !== name) : [...f.notify, name] });
   const [err, setErr] = useState(null);
+  // Logins that can be linked, so a person who leaves loses theirs too.
+  const users = useFetch(() => (me.role === 'admin' ? get('/users') : Promise.resolve(null)), []);
+  const logins = users.data ? (users.data.items || users.data).map(u => u.username).filter(Boolean) : [];
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async (e) => {
     e.preventDefault();
@@ -68,9 +77,10 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
       <${Field} label=${t('ui.dir.notify') + ' *'} hint=${channels.length ? t('ui.dir.notify_hint') : t('ui.dir.notify_none')}>
         <div class="col">${channels.map(c => html`<label class="switch">
           <input type="checkbox" checked=${f.notify.includes(c.name)} disabled=${!has[c.contact] && !f.notify.includes(c.name)} onChange=${() => toggle(c.name)} />
-          <b class="ltr">${c.name}</b> <span class="small muted">${t('ui.dir.via.' + c.contact)}</span></label>`)}</div><//>
+          <b class="ltr">${c.name}</b> <span class="small muted">${t('ui.dir.via.' + viaOf(c))}</span></label>`)}</div><//>
       <div class="two">
-        <${Field} label=${t('ui.dir.username')} hint=${t('ui.dir.username_hint')}><input type="text" class="ltr" value=${f.username} onInput=${set('username')} /><//>
+        <${Field} label=${t('ui.dir.username')} hint=${t('ui.dir.username_hint')}><input type="text" class="ltr" list="dir-logins" value=${f.username} onInput=${set('username')} autocomplete="off" />
+          <datalist id="dir-logins">${logins.map(u => html`<option value=${u} />`)}</datalist><//>
         <${Field} label=${t('ui.dir.note')}><input type="text" value=${f.note} onInput=${set('note')} /><//>
       </div>
       ${err && html`<div class="banner error">${errText(err)}</div>`}

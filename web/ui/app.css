@@ -764,3 +764,6 @@ body.summarypage { background: var(--bg); }
 /* Team, region and tag filters of the monitor list. */
 .row.filters { gap: 8px; }
 .row.filters select { width: auto; min-width: 9em; }
+
+.quick-examples { margin-top: 4px; }
+.quick-examples .tbl td { padding: 4px 8px; }

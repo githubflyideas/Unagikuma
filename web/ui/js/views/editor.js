@@ -2,7 +2,7 @@
 import { html, useState, useEffect } from '../lib.js';
 import { t, detailText } from '../i18n.js';
 import { get, post, put, ifMatch, newKey, me } from '../api.js';
-import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, teamTitle, regionTitle, writableTeams } from '../ui.js';
+import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, teamTitle, regionTitle, writableTeams, Copy } from '../ui.js';
 
 // Check types, grouped for the type menu.
 const TYPE_GROUPS = [
@@ -272,6 +272,14 @@ export function MonitorEditor({ name }) {
 // QuickAdd adds monitors from lines of text. Their team and region are
 // filled in: from the list's filter, else the user's only team, else the
 // admin team and global.
+// Lines the quick add understands, shown under the box for copying: one
+// item per line, or several on a line separated by commas.
+const QUICK_EXAMPLES = [
+  ['https://www.example.com', 'http'], ['http://1.3.5.7:8080', 'http'], ['ping 1.1.1.1', 'ping'], ['icmp 9.9.9.9', 'ping'],
+  ['tcp 12.23.23.23:22', 'tcp'], ['10.0.0.5:5432', 'tcp'], ['udp 8.8.8.8:53', 'udp'], ['udp 10.0.0.1:ntp', 'udp_kw'],
+  ['ping 1.1.1.1 , udp 8.8.8.8:53 , tcp 12.23.23.23:22', 'several'], ['https://shop.example.com name=shop tags=env:prod', 'opts'],
+];
+
 export function QuickAdd({ onClose, onDone, team = '', region = '' }) {
   const teams = useFetch(() => get('/teams'), []);
   const regions = useFetch(() => get('/regions'), []);
@@ -315,7 +323,14 @@ export function QuickAdd({ onClose, onDone, team = '', region = '' }) {
       <button class="btn primary" disabled=${!text.trim()} onClick=${parse}>${t('ui.quick.preview')}</button>`}>
     ${!parsed ? html`<div class="form">
       <p class="muted small">${t('ui.quick.hint')}</p>
-      <textarea class="ltr mono" rows="10" value=${text} onInput=${(e) => setText(e.target.value)} placeholder=${'https://example.com\n10.0.0.5:5432\nudp 10.0.0.1:ntp\nping 192.168.1.1'}></textarea>
+      <textarea class="ltr mono" rows="8" value=${text} onInput=${(e) => setText(e.target.value)} aria-label=${t('ui.mon.quick_add')}></textarea>
+      <div class="quick-examples">
+        <div class="small muted">${t('ui.quick.examples')}</div>
+        <table class="tbl small"><tbody>${QUICK_EXAMPLES.map(([ex, k]) => html`<tr>
+          <td><code class="ltr">${ex}</code></td><td class="muted">${t('ui.quick.ex.' + k)}</td>
+          <td class="right nowrap"><button type="button" class="btn sm" onClick=${() => setText((text.trim() ? text.replace(/\s*$/, '\n') : '') + ex)}>${t('ui.quick.insert')}</button>
+            <${Copy} text=${ex} /></td></tr>`)}</tbody></table>
+      </div>
     </div>` : html`<div class="col">
       <div class="two">
         ${teams.data && teams.data.items.length > 1 && html`<${Field} label=${t('ui.team.field')}>

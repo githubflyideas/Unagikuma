@@ -1070,11 +1070,8 @@ func (s *Server) quickadd(w http.ResponseWriter, r *http.Request) (any, error) {
 	for _, m := range cur.Config.Monitors {
 		used[m.Name] = true
 	}
-	for i, line := range strings.Split(req.Text, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, ";") {
-			continue
-		}
+	for _, it := range quickItems(req.Text) {
+		i, line := it.line-1, it.text
 		spec, err := quickRecord(line, used)
 		if err != nil {
 			out.Errors = append(out.Errors, lineErr{i + 1, err.Error()})
