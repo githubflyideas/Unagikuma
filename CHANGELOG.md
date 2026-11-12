@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.6.7 — unreleased
+## v2.6.7 — 2026-11-12
 
 Every channel kind was sent problems, recoveries and a long daily report through stand-ins that check requests the way the real services do, and through the real services with wrong credentials. What that found:
 
