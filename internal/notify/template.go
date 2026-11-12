@@ -181,6 +181,22 @@ var funcs = template.FuncMap{
 		return out
 	},
 	"b64": func(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) },
+	// digits keeps the digits of an id such as a QQ group number, so it
+	// can stand unquoted as a JSON number; an id without digits becomes 0.
+	"digits": func(s string) string {
+		var b strings.Builder
+		for _, r := range s {
+			if r >= '0' && r <= '9' {
+				b.WriteRune(r)
+			} else if b.Len() > 0 && (r == ',' || r == ' ') {
+				break
+			}
+		}
+		if b.Len() == 0 {
+			return "0"
+		}
+		return b.String()
+	},
 }
 
 func renderTemplate(src string, data map[string]any) (string, error) {

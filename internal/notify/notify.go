@@ -116,6 +116,7 @@ type KindInfo struct {
 	Kind   string  `json:"kind"`
 	Label  string  `json:"label"`
 	Preset bool    `json:"preset,omitempty"`
+	Group  string  `json:"group,omitempty"`
 	Fields []Field `json:"fields"`
 }
 
@@ -161,7 +162,7 @@ func Kinds() []KindInfo {
 	sort.Strings(names)
 	for _, n := range names {
 		p := presets[n]
-		out = append(out, KindInfo{Kind: "webhook:" + n, Label: p.Label, Preset: true, Fields: append(append([]Field(nil), p.Fields...), tplField)})
+		out = append(out, KindInfo{Kind: "webhook:" + n, Label: p.Label, Preset: true, Group: p.Group, Fields: append(append([]Field(nil), p.Fields...), tplField)})
 	}
 	// A contact group is resolved by the engine, not sent here.
 	out = append(out, KindInfo{Kind: "group", Label: "Contact group", Fields: []Field{{Key: "members", Type: "text", Required: true, Placeholder: "ops-feishu,ops-sms"}}})

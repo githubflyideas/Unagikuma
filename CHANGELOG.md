@@ -1,11 +1,13 @@
 # Changelog
 
-## v2.6.8 — unreleased
+## v2.6.9 — unreleased
 
 **Added**
 - Custom SMS and voice gateways (`custom-sms`, `custom-voice`): an operator's own HTTP interface, one request per number, with `{{.Phone}}` and the message names in the address, headers and body. They follow the contact directory like the provider channels. The generic webhook is shown as a custom webhook.
 - Status pages can be edited (title and the monitors shown) and deleted, and another one added at any time. Only creating one was possible, and the form went away once a page existed. `PUT` and `DELETE /api/v1/status-pages/{name}`.
 - **Settings › General › Internet gateway** can be chosen two ways. **By country**: pick one of 12 countries or regions and the public resolvers local to it are measured from this host. **Detect automatically**: this host's public address and country are read from two fixed HTTPS services (what `curl ifconfig.me` does), the route out is traced in Go (what traceroute does; it needs root or CAP_NET_RAW and is skipped otherwise), and the fastest resolver of that country and the first public router on the way out are proposed. Only listed addresses, or routers on this host's own route, are measured; no shell or external program runs; one run every 20 seconds at most; nothing is saved until the administrator picks one.
+- 95 more channel presets, 112 in all, grouped in the channel menu by kind and region: team chat (Rocket.Chat, Webex, Zulip, Zoho Cliq, Nextcloud Talk, ClickUp, Signal, Threema …), China, Japan and Korea (QQ through OneBot and Milky, KOOK, WxPusher, PushDeer, Chatwork, KakaoWork, Dooray!, JANDI …), incident tools (Alerta, GoAlert, Grafana OnCall, ilert, incident.io, Squadcast, SIGNL4, Splunk On-Call, PagerTree, GitLab alerts …), WhatsApp (Meta Cloud API, Z-API and Zenvia for Brazil and Latin America, WAHA, Evolution …), SMS (Infobip, Vonage, Plivo, Telnyx, MessageBird, Unifonic and Taqnyat for the Gulf, Ooredoo …), e-mail APIs (SendGrid, Brevo, Resend) and automation (Zapier, n8n, IFTTT). Incident tools resolve on recovery. That covers 98 of the 111 Uptime Kuma notification kinds, 42 of 43 in Gatus and all of Checkmate's; the rest need request signing or a login step (AWS SES, Web Push, Nostr, Microsoft Graph) or are single-vendor stores.
+- Template function `digits` keeps the digits of an id so it can be a JSON number.
 - Quick add takes `icmp 9.9.9.9`, and its examples stay visible under the box, to copy or insert, down to one with every option: `https://pay.example.com name=pay title=支付网关 team=admin region=global scope=wan group=payments tags=env:prod,tier:1 policy=default`. A line with more than one target is refused instead of keeping the first and dropping the rest.
 
 **Changed**

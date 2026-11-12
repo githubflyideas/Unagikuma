@@ -17,6 +17,9 @@ function fieldLabel(k) {
   return has(key) ? t(key) : k;
 }
 
+// Sections of the preset menu, in the order they are shown.
+const PRESET_GROUPS = ['chat', 'asia', 'incident', 'sms', 'whatsapp', 'push', 'email', 'automation', 'ru'];
+
 // The e-mail options that only an SMTP server uses.
 const SMTP_ONLY = ['host', 'port', 'username', 'password', 'tls'];
 
@@ -90,7 +93,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
         <${Field} label=${t('ui.ch.kind')}>
           <select value=${kind} onChange=${(e) => { setKind(e.target.value); setTest(null); }} disabled=${editing}>
             <optgroup label=${t('ui.ch.native')}>${kinds.filter(k => !k.preset).map(k => html`<option value=${k.kind}>${kindLabel(k)}</option>`)}</optgroup>
-            <optgroup label=${t('ui.ch.presets')}>${kinds.filter(k => k.preset).map(k => html`<option value=${k.kind}>${k.label}</option>`)}</optgroup>
+            ${PRESET_GROUPS.map(g => html`<optgroup label=${t('ui.ch.group.' + g)}>${kinds.filter(k => k.preset && k.group === g).sort((a, b) => a.label.localeCompare(b.label)).map(k => html`<option value=${k.kind}>${k.label}</option>`)}</optgroup>`)}
           </select><//>
         <${Field} label=${t('ui.name')}><input type="text" class="ltr" value=${name} onInput=${(e) => setName(e.target.value)} required disabled=${editing} pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" /><//>
       </div>

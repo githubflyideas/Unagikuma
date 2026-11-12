@@ -167,6 +167,16 @@ admin     IN TEAM channels=team,night-sms mode=all
 | PagerDuty, Opsgenie, Datadog | `webhook preset=pagerduty`, `opsgenie`, `datadog` | `routing-key=`, `api-key=` (Datadog: also `site=`) |
 | ntfy, Gotify, Bark, Pushover, Pushbullet, ServerChan, PushPlus | `webhook preset=ntfy`, `gotify`, `bark`, `pushover`, `pushbullet`, `serverchan`, `pushplus` | the server and topic, or the token or key of the app |
 | Apprise | `webhook preset=apprise` | `server=` of an Apprise API and the `key=` of a configuration saved there (`tag=` picks some of its services) |
+| Team chat | `webhook preset=rocketchat`, `zohocliq`, `pumble`, `stackfield`, `webex`, `zulip`, `nextcloudtalk`, `clickup`, `signal`, `threema` | the incoming webhook `url=`, or the bot token and the room, stream or channel |
+| China, Japan, Korea | `webhook preset=kook`, `onebot`, `milky` (QQ), `wxpusher`, `pushdeer`, `wpush`, `spug`, `yzj`, `flashduty`, `chatwork`, `kakaowork`, `dooray`, `jandi`, `onechat` | the bot token or webhook `url=`, and the room or group |
+| Russia, Iran | `webhook preset=vkteams`, `vk`, `max`, `bitrix24`, `bale` | the bot token and `chat=` |
+| Incident and on-call | `webhook preset=alerta`, `alertnow`, `goalert`, `grafanaoncall`, `pagertree`, `signl4`, `splunk`, `squadcast`, `heii`, `ilert`, `incidentio`, `newrelic`, `halopsa`, `flowtriq`, `gitlab` | the integration `url=` or key. Recoveries resolve the alert they opened, keyed by the incident |
+| Issues | `webhook preset=github`, `gitea` | `token=`, `repo=owner/name`; each alert opens an issue |
+| Automation | `webhook preset=zapier`, `n8n`, `ifttt` | the catch-hook `url=`, or the IFTTT `key=` and `event=` |
+| WhatsApp | `webhook preset=whatsapp` (Meta Cloud API), `zapi`, `zenvia`, `waha`, `evolution`, `openwa`, `whapi`, `callmebot`, `onesender`, `360messenger` | the token, the instance or phone number id, and `to=` |
+| SMS | `webhook preset=infobip`, `plivo`, `telnyx`, `vonage`, `messagebird`, `sevenio`, `46elks`, `octopush`, `freemobile`, `smsc`, `smseagle`, `smsgateway`, `unifonic`, `taqnyat`, `ooredoo`, `zenvia`, `serwersms`, `smspartner`, `promosms`, `smsmanager`, `smsplanet`, `cellsynt`, `gtx`, `bearsms`, `egosms` | the provider's keys, `from=` and `to=` (several numbers separated by commas where the service takes them) |
+| E-mail APIs | `webhook preset=sendgrid`, `brevo`, `resend`, `turbosmtp` | `api-key=`, `from=`, `to=` |
+| Other push apps | `webhook preset=homeassistant`, `gorush`, `lunasea`, `techulus`, `pushy`, `notifery`, `notifyapp`, `signalgrid` | the server or the app's key |
 | Anything else | `webhook` | `url=`; the message as JSON, or your own `body=` |
 | Your own SMS or voice gateway | `custom-sms`, `custom-voice` | `url=` and `phones=`; one request per number, `{{.Phone}}` and `{{.Title}}` in the address, `header.Name=value` and `body=` (default `{"phone":"{{.Phone}}","message":"{{.Title}}"}`), `success-match=` |
 
