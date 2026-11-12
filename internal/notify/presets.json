@@ -282,5 +282,158 @@
     "limits": {
       "text": 4000
     }
+  },
+  {
+    "name": "pushbullet",
+    "label": "Pushbullet",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.pushbullet.com/v2/pushes",
+    "headers": {
+      "Access-Token": "{{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"type\":\"note\",\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\"}",
+    "limits": {
+      "title": 250,
+      "body": 8000
+    }
+  },
+  {
+    "name": "line",
+    "label": "LINE (Messaging API)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "U… (user), C… (group) or R… (room) id"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.line.me/v2/bot/message/push",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"to\":\"{{.to}}\",\"messages\":[{\"type\":\"text\",\"text\":\"{{.Text}}\"}]}",
+    "limits": {
+      "text": 5000
+    }
+  },
+  {
+    "name": "clicksend",
+    "label": "ClickSend SMS",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+61411111111,+8613800000000"
+      },
+      {
+        "key": "from",
+        "type": "text"
+      }
+    ],
+    "method": "POST",
+    "url": "https://rest.clicksend.com/v3/sms/send",
+    "headers": {
+      "Authorization": "Basic {{b64 (print .username \":\" (index . \"api-key\"))}}"
+    },
+    "content_type": "json",
+    "body": "{\"messages\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}{\"source\":\"unagikuma\",\"body\":\"{{$.Title}}\",\"to\":\"{{$n}}\"{{if $.from}},\"from\":\"{{$.from}}\"{{end}}}{{end}}]}",
+    "success": {
+      "field": "data.messages.0.status",
+      "equals": "SUCCESS"
+    },
+    "limits": {
+      "title": 600
+    }
+  },
+  {
+    "name": "datadog",
+    "label": "Datadog (events)",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "site",
+        "type": "select",
+        "options": [
+          "datadoghq.com",
+          "datadoghq.eu",
+          "us3.datadoghq.com",
+          "us5.datadoghq.com",
+          "ap1.datadoghq.com",
+          "ddog-gov.com"
+        ],
+        "default": "datadoghq.com"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.{{.site}}/api/v1/events",
+    "headers": {
+      "DD-API-KEY": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"text\":\"{{.Body}}\",\"alert_type\":\"{{if eq .Kind \"RECOVERY\"}}success{{else if eq .Priority \"low\"}}warning{{else}}error{{end}}\",\"aggregation_key\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"source_type_name\":\"unagikuma\"{{if .Monitor}},\"tags\":[\"monitor:{{.Monitor}}\"]{{end}}}",
+    "success": {
+      "field": "status",
+      "equals": "ok"
+    },
+    "limits": {
+      "title": 500,
+      "body": 4000
+    }
+  },
+  {
+    "name": "apprise",
+    "label": "Apprise API",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true,
+        "placeholder": "http://apprise.example.com:8000"
+      },
+      {
+        "key": "key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "tag",
+        "type": "text"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/notify/{{pathescape .key}}",
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\",\"type\":\"{{if eq .Kind \"RECOVERY\"}}success{{else if eq .Priority \"low\"}}warning{{else}}failure{{end}}\"{{if .tag}},\"tag\":\"{{.tag}}\"{{end}}}"
   }
 ]

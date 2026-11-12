@@ -106,6 +106,14 @@ func (e *Engine) dispatchIntents(ctx context.Context, wg *sync.WaitGroup) {
 				in.Attempts = append(in.Attempts, notify.Attempt{Channel: name, Error: "outside its time period"})
 				continue
 			}
+			if e.heldTooLong(in, i, name, now) {
+				// The service told this channel to wait longer than an
+				// alert should: the next channel takes it.
+				in.Delivery.Begin(i)
+				in.Delivery.Finish(i, false, "held by the service's rate limit", now, 0, 0)
+				in.Attempts = append(in.Attempts, notify.Attempt{Channel: name, Error: "held by the service's rate limit"})
+				continue
+			}
 			if !e.channelAllows(name, ch.Kind, now) {
 				continue // rate limited: stays queued
 			}
@@ -182,6 +190,22 @@ func (e *Engine) serviceLimit(kind string) int {
 		}
 	}
 	return 0
+}
+
+// heldTooLong reports whether step i's channel is kept quiet by its
+// service for longer than notify.retry-after-max while a later channel of
+// a fallback chain could take the alert now.
+func (e *Engine) heldTooLong(in *Intent, i int, name string, now time.Time) bool {
+	until, held := e.chanHold[name]
+	if !held || until.Sub(now) <= e.cfg.Tunables.Duration("notify.retry-after-max") || in.Delivery.Mode != DeliverFallback {
+		return false
+	}
+	for _, s := range in.Delivery.Steps[i+1:] {
+		if s.State == StepPending {
+			return true
+		}
+	}
+	return false
 }
 
 // channelAllows says whether a channel may send now: it is not held back

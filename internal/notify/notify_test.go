@@ -234,7 +234,7 @@ func TestWebhookJSONEscaping(t *testing.T) {
 }
 
 func TestPresets(t *testing.T) {
-	if len(presets) != 12 {
+	if len(presets) != 17 {
 		t.Fatalf("%d presets", len(presets))
 	}
 	cap := &capture{}
@@ -328,7 +328,7 @@ func TestValidateChannel(t *testing.T) {
 	if err := ValidateChannel("feishu", map[string]string{"url": "${secret:hook}"}); err != nil {
 		t.Errorf("references must pass: %v", err)
 	}
-	if len(Kinds()) != 9+len(cloudKinds)+1+12 {
+	if len(Kinds()) != 9+len(cloudKinds)+1+17 {
 		t.Errorf("kinds %d", len(Kinds()))
 	}
 }

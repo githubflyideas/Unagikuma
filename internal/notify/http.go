@@ -39,20 +39,37 @@ func jsonCode(kind, ok string, fields ...string) checkFunc {
 			return fmt.Errorf("unexpected response (not JSON)")
 		}
 		for _, f := range fields {
-			if v, has := m[f]; has && codeText(v) != ok {
-				msg := m["msg"]
-				if msg == nil {
-					msg = m["errmsg"]
-				}
-				if msg == nil {
-					msg = m["description"]
-				}
+			if v, has := jsonPath(m, f); has && codeText(v) != ok {
+				var msg any = replyReason(body)
 				rule := serviceCodes[kind][codeText(v)]
 				return &failure{msg: fmt.Sprintf("%s=%s %v", f, codeText(v), msg), permanent: rule.permanent, retryAfter: rule.wait}
 			}
 		}
 		return nil
 	}
+}
+
+// jsonPath finds a field of a reply; "data.messages.0.status" goes into
+// objects and lists.
+func jsonPath(v any, path string) (any, bool) {
+	for _, k := range strings.Split(path, ".") {
+		switch x := v.(type) {
+		case map[string]any:
+			var ok bool
+			if v, ok = x[k]; !ok {
+				return nil, false
+			}
+		case []any:
+			i, err := strconv.Atoi(k)
+			if err != nil || i < 0 || i >= len(x) {
+				return nil, false
+			}
+			v = x[i]
+		default:
+			return nil, false
+		}
+	}
+	return v, true
 }
 
 // codeText prints a JSON number the way the service wrote it (300005, not

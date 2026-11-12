@@ -102,3 +102,28 @@ func TestKeyedConcurrent(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+// A window never lets more than Max events into any span of Per, also
+// right after a quiet minute (where a bucket would allow a full burst
+// and then a minute's worth again).
+func TestWindowCountsAnySpan(t *testing.T) {
+	w := &Window{Max: 20, Per: time.Minute}
+	t0 := time.Unix(1_700_000_000, 0)
+	for i := 0; i < 20; i++ {
+		if !w.Allow(t0.Add(time.Duration(i) * time.Second)) {
+			t.Fatalf("event %d refused", i)
+		}
+	}
+	for _, d := range []time.Duration{20 * time.Second, 40 * time.Second, 59 * time.Second} {
+		if w.Allow(t0.Add(d)) {
+			t.Fatalf("a 21st event was let in at %s", d)
+		}
+	}
+	// The first event leaves the window after a minute: room for one.
+	if !w.Allow(t0.Add(60*time.Second)) || w.Allow(t0.Add(60*time.Second+500*time.Millisecond)) {
+		t.Fatal("exactly one event fits when the oldest one leaves")
+	}
+	if !(&Window{}).Allow(t0) {
+		t.Fatal("a window without a limit allows everything")
+	}
+}

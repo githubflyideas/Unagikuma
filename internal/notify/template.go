@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -145,6 +146,17 @@ var funcs = template.FuncMap{
 	"upper":   strings.ToUpper,
 	"lower":   strings.ToLower,
 	"join":    func(sep string, list []string) string { return strings.Join(list, sep) },
+	// split cuts a list such as "a, b" into its items, without the blanks.
+	"split": func(sep, s string) []string {
+		var out []string
+		for _, x := range strings.Split(s, sep) {
+			if x = strings.TrimSpace(x); x != "" {
+				out = append(out, x)
+			}
+		}
+		return out
+	},
+	"b64": func(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) },
 }
 
 func renderTemplate(src string, data map[string]any) (string, error) {

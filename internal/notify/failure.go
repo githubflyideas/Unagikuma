@@ -118,7 +118,7 @@ func retryAfter(h http.Header, body []byte) time.Duration {
 func replyReason(body []byte) string {
 	var m map[string]any
 	if json.Unmarshal(body, &m) == nil {
-		for _, k := range []string{"description", "message", "errmsg", "msg", "error", "errors", "Message"} {
+		for _, k := range []string{"description", "message", "errmsg", "msg", "error", "errors", "Message", "response_msg", "info"} {
 			switch v := m[k].(type) {
 			case string:
 				if v != "" {
