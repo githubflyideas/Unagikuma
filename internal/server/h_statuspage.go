@@ -31,6 +31,7 @@ func (s *Server) statusPages(w http.ResponseWriter, r *http.Request) (any, error
 		Monitors    int    `json:"monitors"`
 		Subscribers int    `json:"subscribers"`
 		Pending     int    `json:"pending"`
+		Select      string `json:"select"`
 	}
 	counts, err := s.app.Store().SubscriberCounts()
 	if err != nil {
@@ -39,7 +40,7 @@ func (s *Server) statusPages(w http.ResponseWriter, r *http.Request) (any, error
 	out := []pageJSON{}
 	for _, sp := range s.app.EffectiveConfig().StatusPages {
 		c := counts[sp.Name]
-		out = append(out, pageJSON{sp.Name, sp.Title, s.pageURL(sp), sp.Domain, sp.Subscribe, len(s.published(sp)), c[0], c[1]})
+		out = append(out, pageJSON{sp.Name, sp.Title, s.pageURL(sp), sp.Domain, sp.Subscribe, len(s.published(sp)), c[0], c[1], sp.Select})
 	}
 	return out, nil
 }
@@ -423,4 +424,69 @@ func (s *Server) statusPageCreate(w http.ResponseWriter, r *http.Request) (any, 
 		out["url"] = s.pageURL(sp)
 	}
 	return out, nil
+}
+
+// statusPageUpdate changes a status page's title and the monitors it
+// shows; its other options (domain, subscriptions, look) stay as written.
+func (s *Server) statusPageUpdate(w http.ResponseWriter, r *http.Request) (any, error) {
+	name := r.PathValue("name")
+	if s.statusPage(name) == nil {
+		return nil, notFound("status page")
+	}
+	var req struct {
+		Title  string `json:"title"`
+		Select string `json:"select"`
+	}
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	title, sel := strings.TrimSpace(req.Title), strings.TrimSpace(req.Select)
+	if title == "" || sel == "" {
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "a status page needs a title and which monitors it shows")
+	}
+	if _, err := config.ParseSelector(sel); err != nil {
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "select: %v", err)
+	}
+	st, err := s.editConfig(r, "edit status page "+name, ifMatch(r, name, func(f *config.File) error {
+		rec, ok := f.Record(name)
+		if !ok || rec.Type != "STATUSPAGE" {
+			return fmt.Errorf("no status page %s", name)
+		}
+		opts := make([]config.Opt, 0, len(rec.Opts)+1)
+		seen := false
+		for _, o := range rec.Opts {
+			if o.Key == "select" {
+				if seen {
+					continue
+				}
+				o.Value, seen = sel, true
+			}
+			opts = append(opts, o)
+		}
+		if !seen {
+			opts = append([]config.Opt{{Key: "select", Value: sel}}, opts...)
+		}
+		return f.UpsertRecord(config.RecordSpec{Name: name, Type: "STATUSPAGE", Target: title, Opts: opts})
+	}))
+	if err != nil {
+		return nil, s.configError(err)
+	}
+	auditOf(r).target = name
+	return s.savedRecord(st, name), nil
+}
+
+// statusPageDelete removes a status page. Its announcements and
+// subscribers are kept, so a page added again under the same name has
+// them back.
+func (s *Server) statusPageDelete(w http.ResponseWriter, r *http.Request) (any, error) {
+	name := r.PathValue("name")
+	if s.statusPage(name) == nil {
+		return nil, notFound("status page")
+	}
+	st, err := s.editConfig(r, "delete status page "+name, ifMatch(r, name, func(f *config.File) error { return f.DeleteRecord(name) }))
+	if err != nil {
+		return nil, s.configError(err)
+	}
+	auditOf(r).target = name
+	return s.saved(st), nil
 }

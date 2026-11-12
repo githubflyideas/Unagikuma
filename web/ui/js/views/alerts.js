@@ -6,6 +6,12 @@ import { get, post, del, put, ifMatch } from '../api.js';
 import { ContactsTab, IssueDot, NewAddresses, addressKey } from './contacts.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle } from '../ui.js';
 
+// kindLabel is a kind's name in the reader's language where it has one.
+function kindLabel(k) {
+  const key = 'ui.ch.kind.' + k.kind, v = t(key);
+  return v === key ? k.label : v;
+}
+
 function fieldLabel(k) {
   const key = 'ui.field.' + k;
   return has(key) ? t(key) : k;
@@ -83,7 +89,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
       <div class="two">
         <${Field} label=${t('ui.ch.kind')}>
           <select value=${kind} onChange=${(e) => { setKind(e.target.value); setTest(null); }} disabled=${editing}>
-            <optgroup label=${t('ui.ch.native')}>${kinds.filter(k => !k.preset).map(k => html`<option value=${k.kind}>${k.label}</option>`)}</optgroup>
+            <optgroup label=${t('ui.ch.native')}>${kinds.filter(k => !k.preset).map(k => html`<option value=${k.kind}>${kindLabel(k)}</option>`)}</optgroup>
             <optgroup label=${t('ui.ch.presets')}>${kinds.filter(k => k.preset).map(k => html`<option value=${k.kind}>${k.label}</option>`)}</optgroup>
           </select><//>
         <${Field} label=${t('ui.name')}><input type="text" class="ltr" value=${name} onInput=${(e) => setName(e.target.value)} required disabled=${editing} pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" /><//>
@@ -95,7 +101,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
           return html`<${Field} label=${label}><select value=${v} onChange=${(e) => set(f.key, e.target.value)}>${['', ...(f.options || [])].map(o => html`<option value=${o}>${o || '–'}</option>`)}</select><//>`;
         }
         if (f.type === 'textarea') {
-          return html`<${Field} label=${label} hint=${f.key === 'template' ? t('ui.ch.template_hint') : ''}><textarea class="ltr mono" rows="5" value=${f.key === 'template' ? v.replace(/\\n/g, '\n') : v} placeholder=${(f.placeholder || '').replace(/\\n/g, '\n')} onInput=${(e) => set(f.key, e.target.value)}></textarea><//>`;
+          return html`<${Field} label=${label} hint=${f.key === 'template' ? t('ui.ch.template_hint') : f.key === 'body' && kind.startsWith('custom-') ? t('ui.ch.custom_hint') : ''}><textarea class="ltr mono" rows="5" value=${f.key === 'template' ? v.replace(/\\n/g, '\n') : v} placeholder=${(f.placeholder || '').replace(/\\n/g, '\n')} onInput=${(e) => set(f.key, e.target.value)}></textarea><//>`;
         }
         const hint = f.type === 'secret' ? t('ui.ch.secret_hint') : f.type === 'email-list' ? t('ui.ch.email_list') : f.key === 'period' ? t('ui.ch.period_hint') : f.key === 'members' ? t('ui.ch.members_hint')
           : f.key === 'at' ? t('ui.ch.at_hint') : f.key === 'program' ? t('ui.ch.program_hint') : f.key === 'from' && viaSendmail ? t('ui.ch.from_sendmail_hint') : '';
@@ -159,7 +165,7 @@ function ChannelsTab() {
         <thead><tr><th>${t('ui.name')}</th><th>${t('ui.ch.kind')}</th><th>${t('ui.ch.teams')}</th><th></th></tr></thead>
         <tbody>${list.data.map(c => html`<tr>
           <td class="name ltr">${c.name} <${IssueDot} issues=${c.issues} />${c.system && html` <span class="tag">${t('ui.ch.system_tag')}</span>`}</td>
-          <td>${(kinds.data.find(k => k.kind === (c.opts.preset ? 'webhook:' + c.opts.preset : c.kind)) || { label: c.kind }).label}</td>
+          <td>${kindLabel(kinds.data.find(k => k.kind === (c.opts.preset ? 'webhook:' + c.opts.preset : c.kind)) || { kind: c.kind, label: c.kind })}</td>
           <td class="small">${c.teams.length || c.used_by.length || c.system ? [...c.teams.map(n => teamTitle({ name: n })), ...c.used_by].join(', ') : html`<span class="warn-text">${t('ui.ch.unused')}</span>`}</td>
           <td class="right nowrap">
             <button class="btn sm" onClick=${() => test(c)}>${t('ui.ch.test')}</button>

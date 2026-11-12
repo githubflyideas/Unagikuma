@@ -154,7 +154,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .verdict.unknown { background: color-mix(in srgb, var(--faint) 18%, transparent); color: var(--muted); }
 .rdot.setup { background: var(--degraded); }
 .top-sub { color: var(--muted); font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.search { display: flex; align-items: center; gap: 8px; width: 460px; max-width: 46vw; padding: 5px 10px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel-2); color: var(--muted); }
+.search { display: flex; align-items: center; gap: 8px; width: 460px; max-width: 40vw; flex: 0 1 460px; padding: 5px 10px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel-2); color: var(--muted); }
 .search input { border: 0 !important; outline: 0 !important; background: none !important; padding: 0 !important; color: var(--text); }
 .search select.sort { width: auto; border: 0; background: none; padding: 0 2px; color: var(--muted); font-size: 12.5px; }
 .search button.kbd { border: 0; background: none; padding: 0; cursor: pointer; }

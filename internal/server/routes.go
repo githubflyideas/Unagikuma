@@ -115,6 +115,8 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/status-support", "admin", s.supportGet)
 	s.handle("PUT /api/v1/status-support", "admin", requireFeature(s, license.FeatBranding, s.supportPut))
 	s.handle("POST /api/v1/status-pages", "write", global(s.statusPageCreate))
+	s.handle("PUT /api/v1/status-pages/{name}", "write", global(s.statusPageUpdate))
+	s.handle("DELETE /api/v1/status-pages/{name}", "write", global(s.statusPageDelete))
 	s.handle("GET /api/v1/status-pages/{name}/announcements", "read", s.announcements)
 	s.handle("POST /api/v1/status-pages/{name}/announcements", "write", global(s.announcementCreate))
 	s.handle("PUT /api/v1/announcements/{id}", "write", global(s.announcementUpdate))

@@ -328,7 +328,7 @@ func TestValidateChannel(t *testing.T) {
 	if err := ValidateChannel("feishu", map[string]string{"url": "${secret:hook}"}); err != nil {
 		t.Errorf("references must pass: %v", err)
 	}
-	if len(Kinds()) != 9+len(cloudKinds)+1+17 {
+	if len(Kinds()) != 11+len(cloudKinds)+1+17 {
 		t.Errorf("kinds %d", len(Kinds()))
 	}
 }

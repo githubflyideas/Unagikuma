@@ -55,9 +55,10 @@ function ReportTab() {
   </div>`;
 }
 
-// ScreensTab opens or shares the wall screen and the managers' summary.
+// ScreensTab opens or shares the on-duty wall screen. The managers'
+// summary is a page of the console (/summary), not something to cast.
 function ScreensTab() {
-  return html`<div class="links2"><${LinkCard} page="wall" k="wall" /><${LinkCard} page="summary" k="sum" /></div>`;
+  return html`<div class="links2"><${LinkCard} page="wall" k="wall" /></div>`;
 }
 
 export const NOTICE_TABS = [['changes', 'ui.chg.tab'], ['pages', 'ui.notice.tab'], ['report', 'ui.report.tab'], ['screens', 'ui.notice.screens_tab']];
