@@ -6,7 +6,7 @@
 - Custom SMS and voice gateways (`custom-sms`, `custom-voice`): an operator's own HTTP interface, one request per number, with `{{.Phone}}` and the message names in the address, headers and body. They follow the contact directory like the provider channels. The generic webhook is shown as a custom webhook.
 - Status pages can be edited (title and the monitors shown) and deleted, and another one added at any time. Only creating one was possible, and the form went away once a page existed. `PUT` and `DELETE /api/v1/status-pages/{name}`.
 - **Settings › General › Internet gateway** has a **Suggest** button: it measures public resolvers of several countries from this host (ping, or TCP port 53 where ping is filtered), shows the host's public address and proposes the two that answer best. Only a fixed list is measured; nothing runs a shell or an external program; one run every 20 seconds at most.
-- Quick add takes `icmp 9.9.9.9`, and several targets on one line separated by commas (`ping 1.1.1.1 , udp 8.8.8.8:53 , tcp 12.23.23.23:22`). Its examples stay visible under the box, to copy or insert.
+- Quick add takes `icmp 9.9.9.9`, and its examples stay visible under the box, to copy or insert, down to one with every option: `https://pay.example.com name=pay title=支付网关 team=admin region=global scope=wan group=payments tags=env:prod,tier:1 policy=default`. A line with more than one target is refused instead of keeping the first and dropping the rest.
 
 **Changed**
 - The search box sits next to the page title instead of at the far right of the top bar.

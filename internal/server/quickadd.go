@@ -43,6 +43,9 @@ func quickRecord(line string, used map[string]bool) (config.RecordSpec, error) {
 		return spec, fmt.Errorf("nothing to monitor")
 	}
 	typ, target := "", ""
+	if n := quickWords(words[0]); len(words) > n {
+		return spec, fmt.Errorf("one target per line: %q is left over", strings.Join(words[n:], " "))
+	}
 	switch strings.ToLower(words[0]) {
 	case "icmp":
 		if len(words) < 2 {
@@ -134,28 +137,12 @@ func deriveName(typ, target string, used map[string]bool) string {
 	return out
 }
 
-// quickItems splits the text into items: one per line, and on one line
-// items separated by a comma with a space next to it, or by a Chinese
-// comma (so "ping 1.1.1.1 , udp 8.8.8.8:53" is two items, while
-// tags=a,b stays one option).
-func quickItems(text string) []quickItem {
-	var out []quickItem
-	for i, line := range strings.Split(text, "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), ";") {
-			continue // a comment
-		}
-		for _, part := range quickSep.Split(line, -1) {
-			if part = strings.TrimSpace(part); part != "" && !strings.HasPrefix(part, ";") {
-				out = append(out, quickItem{line: i + 1, text: part})
-			}
-		}
+// quickWords is how many words the target of a line takes: a type and its
+// target, or the target alone.
+func quickWords(first string) int {
+	switch strings.ToLower(first) {
+	case "icmp", "http", "https", "tcp", "udp", "ping", "dns", "ntp", "snmp", "syslog", "redis", "postgres", "mysql", "grpc", "docker":
+		return 2
 	}
-	return out
+	return 1
 }
-
-type quickItem struct {
-	line int
-	text string
-}
-
-var quickSep = regexp.MustCompile(`\s+[,，、;；]\s*|[,，、;；]\s+|[，、；]`)

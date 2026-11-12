@@ -273,11 +273,12 @@ export function MonitorEditor({ name }) {
 // filled in: from the list's filter, else the user's only team, else the
 // admin team and global.
 // Lines the quick add understands, shown under the box for copying: one
-// item per line, or several on a line separated by commas.
+// item per line.
 const QUICK_EXAMPLES = [
   ['https://www.example.com', 'http'], ['http://1.3.5.7:8080', 'http'], ['ping 1.1.1.1', 'ping'], ['icmp 9.9.9.9', 'ping'],
   ['tcp 12.23.23.23:22', 'tcp'], ['10.0.0.5:5432', 'tcp'], ['udp 8.8.8.8:53', 'udp'], ['udp 10.0.0.1:ntp', 'udp_kw'],
-  ['ping 1.1.1.1 , udp 8.8.8.8:53 , tcp 12.23.23.23:22', 'several'], ['https://shop.example.com name=shop tags=env:prod', 'opts'],
+  ['https://shop.example.com name=shop tags=env:prod', 'opts'],
+  ['https://pay.example.com name=pay title=支付网关 team=admin region=global scope=wan group=payments tags=env:prod,tier:1 policy=default', 'full'],
 ];
 
 export function QuickAdd({ onClose, onDone, team = '', region = '' }) {
