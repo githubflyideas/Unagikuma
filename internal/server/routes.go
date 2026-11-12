@@ -100,6 +100,7 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/keywords", "read", s.keywordsList)
 	s.handle("GET /api/v1/system", "read", s.system)
 	s.handle("GET /api/v1/settings", "read", s.settingsGet)
+	s.handle("GET /api/v1/settings/exit-countries", "admin", s.exitCountries)
 	s.handle("POST /api/v1/settings/exit-suggest", "admin", s.exitSuggest)
 	s.handle("PUT /api/v1/settings", "admin", s.settingsPut)
 	s.handle("POST /api/v1/settings/heartbeat/test", "admin", s.heartbeatTest)

@@ -10,6 +10,19 @@ import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, byte
 
 const EXIT_KEY = 'localnet.exit-target';
 
+// regionName is a country or region in the reader's language.
+function regionName(code) {
+  try { return new Intl.DisplayNames([currentLang()], { type: 'region' }).of(code) || code; } catch { return code; }
+}
+
+// routeText is the traced route, without the run of silent hops at its
+// end (routers that do not answer, or the trace stopping short).
+function routeText(hops) {
+  const h = hops.slice();
+  while (h.length && !h[h.length - 1].addr) h.pop();
+  return h.length ? h.map(x => x.addr || '*').join(' → ') + (h.length < hops.length ? ' → …' : '') : '—';
+}
+
 function General() {
   const s = useFetch(() => get('/settings'), []);
   const tun = useFetch(() => get('/tunables'), []);
@@ -36,11 +49,13 @@ function General() {
       toast(t('ui.saved'));
     } catch (e2) { toastError(e2); }
   };
-  // Measures a fixed list of public resolvers from this host and proposes
-  // the two that answer best; the administrator picks one, then saves.
-  const suggest = async () => {
+  // Two ways to choose the internet gateway: the public resolvers of a
+  // country, or what this host's own route and country suggest.
+  const countries = useFetch(() => get('/settings/exit-countries'), []);
+  const [cc, setCc] = useState('');
+  const suggest = async (body) => {
     setSug({ busy: true });
-    try { setSug(await post('/settings/exit-suggest')); } catch (e) { setSug({ err: e }); }
+    try { setSug(await post('/settings/exit-suggest', body)); } catch (e) { setSug({ err: e }); }
   };
   const testHb = async () => {
     setHb({ busy: true });
@@ -55,13 +70,19 @@ function General() {
       <select value=${f.message_lang || 'en'} onChange=${set('message_lang')}>${langList().map(l => html`<option value=${l.code}>${l.name}</option>`)}</select><//>
     ${exitTun && html`<${Field} label=${t('ui.set.exit')} hint=${t('ui.set.exit_hint', { addr: exitTun.default })}>
       <div class="row nowrap"><input type="text" class="ltr" value=${exit ?? ''} onInput=${(e) => setExit(e.target.value)} placeholder=${t('ui.set.exit_off')} style=${{ maxWidth: '320px' }} />
-        <button type="button" class="btn" onClick=${suggest} disabled=${sug && sug.busy}>${sug && sug.busy ? t('ui.set.exit_measuring') : t('ui.set.exit_suggest')}</button></div><//>`}
+      </div>
+      <div class="row nowrap" style=${{ marginTop: '8px' }}>
+        <select value=${cc} onChange=${(e) => { setCc(e.target.value); if (e.target.value) suggest({ mode: 'country', country: e.target.value }); }} aria-label=${t('ui.set.exit_by_country')} style=${{ maxWidth: '320px' }}>
+          <option value="">${t('ui.set.exit_by_country')}</option>
+          ${(countries.data || []).map(c => html`<option value=${c.code}>${c.code === 'ANY' ? t('ui.set.exit_anycast') : regionName(c.code)} — ${c.label}</option>`)}</select>
+        <button type="button" class="btn" onClick=${() => { setCc(''); suggest({ mode: 'auto' }); }} disabled=${sug && sug.busy}>${sug && sug.busy ? t('ui.set.exit_measuring') : t('ui.set.exit_suggest')}</button></div><//>`}
     ${sug && sug.err && html`<div class="banner error">${errText(sug.err)}</div>`}
     ${sug && sug.candidates && html`<div class="card"><div class="bd col" style=${{ gap: '8px' }}>
-      <p class="small muted" style=${{ margin: 0 }}>${t('ui.set.exit_result')}${sug.public_addr ? ' · ' + t('ui.set.exit_public', { addr: sug.public_addr }) : ''}</p>
+      <p class="small muted" style=${{ margin: 0 }}>${t('ui.set.exit_result')}${sug.public_addr ? ' · ' + t('ui.set.exit_public', { addr: sug.public_addr }) : ''}${sug.mode === 'auto' && sug.country ? ' · ' + regionName(sug.country) : ''}</p>
+      ${sug.mode === 'auto' && html`<div class="small muted">${sug.trace_error ? t('ui.set.exit_no_trace') : t('ui.set.exit_route') + ': ' + routeText(sug.hops)}</div>`}
       ${!sug.suggested.length && html`<div class="banner warning">${t('ui.set.exit_none')}</div>`}
       <table class="tbl small"><tbody>${sug.candidates.map(c => html`<tr class=${c.ok ? '' : 'muted'}>
-        <td class="ltr mono">${c.addr}</td><td>${c.label}${c.region ? ' · ' + c.region : ''}</td>
+        <td class="ltr mono">${c.addr}</td><td>${c.source === 'route' ? t('ui.set.exit_hop', { label: c.label }) : c.label}</td>
         <td class="right nowrap">${c.ok ? msText(c.rtt_ms) + (c.loss > 0 ? ' · ' + Math.round(c.loss * 100) + '%' : '') + (c.via && c.via !== 'icmp' ? ' · ' + c.via : '') : t('ui.ov.exit_down')}</td>
         <td class="right nowrap">${sug.suggested.includes(c.addr) && html`<span class="tag">${t('ui.set.exit_recommended')}</span>`}
           ${c.ok && html` <button type="button" class=${'btn sm' + (sug.suggested[0] === c.addr ? ' primary' : '')} onClick=${() => setExit(c.addr)}>${t('ui.set.exit_use')}</button>`}</td>
