@@ -86,7 +86,7 @@ func escapeForJSON(d map[string]any) {
 // out instead.
 func textOf(o map[string]string, m *Message) (title, body string) {
 	title, body = Render(m)
-	tpl := o["template"]
+	tpl := templateLines(o["template"])
 	if tpl == "" {
 		return title, body
 	}
@@ -103,6 +103,30 @@ func textOf(o map[string]string, m *Message) (title, body string) {
 		}
 	}
 	return title, body
+}
+
+// templateLines turns the two characters \n into a line break, outside
+// {{ }}: a configuration value is one line, a message has several.
+func templateLines(src string) string {
+	if !strings.Contains(src, `\n`) {
+		return src
+	}
+	var b strings.Builder
+	inAction := false
+	for i := 0; i < len(src); i++ {
+		switch {
+		case strings.HasPrefix(src[i:], "{{"):
+			inAction = true
+		case strings.HasPrefix(src[i:], "}}"):
+			inAction = false
+		case !inAction && strings.HasPrefix(src[i:], `\n`):
+			b.WriteByte('\n')
+			i++
+			continue
+		}
+		b.WriteByte(src[i])
+	}
+	return b.String()
 }
 
 // sampleMessage is a made-up problem used to try templates: when a

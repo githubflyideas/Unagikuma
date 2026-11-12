@@ -293,6 +293,7 @@ running. Warnings (for example a timeout not shorter than the interval) do
 not stop a file from being applied. Among them: `conflicting_auth` (an
 HTTP monitor sets both `basic=` and `bearer=`; `bearer=` is sent) and
 `rotation_removed` (a group still has the options of on-call rotations,
-which were removed; they are ignored and every member is notified) and
-`standby_scheme_added` (a node's `standby=` is a bare `host:port`; it is
-read as `https://host:port`).
+which were removed; they are ignored and every member is notified) `standby_scheme_added` (a node's `standby=` is a bare `host:port`; it is
+read as `https://host:port`) and `template_problem` (a channel's
+`template=`, `body=`, `params=` or `url=` does not parse or uses a name
+that does not exist; the built-in text is sent and the name is empty).

@@ -498,3 +498,15 @@ func TestWebhookURLHoldsNames(t *testing.T) {
 		t.Fatalf("%v %s ?%s", a, r.method, r.query)
 	}
 }
+
+// A template is one line in the file: \n between {{ }} parts is a line
+// break, inside them it is left alone.
+func TestTemplateLineBreaks(t *testing.T) {
+	if got := templateLines(`a\nb {{join "\n" .Tags}} c\n`); got != "a\nb {{join \"\\n\" .Tags}} c\n" {
+		t.Fatalf("%q", got)
+	}
+	title, body := textOf(map[string]string{"template": `{{.Name}}\n{{.StatusText}}\n{{join "\n" .Tags}}`}, aProblem("en"))
+	if title != `支付网关 "API" <gw> & co` || body != "CRITICAL\nenv:prod" {
+		t.Fatalf("title %q body %q", title, body)
+	}
+}

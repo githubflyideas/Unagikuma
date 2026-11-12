@@ -131,6 +131,11 @@ func (s *Server) channelSave(w http.ResponseWriter, r *http.Request) (any, error
 	if tok := req.Opts["token"]; kind == "telegram" && tok != "" && tok != "***" && !strings.Contains(tok, "${") && !telegramToken.MatchString(tok) {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "this is not a Telegram bot token: it looks like 123456789:AAE… (numbers, a colon, then letters and digits), as BotFather gives it")
 	}
+	// A record is one line: the line breaks of a message template are kept
+	// as the two characters \n, which the channel turns back when sending.
+	if tpl, ok := req.Opts["template"]; ok {
+		req.Opts["template"] = strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(tpl), "\r\n", "\n"), "\n", `\n`)
+	}
 	// A template typed here is tried at once: a file may carry a wrong one
 	// (it loads with a warning), a form does not save it.
 	if probs := notify.TemplateProblems(kind, req.Opts); len(probs) > 0 {

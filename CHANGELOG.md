@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.6.7 — unreleased
+
+Every channel kind was sent problems, recoveries and a long daily report through stand-ins that check requests the way the real services do, and through the real services with wrong credentials. What that found:
+
+**Fixed**
+- A long message, usually the daily report, went over the limit of WeCom (2048 bytes) and was refused. Every chat kind and preset now cuts a message to its service's limit at a line, and the last line says how many lines are left out.
+- More than 20 alerts a minute to a DingTalk robot were lost: the robot refused them and nothing sent them again. A channel never sends more than its service takes in a minute (`notify.service-limits`); the rest wait and a long queue becomes one summary.
+- `Retry-After` of a rate-limiting service was not read. The next try now comes when the service says; if that is longer than `notify.retry-after-max` (30s), the next channel takes the alert.
+- `rate=` and `retries=0` on a channel had no effect.
+- A wrong webhook token that the service reports under HTTP 200 (Feishu, DingTalk, WeCom) was tried three times, so the next channel got the alert 9 seconds late. It is tried once.
+- An alert showed `<no value>` for a name its template did not know. It is empty, and such a template is reported: refused in the console, a `template_problem` warning in a file.
+- A `webhook` with `method=GET` carried nothing: its `url=` may now hold names.
+- A failed delivery says why, not only "HTTP 400": the service's own words follow.
+- A Twilio call was read by the English voice whatever the language, emoji and brackets included. It is read in the message language, without them.
+- The daily report lists services that failed at the same moment by name instead of in a different order each day.
+- The diagnostic of a channel test no longer lists an issue without an address; the case is the `no_recipients` field, as in `people/lookup`.
+
+**Added**
+- `template=` (the **Message template** field) sets the text of problems and recoveries on chat, e-mail, push and Twilio channels; **Test** shows it filled with an example. New names: `{{.StatusText}}`, `{{.KindText}}`, `{{.ReasonText}}`, `{{.DurationText}}`, `{{.Started}}`, `{{.Icon}}`, `{{.Class}}`. The option used to be accepted and ignored.
+- `at=` mentions people on DingTalk, WeCom and Feishu: `all`, or phone numbers (Feishu: user ids).
+- Channels for Pushbullet, LINE (Messaging API), ClickSend SMS, Datadog events and Apprise API.
+- The manual lists every channel kind, the names a template can use, and how limits, retries and falling back work.
+
+**Changed**
+- SMS and voice channels take the daily report only with `report=yes`. It used to fill an approved alert template with report text, and ring every morning.
+
 ## v2.6.6 — 2026-11-11
 
 **Fixed**

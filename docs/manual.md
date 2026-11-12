@@ -152,6 +152,62 @@ night-sms IN CHANNEL aliyun-sms … period=!office
 admin     IN TEAM channels=team,night-sms mode=all
 ```
 
+### Channel kinds
+
+| Where | Kind | What it needs |
+|-------|------|---------------|
+| Feishu / Lark, DingTalk, WeCom | `feishu`, `dingtalk`, `wecom` | the group robot's webhook `url=`; `secret=` when the robot signs (Feishu, DingTalk) |
+| Telegram | `telegram` | `token=` of the bot and `chat=` |
+| Slack, Discord | `slack`, `discord` | the incoming webhook `url=` |
+| Microsoft Teams, Mattermost, Google Chat | `webhook preset=teams`, `mattermost`, `googlechat` | the webhook `url=` |
+| LINE | `webhook preset=line` | the channel access `token=` of a Messaging API channel and `to=` (a user, group or room id) |
+| Matrix | `webhook preset=matrix` | `homeserver=`, `token=`, `room=` |
+| E-mail | `email` | an SMTP server or the local `sendmail` (below) |
+| SMS and calls | `aliyun-sms`, `aliyun-voice`, `tencent-sms`, `tencent-voice`, `twilio-sms`, `twilio-voice`, `webhook preset=clicksend` | the provider's keys, and for Aliyun and Tencent Cloud an approved template |
+| PagerDuty, Opsgenie, Datadog | `webhook preset=pagerduty`, `opsgenie`, `datadog` | `routing-key=`, `api-key=` (Datadog: also `site=`) |
+| ntfy, Gotify, Bark, Pushover, Pushbullet, ServerChan, PushPlus | `webhook preset=ntfy`, `gotify`, `bark`, `pushover`, `pushbullet`, `serverchan`, `pushplus` | the server and topic, or the token or key of the app |
+| Apprise | `webhook preset=apprise` | `server=` of an Apprise API and the `key=` of a configuration saved there (`tag=` picks some of its services) |
+| Anything else | `webhook` | `url=`; the message as JSON, or your own `body=` |
+
+**Alerting › Channels** has a form for each, and **Test** sends a message through it. Two services accept any key and only refuse it later, so their test cannot tell a wrong key: PagerDuty and Datadog.
+
+### What is sent, and changing it
+
+Every message has a title and a body in the language set under **Settings**. A channel can replace the text of problems and recoveries with `template=` (the **Message template** field). The first line of the result is the title:
+
+```text
+ops-im IN CHANNEL feishu url=${secret:feishu_ops} at=all template="{{.Icon}} {{.KindText}}: {{.Name}} {{.StatusText}}\n{{.ReasonText}} — {{.Detail}}\nfor {{.DurationText}} · {{.DetailURL}}"
+```
+
+| Name | What it is |
+|------|------------|
+| `{{.Name}}`, `{{.Monitor}}` | the monitor's title and its name in the file |
+| `{{.Kind}}`, `{{.KindText}}` | `PROBLEM`, `REPEAT`, `REOPEN`, `ESCALATE`, `RECOVERY`; and in words |
+| `{{.Status}}`, `{{.StatusText}}` | `critical`, `degraded`, `ok`…; and in words |
+| `{{.Reason}}`, `{{.ReasonText}}`, `{{.Detail}}` | why it fails: the code, in words, and what the check saw |
+| `{{.Type}}`, `{{.Target}}`, `{{.Depth}}` | the check |
+| `{{.Started}}`, `{{.DurationText}}`, `{{seconds .Duration}}`, `{{rfc3339 .Time}}` | since when and for how long |
+| `{{.Count}}`, `{{.Max}}` | this is notification number … of … |
+| `{{.DetailURL}}`, `{{.AckURL}}` | links to the console (set its address under **Settings**) |
+| `{{.Tags}}`, `{{.Priority}}`, `{{.Class}}`, `{{.IncidentID}}`, `{{.Instance}}`, `{{.Site}}`, `{{.DeliveryID}}`, `{{.Icon}}` | the rest |
+| `{{.Title}}`, `{{.Body}}`, `{{.Text}}` | the built-in text, to add a line to it instead of replacing it |
+| `{{.owner}}`, `{{index . "my-key"}}` | the channel's own options |
+
+Functions: `upper`, `lower`, `trunc 20 .Name`, `join ", " .Tags`, `json .Tags`, `urlquery`, `pathescape`, `seconds`, `rfc3339`.
+
+- Summaries, reports and system notices keep their own text. **Test** shows the template filled with an example.
+- A template that does not parse, or uses a name that does not exist, is refused when the channel is saved in the console. In a file it is a warning (`template_problem`): the built-in text is sent, and a name that does not exist is empty.
+- `at=` on a `dingtalk`, `wecom` or `feishu` channel mentions people on problems: `at=all`, or phone numbers separated by commas (Feishu: user ids). Recoveries and reports mention nobody.
+- A `webhook` channel sends all of the above as JSON; `body=` replaces it with your own template (`content-type=json|form|text`, `header.Name=value` for headers), and the `url=` may hold names too, which is all a `method=GET` hook can carry.
+- SMS providers in China only send approved templates: `params="{{.Name}}|{{.StatusText}}|{{.ReasonText}}"` fills the template's variables in order.
+
+### Limits, retries and falling back
+
+- **Length.** Each service takes messages up to a size (WeCom 2048 bytes, Telegram 4096 characters, Discord 2000, Pushover 1024, …). A longer message, usually the daily report, is cut at a line and its last line says how many lines are left out.
+- **Rate.** A channel sends at most `notify.channel-rate` (20 a minute; `rate=6/m` on a channel changes it), and never more than its service takes from one robot in a minute (`notify.service-limits`: DingTalk, WeCom and Telegram 20, Discord 30, Slack 60, Feishu 100). What cannot go yet waits, and a long queue becomes one summary.
+- **Retries.** A failed delivery is tried again twice (`notify.channel-retries`, `retries=` on a channel, `retries=0` for none), after 2 and 5 seconds. A failure that will repeat (a wrong token, a refused message) is not tried again. A service that asks to wait (HTTP 429 with `Retry-After`, or its own "too fast" answer) is asked again after that long; if it asks for more than `notify.retry-after-max` (30s) the next channel of the team takes the alert.
+- **Daily report.** SMS and voice channels take it only with `report=yes`; every other channel takes it unless `report=no`.
+
 - **E-mail.** An `email` channel sends either to an SMTP server (`host=`, `port=`, `tls=starttls|tls|none`, `username=`, `password=`, `from=`) or, with `via=sendmail`, through this machine's own mail system, the way Nagios and cron do:
 
   ```text
