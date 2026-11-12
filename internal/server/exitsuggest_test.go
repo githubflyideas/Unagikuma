@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,11 +17,14 @@ import (
 func TestExitSuggest(t *testing.T) {
 	rtt := map[string]time.Duration{"114.114.114.114": 8 * time.Millisecond, "223.5.5.5": 9 * time.Millisecond, "8.8.8.8": 180 * time.Millisecond}
 	var asked []string
+	var mu sync.Mutex
 	prev, prevPub := exitProbe, exitPublic
 	t.Cleanup(func() { exitProbe, exitPublic, exitLastOut = prev, prevPub, nil })
 	exitLastOut = nil
 	exitProbe = func(_ context.Context, sp probe.Spec) probe.Result {
+		mu.Lock()
 		asked = append(asked, sp.Target)
+		mu.Unlock()
 		if sp.Type == "TCP" {
 			if sp.Target == "9.9.9.9:53" {
 				return probe.Result{Vote: probe.VoteOK, Latency: 50 * time.Millisecond}
