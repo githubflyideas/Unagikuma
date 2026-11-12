@@ -168,6 +168,7 @@ admin     IN TEAM channels=team,night-sms mode=all
 | ntfy, Gotify, Bark, Pushover, Pushbullet, ServerChan, PushPlus | `webhook preset=ntfy`, `gotify`, `bark`, `pushover`, `pushbullet`, `serverchan`, `pushplus` | the server and topic, or the token or key of the app |
 | Apprise | `webhook preset=apprise` | `server=` of an Apprise API and the `key=` of a configuration saved there (`tag=` picks some of its services) |
 | Anything else | `webhook` | `url=`; the message as JSON, or your own `body=` |
+| Your own SMS or voice gateway | `custom-sms`, `custom-voice` | `url=` and `phones=`; one request per number, `{{.Phone}}` and `{{.Title}}` in the address, `header.Name=value` and `body=` (default `{"phone":"{{.Phone}}","message":"{{.Title}}"}`), `success-match=` |
 
 **Alerting › Channels** has a form for each, and **Test** sends a message through it. Two services accept any key and only refuse it later, so their test cannot tell a wrong key: PagerDuty and Datadog.
 
