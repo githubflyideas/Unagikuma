@@ -796,7 +796,7 @@
 "ui.story.slow": "{n} monitores estão lentos",
 "ui.story.slow_text": "Respondem acima do limite de lentidão; lento não conta como fora do ar.",
 "ui.story.ok_cluster": "{n} nós online, todos os caminhos normais",
-"ui.story.ok_cluster_text": "Cada alvo é verificado a partir de vários nós e só falha quando a maioria falha; um problema de um nó nunca vira alerta.",
+"ui.story.ok_cluster_text": "Cada local monitora e alerta de forma independente. As observações compartilhadas são informativas.",
 "ui.story.ok_single": "A rede deste host está bem e todo monitor é verificado no horário",
 "ui.story.ok_single_text": "O gateway {gateway} responde em {rtt}; o DNS está funcionando.",
 "ui.story.saved": "alertas retidos",

@@ -796,7 +796,7 @@
 "ui.story.slow": "{n} moniteurs sont lents",
 "ui.story.slow_text": "Ils répondent au-delà du seuil de lenteur ; lent ne compte pas comme panne.",
 "ui.story.ok_cluster": "{n} nœuds en ligne, tous les chemins sont normaux",
-"ui.story.ok_cluster_text": "Chaque cible est vérifiée depuis plusieurs nœuds et n'échoue que si la majorité échoue ; un souci propre à un nœud ne devient jamais une alerte.",
+"ui.story.ok_cluster_text": "Chaque site surveille et alerte indépendamment. Les observations partagées sont informatives.",
 "ui.story.ok_single": "Le réseau de cet hôte va bien et chaque moniteur est vérifié à l'heure",
 "ui.story.ok_single_text": "La passerelle {gateway} répond en {rtt} ; le DNS fonctionne.",
 "ui.story.saved": "alertes retenues",

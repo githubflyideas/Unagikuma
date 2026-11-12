@@ -796,7 +796,7 @@
 "ui.story.slow": "{n} Monitore sind langsam",
 "ui.story.slow_text": "Sie antworten über der Langsam-Schwelle; langsam zählt nicht als ausgefallen.",
 "ui.story.ok_cluster": "{n} Knoten online, alle Wege normal",
-"ui.story.ok_cluster_text": "Jedes Ziel wird von mehreren Knoten geprüft und gilt erst als ausgefallen, wenn die Mehrheit scheitert; Probleme eines einzelnen Knotens werden nie zum Alarm.",
+"ui.story.ok_cluster_text": "Jeder Standort prüft und alarmiert unabhängig. Gemeinsame Beobachtungen dienen nur zur Information.",
 "ui.story.ok_single": "Das Netzwerk dieses Hosts ist in Ordnung, jeder Monitor wird pünktlich geprüft",
 "ui.story.ok_single_text": "Gateway {gateway} antwortet in {rtt}; DNS funktioniert.",
 "ui.story.saved": "Alarme zurückgehalten",

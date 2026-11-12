@@ -796,7 +796,7 @@
 "ui.story.slow": "{n} monitores van lentos",
 "ui.story.slow_text": "Responden por encima del umbral de lentitud; lento no cuenta como caído.",
 "ui.story.ok_cluster": "{n} nodos en línea, todos los caminos normales",
-"ui.story.ok_cluster_text": "Cada objetivo se comprueba desde varios nodos y solo falla si falla la mayoría; un problema de un nodo nunca se convierte en alerta.",
+"ui.story.ok_cluster_text": "Cada sitio supervisa y alerta de forma independiente. Las observaciones compartidas son informativas.",
 "ui.story.ok_single": "La red de este equipo está bien y todos los monitores se comprueban a tiempo",
 "ui.story.ok_single_text": "La pasarela {gateway} responde en {rtt}; el DNS funciona.",
 "ui.story.saved": "alertas retenidas",

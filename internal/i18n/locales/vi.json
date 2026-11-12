@@ -788,7 +788,7 @@
 "ui.story.slow": "{n} giám sát bị chậm",
 "ui.story.slow_text": "Thời gian phản hồi vượt ngưỡng chậm; chậm không tính là sập.",
 "ui.story.ok_cluster": "{n} nút trực tuyến, mọi đường đều bình thường",
-"ui.story.ok_cluster_text": "Mỗi mục tiêu được kiểm tra từ nhiều nút và chỉ tính là lỗi khi đa số lỗi; sự cố riêng của một nút không bao giờ thành cảnh báo.",
+"ui.story.ok_cluster_text": "Mỗi địa điểm giám sát và cảnh báo độc lập. Quan sát chia sẻ chỉ để tham khảo.",
 "ui.story.ok_single": "Mạng của máy này bình thường, mọi giám sát đều được kiểm tra đúng giờ",
 "ui.story.ok_single_text": "Gateway {gateway} trả lời trong {rtt}; DNS bình thường.",
 "ui.story.saved": "cảnh báo đã bị chặn",

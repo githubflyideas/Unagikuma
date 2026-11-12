@@ -788,7 +788,7 @@
 "ui.story.slow": "監視 {n} 件が低速",
 "ui.story.slow_text": "応答が低速しきい値を超えています。低速はダウンとして数えません。",
 "ui.story.ok_cluster": "{n} 台のノードがオンライン、すべての経路が正常",
-"ui.story.ok_cluster_text": "各ターゲットを複数ノードから同時に検査し、過半数が失敗したときだけ障害とします。ノード自身の問題がアラートになることはありません。",
+"ui.story.ok_cluster_text": "各拠点は独立して監視・通知します。共有観測は参考情報です。",
 "ui.story.ok_single": "このホストのネットワークは正常で、すべての監視が時間どおり実行されています",
 "ui.story.ok_single_text": "ゲートウェイ {gateway} は {rtt} で応答、DNS は正常です。",
 "ui.story.saved": "件のアラートを抑止",

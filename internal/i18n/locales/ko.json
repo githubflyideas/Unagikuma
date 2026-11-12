@@ -788,7 +788,7 @@
 "ui.story.slow": "모니터 {n}개 느림",
 "ui.story.slow_text": "응답이 느림 임계값을 넘었습니다. 느림은 다운으로 치지 않습니다.",
 "ui.story.ok_cluster": "노드 {n}개 온라인, 모든 경로 정상",
-"ui.story.ok_cluster_text": "각 대상을 여러 노드에서 동시에 검사하고 과반이 실패해야 장애로 봅니다. 노드 자체의 문제는 알림이 되지 않습니다.",
+"ui.story.ok_cluster_text": "각 사이트는 독립적으로 모니터링하고 알립니다. 공유 관측은 참고용입니다.",
 "ui.story.ok_single": "이 호스트의 네트워크는 정상이며 모든 모니터가 제때 검사되고 있습니다",
 "ui.story.ok_single_text": "게이트웨이 {gateway} 응답 {rtt}, DNS 정상.",
 "ui.story.saved": "건의 알림 차단",

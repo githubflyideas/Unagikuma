@@ -788,7 +788,7 @@
 "ui.story.slow": "{n} monitor lambat",
 "ui.story.slow_text": "Responsnya di atas ambang lambat; lambat tidak dihitung sebagai mati.",
 "ui.story.ok_cluster": "{n} node daring, semua jalur normal",
-"ui.story.ok_cluster_text": "Setiap target diperiksa dari beberapa node dan dianggap gagal hanya jika mayoritas gagal; masalah satu node tidak pernah menjadi peringatan.",
+"ui.story.ok_cluster_text": "Setiap situs memantau dan memberi peringatan secara mandiri. Pengamatan bersama hanya untuk informasi.",
 "ui.story.ok_single": "Jaringan host ini normal dan setiap monitor diperiksa tepat waktu",
 "ui.story.ok_single_text": "Gateway {gateway} menjawab dalam {rtt}; DNS normal.",
 "ui.story.saved": "peringatan ditahan",
