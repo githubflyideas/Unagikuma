@@ -6,7 +6,7 @@ import { Nodes } from './nodes.js';
 import { Appearance } from './appearance.js';
 import { ChannelList } from './alerts.js';
 import { IssueDot } from './contacts.js';
-import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, regionTitle } from '../ui.js';
+import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, regionTitle, msText } from '../ui.js';
 
 const EXIT_KEY = 'localnet.exit-target';
 
@@ -16,6 +16,7 @@ function General() {
   const [f, setF] = useState(null);
   const [hb, setHb] = useState(null);
   const [exit, setExit] = useState(null);
+  const [sug, setSug] = useState(null);
   useEffect(() => { if (s.data) setF({ ...s.data }); }, [s.data]);
   const exitTun = tun.data && tun.data.find(x => x.key === EXIT_KEY);
   useEffect(() => { if (exitTun) setExit(exitTun.value); }, [tun.data]);
@@ -35,6 +36,12 @@ function General() {
       toast(t('ui.saved'));
     } catch (e2) { toastError(e2); }
   };
+  // Measures a fixed list of public resolvers from this host and proposes
+  // the two that answer best; the administrator picks one, then saves.
+  const suggest = async () => {
+    setSug({ busy: true });
+    try { setSug(await post('/settings/exit-suggest')); } catch (e) { setSug({ err: e }); }
+  };
   const testHb = async () => {
     setHb({ busy: true });
     try { setHb(await post('/settings/heartbeat/test')); } catch (e) { setHb({ err: e }); }
@@ -47,7 +54,19 @@ function General() {
     <${Field} label=${t('ui.set.message_lang')} hint=${t('ui.set.message_lang_hint')}>
       <select value=${f.message_lang || 'en'} onChange=${set('message_lang')}>${langList().map(l => html`<option value=${l.code}>${l.name}</option>`)}</select><//>
     ${exitTun && html`<${Field} label=${t('ui.set.exit')} hint=${t('ui.set.exit_hint', { addr: exitTun.default })}>
-      <input type="text" class="ltr" value=${exit ?? ''} onInput=${(e) => setExit(e.target.value)} placeholder=${t('ui.set.exit_off')} style=${{ maxWidth: '320px' }} /><//>`}
+      <div class="row nowrap"><input type="text" class="ltr" value=${exit ?? ''} onInput=${(e) => setExit(e.target.value)} placeholder=${t('ui.set.exit_off')} style=${{ maxWidth: '320px' }} />
+        <button type="button" class="btn" onClick=${suggest} disabled=${sug && sug.busy}>${sug && sug.busy ? t('ui.set.exit_measuring') : t('ui.set.exit_suggest')}</button></div><//>`}
+    ${sug && sug.err && html`<div class="banner error">${errText(sug.err)}</div>`}
+    ${sug && sug.candidates && html`<div class="card"><div class="bd col" style=${{ gap: '8px' }}>
+      <p class="small muted" style=${{ margin: 0 }}>${t('ui.set.exit_result')}${sug.public_addr ? ' · ' + t('ui.set.exit_public', { addr: sug.public_addr }) : ''}</p>
+      ${!sug.suggested.length && html`<div class="banner warning">${t('ui.set.exit_none')}</div>`}
+      <table class="tbl small"><tbody>${sug.candidates.map(c => html`<tr class=${c.ok ? '' : 'muted'}>
+        <td class="ltr mono">${c.addr}</td><td>${c.label}${c.region ? ' · ' + c.region : ''}</td>
+        <td class="right nowrap">${c.ok ? msText(c.rtt_ms) + (c.loss > 0 ? ' · ' + Math.round(c.loss * 100) + '%' : '') + (c.via && c.via !== 'icmp' ? ' · ' + c.via : '') : t('ui.ov.exit_down')}</td>
+        <td class="right nowrap">${sug.suggested.includes(c.addr) && html`<span class="tag">${t('ui.set.exit_recommended')}</span>`}
+          ${c.ok && html` <button type="button" class=${'btn sm' + (sug.suggested[0] === c.addr ? ' primary' : '')} onClick=${() => setExit(c.addr)}>${t('ui.set.exit_use')}</button>`}</td>
+      </tr>`)}</tbody></table>
+    </div></div>`}
     <${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
       <div class="row nowrap"><input type="url" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
         <button type="button" class="btn" onClick=${testHb} disabled=${!s.data.heartbeat_url}>${t('ui.set.heartbeat_test')}</button></div><//>
