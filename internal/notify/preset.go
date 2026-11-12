@@ -24,6 +24,31 @@ type Preset struct {
 		Field  string `json:"field"`
 		Equals string `json:"equals"`
 	} `json:"success"`
+	// Limits are the longest title, body and whole text the service
+	// takes, in characters (BodyBytes in bytes); 0 = not limited.
+	Limits struct {
+		Title     int `json:"title"`
+		Body      int `json:"body"`
+		BodyBytes int `json:"body_bytes"`
+		Text      int `json:"text"`
+	} `json:"limits"`
+}
+
+// fitted is the message data with the texts shortened to the service's
+// limits.
+func (p *Preset) fitted(m *Message, o map[string]string, escapeJSON bool) map[string]any {
+	l := p.Limits
+	if l.Title == 0 && l.Body == 0 && l.BodyBytes == 0 && l.Text == 0 {
+		return templateData(m, o, escapeJSON)
+	}
+	d := templateData(m, o, false)
+	title, body := cut(d["Title"].(string), limit{runes: l.Title}), fit(d["Body"].(string), limit{runes: l.Body, bytes: l.BodyBytes}, m.Lang)
+	d["Title"], d["Body"] = title, body
+	d["Text"] = fit(strings.TrimRight(title+"\n"+body, "\n"), limit{runes: l.Text}, m.Lang)
+	if escapeJSON {
+		escapeForJSON(d)
+	}
+	return d
 }
 
 //go:embed presets.json
@@ -69,12 +94,12 @@ func (s *Sender) buildPreset(ctx context.Context, p *Preset, opts map[string]str
 			o[f.Key] = strings.TrimRight(o[f.Key], "/")
 		}
 	}
-	plain := templateData(m, o, false)
+	plain := p.fitted(m, o, false)
 	u, err := renderTemplate(p.URL, plain)
 	if err != nil {
 		return nil, nil, err
 	}
-	body, err := renderTemplate(p.Body, templateData(m, o, p.ContentType == "json"))
+	body, err := renderTemplate(p.Body, p.fitted(m, o, p.ContentType == "json"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -96,7 +121,7 @@ func (s *Sender) buildPreset(ctx context.Context, p *Preset, opts map[string]str
 	if p.Success.Field == "" {
 		return req, status2xx, nil
 	}
-	return req, jsonCode(p.Success.Equals, p.Success.Field), nil
+	return req, jsonCode("", p.Success.Equals, p.Success.Field), nil
 }
 
 // Presets returns the preset definitions.

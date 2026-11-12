@@ -67,7 +67,7 @@ func (s *Sender) Send(ctx context.Context, ch Channel, m *Message) (a Attempt) {
 		a.Bounces, err = sendEmail(ctx, ch.Opts, m)
 		a.OK = err == nil
 		if err != nil {
-			a.Error = err.Error()
+			classify(&a, err)
 		}
 		return a
 	}
@@ -76,7 +76,7 @@ func (s *Sender) Send(ctx context.Context, ch Channel, m *Message) (a Attempt) {
 		a.Bounces, err = s.sendCloud(ctx, ch, m)
 		a.OK = err == nil
 		if err != nil {
-			a.Error = err.Error()
+			classify(&a, err)
 		}
 		return a
 	}
@@ -121,14 +121,21 @@ type Field struct {
 	Options     []string `json:"options,omitempty"`
 }
 
+// tplField is the message template of a channel that sends text; atField
+// names who a chat robot mentions.
+var (
+	tplField = Field{Key: "template", Type: "textarea", Placeholder: "{{.Icon}} {{.KindText}}: {{.Name}} {{.StatusText}}\n{{.ReasonText}} — {{.Detail}}\n{{.DetailURL}}"}
+	atField  = Field{Key: "at", Type: "text", Placeholder: "all | 13800000000,13900000000"}
+)
+
 var nativeKinds = []KindInfo{
-	{Kind: "feishu", Label: "Feishu / Lark", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://open.feishu.cn/open-apis/bot/v2/hook/…"}, {Key: "secret", Type: "secret"}}},
-	{Kind: "dingtalk", Label: "DingTalk", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://oapi.dingtalk.com/robot/send?access_token=…"}, {Key: "secret", Type: "secret"}}},
-	{Kind: "wecom", Label: "WeCom", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…"}}},
-	{Kind: "telegram", Label: "Telegram", Fields: []Field{{Key: "token", Type: "secret", Required: true}, {Key: "chat", Type: "text", Required: true}, {Key: "api", Type: "url", Default: "https://api.telegram.org"}}},
-	{Kind: "slack", Label: "Slack", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://hooks.slack.com/services/…"}}},
-	{Kind: "discord", Label: "Discord", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://discord.com/api/webhooks/…"}}},
-	{Kind: "email", Label: "Email", Fields: []Field{{Key: "via", Type: "select", Options: []string{"smtp", "sendmail"}, Default: "smtp"}, {Key: "host", Type: "text"}, {Key: "port", Type: "number", Default: "587"}, {Key: "username", Type: "text"}, {Key: "password", Type: "secret"}, {Key: "tls", Type: "select", Options: []string{"starttls", "tls", "none"}}, {Key: "program", Type: "text", Placeholder: "/usr/sbin/sendmail"}, {Key: "from", Type: "text"}, {Key: "to", Type: "email-list", Required: true}}},
+	{Kind: "feishu", Label: "Feishu / Lark", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://open.feishu.cn/open-apis/bot/v2/hook/…"}, {Key: "secret", Type: "secret"}, {Key: "at", Type: "text", Placeholder: "all | ou_xxxxxxxx"}, tplField}},
+	{Kind: "dingtalk", Label: "DingTalk", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://oapi.dingtalk.com/robot/send?access_token=…"}, {Key: "secret", Type: "secret"}, atField, tplField}},
+	{Kind: "wecom", Label: "WeCom", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…"}, atField, tplField}},
+	{Kind: "telegram", Label: "Telegram", Fields: []Field{{Key: "token", Type: "secret", Required: true}, {Key: "chat", Type: "text", Required: true}, {Key: "api", Type: "url", Default: "https://api.telegram.org"}, tplField}},
+	{Kind: "slack", Label: "Slack", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://hooks.slack.com/services/…"}, tplField}},
+	{Kind: "discord", Label: "Discord", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://discord.com/api/webhooks/…"}, tplField}},
+	{Kind: "email", Label: "Email", Fields: []Field{{Key: "via", Type: "select", Options: []string{"smtp", "sendmail"}, Default: "smtp"}, {Key: "host", Type: "text"}, {Key: "port", Type: "number", Default: "587"}, {Key: "username", Type: "text"}, {Key: "password", Type: "secret"}, {Key: "tls", Type: "select", Options: []string{"starttls", "tls", "none"}}, {Key: "program", Type: "text", Placeholder: "/usr/sbin/sendmail"}, {Key: "from", Type: "text"}, {Key: "to", Type: "email-list", Required: true}, tplField}},
 	{Kind: "webhook", Label: "Webhook", Fields: []Field{{Key: "url", Type: "url", Required: true}, {Key: "method", Type: "select", Options: []string{"POST", "PUT", "GET"}, Default: "POST"}, {Key: "content-type", Type: "select", Options: []string{"json", "form", "text"}, Default: "json"}, {Key: "body", Type: "textarea"}, {Key: "success-match", Type: "text"}}},
 	{Kind: "log", Label: "Log only", Fields: nil},
 }
@@ -145,7 +152,7 @@ func Kinds() []KindInfo {
 	sort.Strings(names)
 	for _, n := range names {
 		p := presets[n]
-		out = append(out, KindInfo{Kind: "webhook:" + n, Label: p.Label, Preset: true, Fields: p.Fields})
+		out = append(out, KindInfo{Kind: "webhook:" + n, Label: p.Label, Preset: true, Fields: append(append([]Field(nil), p.Fields...), tplField)})
 	}
 	// A contact group is resolved by the engine, not sent here.
 	out = append(out, KindInfo{Kind: "group", Label: "Contact group", Fields: []Field{{Key: "members", Type: "text", Required: true, Placeholder: "ops-feishu,ops-sms"}}})
@@ -189,6 +196,9 @@ func ValidateChannel(kind string, opts map[string]string) error {
 	if !ok {
 		return fmt.Errorf("unknown channel kind %q", kind)
 	}
+	// template= on a kind that has no text of its own (an SMS template of
+	// the provider, a log line) was always accepted and is still: it does
+	// nothing there.
 	extra := map[string]bool{"template": true}
 	if kind == "webhook" {
 		for k := range opts {
@@ -204,6 +214,31 @@ func ValidateChannel(kind string, opts map[string]string) error {
 		return validateEmail(opts)
 	}
 	return nil
+}
+
+// TemplateProblems tries the templates an operator wrote for a channel on
+// a made-up message: one that does not parse, or uses a name that does
+// not exist, is reported. A configuration file with such a template still
+// loads (the built-in text is sent, a missing name is empty); the console
+// refuses to save one.
+func TemplateProblems(kind string, opts map[string]string) []string {
+	var out []string
+	keys := []string{"template"}
+	if kind == "webhook" && opts["preset"] == "" {
+		keys = append(keys, "body")
+		if strings.Contains(opts["url"], "{{") {
+			keys = append(keys, "url")
+		}
+	}
+	if isCloudKind(kind) && !strings.HasPrefix(kind, "twilio-") {
+		keys = append(keys, "params")
+	}
+	for _, k := range keys {
+		if err := checkTemplate(k, opts[k], opts); err != nil {
+			out = append(out, err.Error())
+		}
+	}
+	return out
 }
 
 // smtpOnly are the e-mail options that mean nothing to the local

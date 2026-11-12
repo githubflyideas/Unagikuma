@@ -5,6 +5,7 @@ import (
 	"context"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -105,7 +106,7 @@ func (e *Engine) dispatchIntents(ctx context.Context, wg *sync.WaitGroup) {
 				in.Attempts = append(in.Attempts, notify.Attempt{Channel: name, Error: "outside its time period"})
 				continue
 			}
-			if !e.channelBucket(name).Allow(now) {
+			if !e.channelAllows(name, ch.Kind, now) {
 				continue // rate limited: stays queued
 			}
 			in.Delivery.Begin(i)
@@ -149,14 +150,65 @@ func (e *Engine) dispatchIntents(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
+// channelRate is a channel's own rate= or notify.channel-rate.
+func (e *Engine) channelRate(name string) float64 {
+	if ch, ok := e.cfg.Channels[name]; ok && ch.Rate > 0 {
+		return ch.Rate
+	}
+	return e.cfg.Tunables.Rate("notify.channel-rate")
+}
+
 func (e *Engine) channelBucket(name string) *ratelimit.Bucket {
 	b := e.chanRate[name]
 	if b == nil {
-		r := e.cfg.Tunables.Rate("notify.channel-rate")
+		r := e.channelRate(name)
 		b = ratelimit.New(r, max(1, int(r*60)))
 		e.chanRate[name] = b
 	}
 	return b
+}
+
+// serviceWindow is the margin over a minute in which a service's limit is
+// counted, so a clock a little off the service's does not go over.
+const serviceWindow = 62 * time.Second
+
+// serviceLimit is what a channel's service takes in a minute
+// (notify.service-limits), 0 when it is not limited.
+func (e *Engine) serviceLimit(kind string) int {
+	for _, kv := range strings.Split(e.cfg.Tunables.Raw("notify.service-limits"), ",") {
+		if k, v, ok := strings.Cut(strings.TrimSpace(kv), "="); ok && strings.EqualFold(strings.TrimSpace(k), kind) {
+			n, _ := strconv.Atoi(strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(v), "/m")))
+			return n
+		}
+	}
+	return 0
+}
+
+// channelAllows says whether a channel may send now: it is not held back
+// by its service, the service's limit for a minute has room, and the
+// channel's own rate allows it. What may not go stays queued, where a
+// long queue becomes one summary instead of messages the service drops.
+func (e *Engine) channelAllows(name, kind string, now time.Time) bool {
+	if until, held := e.chanHold[name]; held {
+		if now.Before(until) {
+			return false
+		}
+		delete(e.chanHold, name)
+	}
+	if e.channelBucket(name).Delay(now) > 0 {
+		return false
+	}
+	if lim := e.serviceLimit(kind); lim > 0 {
+		w := e.chanWindow[name]
+		if w == nil {
+			w = &ratelimit.Window{Max: lim, Per: serviceWindow}
+			e.chanWindow[name] = w
+		}
+		if !w.Allow(now) {
+			return false
+		}
+	}
+	return e.channelBucket(name).Allow(now)
 }
 
 // onAttempt records a finished channel attempt.
@@ -166,18 +218,24 @@ func (e *Engine) onAttempt(a attemptResult) {
 		return
 	}
 	now := e.now()
+	name := in.Delivery.Steps[a.step].Channel
 	retries := e.cfg.Tunables.Int("notify.channel-retries")
-	if ch, ok := e.cfg.Channels[in.Delivery.Steps[a.step].Channel]; ok && ch.Retries > 0 {
+	if ch, ok := e.cfg.Channels[name]; ok && (ch.RetriesSet || ch.Retries > 0) {
 		retries = ch.Retries
 	}
-	if !a.att.OK && permanentNotifyErr(a.att) {
-		retries = 0 // auth / bad request: skip to fallback channel
+	if !a.att.OK && (a.att.Permanent || permanentNotifyErr(a.att)) {
+		retries = 0 // a wrong token or a refused message: on to the next channel
 		e.log.Info("notify permanent error; not retrying channel", "channel", a.att.Channel, "status", a.att.Status, "err", a.att.Error)
 	}
 	backoff := notifyRetryBackoff(in.Delivery.Steps[a.step].Attempts, e.cfg.Tunables.Duration("notify.retry-backoff"))
-	if !a.att.OK && a.att.Status == 429 {
-		if d := retryAfterDuration(a.att.Response); d > 0 && d < 60*time.Second {
-			backoff = d
+	if wait := a.att.RetryAfter; !a.att.OK && wait > 0 {
+		// The service is limiting this channel: nothing else goes through
+		// it until then either.
+		e.chanHold[name] = now.Add(wait)
+		if wait <= e.cfg.Tunables.Duration("notify.retry-after-max") {
+			backoff = wait
+		} else {
+			retries = 0 // too long to wait: the next channel takes the message
 		}
 	}
 	in.Delivery.Finish(a.step, a.att.OK, a.att.Error, now, retries, backoff)

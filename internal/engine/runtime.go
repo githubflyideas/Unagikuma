@@ -85,7 +85,11 @@ type MonitorSpec struct {
 // ChannelSpec is a notification channel with secrets resolved.
 type ChannelSpec struct {
 	notify.Channel
-	Retries int
+	// Retries replaces notify.channel-retries when RetriesSet (0 = none).
+	Retries    int
+	RetriesSet bool
+	// Rate replaces notify.channel-rate (messages a second; 0 = not set).
+	Rate float64
 	// Period limits the channel to a weekly period (nil = always);
 	// Outside inverts it.
 	Period  *schedule.Period
@@ -221,9 +225,14 @@ type Engine struct {
 	// tempIncident numbers incidents the store could not save yet (< 0).
 	tempIncident int64
 	chanRate     map[string]*ratelimit.Bucket
-	sentAt       map[string][]time.Time  // per channel: sends in the backstop window
-	unsent       []unsentNote            // system notices that could not be sent (told after a local outage)
-	folded       map[string]*backstopBuf // per policy: alerts the backstop held back
+	// chanWindow counts each channel's sends of the last minute against
+	// its service's limit; chanHold keeps a channel quiet until the time a
+	// rate-limiting service asked for.
+	chanWindow map[string]*ratelimit.Window
+	chanHold   map[string]time.Time
+	sentAt     map[string][]time.Time  // per channel: sends in the backstop window
+	unsent     []unsentNote            // system notices that could not be sent (told after a local outage)
+	folded     map[string]*backstopBuf // per policy: alerts the backstop held back
 
 	sem   chan struct{}
 	stats selfStats
@@ -321,31 +330,33 @@ func New(d Deps) *Engine {
 	now := d.Clock()
 	ts := tunables.Set{}
 	e := &Engine{
-		deps:      d,
-		log:       d.Log,
-		self:      NodeName,
-		monitors:  map[string]*MonitorSpec{},
-		states:    map[string]*monRuntime{},
-		sched:     NewScheduler(),
-		localnet:  NewLocalNet(LocalNetConfigFrom(ts), now),
-		watchdog:  NewWatchdog(SuspendConfigFrom(ts)),
-		incidents: map[int64]*Incident{},
-		byMonitor: map[string]*Incident{},
-		lowByMon:  map[string]*Incident{},
-		system:    map[string]*Incident{},
-		regional:  map[string]*Incident{},
-		nodes:     map[string]*nodeRuntime{},
-		agentRT:   map[string]*monRuntime{},
-		intents:   map[string]*Intent{},
-		chanRate:  map[string]*ratelimit.Bucket{},
-		sentAt:    map[string][]time.Time{},
-		folded:    map[string]*backstopBuf{},
-		results:   make(chan roundResult, 256),
-		attempts:  make(chan attemptResult, 64),
-		handling:  map[string]bool{},
-		cmds:      make(chan func(), 64),
-		booted:    now,
-		stopped:   make(chan struct{}),
+		deps:       d,
+		log:        d.Log,
+		self:       NodeName,
+		monitors:   map[string]*MonitorSpec{},
+		states:     map[string]*monRuntime{},
+		sched:      NewScheduler(),
+		localnet:   NewLocalNet(LocalNetConfigFrom(ts), now),
+		watchdog:   NewWatchdog(SuspendConfigFrom(ts)),
+		incidents:  map[int64]*Incident{},
+		byMonitor:  map[string]*Incident{},
+		lowByMon:   map[string]*Incident{},
+		system:     map[string]*Incident{},
+		regional:   map[string]*Incident{},
+		nodes:      map[string]*nodeRuntime{},
+		agentRT:    map[string]*monRuntime{},
+		intents:    map[string]*Intent{},
+		chanRate:   map[string]*ratelimit.Bucket{},
+		chanWindow: map[string]*ratelimit.Window{},
+		chanHold:   map[string]time.Time{},
+		sentAt:     map[string][]time.Time{},
+		folded:     map[string]*backstopBuf{},
+		results:    make(chan roundResult, 256),
+		attempts:   make(chan attemptResult, 64),
+		handling:   map[string]bool{},
+		cmds:       make(chan func(), 64),
+		booted:     now,
+		stopped:    make(chan struct{}),
 	}
 	e.applyTunables(ts)
 	return e
@@ -376,9 +387,14 @@ func (e *Engine) applyTunables(ts tunables.Set) {
 	} else {
 		e.pps.SetRate(pps, int(pps))
 	}
-	r := ts.Rate("notify.channel-rate")
-	for _, b := range e.chanRate {
+	for name, b := range e.chanRate {
+		r := e.channelRate(name)
 		b.SetRate(r, max(1, int(r*60)))
+	}
+	for name, w := range e.chanWindow {
+		// The limits or the channel's kind may have changed; what was
+		// sent in the last minute still counts.
+		w.Max = e.serviceLimit(e.cfg.Channels[name].Kind)
 	}
 }
 

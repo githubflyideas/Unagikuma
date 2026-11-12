@@ -27,6 +27,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
   // E-mail goes to an SMTP server or through this machine's sendmail
   // command; each way shows only its own fields.
   const viaSendmail = kind === 'email' && opts.via === 'sendmail';
+  const smsOrVoice = /-(sms|voice)$/.test(kind);
   const shown = (f) => kind !== 'email' || (viaSendmail ? !SMTP_ONLY.includes(f.key) : f.key !== 'program');
   // Any channel may be limited to a time period ("!name" = outside it).
   const info = { ...found, fields: [...((found && found.fields) || []).filter(shown), { key: 'period', type: 'text', placeholder: 'office-hours' }] };
@@ -94,17 +95,17 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
           return html`<${Field} label=${label}><select value=${v} onChange=${(e) => set(f.key, e.target.value)}>${['', ...(f.options || [])].map(o => html`<option value=${o}>${o || '–'}</option>`)}</select><//>`;
         }
         if (f.type === 'textarea') {
-          return html`<${Field} label=${label}><textarea class="ltr mono" rows="5" value=${v} placeholder=${f.placeholder || ''} onInput=${(e) => set(f.key, e.target.value)}></textarea><//>`;
+          return html`<${Field} label=${label} hint=${f.key === 'template' ? t('ui.ch.template_hint') : ''}><textarea class="ltr mono" rows="5" value=${v} placeholder=${f.placeholder || ''} onInput=${(e) => set(f.key, e.target.value)}></textarea><//>`;
         }
         const hint = f.type === 'secret' ? t('ui.ch.secret_hint') : f.type === 'email-list' ? t('ui.ch.email_list') : f.key === 'period' ? t('ui.ch.period_hint') : f.key === 'members' ? t('ui.ch.members_hint')
-          : f.key === 'program' ? t('ui.ch.program_hint') : f.key === 'from' && viaSendmail ? t('ui.ch.from_sendmail_hint') : '';
+          : f.key === 'at' ? t('ui.ch.at_hint') : f.key === 'program' ? t('ui.ch.program_hint') : f.key === 'from' && viaSendmail ? t('ui.ch.from_sendmail_hint') : '';
         return html`<${Field} label=${label} hint=${hint}>
           <input type=${f.type === 'secret' ? 'password' : f.type === 'number' ? 'number' : 'text'} class="ltr" value=${v} required=${required(f) && !editing}
             placeholder=${f.type === 'secret' && editing ? '***' : f.placeholder || ''} autocomplete="off" onInput=${(e) => set(f.key, e.target.value)} /><//>`;
       })}
       <label class="switch"><input type="checkbox" checked=${opts.system === 'yes'} onChange=${(e) => set('system', e.target.checked ? 'yes' : '')} /> ${t('ui.ch.system')}</label>
       <p class="small muted" style=${{ margin: 0 }}>${t('ui.ch.system_hint')}</p>
-      <label class="switch"><input type="checkbox" checked=${opts.report !== 'no'} onChange=${(e) => set('report', e.target.checked ? '' : 'no')} /> ${t('ui.ch.takes_report')}</label>
+      <label class="switch"><input type="checkbox" checked=${smsOrVoice ? opts.report === 'yes' : opts.report !== 'no'} onChange=${(e) => set('report', smsOrVoice ? (e.target.checked ? 'yes' : '') : (e.target.checked ? '' : 'no'))} /> ${t('ui.ch.takes_report')}</label>
       ${err && html`<div class="banner error">${errText(err)}</div>`}
       ${test && !test.busy && html`<div class=${'banner ' + (test.err || !test.res.ok ? 'error' : (test.res.warning ? 'warning' : 'ok'))}>
         ${test.err ? errText(test.err) : test.res.ok

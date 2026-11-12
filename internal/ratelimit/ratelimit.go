@@ -135,3 +135,31 @@ func (k *Keyed) Len() int {
 	defer k.mu.Unlock()
 	return len(k.m)
 }
+
+// Window allows at most Max events in any span of Per: the way chat
+// services count their limits ("20 messages a minute"). A token bucket
+// lets a full burst follow a full minute; a window does not.
+type Window struct {
+	Max int
+	Per time.Duration
+	at  []time.Time
+}
+
+// Allow records one event at now if the window has room.
+func (w *Window) Allow(now time.Time) bool {
+	if w.Max <= 0 {
+		return true
+	}
+	keep := w.at[:0]
+	for _, t := range w.at {
+		if now.Sub(t) < w.Per {
+			keep = append(keep, t)
+		}
+	}
+	w.at = keep
+	if len(w.at) >= w.Max {
+		return false
+	}
+	w.at = append(w.at, now)
+	return true
+}

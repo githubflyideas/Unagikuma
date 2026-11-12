@@ -147,7 +147,10 @@ func (e *Engine) report(now time.Time, team, policy string) Report {
 		if a != b {
 			return a > b
 		}
-		return bad[i].LastChange.Before(bad[j].LastChange)
+		if !bad[i].LastChange.Equal(bad[j].LastChange) {
+			return bad[i].LastChange.Before(bad[j].LastChange)
+		}
+		return bad[i].Name < bad[j].Name // failed together: by name, not by chance
 	})
 
 	list := func(names []string) string {

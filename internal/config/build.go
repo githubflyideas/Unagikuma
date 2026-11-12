@@ -27,6 +27,9 @@ type Options struct {
 	ValidateMonitor func(m *Monitor) error
 	// ValidateChannel checks channel options (the notify package).
 	ValidateChannel func(kind string, opts map[string]string) error
+	// ChannelWarnings reports what is wrong with a channel's message
+	// templates; the file still loads.
+	ChannelWarnings func(kind string, opts map[string]string) []string
 	// Location reads the times of maintenance windows (default local).
 	Location *time.Location
 }
@@ -1215,7 +1218,7 @@ func (b *builder) channel(r Record) {
 			if err != nil || n < 0 || n > 5 {
 				b.errf(o.Pos, "invalid_value", "retries must be 0 to 5")
 			}
-			c.Retries = n
+			c.Retries, c.RetriesSet = n, true
 		case "rate":
 			if _, err := tunables.ParseRate(o.Value); err != nil {
 				b.errf(o.Pos, "invalid_value", "rate: %v", err)
@@ -1232,7 +1235,7 @@ func (b *builder) channel(r Record) {
 			if err != nil {
 				b.errf(o.Pos, "invalid_value", "report: %v", err)
 			}
-			c.NoReport = !v
+			c.NoReport, c.ReportSet = !v, true
 		default:
 			c.Opts[o.Key] = o.Value
 		}
@@ -1264,6 +1267,11 @@ func (b *builder) channel(r Record) {
 	if b.opt.ValidateChannel != nil {
 		if err := b.opt.ValidateChannel(c.Kind, c.Opts); err != nil {
 			b.errf(r.NamePos, "invalid_channel", "%s: %v", c.Name, err)
+		}
+	}
+	if b.opt.ChannelWarnings != nil {
+		for _, w := range b.opt.ChannelWarnings(c.Kind, c.Opts) {
+			b.warnf(r.NamePos, "template_problem", "%s: %s", c.Name, w)
 		}
 	}
 	b.cfg.Channels = append(b.cfg.Channels, c)

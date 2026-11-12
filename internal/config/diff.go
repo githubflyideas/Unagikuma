@@ -63,8 +63,12 @@ func Diff(a, b *Config) []Change {
 			out = append(out, Change{Kind: "removed", Record: m.Name, Type: "MONITOR"})
 		}
 	}
-	out = append(out, diffNamed("CHANNEL", names(a.Channels, func(c *Channel) (string, string) { return c.Name, fmt.Sprint(c.Kind, c.Opts, c.Retries, c.Rate) }),
-		names(b.Channels, func(c *Channel) (string, string) { return c.Name, fmt.Sprint(c.Kind, c.Opts, c.Retries, c.Rate) }))...)
+	out = append(out, diffNamed("CHANNEL", names(a.Channels, func(c *Channel) (string, string) {
+		return c.Name, fmt.Sprint(c.Kind, c.Opts, c.Retries, c.RetriesSet, c.Rate)
+	}),
+		names(b.Channels, func(c *Channel) (string, string) {
+			return c.Name, fmt.Sprint(c.Kind, c.Opts, c.Retries, c.RetriesSet, c.Rate)
+		}))...)
 	out = append(out, diffNamed("POLICY", names(a.Policies, func(p *Policy) (string, string) { return p.Name, fmt.Sprintf("%+v", *p) }),
 		names(b.Policies, func(p *Policy) (string, string) { return p.Name, fmt.Sprintf("%+v", *p) }))...)
 	out = append(out, diffNamed("NODE", names(a.Nodes, func(n *Node) (string, string) { return n.Name, fmt.Sprint(n.Opts, n.Description) }),

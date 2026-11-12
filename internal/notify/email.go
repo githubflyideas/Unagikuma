@@ -119,7 +119,7 @@ func sendEmail(ctx context.Context, o map[string]string, m *Message) ([]Bounce, 
 	if err != nil {
 		return bounces, fmt.Errorf("DATA rejected: %v", err)
 	}
-	if _, err := w.Write(buildMail(from, to, m)); err != nil {
+	if _, err := w.Write(buildMail(from, to, o, m)); err != nil {
 		return bounces, fmt.Errorf("sending message: %v", err)
 	}
 	if err := w.Close(); err != nil {
@@ -152,8 +152,8 @@ func isUnknownRecipient(err error) bool {
 	return false
 }
 
-func buildMail(from *mail.Address, to []*mail.Address, m *Message) []byte {
-	title, body := Render(m)
+func buildMail(from *mail.Address, to []*mail.Address, o map[string]string, m *Message) []byte {
+	title, body := textOf(o, m)
 	var b strings.Builder
 	list := make([]string, len(to))
 	for i, a := range to {

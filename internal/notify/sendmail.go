@@ -125,7 +125,7 @@ func sendSendmail(ctx context.Context, o map[string]string, m *Message) error {
 		}
 		args = append(args, a.Address)
 	}
-	msg := bytes.ReplaceAll(buildMail(from, to, m), []byte("\r\n"), []byte("\n"))
+	msg := bytes.ReplaceAll(buildMail(from, to, o, m), []byte("\r\n"), []byte("\n"))
 	cmd := exec.CommandContext(ctx, prog, args...)
 	cmd.Stdin = bytes.NewReader(msg)
 	cmd.Dir = "/"

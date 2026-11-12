@@ -452,6 +452,7 @@ func runCheck(args []string) error {
 			return probe.Validate(s)
 		},
 		ValidateChannel: app.ValidateChannel,
+		ChannelWarnings: app.ChannelWarnings,
 	}
 	_, cfg, diags := config.Load(path, src, opts)
 	diags = append(diags, contactDiags(cfg, path, *data)...)

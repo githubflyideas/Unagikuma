@@ -20,6 +20,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"unicode"
 
 	"github.com/githubflyideas/unagikuma/internal/i18n"
 )
@@ -55,11 +56,11 @@ var cloudKinds = []KindInfo{
 	{Kind: "twilio-sms", Label: "Twilio SMS", Fields: []Field{
 		{Key: "account-sid", Type: "text", Required: true}, {Key: "auth-token", Type: "secret", Required: true},
 		{Key: "from", Type: "text", Required: true}, {Key: "phones", Type: "text", Required: true, Placeholder: "+15550100"},
-		{Key: "api", Type: "url", Default: "https://api.twilio.com"}}},
+		{Key: "api", Type: "url", Default: "https://api.twilio.com"}, tplField}},
 	{Kind: "twilio-voice", Label: "Twilio voice call", Fields: []Field{
 		{Key: "account-sid", Type: "text", Required: true}, {Key: "auth-token", Type: "secret", Required: true},
 		{Key: "from", Type: "text", Required: true}, {Key: "phones", Type: "text", Required: true},
-		{Key: "api", Type: "url", Default: "https://api.twilio.com"}}},
+		{Key: "api", Type: "url", Default: "https://api.twilio.com"}, tplField}},
 }
 
 // Template variables are short on Chinese SMS (often 20-35 characters).
@@ -92,13 +93,11 @@ func smsParams(o map[string]string, m *Message) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("params: %v", err)
 	}
-	d := templateData(m, nil, false)
-	d["StatusText"] = statusText(m)
 	var b bytes.Buffer
-	if err := t.Execute(&b, d); err != nil {
+	if err := t.Execute(&b, messageData(m, nil)); err != nil {
 		return nil, fmt.Errorf("params: %v", err)
 	}
-	return strings.Split(b.String(), "|"), nil
+	return strings.Split(strings.ReplaceAll(b.String(), "<no value>", ""), "|"), nil
 }
 
 // statusText is the state in the message language: "故障", "恢复", ...
@@ -127,17 +126,24 @@ func (s *Sender) sendCloud(ctx context.Context, ch Channel, m *Message) ([]Bounc
 	var errs []string
 	var bounces []Bounce
 	sent := 0
+	// The channel fails for good only when every number did.
+	agg := failure{permanent: true}
 	send := func(err error) {
 		var be *bounceError
+		var f *failure
 		switch {
 		case err == nil:
 			sent++
+			return
 		case errors.As(err, &be):
 			bounces = append(bounces, be.Bounce)
-			errs = append(errs, err.Error())
+		case errors.As(err, &f):
+			agg.permanent = agg.permanent && f.permanent
+			agg.retryAfter = max(agg.retryAfter, f.retryAfter)
 		default:
-			errs = append(errs, err.Error())
+			agg.permanent = false
 		}
+		errs = append(errs, err.Error())
 	}
 	var vals []string
 	if !strings.HasPrefix(ch.Kind, "twilio-") {
@@ -170,15 +176,14 @@ func (s *Sender) sendCloud(ctx context.Context, ch Channel, m *Message) ([]Bounc
 				"TemplateId": o["template-id"], "TemplateParamSet": vals, "CalledNumber": p, "VoiceSdkAppid": o["app-id"], "PlayTimes": 2,
 			}))
 		case "twilio-sms", "twilio-voice":
-			title, _ := Render(m)
+			title, _ := textOf(o, m)
 			f := url.Values{"To": {p}, "From": {o["from"]}}
 			res := "Messages"
 			if ch.Kind == "twilio-voice" {
 				res = "Calls"
-				say := html.EscapeString(title) // TwiML is XML
-				f.Set("Twiml", "<Response><Say>"+say+"</Say><Pause length=\"1\"/><Say>"+say+"</Say></Response>")
+				f.Set("Twiml", twiml(title, m.Lang))
 			} else {
-				f.Set("Body", title)
+				f.Set("Body", cut(title, textLimits["twilio-sms"]))
 			}
 			send(s.twilio(ctx, o, p, res, f))
 		default:
@@ -186,9 +191,43 @@ func (s *Sender) sendCloud(ctx context.Context, ch Channel, m *Message) ([]Bounc
 		}
 	}
 	if sent == 0 {
-		return bounces, errors.New(strings.Join(errs, "; "))
+		agg.msg = strings.Join(errs, "; ")
+		return bounces, &agg
 	}
 	return bounces, nil
+}
+
+// sayLang maps a message language to the language Twilio reads it in.
+// Without it the default English voice reads Chinese as noise.
+var sayLang = map[string]string{
+	"zh": "zh-CN", "en": "en-US", "ja": "ja-JP", "ko": "ko-KR", "de": "de-DE", "fr": "fr-FR", "es": "es-ES",
+	"pt": "pt-BR", "ru": "ru-RU", "hi": "hi-IN", "id": "id-ID", "vi": "vi-VN", "ar": "arb",
+}
+
+// twiml is the call script: the title, twice, in the message language.
+func twiml(title, lang string) string {
+	say := html.EscapeString(speakable(title)) // TwiML is XML
+	open := "<Say>"
+	if l := sayLang[lang]; l != "" {
+		open = `<Say language="` + l + `">`
+	}
+	return "<Response>" + open + say + `</Say><Pause length="1"/>` + open + say + "</Say></Response>"
+}
+
+// speakable drops what a voice cannot read: emoji and other symbols, and
+// the brackets around the product name.
+func speakable(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r == '[' || r == ']' || r == '(' || r == ')' || r == '（' || r == '）':
+			b.WriteRune(' ')
+		case unicode.Is(unicode.So, r) || unicode.Is(unicode.Sk, r) || unicode.Is(unicode.Cs, r) || unicode.Is(unicode.Co, r) || r == 0xFE0F || r == 0x200D:
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return strings.Join(strings.Fields(b.String()), " ")
 }
 
 // Provider error codes that mean the number itself is wrong (it will fail
@@ -249,7 +288,7 @@ func (s *Sender) aliyun(ctx context.Context, o map[string]string, phone, def str
 		return err
 	}
 	var out struct{ Code, Message string }
-	if err := s.doJSON(req, &out); err != nil {
+	if err := s.doJSON(req, &out); err != nil && out.Code == "" {
 		return err
 	}
 	if out.Code == "" && out.Message == "" {
@@ -259,16 +298,31 @@ func (s *Sender) aliyun(ctx context.Context, o map[string]string, phone, def str
 		if aliyunBadNumber[out.Code] {
 			return &bounceError{Bounce{Address: phone, Reason: "aliyun: " + out.Code + " " + out.Message}}
 		}
-		return fmt.Errorf("aliyun: %s %s", out.Code, out.Message)
+		return &failure{msg: fmt.Sprintf("aliyun: %s %s", out.Code, out.Message), permanent: aliyunPermanent(out.Code)}
 	}
 	return nil
+}
+
+// aliyunPermanent tells errors of the account, the signature, the template
+// or its variables, and the per-number sending limits, from trouble on
+// Aliyun's side: none of the former goes away by sending again.
+func aliyunPermanent(code string) bool {
+	for _, p := range []string{"isv.", "isp.", "InvalidAccessKeyId", "SignatureDoesNotMatch", "Forbidden", "InvalidTimeStamp", "MissingParameter", "InvalidParameter", "InvalidVersion", "InvalidAction"} {
+		if strings.HasPrefix(code, p) {
+			return code != "isp.SYSTEM_ERROR" && code != "isp.RAM_PERMISSION_DENY_TEMP"
+		}
+	}
+	return false
 }
 
 // tencent signs a TC3-HMAC-SHA256 request.
 func (s *Sender) tencent(ctx context.Context, o map[string]string, phone, service, def, action, version string, body map[string]any) error {
 	payload, _ := json.Marshal(body)
 	endpoint := strings.TrimRight(optOr(o, "endpoint", def), "/")
-	host := strings.TrimPrefix(strings.TrimPrefix(endpoint, "https://"), "http://")
+	host := endpoint
+	if u, err := url.Parse(endpoint); err == nil && u.Host != "" {
+		host = u.Host // the signature names the host, not the address's path
+	}
 	ts := time.Now().Unix()
 	date := time.Unix(ts, 0).UTC().Format("2006-01-02")
 	sum := func(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
@@ -314,7 +368,22 @@ func (s *Sender) tencent(ctx context.Context, o map[string]string, phone, servic
 	case tencentBadNumber(code):
 		return &bounceError{Bounce{Address: phone, Reason: "tencent cloud: " + code + " " + msg}}
 	}
-	return fmt.Errorf("tencent cloud: %s %s", code, msg)
+	return &failure{msg: fmt.Sprintf("tencent cloud: %s %s", code, msg), permanent: tencentPermanent(code)}
+}
+
+// tencentPermanent: the account, the request or the template is wrong, or
+// a sending limit is reached; RequestLimitExceeded and internal errors are
+// worth another try.
+func tencentPermanent(code string) bool {
+	if strings.HasPrefix(code, "RequestLimitExceeded") || strings.HasPrefix(code, "InternalError") || strings.HasPrefix(code, "ResourceUnavailable") || strings.Contains(code, "Timeout") {
+		return false
+	}
+	for _, p := range []string{"AuthFailure", "InvalidParameter", "MissingParameter", "FailedOperation", "UnauthorizedOperation", "UnsupportedOperation", "LimitExceeded", "UnknownParameter", "InvalidAction", "NoSuchVersion"} {
+		if strings.HasPrefix(code, p) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Sender) twilio(ctx context.Context, o map[string]string, phone, resource string, f url.Values) error {
@@ -352,10 +421,11 @@ func (s *Sender) doJSON(req *http.Request, out any) error {
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
-	if err := json.Unmarshal(b, out); err != nil {
-		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, sanitize(string(b), 200))
-	}
+	uerr := json.Unmarshal(b, out)
 	if resp.StatusCode/100 != 2 {
+		return statusFailure(resp.StatusCode, resp.Header, b)
+	}
+	if uerr != nil {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, sanitize(string(b), 200))
 	}
 	return nil

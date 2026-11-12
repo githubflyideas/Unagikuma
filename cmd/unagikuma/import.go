@@ -345,7 +345,7 @@ func (j *importJob) addRecords(res *importer.Result, changed bool) (uint32, erro
 // (after the first lines lines) into a hint for the report.
 func (j *importJob) validate(res *importer.Result, lines int) error {
 	known := func(name string) bool { _, ok := res.Secrets[name]; return ok || (j.sec != nil && j.sec.Has(name)) }
-	_, _, diags := config.Load(j.cfgPath, j.file.Bytes(), config.Options{SecretKnown: known, ValidateChannel: app.ValidateChannel})
+	_, _, diags := config.Load(j.cfgPath, j.file.Bytes(), config.Options{SecretKnown: known, ValidateChannel: app.ValidateChannel, ChannelWarnings: app.ChannelWarnings})
 	if config.HasErrors(diags) {
 		return fmt.Errorf("internal error: the imported records do not validate, nothing was changed: %v", firstError(diags))
 	}

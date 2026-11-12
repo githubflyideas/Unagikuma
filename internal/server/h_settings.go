@@ -131,6 +131,11 @@ func (s *Server) channelSave(w http.ResponseWriter, r *http.Request) (any, error
 	if tok := req.Opts["token"]; kind == "telegram" && tok != "" && tok != "***" && !strings.Contains(tok, "${") && !telegramToken.MatchString(tok) {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "this is not a Telegram bot token: it looks like 123456789:AAE… (numbers, a colon, then letters and digits), as BotFather gives it")
 	}
+	// A template typed here is tried at once: a file may carry a wrong one
+	// (it loads with a warning), a form does not save it.
+	if probs := notify.TemplateProblems(kind, req.Opts); len(probs) > 0 {
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%s", strings.Join(probs, "; "))
+	}
 	var opts []config.Opt
 	for _, k := range keys {
 		v := req.Opts[k]
@@ -223,7 +228,18 @@ func (s *Server) channelTest(w http.ResponseWriter, r *http.Request) (any, error
 		diag["input"] = raw
 		diag["kept"] = len(send)
 		diag["filtered"] = filtered
-		diag["issues"] = issues
+		// Issues are about addresses; that nobody is left is about the
+		// whole list, as in /people/lookup.
+		about := []directory.Issue{}
+		none := false
+		for _, is := range issues {
+			if is.Code == directory.IssueNoRecipients {
+				none = true
+				continue
+			}
+			about = append(about, is)
+		}
+		diag["issues"], diag["no_recipients"] = about, none
 		switch mode {
 		case "connection":
 			diag["note"] = "connection_only"

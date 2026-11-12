@@ -64,6 +64,12 @@ type Attempt struct {
 	Status   int           `json:"status,omitempty"`
 	Latency  time.Duration `json:"-"`
 	Response string        `json:"response,omitempty"` // redacted snippet
+	// Permanent: the failure will repeat (wrong token, refused message);
+	// the channel is not tried again for this message.
+	Permanent bool `json:"permanent,omitempty"`
+	// RetryAfter is how long the service asked to wait before the next
+	// request (rate limit); zero when it did not say.
+	RetryAfter time.Duration `json:"-"`
 	// Bounces are recipients the provider said do not exist (mailbox
 	// unknown, invalid number): the rest of the channel still got it.
 	Bounces []Bounce `json:"bounces,omitempty"`
@@ -88,12 +94,16 @@ type attemptJSON struct {
 	LatencyMS float64 `json:"latency_ms"`
 	Response  string  `json:"response,omitempty"`
 	Latency   int64   `json:"latency,omitempty"` // nanoseconds, as stored before
+	Permanent bool    `json:"permanent,omitempty"`
+	// RetryAfterS is the wait the service asked for, in seconds.
+	RetryAfterS float64 `json:"retry_after_s,omitempty"`
 }
 
 // MarshalJSON writes the latency in milliseconds, like every API field.
 func (a Attempt) MarshalJSON() ([]byte, error) {
 	return json.Marshal(attemptJSON{Channel: a.Channel, OK: a.OK, Error: a.Error, Status: a.Status,
-		LatencyMS: float64(a.Latency) / float64(time.Millisecond), Response: a.Response})
+		LatencyMS: float64(a.Latency) / float64(time.Millisecond), Response: a.Response,
+		Permanent: a.Permanent, RetryAfterS: a.RetryAfter.Seconds()})
 }
 
 // UnmarshalJSON reads both forms, so attempts stored earlier keep their
@@ -104,7 +114,8 @@ func (a *Attempt) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*a = Attempt{Channel: j.Channel, OK: j.OK, Error: j.Error, Status: j.Status, Response: j.Response,
-		Latency: time.Duration(j.LatencyMS * float64(time.Millisecond))}
+		Latency: time.Duration(j.LatencyMS * float64(time.Millisecond)), Permanent: j.Permanent,
+		RetryAfter: time.Duration(j.RetryAfterS * float64(time.Second))}
 	if j.Latency != 0 {
 		a.Latency = time.Duration(j.Latency)
 	}

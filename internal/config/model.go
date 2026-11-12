@@ -210,7 +210,9 @@ type Channel struct {
 	Kind    string
 	Opts    map[string]string // kind-specific options (refs unresolved)
 	Retries int
-	Rate    string
+	// RetriesSet: retries= was written (0 turns retries off for the channel).
+	RetriesSet bool
+	Rate       string
 	// Period limits the channel to a time period ("!name" = outside it).
 	Period string
 	// Members are the channels of a "group" channel, all notified at once.
@@ -221,9 +223,12 @@ type Channel struct {
 	System bool
 	// NoReport: the channel does not take the daily status report (report=no).
 	NoReport bool
-	Refs     []string
-	Pos      Pos
-	Lines    [2]int
+	// ReportSet: report= was written. Without it SMS and voice channels do
+	// not take the report.
+	ReportSet bool
+	Refs      []string
+	Pos       Pos
+	Lines     [2]int
 }
 
 // Policy is a notification policy. Unset numbers are filled from the

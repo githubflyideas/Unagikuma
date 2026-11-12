@@ -18,19 +18,20 @@ import (
 
 // checkFunc decides success from the HTTP status and body (many bot APIs
 // answer 200 with an error code in the body).
-type checkFunc func(status int, body []byte) error
+type checkFunc func(status int, h http.Header, body []byte) error
 
-func status2xx(status int, _ []byte) error {
+func status2xx(status int, h http.Header, body []byte) error {
 	if status < 200 || status > 299 {
-		return fmt.Errorf("HTTP %d", status)
+		return statusFailure(status, h, body)
 	}
 	return nil
 }
 
 // jsonCode fails when any of the fields is present and not equal to ok.
-func jsonCode(ok string, fields ...string) checkFunc {
-	return func(status int, body []byte) error {
-		if err := status2xx(status, body); err != nil {
+// kind names the service whose error codes are known (serviceCodes).
+func jsonCode(kind, ok string, fields ...string) checkFunc {
+	return func(status int, h http.Header, body []byte) error {
+		if err := status2xx(status, h, body); err != nil {
 			return err
 		}
 		var m map[string]any
@@ -38,16 +39,29 @@ func jsonCode(ok string, fields ...string) checkFunc {
 			return fmt.Errorf("unexpected response (not JSON)")
 		}
 		for _, f := range fields {
-			if v, has := m[f]; has && fmt.Sprint(v) != ok {
+			if v, has := m[f]; has && codeText(v) != ok {
 				msg := m["msg"]
 				if msg == nil {
 					msg = m["errmsg"]
 				}
-				return fmt.Errorf("%s=%v %v", f, v, msg)
+				if msg == nil {
+					msg = m["description"]
+				}
+				rule := serviceCodes[kind][codeText(v)]
+				return &failure{msg: fmt.Sprintf("%s=%s %v", f, codeText(v), msg), permanent: rule.permanent, retryAfter: rule.wait}
 			}
 		}
 		return nil
 	}
+}
+
+// codeText prints a JSON number the way the service wrote it (300005, not
+// 300005.0 or 3.00005e+05).
+func codeText(v any) string {
+	if f, ok := v.(float64); ok && f == float64(int64(f)) {
+		return strconv.FormatInt(int64(f), 10)
+	}
+	return fmt.Sprint(v)
 }
 
 func (s *Sender) newRequest(ctx context.Context, method, rawURL, contentType string, body []byte, m *Message) (*http.Request, error) {
@@ -78,20 +92,22 @@ const ctJSON = "application/json; charset=utf-8"
 
 func (s *Sender) build(ctx context.Context, ch Channel, m *Message) (*http.Request, checkFunc, error) {
 	o := ch.Opts
-	title, body := Render(m)
-	full := title
-	if body != "" {
-		full += "\n" + body
-	}
+	title, body := textOf(o, m)
+	full := fit(strings.TrimRight(title+"\n"+body, "\n"), textLimits[ch.Kind], m.Lang)
+	at := mentions(o["at"], m)
 	switch ch.Kind {
 	case "feishu":
+		for _, id := range at {
+			// The words inside the tag are shown when the id is unknown.
+			full += map[bool]string{true: `<at user_id="all"></at>`, false: `<at user_id="` + id + `"></at>`}[id == "all"]
+		}
 		payload := map[string]any{"msg_type": "text", "content": map[string]string{"text": full}}
 		if sec := o["secret"]; sec != "" {
 			ts := strconv.FormatInt(time.Now().Unix(), 10)
 			payload["timestamp"], payload["sign"] = ts, feishuSign(ts, sec)
 		}
 		req, err := s.newRequest(ctx, http.MethodPost, o["url"], ctJSON, jsonBody(payload), m)
-		return req, jsonCode("0", "code", "StatusCode"), err
+		return req, jsonCode("feishu", "0", "code", "StatusCode"), err
 	case "dingtalk":
 		u := o["url"]
 		if sec := o["secret"]; sec != "" {
@@ -102,18 +118,31 @@ func (s *Sender) build(ctx context.Context, ch Channel, m *Message) (*http.Reque
 			}
 			u += sep + "timestamp=" + ts + "&sign=" + url.QueryEscape(dingtalkSign(ts, sec))
 		}
-		req, err := s.newRequest(ctx, http.MethodPost, u, ctJSON, jsonBody(map[string]any{"msgtype": "text", "text": map[string]string{"content": full}}), m)
-		return req, jsonCode("0", "errcode"), err
+		payload := map[string]any{"msgtype": "text", "text": map[string]string{"content": full}}
+		if len(at) > 0 {
+			if at[0] == "all" {
+				payload["at"] = map[string]any{"isAtAll": true}
+			} else {
+				payload["at"] = map[string]any{"atMobiles": at}
+			}
+		}
+		req, err := s.newRequest(ctx, http.MethodPost, u, ctJSON, jsonBody(payload), m)
+		return req, jsonCode("dingtalk", "0", "errcode"), err
 	case "wecom":
-		req, err := s.newRequest(ctx, http.MethodPost, o["url"], ctJSON, jsonBody(map[string]any{"msgtype": "text", "text": map[string]string{"content": full}}), m)
-		return req, jsonCode("0", "errcode"), err
+		text := map[string]any{"content": full}
+		if len(at) > 0 {
+			list := at
+			if at[0] == "all" {
+				list = []string{"@all"}
+			}
+			text["mentioned_mobile_list"] = list
+		}
+		req, err := s.newRequest(ctx, http.MethodPost, o["url"], ctJSON, jsonBody(map[string]any{"msgtype": "text", "text": text}), m)
+		return req, jsonCode("wecom", "0", "errcode"), err
 	case "slack":
 		req, err := s.newRequest(ctx, http.MethodPost, o["url"], ctJSON, jsonBody(map[string]string{"text": full}), m)
 		return req, status2xx, err
 	case "discord":
-		if len([]rune(full)) > 2000 {
-			full = string([]rune(full)[:1999]) + "…"
-		}
 		req, err := s.newRequest(ctx, http.MethodPost, o["url"], ctJSON, jsonBody(map[string]string{"content": full}), m)
 		return req, status2xx, err
 	case "telegram":
@@ -123,7 +152,7 @@ func (s *Sender) build(ctx context.Context, ch Channel, m *Message) (*http.Reque
 		}
 		req, err := s.newRequest(ctx, http.MethodPost, api+"/bot"+o["token"]+"/sendMessage", ctJSON,
 			jsonBody(map[string]any{"chat_id": o["chat"], "text": full, "disable_web_page_preview": true}), m)
-		return req, jsonCode("true", "ok"), err
+		return req, jsonCode("telegram", "true", "ok"), err
 	case "webhook":
 		if p := o["preset"]; p != "" {
 			return s.buildPreset(ctx, presets[p], o, m)
@@ -131,6 +160,25 @@ func (s *Sender) build(ctx context.Context, ch Channel, m *Message) (*http.Reque
 		return s.buildWebhook(ctx, o, m)
 	}
 	return nil, nil, fmt.Errorf("unknown channel kind %q", ch.Kind)
+}
+
+// mentions lists who at= names for this message: "all", or phone numbers
+// (DingTalk, WeCom) or user ids (Feishu). Recoveries, reports and change
+// notices mention nobody: they need no one's attention.
+func mentions(at string, m *Message) []string {
+	switch m.Kind {
+	case "RECOVERY", "REPORT", "CHANGE", "STATUS":
+		return nil
+	}
+	var out []string
+	for _, x := range strings.Split(at, ",") {
+		if x = strings.TrimSpace(x); strings.EqualFold(x, "all") {
+			return []string{"all"}
+		} else if x != "" {
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 // feishuSign: HMAC-SHA256 keyed by "timestamp\nsecret" over an empty
@@ -166,7 +214,7 @@ func (s *Sender) buildWebhook(ctx context.Context, o map[string]string, m *Messa
 		}
 		body = []byte(out)
 	} else {
-		title, text := Render(m)
+		title, text := textOf(o, m)
 		payload := map[string]any{
 			"title": title, "text": text, "kind": m.Kind, "priority": m.Priority, "monitor": m.Monitor,
 			"display_name": m.Title, "type": m.Type, "target": m.Target, "depth": m.Depth, "status": m.Status,
@@ -180,6 +228,14 @@ func (s *Sender) buildWebhook(ctx context.Context, o map[string]string, m *Messa
 	}
 	contentType := map[string]string{"json": ctJSON, "form": "application/x-www-form-urlencoded", "text": "text/plain; charset=utf-8"}[ct]
 	u := o["url"]
+	if strings.Contains(u, "{{") {
+		// Names in the URL: a GET hook has nowhere else to put them.
+		out, err := renderTemplate(u, messageData(m, o))
+		if err != nil {
+			return nil, nil, err
+		}
+		u = out
+	}
 	if method == http.MethodGet {
 		body = nil
 	}
@@ -193,8 +249,8 @@ func (s *Sender) buildWebhook(ctx context.Context, o map[string]string, m *Messa
 		}
 	}
 	match := o["success-match"]
-	return req, func(status int, b []byte) error {
-		if err := status2xx(status, b); err != nil {
+	return req, func(status int, h http.Header, b []byte) error {
+		if err := status2xx(status, h, b); err != nil {
 			return err
 		}
 		if match != "" && !strings.Contains(string(b), match) {
@@ -217,8 +273,8 @@ func (s *Sender) do(req *http.Request, check checkFunc, a Attempt) Attempt {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, respCap))
 	a.Status = resp.StatusCode
 	a.Response = string(body)
-	if err := check(resp.StatusCode, body); err != nil {
-		a.Error = err.Error()
+	if err := check(resp.StatusCode, resp.Header, body); err != nil {
+		classify(&a, err)
 		return a
 	}
 	a.OK = true

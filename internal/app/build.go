@@ -204,6 +204,7 @@ func (a *App) validators() config.Options {
 			return probe.Validate(s)
 		},
 		ValidateChannel: ValidateChannel,
+		ChannelWarnings: notify.TemplateProblems,
 	}
 }
 
@@ -300,7 +301,10 @@ func (a *App) channelSpec(cfg *config.Config, c *config.Channel, resolve func(st
 		}
 		opts[k] = rv
 	}
-	cs := engine.ChannelSpec{Channel: notify.Channel{Name: c.Name, Kind: c.Kind, Opts: opts}, Retries: c.Retries, Members: c.Members}
+	cs := engine.ChannelSpec{Channel: notify.Channel{Name: c.Name, Kind: c.Kind, Opts: opts}, Retries: c.Retries, RetriesSet: c.RetriesSet, Members: c.Members}
+	if c.Rate != "" {
+		cs.Rate, _ = tunables.ParseRate(c.Rate)
+	}
 	if key, kind, ok := directory.AddressKey(c.Kind); ok {
 		// Recipients go through the contact directory: @handles become
 		// addresses, people who left and dead addresses are dropped.
@@ -326,11 +330,19 @@ func (a *App) channelSpec(cfg *config.Config, c *config.Channel, resolve func(st
 			cs.Period, cs.Outside = &p.Spec, strings.HasPrefix(c.Period, "!")
 		}
 	}
-	if c.NoReport {
+	// A daily report by SMS fills an approved alert template with report
+	// text, and by voice it is a phone call every morning: these channels
+	// take it only when asked to (report=yes).
+	if c.NoReport || (!c.ReportSet && smsOrVoice(c.Kind)) {
 		cs.NoReport = true
 	}
 	cs.Scope, cs.Family, cs.OnLink, cs.ByName = channelReach(c.Kind, opts)
 	return cs
+}
+
+// smsOrVoice reports whether a channel kind sends text messages or calls.
+func smsOrVoice(kind string) bool {
+	return strings.HasSuffix(kind, "-sms") || strings.HasSuffix(kind, "-voice")
 }
 
 // policySpec translates one notification policy.
@@ -510,6 +522,12 @@ func (a *App) ListenAddr() string { return a.opts.Listen }
 // page subscriptions).
 func (a *App) SendDirect(ctx context.Context, ch notify.Channel, m *notify.Message) notify.Attempt {
 	return a.sender.Send(ctx, ch, m)
+}
+
+// ChannelWarnings reports what is wrong with a channel's message templates
+// (for the check and import commands, as the server reports it).
+func ChannelWarnings(kind string, opts map[string]string) []string {
+	return notify.TemplateProblems(kind, opts)
 }
 
 // ValidateChannel checks a channel's options as the server does when it
