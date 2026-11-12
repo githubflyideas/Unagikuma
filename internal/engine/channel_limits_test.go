@@ -173,3 +173,53 @@ func TestServiceLimitAndChannelRate(t *testing.T) {
 		t.Fatalf("%d messages through a channel with rate=3/m", n)
 	}
 }
+
+// An alert no channel delivered does not use up the incident's
+// notifications and does not wait for the repeat interval: it is sent
+// again after notify.failed-retry, and counted once it arrives.
+func TestUndeliveredAlertIsSentAgainSoon(t *testing.T) {
+	p := NotifyPolicy{Max: 3, Repeat: 30 * time.Minute, Recovery: true}
+	t0 := time.Date(2026, 11, 12, 8, 0, 0, 0, time.UTC)
+	st, n, _ := Fail(nil, t0, "http_status", p)
+	if len(n) != 1 || n[0].Kind != NoticeProblem || st.NotifyCount != 1 {
+		t.Fatalf("first notice: %+v %+v", n, st)
+	}
+	// Three deliveries in a row fail: the waits double, the count stays.
+	at := t0
+	for i, want := range []time.Duration{2 * time.Minute, 4 * time.Minute, 8 * time.Minute} {
+		st.NotDelivered(at, 2*time.Minute, p.Repeat)
+		if st.NotifyCount != 0 || st.Capped || st.RetryAt.Sub(at) != want {
+			t.Fatalf("failure %d: count=%d capped=%v wait=%s, want %s", i+1, st.NotifyCount, st.Capped, st.RetryAt.Sub(at), want)
+		}
+		if n, _ := Advance(st, st.RetryAt.Add(-time.Second), p); len(n) != 0 {
+			t.Fatalf("failure %d: sent before the wait was over: %+v", i+1, n)
+		}
+		at = st.RetryAt
+		n, _ := Advance(st, at, p)
+		if len(n) != 1 || n[0].Kind != NoticeProblem || n[0].Seq != 1 {
+			t.Fatalf("failure %d: resent as %+v", i+1, n)
+		}
+	}
+	// It arrives: counted once, and the repeat interval applies again.
+	st.Delivered()
+	if st.Undelivered != 0 || !st.RetryAt.IsZero() || st.NotifyCount != 1 || st.Told != 1 {
+		t.Fatalf("after delivery: %+v", st)
+	}
+	if n, _ := Advance(st, at.Add(29*time.Minute), p); len(n) != 0 {
+		t.Fatalf("repeated early: %+v", n)
+	}
+	if n, _ := Advance(st, at.Add(30*time.Minute), p); len(n) != 1 || n[0].Kind != NoticeRepeat || n[0].Seq != 2 {
+		t.Fatalf("repeat: %+v", n)
+	}
+	// A repeat that fails gives its number back too.
+	st.NotDelivered(at.Add(30*time.Minute), 2*time.Minute, p.Repeat)
+	if n, _ := Advance(st, at.Add(32*time.Minute), p); len(n) != 1 || n[0].Kind != NoticeRepeat || n[0].Seq != 2 {
+		t.Fatalf("failed repeat resent as %+v", n)
+	}
+	// Acknowledged: nothing more, failed or not.
+	st.NotDelivered(at.Add(33*time.Minute), 2*time.Minute, p.Repeat)
+	st.Acked = true
+	if n, _ := Advance(st, at.Add(time.Hour), p); len(n) != 0 {
+		t.Fatalf("sent after an acknowledgement: %+v", n)
+	}
+}

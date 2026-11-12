@@ -7,6 +7,7 @@ Every channel kind was sent problems, recoveries and a long daily report through
 **Fixed**
 - A long message, usually the daily report, went over the limit of WeCom (2048 bytes) and was refused. Every chat kind and preset now cuts a message to its service's limit at a line, and the last line says how many lines are left out.
 - More than 20 alerts a minute to a DingTalk robot were lost: the robot refused them and nothing sent them again. A channel never sends more than its service takes in a minute (`notify.service-limits`); the rest wait and a long queue becomes one summary.
+- An alert that no channel delivered counted towards `notify.max` and was only sent again at the repeat interval (30 minutes); after three failures the incident went quiet without anyone having been told. It no longer counts, and is sent again after `notify.failed-retry` (2 minutes, doubled each time up to the repeat interval). The system channels are told once, not at every try.
 - `Retry-After` of a rate-limiting service was not read. The next try now comes when the service says; if that is longer than `notify.retry-after-max` (30s), the next channel takes the alert.
 - `rate=` and `retries=0` on a channel had no effect.
 - A wrong webhook token that the service reports under HTTP 200 (Feishu, DingTalk, WeCom) was tried three times, so the next channel got the alert 9 seconds late. It is tried once.

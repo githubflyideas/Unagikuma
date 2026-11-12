@@ -201,7 +201,7 @@ func (s *Sender) sendCloud(ctx context.Context, ch Channel, m *Message) ([]Bounc
 // Without it the default English voice reads Chinese as noise.
 var sayLang = map[string]string{
 	"zh": "zh-CN", "en": "en-US", "ja": "ja-JP", "ko": "ko-KR", "de": "de-DE", "fr": "fr-FR", "es": "es-ES",
-	"pt": "pt-BR", "ru": "ru-RU", "hi": "hi-IN", "id": "id-ID", "vi": "vi-VN", "ar": "arb",
+	"pt": "pt-BR", "ru": "ru-RU", "hi": "hi-IN", "id": "id-ID", "vi": "vi-VN",
 }
 
 // twiml is the call script: the title, twice, in the message language.

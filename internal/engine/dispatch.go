@@ -307,11 +307,36 @@ func (e *Engine) finishIntent(in *Intent, now time.Time) {
 	}
 	if !in.System {
 		e.openSystem(SystemAllFailed, now, e.text("all_failed", in.Policy, in.Message.Title))
-		e.tellOnFail(in, now)
+		if e.notDelivered(in, now) {
+			e.tellOnFail(in, now)
+		}
 	} else if in.Kind == "SYSTEM" && !in.Message.DryRun {
 		// Most likely this host's own network: said in its summary.
 		e.unsent = append(e.unsent[max(0, len(e.unsent)-9):], unsentNote{at: in.CreatedAt, text: firstLine(cmp.Or(in.Message.Body, in.Message.Title))})
 	}
+}
+
+// notDelivered books a problem notification that no channel delivered on
+// its incident, which sends it again after notify.failed-retry. It
+// reports whether this is the first failure in a row: the system channels
+// are told once, not at every try.
+func (e *Engine) notDelivered(in *Intent, now time.Time) bool {
+	switch NoticeKind(in.Kind) {
+	case NoticeProblem, NoticeRepeat, NoticeReopen:
+	default:
+		return true
+	}
+	inc := e.incidents[in.IncidentID]
+	if inc == nil || in.Message.DryRun || !inc.State.Open() {
+		return true
+	}
+	wait := e.cfg.Tunables.Duration("notify.failed-retry")
+	if wait <= 0 {
+		return true // off: the repeat interval decides, as before
+	}
+	inc.State.NotDelivered(now, wait, e.effectivePolicy(inc, e.policy(inc.Policy)).Repeat)
+	e.saveIncident(inc)
+	return inc.State.Undelivered == 1
 }
 
 // tellOnFail sends a notice that could not be delivered to each of the

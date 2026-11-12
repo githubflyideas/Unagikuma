@@ -99,6 +99,11 @@ type IncidentState struct {
 	Tracked      bool      `json:"tracked,omitzero"`
 	LastNotifyAt time.Time `json:"last_notify_at,omitzero"`
 	Capped       bool      `json:"capped,omitzero"`
+	// Undelivered counts the problem notifications in a row that no
+	// channel delivered; RetryAt is when the next one is due because of
+	// that, ahead of the repeat interval.
+	Undelivered int       `json:"undelivered,omitzero"`
+	RetryAt     time.Time `json:"retry_at,omitzero"`
 
 	Acked        bool      `json:"acked,omitzero"`
 	AckedBy      string    `json:"acked_by,omitzero"`
@@ -131,7 +136,30 @@ func (s *IncidentState) told() bool {
 }
 
 // Delivered books a problem notification that reached someone.
-func (s *IncidentState) Delivered() { s.Told++ }
+func (s *IncidentState) Delivered() { s.Told++; s.Undelivered, s.RetryAt = 0, time.Time{} }
+
+// NotDelivered books a problem notification that no channel delivered. It
+// does not count towards the cap, and the next one is due after wait,
+// doubled for each failure in a row up to most: an alert nobody received
+// must not use up the notifications of its incident, nor wait for the
+// repeat interval.
+func (s *IncidentState) NotDelivered(now time.Time, wait, most time.Duration) {
+	if !s.Open() {
+		return
+	}
+	s.Undelivered++
+	if s.NotifyCount > 0 {
+		s.NotifyCount--
+	}
+	s.Capped = false
+	for i := 1; i < s.Undelivered && wait < most; i++ {
+		wait *= 2
+	}
+	if most > 0 && wait > most {
+		wait = most // the repeat interval would send it by then anyway
+	}
+	s.RetryAt = now.Add(wait)
+}
 
 // Open reports whether the incident is currently failing.
 func (s *IncidentState) Open() bool { return !s.Closed && s.ResolvedAt.IsZero() }
@@ -233,12 +261,21 @@ func Advance(s *IncidentState, now time.Time, p NotifyPolicy) (notices []Planned
 	if s.Low && !p.NotifyDegraded {
 		return notices, events
 	}
+	// After a notification nobody received, the next one waits for
+	// RetryAt and then goes out whatever the repeat interval says.
+	again := false
+	if !s.RetryAt.IsZero() {
+		if now.Before(s.RetryAt) {
+			return notices, events
+		}
+		s.RetryAt, again = time.Time{}, true
+	}
 	switch {
 	case s.NotifyCount == 0:
 		if !now.Before(s.HardAt.Add(p.Delay)) {
 			notices = append(notices, s.sent(NoticeProblem, now, max))
 		}
-	case (max == 0 || s.NotifyCount < max) && p.Repeat > 0 && !now.Before(s.LastNotifyAt.Add(p.Repeat)):
+	case (max == 0 || s.NotifyCount < max) && (again || p.Repeat > 0 && !now.Before(s.LastNotifyAt.Add(p.Repeat))):
 		notices = append(notices, s.sent(NoticeRepeat, now, max))
 	}
 	if len(notices) > 0 && s.Capped {
