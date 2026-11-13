@@ -20,7 +20,7 @@ function when(c) {
 }
 const STATE_CLS = { planned: 'tag', running: 'tag warn-text', done: 'tag ok-text', rolled_back: 'tag err-text', cancelled: 'tag muted' };
 
-function ChangeForm({ initial, onClose, onSaved }) {
+export function ChangeForm({ initial, onClose, onSaved }) {
   const c = initial || {};
   const pol = useFetch(() => get('/policies'), []);
   const ch = useFetch(() => get('/channels'), []);

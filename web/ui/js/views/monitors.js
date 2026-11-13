@@ -154,6 +154,10 @@ export function Monitors({ query }) {
   const total = list.data ? list.data.items.length : 0;
   return html`<div class="page list">
     <div class="row">
+      <div class="chips">
+        <button class=${'chip' + (!status ? ' on' : '')} onClick=${() => setStatus(status)}>${t('ui.all')} <b>${fmtNum(total)}</b></button>
+        ${CHIPS.filter(s => counts[s]).map(s => html`<button class=${'chip' + (status === s ? ' on' : '')} onClick=${() => setStatus(s)}>${t('status.' + s)} <b>${fmtNum(counts[s])}</b></button>`)}
+      </div>
       <${Seg} value=${view} onChange=${changeView} options=${[['list', t('ui.mon.view_list')], ['hive', t('ui.mon.view_hive')]]} />
       <div class="spacer"></div>
       <button class="btn" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
@@ -187,10 +191,6 @@ export function Monitors({ query }) {
         <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!moving.team && !moving.region}>${t('ui.mon.move')}</button></div>
       </form>
     <//>`}
-    <div class="chips">
-      <button class=${'chip' + (!status ? ' on' : '')} onClick=${() => setStatus(status)}>${t('ui.all')} <b>${fmtNum(total)}</b></button>
-      ${CHIPS.filter(s => counts[s]).map(s => html`<button class=${'chip' + (status === s ? ' on' : '')} onClick=${() => setStatus(s)}>${t('status.' + s)} <b>${fmtNum(counts[s])}</b></button>`)}
-    </div>
     <${ErrorBox} error=${list.error} retry=${list.reload} />
     <div class="card scroll"><div class="bd flush tbl-wrap">
       ${!list.data ? html`<${Loading} />` : !total ? html`<${Empty} title=${t('ui.mon.none')}><p>${t('ui.mon.none_hint')}</p><a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a><//>` :
