@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -20,18 +21,17 @@ import (
 // parameter.
 
 // HeartbeatKeys are the settings of the external heartbeat.
-var HeartbeatKeys = []string{"heartbeat_url", "heartbeat_method", "heartbeat_format", "heartbeat_host_info",
+var HeartbeatKeys = []string{"heartbeat_url", "heartbeat_method", "heartbeat_format", "heartbeat_fields",
 	"heartbeat_auth", "heartbeat_user", "heartbeat_password", "heartbeat_key_name", "heartbeat_key_value", "heartbeat_key_in"}
 
 // HeartbeatSecretKeys are shown masked and kept when "***" comes back.
 var HeartbeatSecretKeys = map[string]bool{"heartbeat_password": true, "heartbeat_key_value": true}
 
 var heartbeatChoices = map[string][]string{
-	"heartbeat_method":    {"", "GET", "PUSH"},
-	"heartbeat_format":    {"", "json", "text"},
-	"heartbeat_host_info": {"", "on", "off"},
-	"heartbeat_auth":      {"", "none", "basic", "apikey"},
-	"heartbeat_key_in":    {"", "header", "query"},
+	"heartbeat_method": {"", "GET", "PUSH"},
+	"heartbeat_format": {"", "json", "text"},
+	"heartbeat_auth":   {"", "none", "basic", "apikey"},
+	"heartbeat_key_in": {"", "header", "query"},
 }
 
 func isHeartbeatKey(key string) bool {
@@ -53,10 +53,37 @@ func checkHeartbeatSetting(key, value string) error {
 		}
 		return fmt.Errorf("%s must be one of %s", key, strings.Join(choices[1:], ", "))
 	}
+	if key == "heartbeat_fields" && value != "" && value != "none" {
+		for _, f := range strings.Split(value, ",") {
+			if !slices.Contains(HeartbeatFields, f) {
+				return fmt.Errorf("unknown heartbeat field %q", f)
+			}
+		}
+	}
 	if key == "heartbeat_key_name" && strings.ContainsAny(value, " \t\r\n:") {
 		return fmt.Errorf("the API key name must be one word")
 	}
 	return nil
+}
+
+// HeartbeatFields are the facts a heartbeat can carry, in the order they
+// are sent. The setting lists the chosen ones; empty means all of them.
+var HeartbeatFields = []string{"host", "status", "problems", "monitors", "time"}
+
+func heartbeatFieldsOf(v string) []string {
+	switch v {
+	case "":
+		return HeartbeatFields
+	case "none":
+		return nil
+	}
+	var out []string
+	for _, f := range HeartbeatFields { // the fixed order, whatever the setting's
+		if slices.Contains(strings.Split(v, ","), f) {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // HeartbeatInfo is what a heartbeat says about this machine.
@@ -92,25 +119,45 @@ func buildHeartbeat(get func(string) string, raw string, in HeartbeatInfo) (engi
 		return hr, fmt.Errorf("invalid heartbeat URL")
 	}
 	q, changed := u.Query(), false
-	withInfo := get("heartbeat_host_info") != "off"
-	push := get("heartbeat_method") == "PUSH"
-	if push {
+	fields := heartbeatFieldsOf(get("heartbeat_fields"))
+	vals := map[string]any{"host": in.Host, "status": in.Status, "problems": in.Problems, "monitors": in.Monitors, "time": in.Time}
+	if get("heartbeat_method") == "PUSH" {
 		hr.Method = http.MethodPost
 		if get("heartbeat_format") == "text" {
 			hr.Header.Set("Content-Type", "text/plain; charset=utf-8")
-			hr.Body = fmt.Sprintf("%s %s %d problems %d monitors %s", in.Host, in.Status, in.Problems, in.Monitors, in.Time)
+			parts := []string{}
+			for _, f := range fields {
+				switch f {
+				case "problems", "monitors":
+					parts = append(parts, fmt.Sprint(vals[f], " ", f))
+				default:
+					parts = append(parts, fmt.Sprint(vals[f]))
+				}
+			}
+			hr.Body = strings.Join(parts, " ")
 		} else {
 			hr.Header.Set("Content-Type", "application/json")
-			b, _ := json.Marshal(in)
-			hr.Body = string(b)
+			var b strings.Builder // in the fixed order, unlike a map
+			b.WriteString("{")
+			for i, f := range fields {
+				if i > 0 {
+					b.WriteString(",")
+				}
+				k, _ := json.Marshal(f)
+				v, _ := json.Marshal(vals[f])
+				b.Write(k)
+				b.WriteString(":")
+				b.Write(v)
+			}
+			b.WriteString("}")
+			hr.Body = b.String()
 		}
-	} else if withInfo {
+	} else {
 		// A parameter the URL already has is the receiver's own (an Uptime
 		// Kuma push URL brings status=up): it is kept as it is.
-		for k, v := range map[string]string{"host": in.Host, "status": in.Status, "problems": fmt.Sprint(in.Problems),
-			"monitors": fmt.Sprint(in.Monitors), "time": in.Time} {
-			if !q.Has(k) {
-				q.Set(k, v)
+		for _, f := range fields {
+			if !q.Has(f) {
+				q.Set(f, fmt.Sprint(vals[f]))
 				changed = true
 			}
 		}

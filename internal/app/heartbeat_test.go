@@ -23,7 +23,7 @@ func TestBuildHeartbeat(t *testing.T) {
 				t.Fatalf("%s %s %q", m, u, b)
 			}
 		}},
-		{"GET without host info keeps the URL as written", map[string]string{"heartbeat_host_info": "off"}, "https://k.example/api/push/x?status=up&msg=OK&ping=", func(t *testing.T, m, u, _, _, _, _ string) {
+		{"GET without host info keeps the URL as written", map[string]string{"heartbeat_fields": "none"}, "https://k.example/api/push/x?status=up&msg=OK&ping=", func(t *testing.T, m, u, _, _, _, _ string) {
 			if u != "https://k.example/api/push/x?status=up&msg=OK&ping=" {
 				t.Fatal(u)
 			}
@@ -39,12 +39,22 @@ func TestBuildHeartbeat(t *testing.T) {
 				t.Fatalf("%s %s %s %s %s", m, u, auth, ct, b)
 			}
 		}},
+		{"only the chosen fields", map[string]string{"heartbeat_fields": "time,host"}, "https://x.example/hb", func(t *testing.T, _, u, _, _, _, _ string) {
+			if u != "https://x.example/hb?host=nas01&time=2026-11-13T08%3A00%3A00Z" {
+				t.Fatal(u)
+			}
+		}},
+		{"PUSH JSON with the chosen fields", map[string]string{"heartbeat_method": "PUSH", "heartbeat_fields": "status,problems"}, "https://x.example/hb", func(t *testing.T, _, _, _, _, _, b string) {
+			if b != `{"status":"ok","problems":0}` {
+				t.Fatal(b)
+			}
+		}},
 		{"PUSH text with an API key header", map[string]string{"heartbeat_method": "PUSH", "heartbeat_format": "text", "heartbeat_auth": "apikey", "heartbeat_key_value": "k1"}, "https://x.example/hb", func(t *testing.T, _, _, _, key, ct, b string) {
 			if key != "k1" || !strings.HasPrefix(ct, "text/plain") || b != "nas01 ok 0 problems 47 monitors 2026-11-13T08:00:00Z" {
 				t.Fatalf("%s %s %q", key, ct, b)
 			}
 		}},
-		{"API key as a URL parameter", map[string]string{"heartbeat_host_info": "off", "heartbeat_auth": "apikey", "heartbeat_key_name": "token", "heartbeat_key_value": "k1", "heartbeat_key_in": "query"}, "https://x.example/hb", func(t *testing.T, _, u, _, _, _, _ string) {
+		{"API key as a URL parameter", map[string]string{"heartbeat_fields": "none", "heartbeat_auth": "apikey", "heartbeat_key_name": "token", "heartbeat_key_value": "k1", "heartbeat_key_in": "query"}, "https://x.example/hb", func(t *testing.T, _, u, _, _, _, _ string) {
 			if u != "https://x.example/hb?token=k1" {
 				t.Fatal(u)
 			}
@@ -101,6 +111,9 @@ func TestHeartbeatSentAndPreviewed(t *testing.T) {
 		"heartbeat_user": "u", "heartbeat_password": "***"})
 	if err != nil || pv.Header.Get("Authorization") != "Basic ***" {
 		t.Fatalf("preview %v %v", pv.Header, err)
+	}
+	if err := a.SetSetting("heartbeat_fields", "host,cpu"); err == nil {
+		t.Fatal("unknown field accepted")
 	}
 	if err := a.SetSetting("heartbeat_method", "DELETE"); err == nil {
 		t.Fatal("DELETE accepted")

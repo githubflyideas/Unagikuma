@@ -93,12 +93,20 @@ function General() {
   </div></form>`;
 }
 
+const HB_FIELDS = ['host', 'status', 'problems', 'monitors', 'time'];
+
 // HeartbeatForm sets how the external heartbeat is sent, field by field
 // as an API client does it, and previews the request.
 function HeartbeatForm({ f, setF }) {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? (e.target.checked ? 'on' : 'off') : e.target.value });
   const push = f.heartbeat_method === 'PUSH';
   const auth = f.heartbeat_auth || 'none';
+  // Empty means every field (the default); "none" means none.
+  const fields = !f.heartbeat_fields ? HB_FIELDS : f.heartbeat_fields === 'none' ? [] : f.heartbeat_fields.split(',');
+  const toggleField = (k, on) => {
+    const next = HB_FIELDS.filter(x => x === k ? on : fields.includes(x));
+    setF({ ...f, heartbeat_fields: next.length === HB_FIELDS.length ? '' : next.length ? next.join(',') : 'none' });
+  };
   const [pv, setPv] = useState(null);
   useEffect(() => {
     if (!f.heartbeat_url) { setPv(null); return; }
@@ -112,10 +120,12 @@ function HeartbeatForm({ f, setF }) {
     <div class="two">
       <${Field} label=${t('ui.hb.method')}><select value=${push ? 'PUSH' : 'GET'} onChange=${set('heartbeat_method')}>
         <option value="GET">GET</option><option value="PUSH">PUSH (POST)</option></select><//>
-      ${push ? html`<${Field} label=${t('ui.hb.format')}><select value=${f.heartbeat_format || 'json'} onChange=${set('heartbeat_format')}>
-          <option value="json">JSON</option><option value="text">${t('ui.hb.text')}</option></select><//>`
-        : html`<${Field} label=" " hint=${t('ui.hb.host_info_hint')}><label class="switch"><input type="checkbox" checked=${f.heartbeat_host_info !== 'off'} onChange=${set('heartbeat_host_info')} /> ${t('ui.hb.host_info')}</label><//>`}
+      ${push && html`<${Field} label=${t('ui.hb.format')}><select value=${f.heartbeat_format || 'json'} onChange=${set('heartbeat_format')}>
+          <option value="json">JSON</option><option value="text">${t('ui.hb.text')}</option></select><//>`}
     </div>
+    <${Field} label=${t('ui.hb.host_info')} hint=${push ? '' : t('ui.hb.host_info_hint')}>
+      <div class="row" style=${{ gap: '16px' }}>${HB_FIELDS.map(k => html`<label class="switch"><input type="checkbox" checked=${fields.includes(k)}
+        onChange=${(e) => toggleField(k, e.target.checked)} /> ${t('ui.hb.field.' + k)} <span class="muted small ltr">${k}</span></label>`)}</div><//>
     <div class="two">
       <${Field} label=${t('ui.hb.auth')}><select value=${auth} onChange=${set('heartbeat_auth')}>
         <option value="none">${t('ui.hb.auth_none')}</option><option value="basic">${t('ui.hb.auth_basic')}</option><option value="apikey">API Key</option></select><//>
