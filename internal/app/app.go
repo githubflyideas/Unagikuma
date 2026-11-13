@@ -249,7 +249,11 @@ func (a *App) newMaster() error {
 // migrateFiles renames files from older releases and moves policies and
 // push receivers to their current form.
 func (a *App) migrateFiles() error {
-	for _, p := range [][2]string{{a.dataPath(replicaDir, legacyReplicaConfig), a.dataPath(replicaDir, replicaConfig)}, {a.dataPath(legacySiteLocalFile), a.dataPath(siteLocalFile)}} {
+	renames := [][2]string{{a.dataPath(replicaDir, legacyReplicaConfig), a.dataPath(replicaDir, replicaConfig)}}
+	for _, old := range legacySiteLocalFiles {
+		renames = append(renames, [2]string{a.dataPath(old), a.dataPath(SiteLocalFile)})
+	}
+	for _, p := range renames {
 		if _, err := config.MigrateFileName(p[0], p[1]); err != nil {
 			return err
 		}

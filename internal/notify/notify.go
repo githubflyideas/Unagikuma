@@ -71,6 +71,15 @@ func (s *Sender) Send(ctx context.Context, ch Channel, m *Message) (a Attempt) {
 		}
 		return a
 	}
+	if isCustomKind(ch.Kind) {
+		var err error
+		a.Bounces, err = s.sendCustom(ctx, ch, m)
+		a.OK = err == nil
+		if err != nil {
+			classify(&a, err)
+		}
+		return a
+	}
 	if isCloudKind(ch.Kind) {
 		var err error
 		a.Bounces, err = s.sendCloud(ctx, ch, m)
@@ -107,6 +116,7 @@ type KindInfo struct {
 	Kind   string  `json:"kind"`
 	Label  string  `json:"label"`
 	Preset bool    `json:"preset,omitempty"`
+	Group  string  `json:"group,omitempty"`
 	Fields []Field `json:"fields"`
 }
 
@@ -125,7 +135,9 @@ type Field struct {
 // names who a chat robot mentions.
 var (
 	tplField = Field{Key: "template", Type: "textarea", Placeholder: "{{.Icon}} {{.KindText}}: {{.Name}} {{.StatusText}}\n{{.ReasonText}} — {{.Detail}}\n{{.DetailURL}}"}
-	atField  = Field{Key: "at", Type: "text", Placeholder: "all | 13800000000,13900000000"}
+	// prefixField marks each text message with the site that sent it.
+	prefixField = Field{Key: "prefix", Type: "text", Placeholder: "[Beijing unagi-host1]"}
+	atField     = Field{Key: "at", Type: "text", Placeholder: "all | 13800000000,13900000000"}
 )
 
 var nativeKinds = []KindInfo{
@@ -136,7 +148,7 @@ var nativeKinds = []KindInfo{
 	{Kind: "slack", Label: "Slack", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://hooks.slack.com/services/…"}, tplField}},
 	{Kind: "discord", Label: "Discord", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://discord.com/api/webhooks/…"}, tplField}},
 	{Kind: "email", Label: "Email", Fields: []Field{{Key: "via", Type: "select", Options: []string{"smtp", "sendmail"}, Default: "smtp"}, {Key: "host", Type: "text"}, {Key: "port", Type: "number", Default: "587"}, {Key: "username", Type: "text"}, {Key: "password", Type: "secret"}, {Key: "tls", Type: "select", Options: []string{"starttls", "tls", "none"}}, {Key: "program", Type: "text", Placeholder: "/usr/sbin/sendmail"}, {Key: "from", Type: "text"}, {Key: "to", Type: "email-list", Required: true}, tplField}},
-	{Kind: "webhook", Label: "Webhook", Fields: []Field{{Key: "url", Type: "url", Required: true}, {Key: "method", Type: "select", Options: []string{"POST", "PUT", "GET"}, Default: "POST"}, {Key: "content-type", Type: "select", Options: []string{"json", "form", "text"}, Default: "json"}, {Key: "body", Type: "textarea"}, {Key: "success-match", Type: "text"}}},
+	{Kind: "webhook", Label: "Custom webhook", Fields: []Field{{Key: "url", Type: "url", Required: true}, {Key: "method", Type: "select", Options: []string{"POST", "PUT", "GET"}, Default: "POST"}, {Key: "content-type", Type: "select", Options: []string{"json", "form", "text"}, Default: "json"}, {Key: "body", Type: "textarea"}, {Key: "success-match", Type: "text"}}},
 	{Kind: "log", Label: "Log only", Fields: nil},
 }
 
@@ -152,7 +164,7 @@ func Kinds() []KindInfo {
 	sort.Strings(names)
 	for _, n := range names {
 		p := presets[n]
-		out = append(out, KindInfo{Kind: "webhook:" + n, Label: p.Label, Preset: true, Fields: append(append([]Field(nil), p.Fields...), tplField)})
+		out = append(out, KindInfo{Kind: "webhook:" + n, Label: p.Label, Preset: true, Group: p.Group, Fields: append(append([]Field(nil), p.Fields...), tplField)})
 	}
 	// A contact group is resolved by the engine, not sent here.
 	out = append(out, KindInfo{Kind: "group", Label: "Contact group", Fields: []Field{{Key: "members", Type: "text", Required: true, Placeholder: "ops-feishu,ops-sms"}}})
@@ -200,7 +212,7 @@ func ValidateChannel(kind string, opts map[string]string) error {
 	// the provider, a log line) was always accepted and is still: it does
 	// nothing there.
 	extra := map[string]bool{"template": true}
-	if kind == "webhook" {
+	if kind == "webhook" || isCustomKind(kind) {
 		for k := range opts {
 			if strings.HasPrefix(k, "header.") {
 				extra[k] = true
@@ -224,7 +236,14 @@ func ValidateChannel(kind string, opts map[string]string) error {
 func TemplateProblems(kind string, opts map[string]string) []string {
 	var out []string
 	keys := []string{"template"}
-	if kind == "webhook" && opts["preset"] == "" {
+	if (kind == "webhook" && opts["preset"] == "") || isCustomKind(kind) {
+		if isCustomKind(kind) {
+			o := map[string]string{"Phone": "13800000000"}
+			for k, v := range opts {
+				o[k] = v
+			}
+			opts = o
+		}
 		keys = append(keys, "body")
 		if strings.Contains(opts["url"], "{{") {
 			keys = append(keys, "url")

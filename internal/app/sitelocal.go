@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/engine"
@@ -15,13 +16,18 @@ import (
 // nor a promotion overwrites it. This node checks and alerts on it in every
 // role: master, following replica, replica on its own, replaced master.
 
-const (
-	siteLocalFile       = "site-local.conf"
-	legacySiteLocalFile = "site-local.bind" // before 2.6
-)
+// SiteLocalFile is the zone's file name in the data directory. Its name
+// matches monitors.conf so the two are recognised as the same format.
+const SiteLocalFile = "local.monitors.conf"
+
+// Earlier names of the zone's file, renamed at startup.
+var legacySiteLocalFiles = []string{
+	"site-local.bind", // before 2.6
+	"site-local.conf", // 2.6 to 2.6.8
+}
 
 // siteLocalPath is the zone's file.
-func (a *App) siteLocalPath() string { return a.dataPath(siteLocalFile) }
+func (a *App) siteLocalPath() string { return a.dataPath(SiteLocalFile) }
 
 // SiteLocal returns the zone's text ("" when there is none).
 func (a *App) SiteLocal() string {
@@ -44,27 +50,50 @@ func (a *App) loadSiteLocal() *config.Config {
 	return cfg
 }
 
+// withFileHeader puts the $FILE line in front of a zone that has none: the
+// zone is only edited here, so its revision needs no care, and asking a
+// person to type a header first only gets in the way.
+func withFileHeader(text string) string {
+	for _, line := range strings.Split(text, "\n") {
+		l := strings.TrimSpace(line)
+		if l == "" || strings.HasPrefix(l, ";") {
+			continue
+		}
+		if strings.HasPrefix(strings.ToUpper(l), "$FILE") {
+			return text
+		}
+		break
+	}
+	return "$FILE revision=1\n" + text
+}
+
 // SetSiteLocal validates and saves the zone ("" removes it), then applies.
-func (a *App) SetSiteLocal(text, author string) ([]config.Diagnostic, error) {
+// It returns the text as saved: a missing $FILE line is added.
+func (a *App) SetSiteLocal(text, author string) (string, []config.Diagnostic, error) {
+	if strings.TrimSpace(text) == "" {
+		text = ""
+	} else {
+		text = withFileHeader(text)
+	}
 	if text == "" {
 		if err := os.Remove(a.siteLocalPath()); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return nil, err
+			return text, nil, err
 		}
 	} else {
 		_, _, diags := config.Load(a.siteLocalPath(), []byte(text), a.validators())
 		if config.HasErrors(diags) {
-			return diags, errors.New("the site-local configuration has errors")
+			return text, diags, errors.New("the site-local configuration has errors")
 		}
 		if err := os.WriteFile(a.siteLocalPath()+".tmp", []byte(text), 0o600); err != nil {
-			return nil, err
+			return text, nil, err
 		}
 		if err := os.Rename(a.siteLocalPath()+".tmp", a.siteLocalPath()); err != nil {
-			return nil, err
+			return text, nil, err
 		}
 	}
 	_ = a.store.Audit(store.AuditEntry{Actor: author, Action: "config.site_local", Target: "site-local"})
 	a.Reapply()
-	return nil, nil
+	return text, nil, nil
 }
 
 // addSiteLocal adds the zone to what this node's engine runs. Names the

@@ -178,6 +178,39 @@ func (s *Server) channelDelete(w http.ResponseWriter, r *http.Request) (any, err
 	return s.saved(st), nil
 }
 
+// periods lists the time periods (PERIOD records) a channel can be
+// limited to.
+func (s *Server) periods(w http.ResponseWriter, r *http.Request) (any, error) {
+	type period struct {
+		Name string `json:"name"`
+		Rule string `json:"rule"`
+	}
+	out := []period{}
+	if cfg := s.app.EffectiveConfig(); cfg != nil {
+		for _, p := range cfg.Periods {
+			out = append(out, period{p.Name, p.Spec.Src})
+		}
+	}
+	return map[string]any{"items": out}, nil
+}
+
+// channelPreview shows what a message template makes of an example
+// problem, while the channel form is being filled in.
+func (s *Server) channelPreview(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req struct {
+		Template string `json:"template"`
+		Lang     string `json:"lang"`
+	}
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	title, body, err := notify.PreviewTemplate(req.Template, req.Lang, s.app.Instance())
+	if err != nil {
+		return map[string]any{"ok": false, "error": err.Error()}, nil
+	}
+	return map[string]any{"ok": true, "title": title, "body": body}, nil
+}
+
 func (s *Server) channelTest(w http.ResponseWriter, r *http.Request) (any, error) {
 	var req struct {
 		Name string            `json:"name"`
@@ -645,7 +678,7 @@ func (s *Server) secretUsers(name string) []string {
 		}
 	}
 	scan("monitors.conf", s.app.Config().Text)
-	scan("site-local.conf", s.app.SiteLocal())
+	scan("local.monitors.conf", s.app.SiteLocal())
 	return out
 }
 

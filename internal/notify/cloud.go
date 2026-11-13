@@ -56,7 +56,7 @@ var cloudKinds = []KindInfo{
 	{Kind: "twilio-sms", Label: "Twilio SMS", Fields: []Field{
 		{Key: "account-sid", Type: "text", Required: true}, {Key: "auth-token", Type: "secret", Required: true},
 		{Key: "from", Type: "text", Required: true}, {Key: "phones", Type: "text", Required: true, Placeholder: "+15550100"},
-		{Key: "api", Type: "url", Default: "https://api.twilio.com"}, tplField}},
+		{Key: "api", Type: "url", Default: "https://api.twilio.com"}, tplField, prefixField}},
 	{Kind: "twilio-voice", Label: "Twilio voice call", Fields: []Field{
 		{Key: "account-sid", Type: "text", Required: true}, {Key: "auth-token", Type: "secret", Required: true},
 		{Key: "from", Type: "text", Required: true}, {Key: "phones", Type: "text", Required: true},

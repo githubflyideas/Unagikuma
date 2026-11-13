@@ -40,7 +40,7 @@ function ReportTab() {
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${r.enabled
       ? t('ui.report.intro', { at: r.at, via: viaText(r.policy) })
-      : html`<span class="warn-text">${t('ui.report.off', { where: t('ui.nav.settings') + ' › ' + t('ui.set.tab.tunables') })}</span>`}</p>
+      : html`<span class="warn-text">${t('ui.report.off', { where: t('ui.nav.advanced') + ' › ' + t('ui.set.tab.tunables') })}</span>`}</p>
       <button class="btn" onClick=${rep.reload}>${t('ui.report.refresh')}</button>
       <button class="btn primary" onClick=${send} disabled=${busy || !(mine && mine.receives)}>${t('ui.report.send')}</button></div>
     ${teams.length > 1 && html`<div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }}>
@@ -52,12 +52,14 @@ function ReportTab() {
     <p class="small muted" style=${{ margin: 0 }}>${t('ui.report.opt_out_hint')}</p>
     <div class="card"><div class="hd"><h3 class=${r.ok ? '' : 'crit-text'}>${r.title}</h3></div>
       <div class="bd"><pre class="report">${r.body}</pre></div></div>
+    <${LinkCard} page="summary" k="sum" share=${false} />
   </div>`;
 }
 
-// ScreensTab opens or shares the wall screen and the managers' summary.
+// ScreensTab opens or shares the on-duty wall screen. The managers'
+// summary is a page of the console (/summary), not something to cast.
 function ScreensTab() {
-  return html`<div class="links2"><${LinkCard} page="wall" k="wall" /><${LinkCard} page="summary" k="sum" /></div>`;
+  return html`<div class="links2"><${LinkCard} page="wall" k="wall" /></div>`;
 }
 
 export const NOTICE_TABS = [['changes', 'ui.chg.tab'], ['pages', 'ui.notice.tab'], ['report', 'ui.report.tab'], ['screens', 'ui.notice.screens_tab']];

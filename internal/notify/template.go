@@ -85,6 +85,16 @@ func escapeForJSON(d map[string]any) {
 // fails or renders nothing never costs the alert: the built-in text goes
 // out instead.
 func textOf(o map[string]string, m *Message) (title, body string) {
+	title, body = channelText(o, m)
+	// prefix= puts a fixed mark such as "[Beijing host1]" in front, so a
+	// text message says which site sent it.
+	if p := strings.TrimSpace(o["prefix"]); p != "" {
+		title = p + " " + title
+	}
+	return title, body
+}
+
+func channelText(o map[string]string, m *Message) (title, body string) {
 	title, body = Render(m)
 	tpl := templateLines(o["template"])
 	if tpl == "" {
@@ -181,6 +191,22 @@ var funcs = template.FuncMap{
 		return out
 	},
 	"b64": func(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) },
+	// digits keeps the digits of an id such as a QQ group number, so it
+	// can stand unquoted as a JSON number; an id without digits becomes 0.
+	"digits": func(s string) string {
+		var b strings.Builder
+		for _, r := range s {
+			if r >= '0' && r <= '9' {
+				b.WriteRune(r)
+			} else if b.Len() > 0 && (r == ',' || r == ' ') {
+				break
+			}
+		}
+		if b.Len() == 0 {
+			return "0"
+		}
+		return b.String()
+	},
 }
 
 func renderTemplate(src string, data map[string]any) (string, error) {
@@ -232,4 +258,22 @@ func templateError(err error) string {
 		s = rest
 	}
 	return s
+}
+
+// PreviewTemplate is what a channel with this template= sends for an
+// example problem, for the form that edits it: the title and the body, or
+// why the template does not work. An empty template shows the built-in
+// text.
+func PreviewTemplate(tpl, lang, instance string) (title, body string, err error) {
+	m := sampleMessage(&Message{Lang: lang, Instance: instance})
+	if strings.TrimSpace(tpl) == "" {
+		title, body = Render(m)
+		return title, body, nil
+	}
+	o := map[string]string{"template": tpl}
+	if err := checkTemplate("template", templateLines(tpl), o); err != nil {
+		return "", "", err
+	}
+	title, body = textOf(o, m)
+	return title, body, nil
 }

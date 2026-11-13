@@ -510,3 +510,42 @@ func TestTemplateLineBreaks(t *testing.T) {
 		t.Fatalf("title %q body %q", title, body)
 	}
 }
+
+// A custom SMS gateway gets one request per number, with the number and
+// the message where its templates put them; one number failing does not
+// stop the others.
+func TestCustomSMSGateway(t *testing.T) {
+	s := newStandIn(t)
+	ch := Channel{Name: "sms", Kind: "custom-sms", Opts: map[string]string{"url": "https://sms.example.com/send?to={{.Phone}}", "phones": "13800000000, 13900000000",
+		"header.X-Key": "k1", "success-match": `"ok":true`}}
+	s.reply = `{"ok":true}`
+	if err := ValidateChannel(ch.Kind, ch.Opts); err != nil {
+		t.Fatal(err)
+	}
+	if a := s.sender().Send(context.Background(), ch, aProblem("zh")); !a.OK {
+		t.Fatal(a.Error)
+	}
+	if len(s.reqs) != 2 || s.reqs[1].query != "to=13900000000" || s.reqs[1].header.Get("X-Key") != "k1" {
+		t.Fatalf("%d requests, last ?%s %v", len(s.reqs), s.reqs[1].query, s.reqs[1].header)
+	}
+	var d map[string]string
+	if json.Unmarshal(s.reqs[0].body, &d) != nil || d["phone"] != "13800000000" || !strings.Contains(d["message"], "支付网关") {
+		t.Fatalf("default body %s", s.reqs[0].body)
+	}
+	// A body of the operator's own, as a form.
+	ch.Opts["content-type"], ch.Opts["body"] = "form", "mobile={{.Phone}}&text={{urlquery .Name}}"
+	ch.Opts["url"] = "https://sms.example.com/send"
+	s.sender().Send(context.Background(), ch, aProblem("zh"))
+	if got := string(s.last(t).body); got != "mobile=13900000000&text="+url.QueryEscape(`支付网关 "API" <gw> & co`) {
+		t.Fatalf("form body %q", got)
+	}
+	// The gateway refuses: the reason is reported, per number.
+	s.status, s.reply = 403, `{"ok":false,"msg":"bad key"}`
+	a := s.sender().Send(context.Background(), Channel{Name: "v", Kind: "custom-voice", Opts: map[string]string{"url": "https://v.example.com/call", "phones": "13800000000"}}, aProblem("zh"))
+	if a.OK || !a.Permanent || !strings.Contains(a.Error, "13800000000: HTTP 403: bad key") {
+		t.Fatalf("%+v", a)
+	}
+	if p := TemplateProblems("custom-sms", map[string]string{"url": "https://x/?p={{.Phone}}", "body": "{{.Phonee}}"}); len(p) != 1 || !strings.Contains(p[0], "Phonee") {
+		t.Fatalf("problems %v", p)
+	}
+}

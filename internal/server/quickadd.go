@@ -43,7 +43,15 @@ func quickRecord(line string, used map[string]bool) (config.RecordSpec, error) {
 		return spec, fmt.Errorf("nothing to monitor")
 	}
 	typ, target := "", ""
+	if n := quickWords(words[0]); len(words) > n {
+		return spec, fmt.Errorf("one target per line: %q is left over", strings.Join(words[n:], " "))
+	}
 	switch strings.ToLower(words[0]) {
+	case "icmp":
+		if len(words) < 2 {
+			return spec, fmt.Errorf("%s needs a target", words[0])
+		}
+		typ, target = "PING", words[1]
 	case "http", "https", "tcp", "udp", "ping", "dns", "ntp", "snmp", "syslog", "redis", "postgres", "mysql", "grpc", "docker":
 		if len(words) < 2 {
 			return spec, fmt.Errorf("%s needs a target", words[0])
@@ -127,4 +135,14 @@ func deriveName(typ, target string, used map[string]bool) string {
 		out = fmt.Sprintf("%s-%d", name, i)
 	}
 	return out
+}
+
+// quickWords is how many words the target of a line takes: a type and its
+// target, or the target alone.
+func quickWords(first string) int {
+	switch strings.ToLower(first) {
+	case "icmp", "http", "https", "tcp", "udp", "ping", "dns", "ntp", "snmp", "syslog", "redis", "postgres", "mysql", "grpc", "docker":
+		return 2
+	}
+	return 1
 }

@@ -14,6 +14,7 @@ import (
 type Preset struct {
 	Name        string            `json:"name"`
 	Label       string            `json:"label"`
+	Group       string            `json:"group"` // menu section in the channel form
 	Fields      []Field           `json:"fields"`
 	Method      string            `json:"method"`
 	URL         string            `json:"url"`
@@ -66,6 +67,10 @@ func init() {
 			if err := ValidateTemplate(src); err != nil {
 				panic(fmt.Sprintf("notify: preset %s: %v", p.Name, err))
 			}
+		}
+		// Text messages carry a site mark in front when one is set.
+		if p.Group == "sms" || p.Group == "whatsapp" {
+			p.Fields = append(p.Fields, prefixField)
 		}
 		presets[p.Name] = p
 	}

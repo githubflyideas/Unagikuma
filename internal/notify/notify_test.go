@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -234,7 +235,7 @@ func TestWebhookJSONEscaping(t *testing.T) {
 }
 
 func TestPresets(t *testing.T) {
-	if len(presets) != 17 {
+	if len(presets) != 112 {
 		t.Fatalf("%d presets", len(presets))
 	}
 	cap := &capture{}
@@ -328,7 +329,7 @@ func TestValidateChannel(t *testing.T) {
 	if err := ValidateChannel("feishu", map[string]string{"url": "${secret:hook}"}); err != nil {
 		t.Errorf("references must pass: %v", err)
 	}
-	if len(Kinds()) != 9+len(cloudKinds)+1+17 {
+	if len(Kinds()) != 11+len(cloudKinds)+1+112 {
 		t.Errorf("kinds %d", len(Kinds()))
 	}
 }
@@ -459,5 +460,111 @@ func TestRenderNoRepeatedReason(t *testing.T) {
 	_, body := Render(m)
 	if n := strings.Count(strings.ToLower(body), "no response within the timeout"); n != 1 {
 		t.Fatalf("reason written %d times:\n%s", n, body)
+	}
+}
+
+// TestEveryPreset sends a problem and a recovery through every preset with
+// its required fields filled in, and checks the request is well formed.
+func TestEveryPreset(t *testing.T) {
+	cap := &capture{}
+	srv := cap.server(t)
+	s := &Sender{Client: &http.Client{Transport: rewrite{srv.URL}}}
+	for name, p := range presets {
+		o := map[string]string{"preset": name}
+		for _, f := range p.Fields {
+			switch {
+			case f.Type == "url" || f.Key == "url":
+				o[f.Key] = srv.URL + "/" + name
+			case f.Type == "select":
+				o[f.Key] = f.Options[len(f.Options)-1]
+			case f.Key == "to":
+				o[f.Key] = "+8613800000000, +8613900000000"
+			case f.Required:
+				o[f.Key] = "v-" + f.Key
+			}
+		}
+		if err := ValidateChannel("webhook", o); err != nil {
+			t.Errorf("%s: %v", name, err)
+			continue
+		}
+		// A reply that satisfies the success rule, built from its path.
+		cap.resp = ""
+		if fld := p.Success.Field; fld != "" {
+			v := any(p.Success.Equals)
+			if n, err := strconv.Atoi(p.Success.Equals); err == nil {
+				v = n
+			} else if b, err := strconv.ParseBool(p.Success.Equals); err == nil {
+				v = b
+			}
+			parts := strings.Split(fld, ".")
+			for i := len(parts) - 1; i >= 0; i-- {
+				v = map[string]any{parts[i]: v}
+			}
+			b, _ := json.Marshal(v)
+			cap.resp = string(b)
+		}
+		for _, kind := range []string{"PROBLEM", "RECOVERY"} {
+			m := problem()
+			m.Kind = kind
+			m.Title = `db "primary" <down> & 中文`
+			a := s.Send(context.Background(), Channel{Name: name, Kind: "webhook", Opts: o}, m)
+			if !a.OK {
+				t.Errorf("%s %s: %+v", name, kind, a)
+				continue
+			}
+			req, body := cap.last()
+			if req.Method != p.Method {
+				t.Errorf("%s: method %s", name, req.Method)
+			}
+			if strings.Contains(req.Header.Get("Content-Type"), "json") {
+				var v any
+				if err := json.Unmarshal(body, &v); err != nil {
+					t.Errorf("%s %s: invalid JSON %s", name, kind, body)
+				}
+			}
+			if p.ContentType == "form" {
+				if _, err := url.ParseQuery(string(body)); err != nil {
+					t.Errorf("%s: bad form %s", name, body)
+				}
+			}
+			if !strings.Contains(string(body)+req.URL.RawQuery+req.Header.Get("Title"), "primary") && !strings.Contains(string(body), "\\u0022primary") {
+				t.Errorf("%s %s: title not delivered: %s %s", name, kind, req.URL, body)
+			}
+		}
+	}
+}
+
+func TestPreviewTemplate(t *testing.T) {
+	title, body, err := PreviewTemplate(`{{.Icon}} {{.Name}}\n{{.Detail}}`, "zh", "host1")
+	if err != nil || !strings.Contains(title, "Example service") || !strings.Contains(body, "HTTP 503") {
+		t.Fatalf("%q %q %v", title, body, err)
+	}
+	if _, _, err := PreviewTemplate(`{{.Nope}}`, "en", ""); err == nil {
+		t.Fatal("unknown name accepted")
+	}
+	if title, _, err := PreviewTemplate("", "en", ""); err != nil || title == "" {
+		t.Fatalf("built-in text: %q %v", title, err)
+	}
+}
+
+// prefix= goes in front of every message of an SMS channel.
+func TestSMSPrefix(t *testing.T) {
+	cap := &capture{}
+	srv := cap.server(t)
+	o := map[string]string{"url": srv.URL + "/sms?to={{.Phone}}", "phones": "13800000000", "prefix": "【北京 host1】"}
+	if err := ValidateChannel("custom-sms", o); err != nil {
+		t.Fatal(err)
+	}
+	if a := (&Sender{}).Send(context.Background(), Channel{Name: "s", Kind: "custom-sms", Opts: o}, problem()); !a.OK {
+		t.Fatalf("%+v", a)
+	}
+	if _, body := cap.last(); !strings.Contains(string(body), `"message":"【北京 host1】 `) {
+		t.Fatalf("body %s", body)
+	}
+	if err := ValidateChannel("webhook", map[string]string{"preset": "plivo", "username": "u", "password": "p", "from": "1", "to": "2", "prefix": "[x]"}); err != nil {
+		t.Fatalf("sms preset refused prefix: %v", err)
+	}
+	if err := ValidateChannel("feishu", map[string]string{"url": "https://x", "prefix": "[x]"}); err == nil {
+		t.Fatal("prefix accepted on a chat channel")
 	}
 }

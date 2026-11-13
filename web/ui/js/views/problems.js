@@ -155,7 +155,7 @@ export function setupIssues(ov) {
   const out = [];
   const nch = (ov.channels || []).length;
   if (!nch) out.push({ key: 'ui.cfgissue.no_channel', link: '#/alerts/channels', act: 'ui.cfgissue.add_channel' });
-  else if (!ov.alerting_configured) out.push({ key: 'ui.cfgissue.no_policy', link: '#/settings/teams', act: 'ui.cfgissue.fix' });
+  else if (!ov.alerting_configured) out.push({ key: 'ui.cfgissue.no_policy', link: '#/advanced/teams', act: 'ui.cfgissue.fix' });
   if (ov.contact_issues) out.push({ key: 'ui.cfgissue.contacts', n: ov.contact_issues, link: '#/alerts/contacts', act: 'ui.cfgissue.fix' });
   if (ov.script_problems) out.push({ key: 'ui.cfgissue.scripts', n: ov.script_problems, link: '#/settings/scripts', act: 'ui.cfgissue.fix' });
   return out;

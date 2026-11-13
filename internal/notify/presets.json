@@ -30,7 +30,8 @@
     "body": "{{.Body}}",
     "limits": {
       "body_bytes": 4000
-    }
+    },
+    "group": "push"
   },
   {
     "name": "gotify",
@@ -50,7 +51,8 @@
     "method": "POST",
     "url": "{{.server}}/message?token={{urlquery .token}}",
     "content_type": "json",
-    "body": "{\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\",\"priority\":{{if eq .Priority \"low\"}}4{{else}}8{{end}}}"
+    "body": "{\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\",\"priority\":{{if eq .Priority \"low\"}}4{{else}}8{{end}}}",
+    "group": "push"
   },
   {
     "name": "bark",
@@ -78,7 +80,8 @@
     "limits": {
       "title": 200,
       "body_bytes": 3000
-    }
+    },
+    "group": "push"
   },
   {
     "name": "pushover",
@@ -106,7 +109,8 @@
     "limits": {
       "title": 250,
       "body": 1024
-    }
+    },
+    "group": "push"
   },
   {
     "name": "serverchan",
@@ -128,7 +132,8 @@
     },
     "limits": {
       "title": 32
-    }
+    },
+    "group": "asia"
   },
   {
     "name": "pushplus",
@@ -151,7 +156,8 @@
     "limits": {
       "title": 100,
       "body": 20000
-    }
+    },
+    "group": "asia"
   },
   {
     "name": "teams",
@@ -169,7 +175,8 @@
     "body": "{\"type\":\"message\",\"attachments\":[{\"contentType\":\"application/vnd.microsoft.card.adaptive\",\"content\":{\"type\":\"AdaptiveCard\",\"version\":\"1.4\",\"body\":[{\"type\":\"TextBlock\",\"text\":\"{{.Title}}\",\"weight\":\"bolder\",\"wrap\":true},{\"type\":\"TextBlock\",\"text\":\"{{.Body}}\",\"wrap\":true}]}}]}",
     "limits": {
       "body_bytes": 20000
-    }
+    },
+    "group": "chat"
   },
   {
     "name": "matrix",
@@ -197,7 +204,8 @@
     "headers": {
       "Authorization": "Bearer {{.token}}"
     },
-    "body": "{\"msgtype\":\"m.text\",\"body\":\"{{.Text}}\"}"
+    "body": "{\"msgtype\":\"m.text\",\"body\":\"{{.Text}}\"}",
+    "group": "chat"
   },
   {
     "name": "mattermost",
@@ -215,7 +223,8 @@
     "body": "{\"text\":\"{{.Text}}\"}",
     "limits": {
       "text": 16000
-    }
+    },
+    "group": "chat"
   },
   {
     "name": "pagerduty",
@@ -233,7 +242,8 @@
     "body": "{\"routing_key\":\"{{index . \"routing-key\"}}\",\"event_action\":\"{{if eq .Kind \"RECOVERY\"}}resolve{{else}}trigger{{end}}\",\"dedup_key\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"payload\":{\"summary\":\"{{.Title}}\",\"source\":\"{{if .Instance}}{{.Instance}}{{else}}unagikuma{{end}}\",\"severity\":\"{{if eq .Priority \"low\"}}warning{{else}}critical{{end}}\",\"custom_details\":{\"body\":\"{{.Body}}\"}}}",
     "limits": {
       "title": 1024
-    }
+    },
+    "group": "incident"
   },
   {
     "name": "opsgenie",
@@ -263,7 +273,8 @@
     "body": "{{if eq .Kind \"RECOVERY\"}}{\"note\":\"{{.Title}}\"}{{else}}{\"message\":\"{{trunc 120 .Title}}\",\"alias\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"description\":\"{{.Body}}\",\"priority\":\"{{if eq .Priority \"low\"}}P3{{else}}P1{{end}}\"}{{end}}",
     "limits": {
       "body": 15000
-    }
+    },
+    "group": "incident"
   },
   {
     "name": "googlechat",
@@ -281,7 +292,8 @@
     "body": "{\"text\":\"{{.Text}}\"}",
     "limits": {
       "text": 4000
-    }
+    },
+    "group": "chat"
   },
   {
     "name": "pushbullet",
@@ -303,7 +315,8 @@
     "limits": {
       "title": 250,
       "body": 8000
-    }
+    },
+    "group": "push"
   },
   {
     "name": "line",
@@ -330,7 +343,8 @@
     "body": "{\"to\":\"{{.to}}\",\"messages\":[{\"type\":\"text\",\"text\":\"{{.Text}}\"}]}",
     "limits": {
       "text": 5000
-    }
+    },
+    "group": "chat"
   },
   {
     "name": "clicksend",
@@ -370,7 +384,8 @@
     },
     "limits": {
       "title": 600
-    }
+    },
+    "group": "sms"
   },
   {
     "name": "datadog",
@@ -409,7 +424,8 @@
     "limits": {
       "title": 500,
       "body": 4000
-    }
+    },
+    "group": "incident"
   },
   {
     "name": "apprise",
@@ -434,6 +450,2806 @@
     "method": "POST",
     "url": "{{.server}}/notify/{{pathescape .key}}",
     "content_type": "json",
-    "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\",\"type\":\"{{if eq .Kind \"RECOVERY\"}}success{{else if eq .Priority \"low\"}}warning{{else}}failure{{end}}\"{{if .tag}},\"tag\":\"{{.tag}}\"{{end}}}"
+    "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\",\"type\":\"{{if eq .Kind \"RECOVERY\"}}success{{else if eq .Priority \"low\"}}warning{{else}}failure{{end}}\"{{if .tag}},\"tag\":\"{{.tag}}\"{{end}}}",
+    "group": "push"
+  },
+  {
+    "name": "rocketchat",
+    "label": "Rocket.Chat",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4000
+    },
+    "group": "chat"
+  },
+  {
+    "name": "zohocliq",
+    "label": "Zoho Cliq",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4000
+    },
+    "group": "chat"
+  },
+  {
+    "name": "pumble",
+    "label": "Pumble",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4000
+    },
+    "group": "chat"
+  },
+  {
+    "name": "stackfield",
+    "label": "Stackfield",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"Title\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4000
+    },
+    "group": "chat"
+  },
+  {
+    "name": "webex",
+    "label": "Cisco Webex",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "room",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://webexapis.com/v1/messages",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"roomId\":\"{{.room}}\",\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 7000
+    },
+    "group": "chat"
+  },
+  {
+    "name": "zulip",
+    "label": "Zulip",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "username",
+        "type": "text",
+        "required": true,
+        "placeholder": "bot@example.zulipchat.com"
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "stream",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "topic",
+        "type": "text",
+        "default": "unagikuma"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/api/v1/messages",
+    "headers": {
+      "Authorization": "Basic {{b64 (print .username \":\" (index . \"api-key\"))}}"
+    },
+    "content_type": "form",
+    "body": "type=stream&to={{urlquery .stream}}&topic={{urlquery .topic}}&content={{urlquery .Text}}",
+    "success": {
+      "field": "result",
+      "equals": "success"
+    },
+    "limits": {
+      "text": 9000
+    },
+    "group": "chat"
+  },
+  {
+    "name": "nextcloudtalk",
+    "label": "Nextcloud Talk",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "username",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "room",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/ocs/v2.php/apps/spreed/api/v1/chat/{{pathescape .room}}",
+    "headers": {
+      "Authorization": "Basic {{b64 (print .username \":\" .password)}}",
+      "OCS-APIRequest": "true",
+      "Accept": "application/json"
+    },
+    "content_type": "json",
+    "body": "{\"message\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 32000
+    },
+    "group": "chat"
+  },
+  {
+    "name": "vkteams",
+    "label": "VK Teams",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "default": "https://myteam.mail.ru"
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "chat",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "method": "GET",
+    "url": "{{.server}}/bot/v1/messages/sendText?token={{urlquery .token}}&chatId={{urlquery .chat}}&text={{urlquery .Text}}",
+    "content_type": "text",
+    "body": "",
+    "success": {
+      "field": "ok",
+      "equals": "true"
+    },
+    "limits": {
+      "text": 3500
+    },
+    "group": "ru"
+  },
+  {
+    "name": "kook",
+    "label": "KOOK (开黑啦)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "chat",
+        "type": "text",
+        "required": true,
+        "placeholder": "channel id"
+      }
+    ],
+    "method": "POST",
+    "url": "https://www.kookapp.cn/api/v3/message/create",
+    "headers": {
+      "Authorization": "Bot {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"target_id\":\"{{.chat}}\",\"content\":\"{{.Text}}\"}",
+    "success": {
+      "field": "code",
+      "equals": "0"
+    },
+    "limits": {
+      "text": 4000
+    },
+    "group": "asia"
+  },
+  {
+    "name": "signal",
+    "label": "Signal (signal-cli REST API)",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true,
+        "placeholder": "http://signal-api:8080"
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true,
+        "placeholder": "+8613800000000"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+8613900000000,group.xxx"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/v2/send",
+    "content_type": "json",
+    "body": "{\"message\":\"{{.Text}}\",\"number\":\"{{.from}}\",\"recipients\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}\"{{$n}}\"{{end}}]}",
+    "limits": {
+      "text": 2000
+    },
+    "group": "chat"
+  },
+  {
+    "name": "bitrix24",
+    "label": "Bitrix24",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true,
+        "placeholder": "https://xxx.bitrix24.com/rest/1/abc"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "user id"
+      }
+    ],
+    "method": "GET",
+    "url": "{{.url}}/im.notify.system.add.json?USER_ID={{urlquery .to}}&MESSAGE={{urlquery .Text}}",
+    "content_type": "text",
+    "body": "",
+    "limits": {
+      "text": 4000
+    },
+    "group": "ru"
+  },
+  {
+    "name": "onebot",
+    "label": "OneBot (QQ)",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "token",
+        "type": "secret"
+      },
+      {
+        "key": "type",
+        "type": "select",
+        "options": [
+          "group",
+          "private"
+        ],
+        "default": "group"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "group / QQ number"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/send_msg",
+    "headers": {
+      "Authorization": "{{if .token}}Bearer {{.token}}{{end}}"
+    },
+    "content_type": "json",
+    "body": "{\"auto_escape\":true,\"message_type\":\"{{.type}}\",{{if eq .type \"private\"}}\"user_id\"{{else}}\"group_id\"{{end}}:{{digits .to}},\"message\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4500
+    },
+    "group": "asia"
+  },
+  {
+    "name": "homeassistant",
+    "label": "Home Assistant",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "service",
+        "type": "text",
+        "required": true,
+        "placeholder": "mobile_app_phone"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/api/services/notify/{{pathescape .service}}",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\"}",
+    "group": "push"
+  },
+  {
+    "name": "gorush",
+    "label": "Gorush",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "device token"
+      },
+      {
+        "key": "platform",
+        "type": "select",
+        "options": [
+          "ios",
+          "android",
+          "huawei"
+        ],
+        "default": "android"
+      },
+      {
+        "key": "topic",
+        "type": "text"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/api/push",
+    "content_type": "json",
+    "body": "{\"notifications\":[{\"tokens\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}\"{{$n}}\"{{end}}],\"platform\":{{if eq .platform \"ios\"}}1{{else if eq .platform \"huawei\"}}3{{else}}2{{end}},\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\",\"priority\":\"high\"{{if .topic}},\"topic\":\"{{.topic}}\"{{end}}}]}",
+    "limits": {
+      "title": 200,
+      "body": 2000
+    },
+    "group": "push"
+  },
+  {
+    "name": "lunasea",
+    "label": "LunaSea",
+    "fields": [
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "user/ID or device/ID"
+      }
+    ],
+    "method": "POST",
+    "url": "https://notify.lunasea.app/v1/custom/{{.to}}",
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\"}",
+    "group": "push"
+  },
+  {
+    "name": "wxpusher",
+    "label": "WxPusher (微信)",
+    "fields": [
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "SPT_xxx"
+      }
+    ],
+    "method": "POST",
+    "url": "https://wxpusher.zjiecode.com/api/send/message/simple-push",
+    "content_type": "json",
+    "body": "{\"content\":\"{{.Text}}\",\"summary\":\"{{trunc 20 .Title}}\",\"contentType\":1,\"sptList\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}\"{{$n}}\"{{end}}]}",
+    "success": {
+      "field": "code",
+      "equals": "1000"
+    },
+    "limits": {
+      "text": 40000
+    },
+    "group": "asia"
+  },
+  {
+    "name": "pushdeer",
+    "label": "PushDeer",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "default": "https://api2.pushdeer.com"
+      },
+      {
+        "key": "key",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/message/push",
+    "content_type": "json",
+    "body": "{\"pushkey\":\"{{.key}}\",\"text\":\"{{.Title}}\",\"desp\":\"{{.Body}}\",\"type\":\"markdown\"}",
+    "success": {
+      "field": "code",
+      "equals": "0"
+    },
+    "group": "asia"
+  },
+  {
+    "name": "wpush",
+    "label": "WPush",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "channel",
+        "type": "select",
+        "options": [
+          "wechat",
+          "sms",
+          "mail",
+          "feishu",
+          "dingtalk",
+          "webhook",
+          "wechat_work"
+        ],
+        "default": "wechat"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.wpush.cn/api/v1/send",
+    "content_type": "json",
+    "body": "{\"apikey\":\"{{index . \"api-key\"}}\",\"channel\":\"{{.channel}}\",\"title\":\"{{.Title}}\",\"content\":\"{{.Body}}\"}",
+    "success": {
+      "field": "code",
+      "equals": "0"
+    },
+    "group": "asia"
+  },
+  {
+    "name": "spug",
+    "label": "Spug 推送助手",
+    "fields": [
+      {
+        "key": "key",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://push.spug.cc/send/{{pathescape .key}}",
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"content\":\"{{.Body}}\"}",
+    "success": {
+      "field": "code",
+      "equals": "200"
+    },
+    "group": "asia"
+  },
+  {
+    "name": "yzj",
+    "label": "云之家 (YZJ)",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"content\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4000
+    },
+    "group": "asia"
+  },
+  {
+    "name": "techulus",
+    "label": "Techulus Push",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://push.techulus.com/api/v1/notify/{{pathescape (index . \"api-key\")}}",
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\",\"timeSensitive\":{{if eq .Priority \"low\"}}false{{else}}true{{end}}}",
+    "group": "push"
+  },
+  {
+    "name": "pushy",
+    "label": "Pushy",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "device token or /topics/x"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.pushy.me/push?api_key={{urlquery (index . \"api-key\")}}",
+    "content_type": "json",
+    "body": "{\"to\":\"{{.to}}\",\"data\":{\"message\":\"{{.Title}}\"},\"notification\":{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\",\"badge\":1}}",
+    "limits": {
+      "title": 200,
+      "body": 2000
+    },
+    "group": "push"
+  },
+  {
+    "name": "notifery",
+    "label": "Notifery",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.notifery.com/event",
+    "headers": {
+      "x-api-key": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\",\"code\":{{if eq .Kind \"RECOVERY\"}}0{{else}}1{{end}}}",
+    "group": "push"
+  },
+  {
+    "name": "alerta",
+    "label": "Alerta",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true,
+        "placeholder": "https://alerta.example.com/api"
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "environment",
+        "type": "text",
+        "default": "Production"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/alert",
+    "headers": {
+      "Authorization": "Key {{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"environment\":\"{{.environment}}\",\"resource\":\"{{if .Instance}}{{.Instance}}{{else}}unagikuma{{end}}\",\"event\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"severity\":\"{{if eq .Kind \"RECOVERY\"}}normal{{else if eq .Priority \"low\"}}warning{{else}}critical{{end}}\",\"service\":[\"unagikuma\"],\"text\":\"{{.Text}}\",\"origin\":\"unagikuma\"}",
+    "group": "incident"
+  },
+  {
+    "name": "alertnow",
+    "label": "AlertNow",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"summary\":\"{{.Text}}\",\"status\":\"{{if eq .Kind \"RECOVERY\"}}close{{else}}open{{end}}\",\"event_type\":\"{{if eq .Kind \"RECOVERY\"}}INFO{{else}}ERROR{{end}}\",\"event_id\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\"}",
+    "group": "incident"
+  },
+  {
+    "name": "goalert",
+    "label": "GoAlert",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/api/v2/generic/incoming?token={{urlquery .token}}",
+    "content_type": "form",
+    "body": "summary={{urlquery .Title}}&details={{urlquery .Body}}&dedup={{urlquery \"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\"}}{{if eq .Kind \"RECOVERY\"}}&action=close{{end}}",
+    "limits": {
+      "title": 200
+    },
+    "group": "incident"
+  },
+  {
+    "name": "grafanaoncall",
+    "label": "Grafana OnCall",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"alert_uid\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\",\"state\":\"{{if eq .Kind \"RECOVERY\"}}ok{{else}}alerting{{end}}\"}",
+    "group": "incident"
+  },
+  {
+    "name": "pagertree",
+    "label": "PagerTree",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"event_type\":\"{{if eq .Kind \"RECOVERY\"}}resolve{{else}}create{{end}}\",\"id\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"title\":\"{{.Title}}\",\"description\":\"{{.Body}}\",\"urgency\":\"{{if eq .Priority \"low\"}}medium{{else}}high{{end}}\"}",
+    "group": "incident"
+  },
+  {
+    "name": "signl4",
+    "label": "SIGNL4",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\",\"X-S4-SourceSystem\":\"unagikuma\",\"X-S4-ExternalID\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"X-S4-Status\":\"{{if eq .Kind \"RECOVERY\"}}resolved{{else}}new{{end}}\"}",
+    "group": "incident"
+  },
+  {
+    "name": "splunk",
+    "label": "Splunk On-Call (VictorOps)",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true,
+        "placeholder": "https://alert.victorops.com/integrations/generic/…/alert/KEY"
+      },
+      {
+        "key": "routing-key",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}/{{pathescape (index . \"routing-key\")}}",
+    "content_type": "json",
+    "body": "{\"message_type\":\"{{if eq .Kind \"RECOVERY\"}}RECOVERY{{else if eq .Priority \"low\"}}WARNING{{else}}CRITICAL{{end}}\",\"entity_id\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"entity_display_name\":\"{{.Title}}\",\"state_message\":\"{{.Body}}\",\"monitoring_tool\":\"unagikuma\"}",
+    "group": "incident"
+  },
+  {
+    "name": "squadcast",
+    "label": "Squadcast",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"message\":\"{{.Title}}\",\"description\":\"{{.Body}}\",\"event_id\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"status\":\"{{if eq .Kind \"RECOVERY\"}}resolve{{else}}trigger{{end}}\",\"source\":\"unagikuma\"}",
+    "group": "incident"
+  },
+  {
+    "name": "flashduty",
+    "label": "Flashduty (快猫星云)",
+    "fields": [
+      {
+        "key": "key",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.flashcat.cloud/event/push/alert/standard?integration_key={{urlquery .key}}",
+    "content_type": "json",
+    "body": "{\"title_rule\":\"{{.Title}}\",\"event_status\":\"{{if eq .Kind \"RECOVERY\"}}Ok{{else if eq .Priority \"low\"}}Warning{{else}}Critical{{end}}\",\"alert_key\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"description\":\"{{.Body}}\"}",
+    "group": "asia"
+  },
+  {
+    "name": "heii",
+    "label": "Heii On-Call",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "key",
+        "type": "text",
+        "required": true,
+        "placeholder": "trigger id"
+      }
+    ],
+    "method": "POST",
+    "url": "https://heiioncall.com/triggers/{{pathescape .key}}/{{if eq .Kind \"RECOVERY\"}}resolve{{else}}alert{{end}}",
+    "headers": {
+      "Authorization": "Bearer {{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"msg\":\"{{.Text}}\"}",
+    "group": "incident"
+  },
+  {
+    "name": "ilert",
+    "label": "ilert",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.ilert.com/api/events",
+    "content_type": "json",
+    "body": "{\"apiKey\":\"{{index . \"api-key\"}}\",\"eventType\":\"{{if eq .Kind \"RECOVERY\"}}RESOLVE{{else}}ALERT{{end}}\",\"summary\":\"{{.Title}}\",\"details\":\"{{.Body}}\",\"alertKey\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\"}",
+    "limits": {
+      "title": 255
+    },
+    "group": "incident"
+  },
+  {
+    "name": "incidentio",
+    "label": "incident.io",
+    "fields": [
+      {
+        "key": "key",
+        "type": "text",
+        "required": true,
+        "placeholder": "alert source config id"
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.incident.io/v2/alert_events/http/{{pathescape .key}}",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"description\":\"{{.Body}}\",\"deduplication_key\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"status\":\"{{if eq .Kind \"RECOVERY\"}}resolved{{else}}firing{{end}}\"}",
+    "group": "incident"
+  },
+  {
+    "name": "newrelic",
+    "label": "New Relic (events)",
+    "fields": [
+      {
+        "key": "account",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "region",
+        "type": "select",
+        "options": [
+          "us",
+          "eu"
+        ],
+        "default": "us"
+      }
+    ],
+    "method": "POST",
+    "url": "https://insights-collector.{{if eq .region \"eu\"}}eu01.nr-data.net{{else}}newrelic.com{{end}}/v1/accounts/{{pathescape .account}}/events",
+    "headers": {
+      "X-Insert-Key": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "[{\"eventType\":\"UnagikumaAlert\",\"kind\":\"{{.Kind}}\",\"incident\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"title\":\"{{.Title}}\",\"description\":\"{{.Body}}\"}]",
+    "group": "incident"
+  },
+  {
+    "name": "ifttt",
+    "label": "IFTTT Webhooks",
+    "fields": [
+      {
+        "key": "key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "event",
+        "type": "text",
+        "default": "unagikuma"
+      }
+    ],
+    "method": "POST",
+    "url": "https://maker.ifttt.com/trigger/{{pathescape .event}}/with/key/{{pathescape .key}}",
+    "content_type": "json",
+    "body": "{\"value1\":\"{{.Title}}\",\"value2\":\"{{.Body}}\",\"value3\":\"{{.Kind}}\"}",
+    "group": "automation"
+  },
+  {
+    "name": "zapier",
+    "label": "Zapier (Catch Hook)",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\",\"kind\":\"{{.Kind}}\",\"priority\":\"{{.Priority}}\",\"incident\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"instance\":\"{{.Instance}}\"}",
+    "group": "automation"
+  },
+  {
+    "name": "n8n",
+    "label": "n8n (Webhook node)",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\",\"kind\":\"{{.Kind}}\",\"priority\":\"{{.Priority}}\",\"incident\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"instance\":\"{{.Instance}}\"}",
+    "group": "automation"
+  },
+  {
+    "name": "github",
+    "label": "GitHub Issues",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "repo",
+        "type": "text",
+        "required": true,
+        "placeholder": "owner/repo"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.github.com/repos/{{.repo}}/issues",
+    "headers": {
+      "Authorization": "Bearer {{.token}}",
+      "Accept": "application/vnd.github+json"
+    },
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\",\"labels\":[\"unagikuma\"]}",
+    "limits": {
+      "title": 250,
+      "body": 60000
+    },
+    "group": "incident"
+  },
+  {
+    "name": "gitea",
+    "label": "Gitea / Forgejo Issues",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "repo",
+        "type": "text",
+        "required": true,
+        "placeholder": "owner/repo"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/api/v1/repos/{{.repo}}/issues",
+    "headers": {
+      "Authorization": "token {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\"}",
+    "limits": {
+      "title": 250
+    },
+    "group": "incident"
+  },
+  {
+    "name": "plivo",
+    "label": "Plivo SMS",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true,
+        "placeholder": "Auth ID"
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true,
+        "placeholder": "Auth token"
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+14155550100,+8613800000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.plivo.com/v1/Account/{{pathescape .username}}/Message/",
+    "headers": {
+      "Authorization": "Basic {{b64 (print .username \":\" .password)}}"
+    },
+    "content_type": "json",
+    "body": "{\"src\":\"{{.from}}\",\"dst\":\"{{join \"<\" (split \",\" .to)}}\",\"text\":\"{{.Title}}\"}",
+    "limits": {
+      "title": 1600
+    },
+    "group": "sms"
+  },
+  {
+    "name": "telnyx",
+    "label": "Telnyx SMS",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+14155550100"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.telnyx.com/v2/messages",
+    "headers": {
+      "Authorization": "Bearer {{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"from\":\"{{.from}}\",\"to\":\"{{.to}}\",\"text\":\"{{.Title}}\"}",
+    "limits": {
+      "title": 1600
+    },
+    "group": "sms"
+  },
+  {
+    "name": "vonage",
+    "label": "Vonage (Nexmo) SMS",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true,
+        "placeholder": "API secret"
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "14155550100"
+      }
+    ],
+    "method": "POST",
+    "url": "https://rest.nexmo.com/sms/json",
+    "content_type": "form",
+    "body": "api_key={{urlquery (index . \"api-key\")}}&api_secret={{urlquery .password}}&from={{urlquery .from}}&to={{urlquery .to}}&type=unicode&text={{urlquery .Title}}",
+    "limits": {
+      "title": 900
+    },
+    "group": "sms"
+  },
+  {
+    "name": "messagebird",
+    "label": "MessageBird SMS",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "31612345678,8613800000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://rest.messagebird.com/messages",
+    "headers": {
+      "Authorization": "AccessKey {{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"originator\":\"{{.from}}\",\"recipients\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}\"{{$n}}\"{{end}}],\"body\":\"{{.Title}}\"}",
+    "limits": {
+      "title": 1377
+    },
+    "group": "sms"
+  },
+  {
+    "name": "sevenio",
+    "label": "seven.io SMS",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+4917612345678,+8613800000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://gateway.seven.io/api/sms",
+    "headers": {
+      "X-Api-Key": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"to\":\"{{.to}}\",\"text\":\"{{.Title}}\"{{if .from}},\"from\":\"{{.from}}\"{{end}}}",
+    "limits": {
+      "title": 1520
+    },
+    "group": "sms"
+  },
+  {
+    "name": "46elks",
+    "label": "46elks SMS",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true,
+        "placeholder": "API username"
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+46700000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.46elks.com/a1/sms",
+    "headers": {
+      "Authorization": "Basic {{b64 (print .username \":\" .password)}}"
+    },
+    "content_type": "form",
+    "body": "from={{urlquery .from}}&to={{urlquery .to}}&message={{urlquery .Title}}",
+    "limits": {
+      "title": 1600
+    },
+    "group": "sms"
+  },
+  {
+    "name": "octopush",
+    "label": "Octopush SMS",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true,
+        "placeholder": "API login (e-mail)"
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+33600000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.octopush.com/v1/public/sms-campaign/send",
+    "headers": {
+      "api-login": "{{.username}}",
+      "api-key": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"recipients\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}{\"phone_number\":\"{{$n}}\"}{{end}}],\"text\":\"{{.Title}}\",\"type\":\"sms_premium\",\"purpose\":\"alert\"{{if .from}},\"sender\":\"{{.from}}\"{{end}}}",
+    "limits": {
+      "title": 1500
+    },
+    "group": "sms"
+  },
+  {
+    "name": "freemobile",
+    "label": "Free Mobile SMS",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true,
+        "placeholder": "identifiant"
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true,
+        "placeholder": "clé"
+      }
+    ],
+    "method": "POST",
+    "url": "https://smsapi.free-mobile.fr/sendmsg",
+    "content_type": "json",
+    "body": "{\"user\":\"{{.username}}\",\"pass\":\"{{.password}}\",\"msg\":\"{{.Title}}\"}",
+    "limits": {
+      "title": 999
+    },
+    "group": "sms"
+  },
+  {
+    "name": "smsc",
+    "label": "SMSC.ru SMS",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "79991234567,79997654321"
+      }
+    ],
+    "method": "POST",
+    "url": "https://smsc.ru/sys/send.php",
+    "content_type": "form",
+    "body": "login={{urlquery .username}}&psw={{urlquery .password}}&phones={{urlquery .to}}&charset=utf-8&fmt=3&mes={{urlquery .Title}}",
+    "limits": {
+      "title": 1000
+    },
+    "group": "sms"
+  },
+  {
+    "name": "smseagle",
+    "label": "SMSEagle",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+48500000000"
+      }
+    ],
+    "method": "GET",
+    "url": "{{.server}}/http_api/send_sms?access_token={{urlquery .token}}&to={{urlquery .to}}&message={{urlquery .Title}}",
+    "content_type": "text",
+    "body": "",
+    "limits": {
+      "title": 1000
+    },
+    "group": "sms"
+  },
+  {
+    "name": "infobip",
+    "label": "Infobip SMS",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true,
+        "placeholder": "https://xxxxx.api.infobip.com"
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+5511999999999,+966500000000"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/sms/2/text/advanced",
+    "headers": {
+      "Authorization": "App {{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"messages\":[{\"destinations\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}{\"to\":\"{{$n}}\"}{{end}}],{{if .from}}\"from\":\"{{.from}}\",{{end}}\"text\":\"{{.Title}}\"}]}",
+    "limits": {
+      "title": 1600
+    },
+    "group": "sms"
+  },
+  {
+    "name": "threema",
+    "label": "Threema Gateway",
+    "fields": [
+      {
+        "key": "from",
+        "type": "text",
+        "required": true,
+        "placeholder": "*GATEWAY"
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true,
+        "placeholder": "API secret"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "Threema ID"
+      }
+    ],
+    "method": "POST",
+    "url": "https://msgapi.threema.ch/send_simple",
+    "content_type": "form",
+    "body": "from={{urlquery .from}}&to={{urlquery .to}}&secret={{urlquery .password}}&text={{urlquery .Text}}",
+    "limits": {
+      "text": 3500
+    },
+    "group": "chat"
+  },
+  {
+    "name": "sendgrid",
+    "label": "SendGrid (e-mail)",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true,
+        "placeholder": "alerts@example.com"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "ops@example.com,oncall@example.com"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.sendgrid.com/v3/mail/send",
+    "headers": {
+      "Authorization": "Bearer {{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"personalizations\":[{\"to\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}{\"email\":\"{{$n}}\"}{{end}}]}],\"from\":{\"email\":\"{{.from}}\"},\"subject\":\"{{.Title}}\",\"content\":[{\"type\":\"text/plain\",\"value\":\"{{.Body}}\"}]}",
+    "limits": {
+      "title": 900
+    },
+    "group": "email"
+  },
+  {
+    "name": "brevo",
+    "label": "Brevo (e-mail)",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true,
+        "placeholder": "alerts@example.com"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "ops@example.com"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.brevo.com/v3/smtp/email",
+    "headers": {
+      "api-key": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"sender\":{\"email\":\"{{.from}}\",\"name\":\"Unagikuma\"},\"to\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}{\"email\":\"{{$n}}\"}{{end}}],\"subject\":\"{{.Title}}\",\"textContent\":\"{{.Body}}\"}",
+    "limits": {
+      "title": 900
+    },
+    "group": "email"
+  },
+  {
+    "name": "resend",
+    "label": "Resend (e-mail)",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true,
+        "placeholder": "Unagikuma <alerts@example.com>"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "ops@example.com"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.resend.com/emails",
+    "headers": {
+      "Authorization": "Bearer {{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"from\":\"{{.from}}\",\"to\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}\"{{$n}}\"{{end}}],\"subject\":\"{{.Title}}\",\"text\":\"{{.Body}}\"}",
+    "limits": {
+      "title": 900
+    },
+    "group": "email"
+  },
+  {
+    "name": "whatsapp",
+    "label": "WhatsApp Cloud API (Meta)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "key",
+        "type": "text",
+        "required": true,
+        "placeholder": "phone number id"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "5511999999999"
+      }
+    ],
+    "method": "POST",
+    "url": "https://graph.facebook.com/v21.0/{{pathescape .key}}/messages",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"messaging_product\":\"whatsapp\",\"to\":\"{{.to}}\",\"type\":\"text\",\"text\":{\"body\":\"{{.Text}}\"}}",
+    "limits": {
+      "text": 4096
+    },
+    "group": "whatsapp"
+  },
+  {
+    "name": "callmebot",
+    "label": "CallMeBot (WhatsApp)",
+    "fields": [
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+34600000000"
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "GET",
+    "url": "https://api.callmebot.com/whatsapp.php?phone={{urlquery .to}}&apikey={{urlquery (index . \"api-key\")}}&text={{urlquery .Text}}",
+    "content_type": "text",
+    "body": "",
+    "limits": {
+      "text": 1500
+    },
+    "group": "whatsapp"
+  },
+  {
+    "name": "waha",
+    "label": "WAHA (WhatsApp HTTP API)",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "api-key",
+        "type": "secret"
+      },
+      {
+        "key": "session",
+        "type": "text",
+        "default": "default"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "5511999999999@c.us"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/api/sendText",
+    "headers": {
+      "X-Api-Key": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"session\":\"{{.session}}\",\"chatId\":\"{{.to}}\",\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4096
+    },
+    "group": "whatsapp"
+  },
+  {
+    "name": "whapi",
+    "label": "Whapi.Cloud (WhatsApp)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "5511999999999 or group id"
+      }
+    ],
+    "method": "POST",
+    "url": "https://gate.whapi.cloud/messages/text",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"to\":\"{{.to}}\",\"body\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4096
+    },
+    "group": "whatsapp"
+  },
+  {
+    "name": "evolution",
+    "label": "Evolution API (WhatsApp)",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "session",
+        "type": "text",
+        "required": true,
+        "placeholder": "instance name"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "5511999999999"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/message/sendText/{{pathescape .session}}",
+    "headers": {
+      "apikey": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"number\":\"{{.to}}\",\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4096
+    },
+    "group": "whatsapp"
+  },
+  {
+    "name": "zapi",
+    "label": "Z-API (WhatsApp, Brasil)",
+    "fields": [
+      {
+        "key": "session",
+        "type": "text",
+        "required": true,
+        "placeholder": "instance id"
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "key",
+        "type": "secret",
+        "placeholder": "Client-Token"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "5511999999999"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.z-api.io/instances/{{pathescape .session}}/token/{{pathescape .token}}/send-text",
+    "headers": {
+      "Client-Token": "{{.key}}"
+    },
+    "content_type": "json",
+    "body": "{\"phone\":\"{{.to}}\",\"message\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4096
+    },
+    "group": "whatsapp"
+  },
+  {
+    "name": "zenvia",
+    "label": "Zenvia (SMS / WhatsApp, LatAm)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "channel",
+        "type": "select",
+        "options": [
+          "sms",
+          "whatsapp"
+        ],
+        "default": "sms"
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "5511999999999"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.zenvia.com/v2/channels/{{.channel}}/messages",
+    "headers": {
+      "X-API-TOKEN": "{{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"from\":\"{{.from}}\",\"to\":\"{{.to}}\",\"contents\":[{\"type\":\"text\",\"text\":\"{{.Text}}\"}]}",
+    "limits": {
+      "text": 1500
+    },
+    "group": "sms"
+  },
+  {
+    "name": "chatwork",
+    "label": "Chatwork (日本)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "room",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.chatwork.com/v2/rooms/{{pathescape .room}}/messages",
+    "headers": {
+      "X-ChatWorkToken": "{{.token}}"
+    },
+    "content_type": "form",
+    "body": "body={{urlquery (print \"[info][title]\" .Title \"[/title]\" .Body \"[/info]\")}}",
+    "limits": {
+      "body": 10000
+    },
+    "group": "asia"
+  },
+  {
+    "name": "kakaowork",
+    "label": "KakaoWork (카카오워크)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true,
+        "placeholder": "bot app key"
+      },
+      {
+        "key": "chat",
+        "type": "text",
+        "required": true,
+        "placeholder": "conversation id"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.kakaowork.com/v1/messages.send",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"conversation_id\":\"{{.chat}}\",\"text\":\"{{.Text}}\"}",
+    "success": {
+      "field": "success",
+      "equals": "true"
+    },
+    "limits": {
+      "text": 4000
+    },
+    "group": "asia"
+  },
+  {
+    "name": "dooray",
+    "label": "NHN Dooray! (두레이)",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"botName\":\"Unagikuma\",\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4000
+    },
+    "group": "asia"
+  },
+  {
+    "name": "jandi",
+    "label": "JANDI (잔디)",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "headers": {
+      "Accept": "application/vnd.tosslab.jandi-v2+json"
+    },
+    "content_type": "json",
+    "body": "{\"body\":\"{{.Title}}\",\"connectColor\":\"{{if eq .Kind \"RECOVERY\"}}#2EB886{{else}}#E01E5A{{end}}\",\"connectInfo\":[{\"title\":\"{{.Title}}\",\"description\":\"{{.Body}}\"}]}",
+    "limits": {
+      "title": 300,
+      "body": 4000
+    },
+    "group": "asia"
+  },
+  {
+    "name": "unifonic",
+    "label": "Unifonic SMS (الشرق الأوسط)",
+    "fields": [
+      {
+        "key": "key",
+        "type": "secret",
+        "required": true,
+        "placeholder": "AppSid"
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true,
+        "placeholder": "SenderID"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "966500000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://el.cloud.unifonic.com/rest/SMS/messages",
+    "content_type": "form",
+    "body": "AppSid={{urlquery .key}}&SenderID={{urlquery .from}}&Recipient={{urlquery .to}}&Body={{urlquery .Title}}",
+    "limits": {
+      "title": 900
+    },
+    "group": "sms"
+  },
+  {
+    "name": "taqnyat",
+    "label": "Taqnyat SMS (السعودية)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "966500000000,966511111111"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.taqnyat.sa/v1/messages",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"recipients\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}\"{{$n}}\"{{end}}],\"body\":\"{{.Title}}\",\"sender\":\"{{.from}}\"}",
+    "limits": {
+      "title": 900
+    },
+    "group": "sms"
+  },
+  {
+    "name": "gitlab",
+    "label": "GitLab (alert integration)",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true,
+        "placeholder": "https://gitlab.example.com/group/project/alerts/notify/….json"
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"description\":\"{{.Body}}\",\"fingerprint\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"monitoring_tool\":\"unagikuma\",\"severity\":\"{{if eq .Priority \"low\"}}medium{{else}}critical{{end}}\"{{if eq .Kind \"RECOVERY\"}},\"end_time\":\"{{rfc3339 .Time}}\"{{end}}}",
+    "group": "incident"
+  },
+  {
+    "name": "clickup",
+    "label": "ClickUp Chat",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "account",
+        "type": "text",
+        "required": true,
+        "placeholder": "workspace id"
+      },
+      {
+        "key": "chat",
+        "type": "text",
+        "required": true,
+        "placeholder": "channel id"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.clickup.com/api/v3/workspaces/{{pathescape .account}}/chat/channels/{{pathescape .chat}}/messages",
+    "headers": {
+      "Authorization": "{{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"type\":\"message\",\"content\":\"{{.Text}}\",\"content_format\":\"text/md\"}",
+    "limits": {
+      "text": 4000
+    },
+    "group": "chat"
+  },
+  {
+    "name": "vk",
+    "label": "VK (ВКонтакте)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "chat",
+        "type": "text",
+        "required": true,
+        "placeholder": "peer_id"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.vk.ru/method/messages.send",
+    "content_type": "form",
+    "body": "access_token={{urlquery .token}}&v=5.199&peer_id={{urlquery .chat}}&random_id={{.Time.Unix}}&message={{urlquery .Text}}",
+    "limits": {
+      "text": 4000
+    },
+    "group": "ru"
+  },
+  {
+    "name": "bale",
+    "label": "Bale (بله)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "chat",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://tapi.bale.ai/bot{{.token}}/sendMessage",
+    "content_type": "json",
+    "body": "{\"chat_id\":\"{{.chat}}\",\"text\":\"{{.Text}}\"}",
+    "success": {
+      "field": "ok",
+      "equals": "true"
+    },
+    "limits": {
+      "text": 4000
+    },
+    "group": "ru"
+  },
+  {
+    "name": "max",
+    "label": "MAX (VK messenger)",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "default": "https://platform-api.max.ru"
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "chat",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/messages?chat_id={{urlquery .chat}}",
+    "headers": {
+      "Authorization": "{{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4000
+    },
+    "group": "ru"
+  },
+  {
+    "name": "onechat",
+    "label": "ONE Chat (ประเทศไทย)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "key",
+        "type": "text",
+        "required": true,
+        "placeholder": "bot id"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "user / group id"
+      }
+    ],
+    "method": "POST",
+    "url": "https://chat-api.one.th/message/api/v1/push_message",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"to\":\"{{.to}}\",\"bot_id\":\"{{.key}}\",\"type\":\"text\",\"message\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 2000
+    },
+    "group": "asia"
+  },
+  {
+    "name": "milky",
+    "label": "Milky (QQ)",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "token",
+        "type": "secret"
+      },
+      {
+        "key": "type",
+        "type": "select",
+        "options": [
+          "group",
+          "private"
+        ],
+        "default": "group"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "group / QQ number"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/api/send_{{.type}}_message",
+    "headers": {
+      "Authorization": "{{if .token}}Bearer {{.token}}{{end}}"
+    },
+    "content_type": "json",
+    "body": "{\"message\":[{\"type\":\"text\",\"data\":{\"text\":\"{{.Text}}\"}}],{{if eq .type \"private\"}}\"user_id\"{{else}}\"group_id\"{{end}}:{{digits .to}}}",
+    "limits": {
+      "text": 4500
+    },
+    "group": "asia"
+  },
+  {
+    "name": "openwa",
+    "label": "OpenWA (WhatsApp)",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "session",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "5511999999999@c.us"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/api/sessions/{{pathescape .session}}/messages/send-text",
+    "headers": {
+      "X-Api-Key": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"chatId\":\"{{.to}}\",\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4096
+    },
+    "group": "whatsapp"
+  },
+  {
+    "name": "onesender",
+    "label": "OneSender (WhatsApp, Indonesia)",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "type",
+        "type": "select",
+        "options": [
+          "private",
+          "group"
+        ],
+        "default": "private"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "6281234567890"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"to\":\"{{.to}}{{if eq .type \"group\"}}@g.us{{else}}@s.whatsapp.net{{end}}\",\"recipient_type\":\"{{if eq .type \"group\"}}group{{else}}individual{{end}}\",\"type\":\"text\",\"text\":{\"body\":\"{{.Text}}\"}}",
+    "limits": {
+      "text": 4096
+    },
+    "group": "whatsapp"
+  },
+  {
+    "name": "360messenger",
+    "label": "360messenger (WhatsApp)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "447488888888"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.360messenger.com/v2/sendMessage",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "json",
+    "body": "{\"phonenumber\":\"{{.to}}\",\"text\":\"{{.Text}}\"}",
+    "limits": {
+      "text": 4096
+    },
+    "group": "whatsapp"
+  },
+  {
+    "name": "notifyapp",
+    "label": "Notify (iOS app)",
+    "fields": [
+      {
+        "key": "key",
+        "type": "text",
+        "required": true,
+        "placeholder": "device id"
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://push.getnotifyapp.com/notify-json/{{pathescape .key}}?token={{urlquery .token}}",
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"text\":\"{{.Body}}\",\"timeSensitive\":{{if eq .Kind \"RECOVERY\"}}false{{else}}true{{end}}}",
+    "group": "push"
+  },
+  {
+    "name": "signalgrid",
+    "label": "Signalgrid",
+    "fields": [
+      {
+        "key": "key",
+        "type": "secret",
+        "required": true,
+        "placeholder": "client key"
+      },
+      {
+        "key": "channel",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.signalgrid.co/v1/push",
+    "content_type": "form",
+    "body": "client_key={{urlquery .key}}&channel={{urlquery .channel}}&title={{urlquery .Title}}&body={{urlquery .Body}}&type={{if eq .Kind \"RECOVERY\"}}SUCCESS{{else if eq .Priority \"low\"}}WARN{{else}}CRIT{{end}}&critical=false",
+    "group": "push"
+  },
+  {
+    "name": "halopsa",
+    "label": "HaloPSA",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "username",
+        "type": "text"
+      },
+      {
+        "key": "password",
+        "type": "secret"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "headers": {
+      "Authorization": "{{if .username}}Basic {{b64 (print .username \":\" .password)}}{{end}}"
+    },
+    "content_type": "json",
+    "body": "{\"title\":\"{{.Title}}\",\"status\":\"{{if eq .Kind \"RECOVERY\"}}UP{{else}}DOWN{{end}}\",\"monitor\":\"{{.Name}}\",\"message\":\"{{.Body}}\",\"timestamp\":\"{{rfc3339 .Time}}\"}",
+    "group": "incident"
+  },
+  {
+    "name": "flowtriq",
+    "label": "Flowtriq",
+    "fields": [
+      {
+        "key": "url",
+        "type": "secret",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "{{.url}}",
+    "content_type": "json",
+    "body": "{\"source\":\"unagikuma\",\"status\":\"{{if eq .Kind \"RECOVERY\"}}up{{else}}down{{end}}\",\"monitor\":\"{{.Name}}\",\"msg\":\"{{.Text}}\"}",
+    "group": "incident"
+  },
+  {
+    "name": "turbosmtp",
+    "label": "turboSMTP (e-mail)",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true,
+        "placeholder": "consumer key"
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true,
+        "placeholder": "consumer secret"
+      },
+      {
+        "key": "region",
+        "type": "select",
+        "options": [
+          "global",
+          "eu"
+        ],
+        "default": "global"
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.{{if eq .region \"eu\"}}eu.{{end}}turbo-smtp.com/api/v2/mail/send",
+    "headers": {
+      "consumerKey": "{{.username}}",
+      "consumerSecret": "{{.password}}"
+    },
+    "content_type": "json",
+    "body": "{\"from\":\"{{.from}}\",\"to\":\"{{.to}}\",\"subject\":\"{{.Title}}\",\"content\":\"{{.Body}}\"}",
+    "limits": {
+      "title": 900
+    },
+    "group": "email"
+  },
+  {
+    "name": "ooredoo",
+    "label": "Ooredoo SMS (Maldives / الخليج)",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "default": "https://o-papi1-lb01.ooredoo.mv/bulk_sms/v2"
+      },
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "username",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true,
+        "placeholder": "access key"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "9607000000"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "form",
+    "body": "username={{urlquery .username}}&access_key={{urlquery (b64 .password)}}&batch={{urlquery (join \" \" (split \",\" .to))}}&message={{urlquery .Title}}",
+    "success": {
+      "field": "response_code",
+      "equals": "0"
+    },
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "serwersms",
+    "label": "SerwerSMS.pl",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "48500000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api2.serwersms.pl/messages/send_sms",
+    "content_type": "json",
+    "body": "{\"username\":\"{{.username}}\",\"password\":\"{{.password}}\",\"sender\":\"{{.from}}\",\"phone\":\"{{.to}}\",\"text\":\"{{.Title}}\"}",
+    "success": {
+      "field": "success",
+      "equals": "true"
+    },
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "smspartner",
+    "label": "SMSPartner (France)",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true,
+        "placeholder": "max 11 chars"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+33600000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api.smspartner.fr/v1/send",
+    "content_type": "json",
+    "body": "{\"apiKey\":\"{{index . \"api-key\"}}\",\"sender\":\"{{trunc 11 .from}}\",\"phoneNumbers\":\"{{.to}}\",\"message\":\"{{.Title}}\"}",
+    "success": {
+      "field": "success",
+      "equals": "true"
+    },
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "promosms",
+    "label": "PromoSMS (Polska)",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "48500000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://promosms.com/api/rest/v3_2/sms",
+    "headers": {
+      "Authorization": "Basic {{b64 (print .username \":\" .password)}}",
+      "Accept": "text/json"
+    },
+    "content_type": "json",
+    "body": "{\"recipients\":[{{range $i, $n := split \",\" .to}}{{if $i}},{{end}}\"{{$n}}\"{{end}}],\"text\":\"{{.Title}}\",\"long-sms\":true,\"type\":1,\"sender\":\"{{.from}}\"}",
+    "success": {
+      "field": "response.status",
+      "equals": "0"
+    },
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "smsmanager",
+    "label": "SmsManager.cz",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "420777000000"
+      },
+      {
+        "key": "type",
+        "type": "select",
+        "options": [
+          "high",
+          "economy",
+          "lowcost"
+        ],
+        "default": "high"
+      }
+    ],
+    "method": "GET",
+    "url": "https://http-api.smsmanager.cz/Send?apikey={{urlquery (index . \"api-key\")}}&number={{urlquery .to}}&gateway={{urlquery .type}}&message={{urlquery .Title}}",
+    "content_type": "text",
+    "body": "",
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "smsplanet",
+    "label": "SMSPLANET (Polska)",
+    "fields": [
+      {
+        "key": "token",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "48500000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://api2.smsplanet.pl/sms",
+    "headers": {
+      "Authorization": "Bearer {{.token}}"
+    },
+    "content_type": "form",
+    "body": "from={{urlquery .from}}&to={{urlquery .to}}&msg={{urlquery .Title}}",
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "smsgateway",
+    "label": "SMS Gateway for Android",
+    "fields": [
+      {
+        "key": "server",
+        "type": "url",
+        "required": true
+      },
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+8613800000000"
+      }
+    ],
+    "method": "POST",
+    "url": "{{.server}}/api/v1/sms/send",
+    "headers": {
+      "X-API-Key": "{{index . \"api-key\"}}"
+    },
+    "content_type": "json",
+    "body": "{\"to\":\"{{.to}}\",\"body\":\"{{.Title}}\"}",
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "cellsynt",
+    "label": "Cellsynt SMS",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true,
+        "placeholder": "originator"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "0046700000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://se-1.cellsynt.net/sms.php?username={{urlquery .username}}&password={{urlquery .password}}&destination={{urlquery .to}}&originatortype=alpha&originator={{urlquery .from}}&charset=UTF-8&allowconcat=6&text={{urlquery .Title}}",
+    "content_type": "text",
+    "body": "",
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "gtx",
+    "label": "GTX Messaging SMS",
+    "fields": [
+      {
+        "key": "api-key",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+4917600000000"
+      }
+    ],
+    "method": "POST",
+    "url": "https://rest.gtx-messaging.net/smsc/sendsms/{{pathescape (index . \"api-key\")}}/json",
+    "content_type": "form",
+    "body": "from={{urlquery .from}}&to={{urlquery .to}}&text={{urlquery .Title}}",
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "bearsms",
+    "label": "BearSMS",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true,
+        "placeholder": "hash key"
+      },
+      {
+        "key": "from",
+        "type": "text"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "+60120000000"
+      }
+    ],
+    "method": "GET",
+    "url": "https://app.bearsms.com/index.php?app=ws&op=pv&u={{urlquery .username}}&h={{urlquery .password}}&to={{urlquery .to}}{{if .from}}&from={{urlquery .from}}{{end}}&unicode=1&msg={{urlquery .Title}}",
+    "content_type": "text",
+    "body": "",
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
+  },
+  {
+    "name": "egosms",
+    "label": "EgoSMS (Uganda)",
+    "fields": [
+      {
+        "key": "username",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "password",
+        "type": "secret",
+        "required": true
+      },
+      {
+        "key": "from",
+        "type": "text",
+        "default": "EGOSMS"
+      },
+      {
+        "key": "to",
+        "type": "text",
+        "required": true,
+        "placeholder": "256700000000"
+      }
+    ],
+    "method": "GET",
+    "url": "https://www.egosms.co/api/v1/plain/?number={{urlquery .to}}&username={{urlquery .username}}&password={{urlquery .password}}&sender={{urlquery .from}}&priority=0&message={{urlquery .Title}}",
+    "content_type": "text",
+    "body": "",
+    "limits": {
+      "title": 640
+    },
+    "group": "sms"
   }
 ]

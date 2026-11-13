@@ -1,5 +1,30 @@
 # Changelog
 
+## v2.6.9 — unreleased
+
+**Added**
+- Custom SMS and voice gateways (`custom-sms`, `custom-voice`): an operator's own HTTP interface, one request per number, with `{{.Phone}}` and the message names in the address, headers and body. They follow the contact directory like the provider channels. The generic webhook is shown as a custom webhook.
+- Status pages can be edited (title and the monitors shown) and deleted, and another one added at any time. Only creating one was possible, and the form went away once a page existed. `PUT` and `DELETE /api/v1/status-pages/{name}`.
+- The channel form: the built-in kinds are grouped too (chat robots, e-mail, SMS and calls, custom). The message template has buttons that insert a name at the cursor, ready-made templates (short, detailed, one line for SMS) and a preview of an example problem as it is typed (`POST /api/v1/channels/preview`). DingTalk and WeCom mentions are picked from the contact directory or set to everyone. The time period is chosen from the defined ones, inside or outside it (`GET /api/v1/periods`).
+- SMS, voice-gateway and WhatsApp channels take `prefix=`, put in front of every message, such as `【Beijing host1】`, so the reader knows which site sent it. Aliyun and Tencent Cloud SMS start with their approved signature instead.
+- **Advanced** in the sidebar holds the settings most installations set once: appearance, teams, regions, tunables, API tokens, secrets and UDP keywords. The old addresses still open them.
+- **Settings › General › Internet gateway** can be chosen two ways. **By country**: pick one of 12 countries or regions and the public resolvers local to it are measured from this host. **Detect automatically**: this host's public address and country are read from two fixed HTTPS services (what `curl ifconfig.me` does), the route out is traced in Go (what traceroute does; it needs root or CAP_NET_RAW and is skipped otherwise), and the fastest resolver of that country and the first public router on the way out are proposed. Only listed addresses, or routers on this host's own route, are measured; no shell or external program runs; one run every 20 seconds at most; nothing is saved until the administrator picks one.
+- 95 more channel presets, 112 in all, grouped in the channel menu by kind and region: team chat (Rocket.Chat, Webex, Zulip, Zoho Cliq, Nextcloud Talk, ClickUp, Signal, Threema …), China, Japan and Korea (QQ through OneBot and Milky, KOOK, WxPusher, PushDeer, Chatwork, KakaoWork, Dooray!, JANDI …), incident tools (Alerta, GoAlert, Grafana OnCall, ilert, incident.io, Squadcast, SIGNL4, Splunk On-Call, PagerTree, GitLab alerts …), WhatsApp (Meta Cloud API, Z-API and Zenvia for Brazil and Latin America, WAHA, Evolution …), SMS (Infobip, Vonage, Plivo, Telnyx, MessageBird, Unifonic and Taqnyat for the Gulf, Ooredoo …), e-mail APIs (SendGrid, Brevo, Resend) and automation (Zapier, n8n, IFTTT). Incident tools resolve on recovery. That covers 98 of the 111 Uptime Kuma notification kinds, 42 of 43 in Gatus and all of Checkmate's; the rest need request signing or a login step (AWS SES, Web Push, Nostr, Microsoft Graph) or are single-vendor stores.
+- Template function `digits` keeps the digits of an id so it can be a JSON number.
+- Quick add takes `icmp 9.9.9.9`, and its examples stay visible under the box, to copy or insert, down to one with every option: `https://pay.example.com name=pay title=支付网关 team=admin region=global scope=wan group=payments tags=env:prod,tier:1 policy=default`. A line with more than one target is refused instead of keeping the first and dropping the rest.
+
+**Changed**
+- The search box sits next to the page title instead of at the far right of the top bar.
+- The screens tab keeps the on-duty wall screen only; the managers' summary is no longer offered as a wall link.
+- The overview's texts are worded for operators, and the cluster summary says what the per-site design does: each node checks and alerts on its own, the others' observations are for reference. It still described the majority vote that 2.6 removed.
+- The contact form shows name, status, e-mail, phone and the daily report; the channels follow the addresses until they are picked by hand, and the department, linked login and @name are under More. The status (active, on leave, moved, left) says what each one does.
+- The site-local configuration is `local.monitors.conf` (`site-local.conf` is renamed at startup) and shows its file name. A missing `$FILE` line is added on save, a short form such as `ping 8.8.4.4` is answered with the full line to write, and the errors say what a monitor line looks like. On a single machine the section stays hidden until the file holds something.
+- A new status page is titled "<this host> Unagikuma notice board", and the form says the title can be changed at any time.
+- The managers' summary is opened from the report tab, signed in; its form no longer makes links with a token.
+- On a wide screen the pages sit in the middle, with the top bar lined up.
+- Themes: Mist is now Bright, Graphite is now Modern and Violet is now Egypt (papyrus, lapis lazuli and terracotta), with new colours. A theme chosen before stays chosen.
+- **Configuration** in the sidebar is named after what it mostly shows: the configuration and its history.
+
 ## v2.6.8 — 2026-11-12
 
 - Update golang.org/x/crypto to v0.59.0.

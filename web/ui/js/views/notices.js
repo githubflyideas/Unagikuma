@@ -43,9 +43,14 @@ function NoticeForm({ page, initial, onClose, onSaved }) {
   <//>`;
 }
 
-function PageNotices({ page }) {
+function PageNotices({ page, onChanged }) {
   const list = useFetch(() => get('/status-pages/' + encodeURIComponent(page.name) + '/announcements'), [page.name]);
   const [edit, setEdit] = useState(null);
+  const [editPage, setEditPage] = useState(false);
+  const removePage = async () => {
+    if (!await confirmDialog(t('ui.notice.delete_page_confirm', { title: page.title }), { danger: true, ok: t('ui.delete') })) return;
+    try { await del('/status-pages/' + encodeURIComponent(page.name)); toast(t('ui.saved')); onChanged(); } catch (e) { toastError(e); }
+  };
   const remove = async (a) => {
     if (!await confirmDialog(t('ui.notice.delete_confirm', { title: a.title }), { danger: true, ok: t('ui.delete') })) return;
     try { await del('/announcements/' + a.id); list.reload(); } catch (e) { toastError(e); }
@@ -55,7 +60,9 @@ function PageNotices({ page }) {
       <a class="small ltr" href=${page.url} target="_blank" rel="noopener">${page.domain || page.url}</a>
       <div class="spacer"></div>
       <span class="small muted">${page.subscribe ? t('ui.notice.subscribers', { n: page.subscribers, pending: page.pending }) : t('ui.notice.no_subscribe')}</span>
-      <button class="btn primary sm" onClick=${() => setEdit({})}>${t('ui.notice.add')}</button></div>
+      <button class="btn primary sm" onClick=${() => setEdit({})}>${t('ui.notice.add')}</button>
+      ${me.role !== 'viewer' && html`<button class="btn sm" onClick=${() => setEditPage(true)}>${t('ui.notice.edit_page')}</button>
+        <button class="btn sm danger" onClick=${removePage}>${t('ui.notice.delete_page')}</button>`}</div>
     <div class="bd flush tbl-wrap">
       ${!list.data ? (list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`)
         : !list.data.length ? html`<${Empty}>${t('ui.notice.none')}<//>` : html`<table class="tbl">
@@ -68,35 +75,50 @@ function PageNotices({ page }) {
             <button class="btn sm danger" onClick=${() => remove(a)}>${t('ui.delete')}</button></td>
         </tr>`)}</tbody></table>`}
     </div>
+    ${editPage && html`<${Modal} title=${t('ui.notice.edit_page')} onClose=${() => setEditPage(false)}>
+      <${PageForm} page=${page} onDone=${() => { setEditPage(false); onChanged(); }} /><//>`}
     ${edit && html`<${NoticeForm} page=${page} initial=${edit.id ? edit : null} onClose=${() => setEdit(null)} onSaved=${() => { setEdit(null); list.reload(); }} />`}
   </div>`;
 }
 
-// NewPage adds a status page (a STATUSPAGE record) for the monitors a
-// filter selects.
-function NewPage({ onDone }) {
-  const [f, setF] = useState({ name: 'status', title: '', select: 'group:public' });
+// PageForm adds a status page (a STATUSPAGE record) for the monitors a
+// filter selects, or changes the title and the filter of one.
+function PageForm({ page, onDone }) {
+  const ov = useFetch(() => (page ? Promise.resolve(null) : get('/overview')), []);
+  const [f, setF] = useState(page ? { name: page.name, title: page.title, select: page.select || '' } : { name: 'status', title: null, select: 'group:public' });
+  // A new page starts with "<this host> Unagikuma notice board" as its
+  // title; it can be changed here at any time.
+  const suggested = t('ui.notice.page_title_default', { host: (ov.data && ov.data.instance) || 'Unagikuma' });
+  if (f.title === null && ov.data !== undefined && (ov.data || ov.error)) setF({ ...f, title: suggested });
   const [err, setErr] = useState(null);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async (e) => {
     e.preventDefault();
     setErr(null);
     try {
-      const r = await post('/status-pages', { name: f.name.trim(), title: f.title.trim(), select: f.select.trim() });
-      toast(t('ui.notice.page_created', { url: r.url || '' }));
+      if (page) {
+        await put('/status-pages/' + encodeURIComponent(page.name), { title: (f.title || '').trim(), select: f.select.trim() });
+        toast(t('ui.saved'));
+      } else {
+        const r = await post('/status-pages', { name: f.name.trim(), title: (f.title || '').trim(), select: f.select.trim() });
+        toast(t('ui.notice.page_created', { url: r.url || '' }));
+      }
       onDone();
     } catch (e2) { setErr(e2); }
   };
-  return html`<div class="card"><div class="hd"><h3>${t('ui.notice.new_page')}</h3></div><div class="bd">
-    <form class="form" onSubmit=${save}>
+  return html`<form class="form" onSubmit=${save}>
       <div class="two">
-        <${Field} label=${t('ui.notice.page_title')}><input type="text" value=${f.title} onInput=${set('title')} required placeholder=${t('ui.notice.page_title_ph')} /><//>
-        <${Field} label=${t('ui.name')}><input type="text" class="ltr" value=${f.name} onInput=${set('name')} required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}" /><//>
+        <${Field} label=${t('ui.notice.page_title')} hint=${t('ui.notice.page_title_hint', { example: suggested })}><input type="text" value=${f.title || ''} onInput=${set('title')} required placeholder=${suggested} /><//>
+        <${Field} label=${t('ui.name')}><input type="text" class="ltr" value=${f.name} onInput=${set('name')} required disabled=${!!page} pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}" /><//>
       </div>
       <${Field} label=${t('ui.notice.page_select')} hint=${t('ui.notice.page_select_hint')}><input type="text" class="ltr" value=${f.select} onInput=${set('select')} required /><//>
       ${err && html`<div class="banner error">${errText(err)}</div>`}
-      <div class="row"><div class="spacer"></div><button class="btn primary">${t('ui.notice.create_page')}</button></div>
-    </form></div></div>`;
+      <div class="row"><div class="spacer"></div><button class="btn primary">${page ? t('ui.save') : t('ui.notice.create_page')}</button></div>
+    </form>`;
+}
+
+function NewPage({ onDone }) {
+  return html`<div class="card"><div class="hd"><h3>${t('ui.notice.new_page')}</h3></div><div class="bd"><${PageForm} onDone=${onDone} /></div></div>`;
 }
 
 // SupportFooter sets the text at the foot of every status page in place of
@@ -121,14 +143,17 @@ function SupportFooter() {
 
 export function NoticesTab() {
   const pages = useFetch(() => get('/status-pages'), []);
+  const [adding, setAdding] = useState(false);
   if (!pages.data) return pages.error ? html`<${ErrorBox} error=${pages.error} />` : html`<${Loading} />`;
   if (!pages.data.length) return html`<div class="col" style=${{ gap: '12px' }}>
     <${Empty} title=${t('ui.notice.no_pages')}>${t('ui.notice.no_pages_hint')}<//>
     <${NewPage} onDone=${pages.reload} />
   </div>`;
   return html`<div class="col" style=${{ gap: '12px' }}>
-    <p class="muted small" style=${{ margin: 0 }}>${t('ui.notice.intro')}</p>
-    ${pages.data.map(p => html`<${PageNotices} key=${p.name} page=${p} />`)}
+    <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.notice.intro')}</p>
+      ${me.role !== 'viewer' && html`<button class="btn" onClick=${() => setAdding(true)}>${t('ui.notice.new_page')}</button>`}</div>
+    ${adding && html`<${Modal} title=${t('ui.notice.new_page')} onClose=${() => setAdding(false)}><${PageForm} onDone=${() => { setAdding(false); pages.reload(); }} /><//>`}
+    ${pages.data.map(p => html`<${PageNotices} key=${p.name} page=${p} onChanged=${pages.reload} />`)}
     ${me.role === 'admin' && html`<${SupportFooter} />`}
   </div>`;
 }
