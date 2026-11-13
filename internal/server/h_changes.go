@@ -292,7 +292,29 @@ func (s *Server) changeFinish(w http.ResponseWriter, r *http.Request) (any, erro
 
 func (s *Server) changeTemplates(w http.ResponseWriter, r *http.Request) (any, error) {
 	tpls, custom := s.app.ChangeTemplates(s.app.MessageLang())
-	return map[string]any{"events": app.ChangeEvents, "templates": tpls, "custom": custom}, nil
+	return map[string]any{"events": app.ChangeEvents, "templates": tpls, "custom": custom, "defaults": app.ChangeTemplateDefaults(s.app.MessageLang())}, nil
+}
+
+// changeTemplatePreview renders a notice template for an example change,
+// with and without the optional parts (impact, description, note).
+func (s *Server) changeTemplatePreview(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req app.ChangeTemplate
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	out := map[string]any{"ok": true}
+	for _, full := range []bool{true, false} {
+		title, body, err := s.app.PreviewChangeTemplate(req, full)
+		if err != nil {
+			return map[string]any{"ok": false, "error": err.Error()}, nil
+		}
+		key := "short"
+		if full {
+			key = "full"
+		}
+		out[key] = map[string]string{"title": title, "body": body}
+	}
+	return out, nil
 }
 
 func (s *Server) changeTemplatesPut(w http.ResponseWriter, r *http.Request) (any, error) {

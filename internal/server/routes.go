@@ -75,6 +75,7 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/changes/{id}/finish", "write", s.changeFinish)
 	s.handle("GET /api/v1/changes/templates", "read", s.changeTemplates)
 	s.handle("PUT /api/v1/changes/templates", "admin", s.changeTemplatesPut)
+	s.handle("POST /api/v1/changes/templates/preview", "admin", s.changeTemplatePreview)
 	s.handle("GET /api/v1/people", "read", s.people)
 	s.handle("POST /api/v1/people", "admin", global(s.personSave))
 	s.handle("PUT /api/v1/people/{id}", "admin", global(s.personSave))

@@ -153,9 +153,9 @@ const NAV = [
   ['/alerts', 'ui.nav.alerts', '✉'],
   ['/notices', 'ui.nav.notices', '⚑'],
   ['/config', 'ui.nav.config', '{}'],
-  ['/nodes', 'ui.nav.runmode', '⌖'],
   ['/settings', 'ui.nav.settings', '⚙'],
   ['/advanced', 'ui.nav.advanced', '⚒'],
+  ['/nodes', 'ui.nav.runmode', '⌖'],
 ];
 
 const TEAM_NAV = new Set(['/', '/monitors', '/problems', '/events']);
