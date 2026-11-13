@@ -8,7 +8,7 @@ import { Overview } from './views/overview.js';
 import { Monitors } from './views/monitors.js';
 import { MonitorDetail } from './views/monitor.js';
 import { MonitorEditor } from './views/editor.js';
-import { Problems, setupIssues } from './views/problems.js';
+import { Problems, ProblemsExpiry, setupIssues } from './views/problems.js';
 import { Events } from './views/events.js';
 import { ConfigView } from './views/config.js';
 import { Alerts } from './views/alerts.js';
@@ -16,7 +16,6 @@ import { Notices } from './views/announce.js';
 import { brand, product, logoURL, loadBrand, brandColors } from './brand.js';
 import { Settings, ADVANCED_TABS } from './views/settings.js';
 import { Nodes } from './views/nodes.js';
-import { Expiry } from './views/expiry.js';
 import { IncidentReport } from './views/incident.js';
 import { DrawerHost } from './views/drawer.js';
 import { PaletteHost, openPalette } from './views/palette.js';
@@ -30,6 +29,15 @@ import { PaletteHost, openPalette } from './views/palette.js';
 // choice ("brand") and the default for anyone who has not picked one.
 const TONES = ['mist', 'slate', 'graphite', 'sky', 'violet'];
 const OLD_TONES = { light: 'mist', paper: 'mist', dark: 'graphite', ink: 'graphite' };
+// What each theme looks like, for its dot in the sidebar.
+const SWATCH = {
+  auto: 'linear-gradient(135deg, #ffffff 50%, #050608 50%)',
+  mist: 'linear-gradient(135deg, #c2410c, #be185d 55%, #5b21b6)',
+  slate: 'linear-gradient(135deg, #313a46 50%, #46c69a 50%)',
+  graphite: 'linear-gradient(135deg, #000000 50%, #a78bfa 50%)',
+  sky: 'linear-gradient(135deg, #f9fcff 50%, #2a78c8 50%)',
+  violet: 'linear-gradient(135deg, #f3e9d2 50%, #1d4e9e 50%)',
+};
 function toneOf(v) {
   v = OLD_TONES[v] || v;
   if (v === 'brand') return brand().id ? 'brand' : 'graphite';
@@ -144,14 +152,14 @@ const NAV = [
   ['/alerts', 'ui.nav.alerts', '✉'],
   ['/notices', 'ui.nav.notices', '⚑'],
   ['/config', 'ui.nav.config', '{}'],
-  ['/nodes', 'ui.nav.runmode', '⌖'],
   ['/settings', 'ui.nav.settings', '⚙'],
   ['/advanced', 'ui.nav.advanced', '⚒'],
+  ['/nodes', 'ui.nav.runmode', '⌖'],
 ];
 
 const TEAM_NAV = new Set(['/', '/monitors', '/problems', '/events']);
 
-const OLD_ALERT_TABS = { changes: 'changes', notices: 'pages', report: 'report' };
+const OLD_ALERT_TABS = { notices: 'pages', report: 'report' };
 
 function Shell({ user, onLogout, onLang }) {
   const route = useRoute();
@@ -169,7 +177,8 @@ function Shell({ user, onLogout, onLang }) {
   const scriptProblems = ov.data ? ov.data.script_problems || 0 : 0;
   const contactIssues = ov.data ? ov.data.contact_issues || 0 : 0;
   const setup = setupIssues(ov.data);
-  const first = route.parts[0] === 'settings' && ADVANCED_TABS.includes(route.parts[1]) ? '/advanced' : '/' + (route.parts[0] || '');
+  const first = route.parts[0] === 'settings' && ADVANCED_TABS.includes(route.parts[1]) ? '/advanced'
+    : route.parts[0] === 'notices' && route.parts[1] === 'changes' ? '/alerts' : '/' + (route.parts[0] || '');
   const changeTheme = (v) => { setTheme(v); storage('unagikuma.theme', v); applyTheme(v); };
   // On a wide screen the button folds the sidebar to icons; on a phone it
   // slides the sidebar in.
@@ -183,7 +192,7 @@ function Shell({ user, onLogout, onLang }) {
   const p = route.parts;
   switch (p[0]) {
     case undefined: view = html`<${Overview} />`; break;
-    case 'problems': view = html`<${Problems} tab=${p[1] || 'unhandled'} />`; break;
+    case 'problems': view = p[1] === 'expiry' ? html`<${ProblemsExpiry} />` : html`<${Problems} tab=${p[1] || 'unhandled'} />`; break;
     case 'monitors':
       if (p[1] === 'new') view = html`<${MonitorEditor} />`;
       else if (p[1] && p[2] === 'edit') view = html`<${MonitorEditor} name=${p[1]} />`;
@@ -191,12 +200,13 @@ function Shell({ user, onLogout, onLang }) {
       else view = html`<${Monitors} query=${route.query} />`;
       break;
     case 'events': view = html`<${Events} tab=${p[1] || 'events'} />`; break;
-    case 'expiry': view = html`<${Expiry} />`; break;
+    case 'expiry': view = html`<${ProblemsExpiry} />`; break; // its old address
     case 'incidents': view = p[1] ? html`<${IncidentReport} id=${p[1]} />` : html`<${Problems} tab="all" />`; break;
     // Changes, status pages and the report used to live under Alerting;
     // their old addresses still open them.
-    case 'alerts': view = OLD_ALERT_TABS[p[1]] ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]]} />` : html`<${Alerts} tab=${p[1] === 'contacts' ? 'contacts' : 'channels'} />`; break; // policies went to the teams
-    case 'notices': view = html`<${Notices} tab=${p[1] || 'changes'} />`; break;
+    case 'alerts': view = OLD_ALERT_TABS[p[1]] ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]]} />` : html`<${Alerts} tab=${['contacts', 'changes'].includes(p[1]) ? p[1] : 'channels'} />`; break; // policies went to the teams
+    // Change notices moved to Alerts and notifications; the old address opens them there.
+    case 'notices': view = p[1] === 'changes' ? html`<${Alerts} tab="changes" />` : html`<${Notices} tab=${p[1] || 'pages'} />`; break;
     case 'config': view = html`<${ConfigView} tab=${p[1] || 'edit'} />`; break;
     // Nodes used to be a Settings tab; its old address opens Run mode.
     case 'settings': view = p[1] === 'nodes' ? html`<div class="page"><${Nodes} /></div>`
@@ -216,6 +226,11 @@ function Shell({ user, onLogout, onLang }) {
     <aside class=${'side' + (open ? ' open' : '')}>
       <a class="brand" href="#/"><${Logo} /><div>${product()}
         <div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div></div></a>
+      <div class="themes" role="group" aria-label=${t('ui.theme')}>
+        ${['auto', ...(brand().id ? ['brand'] : []), ...TONES].map((v) => html`<button type="button" aria-pressed=${String(theme === v)}
+          title=${v === 'brand' ? brand().name : t('ui.theme.' + v)} aria-label=${v === 'brand' ? brand().name : t('ui.theme.' + v)}
+          style=${{ background: SWATCH[v] || 'var(--accent)' }} onClick=${() => changeTheme(v)}></button>`)}
+      </div>
       <nav class="nav">
         ${nav.map(([path, key, ico]) => html`<a href=${href(path)} class=${first === path ? 'on' : ''}>
           <span class="ico" title=${mini ? t(key) : ''}>${ico}</span><span class="lbl">${t(key)}</span>
@@ -227,11 +242,6 @@ function Shell({ user, onLogout, onLang }) {
       </nav>
       <div class="foot">
         <${LangSelect} onChange=${onLang} />
-        <select aria-label=${t('ui.theme')} value=${theme} onChange=${(e) => changeTheme(e.target.value)}>
-          <option value="auto">${t('ui.theme.auto')}</option>
-          ${brand().id && html`<option value="brand">${brand().name}</option>`}
-          ${TONES.map((v) => html`<option value=${v}>${t('ui.theme.' + v)}</option>`)}
-        </select>
         <div class="row"><span class="ellipsis">${user}</span><div class="spacer"></div><button class="btn sm ghost" onClick=${onLogout}>${t('ui.logout')}</button></div>
         ${ov.data && ov.data.instance && html`<div class="host ellipsis" title=${ov.data.instance}>${ov.data.instance}</div>`}
       </div>
@@ -239,11 +249,11 @@ function Shell({ user, onLogout, onLang }) {
     <div class="main">
       <header class="top">
         <button class="btn sm" onClick=${toggleSide} aria-label=${mini ? t('ui.side.expand') : t('ui.side.collapse')} title=${mini ? t('ui.side.expand') : t('ui.side.collapse')}>☰</button>
-        <div class="crumbs">${t((NAV.find(n => n[0] === (first === '/expiry' ? '/monitors' : first)) || NAV[0])[1])}</div>
+        <div class="crumbs">${t((NAV.find(n => n[0] === (first === '/expiry' ? '/problems' : first)) || NAV[0])[1])}</div>
         <${Search} route=${route} />
         ${ov.data && html`<${Verdict} ov=${ov.data} />`}
         <div class="spacer"></div>
-        <span class=${'live' + (live ? ' on' : '')} title=${live ? t('ui.live.on') : t('ui.live.off')}><i></i><span class="hide-sm">${live ? t('ui.live.on') : t('ui.live.off')}</span></span>
+        <${RunMode} ov=${ov.data} live=${live} />
       </header>
       ${banner && html`<div class="page" style=${{ paddingBottom: 0 }}><${ConfigBanner} banner=${banner} /></div>`}
       ${ov.data && ov.data.storage && ov.data.storage.failing && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner error">
@@ -269,11 +279,22 @@ function Verdict({ ov }) {
   else if ((ov.counts.unknown || 0) > 0) { cls = 'unknown'; text = t('ui.top.unknown', { n: ov.counts.unknown }); }
   const week = ov.value_week || {};
   const saved = Object.values(week).reduce((a, n) => a + (n || 0), 0);
-  const online = paths.filter(p => p.online).length;
   const sub = [t('ui.top.monitors', { n: ov.counts.total || 0 }),
-    ov.layout === 'cluster' ? t('ui.top.nodes', { online, n: paths.length }) : t('ui.top.single'),
     saved ? t('ui.top.saved', { n: saved }) : ''].filter(Boolean).join(' · ');
   return html`<a class=${'verdict ' + cls} href=${cls === 'critical' ? '#/problems' : '#/'}><i></i>${text}</a><span class="top-sub">${sub}</span>`;
+}
+
+// RunMode names how this installation runs and opens the run mode page.
+// The dot is green while live updates arrive; when they stop the label says
+// it is reconnecting instead.
+function RunMode({ ov, live }) {
+  const layout = (ov && ov.layout) || 'single';
+  const paths = (ov && ov.paths) || [];
+  const label = layout === 'cluster'
+    ? t('ui.top.mode.cluster', { online: paths.filter(p => p.online).length, n: paths.length })
+    : t('ui.top.mode.' + (layout === 'replica' ? 'replica' : 'single'));
+  return html`<a class=${'live' + (live ? ' on' : '')} href="#/nodes" title=${live ? t('ui.live.on') : t('ui.live.off')}>
+    <i></i><span class="hide-sm">${live ? label : t('ui.live.off')}</span></a>`;
 }
 
 // Search filters the monitor list, with the list's own query syntax
@@ -371,6 +392,15 @@ function Root() {
   await loadBrand();
   applyTheme(storage('unagikuma.theme'));
   await loadLanguages();
+  // The browser's own message for a value of the wrong form is in its
+  // language and says nothing useful; say what the field takes instead.
+  document.addEventListener('invalid', (e) => {
+    const el = e.target, v = el.validity;
+    if (!v || !el.setCustomValidity) return;
+    if (v.patternMismatch) el.setCustomValidity(t(/^\[a-z0-9\]/.test(el.getAttribute('pattern') || '') ? 'ui.err.pattern_handle' : 'ui.err.pattern_name'));
+    else if (v.valueMissing) el.setCustomValidity(t('ui.err.required'));
+  }, true);
+  for (const ev of ['input', 'change']) document.addEventListener(ev, (e) => { if (e.target.setCustomValidity) e.target.setCustomValidity(''); }, true);
   await setLang(detectLang(), false);
   render(html`<${Root} />`, document.getElementById('app'));
 })();

@@ -175,7 +175,11 @@ export function Modal({ title, onClose, children, footer, wide }) {
     addEventListener('keydown', f);
     return () => removeEventListener('keydown', f);
   }, [onClose]);
-  return html`<div class="modal-bg" onMouseDown=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
+  // The dialog sits over the page content, not over the menu beside it.
+  const main = document.querySelector('.main');
+  const r = main && main.getBoundingClientRect();
+  const pad = r && r.width < innerWidth - 100 ? { paddingLeft: r.left + 16 + 'px', paddingRight: Math.max(16, innerWidth - r.right + 16) + 'px' } : null;
+  return html`<div class="modal-bg" style=${pad} onMouseDown=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
     <div class=${'modal' + (wide ? ' wide' : '')} role="dialog" aria-modal="true">
       <div class="hd"><h2>${title}</h2><div class="spacer"></div><button class="btn ghost sm" onClick=${onClose} aria-label=${t('ui.close')}>✕</button></div>
       <div class="bd">${children}</div>

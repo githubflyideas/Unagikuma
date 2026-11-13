@@ -45,6 +45,17 @@ function viaOf(c) {
   return /-sms$/.test(c.kind || '') ? 'sms' : 'phone';
 }
 
+// oddPhone flags a number whose length looks wrong: a Chinese mobile
+// number has 11 digits, and no number has fewer than 6 or more than 15.
+// It is advice only; saving is not refused.
+function oddPhone(n) {
+  const d = n.replace(/[\s()-]/g, '');
+  const cn = /^(\+?86)?(1\d*)$/.exec(d);
+  if (cn && !d.startsWith('+') || (cn && d.startsWith('+86'))) return cn[2].length !== 11;
+  const digits = d.replace(/^\+/, '');
+  return !/^\d+$/.test(digits) || digits.length < 6 || digits.length > 15;
+}
+
 function list(v) { return String(v || '').split(',').map(x => x.trim()).filter(Boolean); }
 
 // PersonForm edits a contact: who they are, at least one address, and the
@@ -94,6 +105,7 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
       </div>
       <${Field} label=${t('ui.dir.emails')} hint=${t('ui.dir.list_hint')}><input type="text" class="ltr" value=${f.emails} onInput=${set('emails')} placeholder="li@example.com" /><//>
       <${Field} label=${t('ui.dir.phones')} hint=${t('ui.dir.list_hint')}><input type="text" class="ltr" value=${f.phones} onInput=${set('phones')} placeholder="+8613800000000" /><//>
+      ${list(f.phones).filter(oddPhone).length > 0 && html`<div class="small warn-text" style=${{ marginTop: '-6px' }}>${t('ui.dir.phone_odd', { list: list(f.phones).filter(oddPhone).join(', ') })}</div>`}
       <label class="switch"><input type="checkbox" checked=${f.report} onChange=${(e) => setF({ ...f, report: e.target.checked })} /> ${t('ui.report.receives')}</label>
       <p class="small muted" style=${{ margin: 0 }}>${!channels.length ? t('ui.dir.notify_none')
         : notify.length ? t('ui.dir.notify_auto', { list: notify.join(', ') }) : t('ui.dir.notify_auto_none')}</p>
@@ -173,6 +185,7 @@ export function ContactsTab() {
         <tbody>${people.map(p => html`<tr class=${p.status !== 'active' ? 'muted' : ''}>
           <td><span class="name">${p.name}</span> <span class="small muted ltr">@${p.handle}</span>
             ${p.note && html`<div class="sub small">${p.note}</div>`}
+            ${p.username && html`<div class="sub small">${t('ui.dir.login_is', { user: p.username })}</div>`}
             ${p.username && html`<div class="sub small ltr">${t('ui.dir.login')}: ${p.username}</div>`}</td>
           <td class="small ltr">${p.emails.join(', ')}</td>
           <td class="small ltr">${p.phones.join(', ')}</td>

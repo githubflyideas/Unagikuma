@@ -16,7 +16,7 @@ ntfy-phone          IN CHANNEL webhook preset=ntfy topic=kuma-fake
 ops-email           IN CHANNEL email host=smtp.example.com port=587 username=alerts@example.com password=${secret:kuma_ops_email_password} from="Kuma <alerts@example.com>" to=ops@example.com,lead@example.com
 ops-telegram        IN CHANNEL telegram token=${secret:kuma_ops_telegram_token} chat=-1001234567
 team-slack          IN CHANNEL slack url=${secret:kuma_team_slack_url}
-webhook-custom-body IN CHANNEL webhook url=https://hooks.example.com/custom header.x-token=${secret:kuma_webhook_custom_body_header_x_token}
+webhook-custom-body IN CHANNEL webhook url=https://hooks.example.com/custom content-type=json body="{\"text\":\"{{msg}}\"}" header.x-token=${secret:kuma_webhook_custom_body_header_x_token}
 wecom-bot           IN CHANNEL wecom url=${secret:kuma_wecom_bot_url}
 
 ; --- Notification policies: the channels each monitor notifies

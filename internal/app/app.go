@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -141,6 +142,7 @@ func New(o Options) (*App, error) {
 		Now:       o.Now,
 		UserAgent: "unagikuma/" + a.instance(),
 	}
+	a.heartbeat.Prepare = a.prepareHeartbeat
 	return a, nil
 }
 
@@ -744,14 +746,19 @@ func (a *App) Instance() string { return a.instance() }
 // SetSetting changes a runtime setting and re-applies what depends on it.
 func (a *App) SetSetting(key, value string) error {
 	switch key {
-	case "heartbeat_url", "message_lang", "base_url", "instance_name":
+	case "message_lang", "base_url", "instance_name":
 	default:
-		return fmt.Errorf("unknown setting %q", key)
+		if !isHeartbeatKey(key) {
+			return fmt.Errorf("unknown setting %q", key)
+		}
+	}
+	if err := checkHeartbeatSetting(key, value); err != nil {
+		return err
 	}
 	if err := a.store.SetSetting(key, value); err != nil {
 		return err
 	}
-	if key != "heartbeat_url" {
+	if !strings.HasPrefix(key, "heartbeat_") {
 		a.applyConfig(a.cfg.current().Config)
 	}
 	return nil

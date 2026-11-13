@@ -154,17 +154,21 @@ export function Monitors({ query }) {
   const total = list.data ? list.data.items.length : 0;
   return html`<div class="page list">
     <div class="row">
-      <${Seg} value=${view} onChange=${changeView} options=${[['list', t('ui.mon.view_list')], ['hive', t('ui.mon.view_hive')]]} />
       <div class="spacer"></div>
       <button class="btn" onClick=${() => pauseAll(true)} disabled=${picked.length === nPaused} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.pause')}${picked.length > nPaused ? ' (' + fmtNum(picked.length - nPaused) + ')' : ''}</button>
       <button class="btn" onClick=${() => pauseAll(false)} disabled=${!nPaused} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.resume')}${nPaused ? ' (' + fmtNum(nPaused) + ')' : ''}</button>
-      <a class="btn" href="#/expiry">${t('ui.exp.title')}</a>
-      <a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a>
-      <button class="btn" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
       <button class="btn" onClick=${checkNow} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.check_all')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
+      ${me.role === 'admin' && html`<button class="btn" onClick=${() => setMoving({ team: '', region: '' })} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.move')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>`}
       <button class="btn danger" onClick=${remove} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.delete')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
+      <button class="btn" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
+      <a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a>
     </div>
     <div class="row filters">
+      <div class="chips">
+        <button class=${'chip' + (!status ? ' on' : '')} onClick=${() => setStatus(status)}>${t('ui.all')} <b>${fmtNum(total)}</b></button>
+        ${CHIPS.filter(s => counts[s]).map(s => html`<button class=${'chip' + (status === s ? ' on' : '')} onClick=${() => setStatus(s)}>${t('status.' + s)} <b>${fmtNum(counts[s])}</b></button>`)}
+      </div>
+      <${Seg} value=${view} onChange=${changeView} options=${[['list', t('ui.mon.view_list')], ['hive', t('ui.mon.view_hive')]]} />
       ${teams.data && teams.data.items.length > 1 && html`<select value=${termOf('team')} onChange=${(e) => setTerm('team', e.target.value)} aria-label=${t('ui.team.field')}>
         <option value="">${t('ui.mon.all_teams')}</option>
         ${teams.data.items.map(tm => html`<option value=${tm.name}>${teamTitle(tm)}</option>`)}</select>`}
@@ -174,8 +178,6 @@ export function Monitors({ query }) {
       ${tagKeys.length > 0 && html`<select value=${termOf('tag')} onChange=${(e) => setTerm('tag', e.target.value)} aria-label=${t('ui.tags')}>
         <option value="">${t('ui.mon.all_tags')}</option>
         ${tagKeys.map(k => html`<option value=${k.toLowerCase()}>${k}</option>`)}</select>`}
-      <div class="spacer"></div>
-      ${me.role === 'admin' && html`<button class="btn" onClick=${() => setMoving({ team: '', region: '' })} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.move')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>`}
     </div>
     ${moving && html`<${Modal} title=${tn('ui.mon.move_title', picked.length)} onClose=${() => setMoving(null)}>
       <form class="form" onSubmit=${move}>
@@ -188,10 +190,6 @@ export function Monitors({ query }) {
         <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!moving.team && !moving.region}>${t('ui.mon.move')}</button></div>
       </form>
     <//>`}
-    <div class="chips">
-      <button class=${'chip' + (!status ? ' on' : '')} onClick=${() => setStatus(status)}>${t('ui.all')} <b>${fmtNum(total)}</b></button>
-      ${CHIPS.filter(s => counts[s]).map(s => html`<button class=${'chip' + (status === s ? ' on' : '')} onClick=${() => setStatus(s)}>${t('status.' + s)} <b>${fmtNum(counts[s])}</b></button>`)}
-    </div>
     <${ErrorBox} error=${list.error} retry=${list.reload} />
     <div class="card scroll"><div class="bd flush tbl-wrap">
       ${!list.data ? html`<${Loading} />` : !total ? html`<${Empty} title=${t('ui.mon.none')}><p>${t('ui.mon.none_hint')}</p><a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a><//>` :

@@ -1,7 +1,7 @@
 // Changes: announced planned work. Who is told, reminders before it
 // starts, a maintenance window for the monitors it touches, and the
 // receipt (done, rolled back, cancelled) when it ends.
-import { html, useState } from '../lib.js';
+import { html, useState, useEffect, useRef } from '../lib.js';
 import { t, currentLang } from '../i18n.js';
 import { get, post, put, qs } from '../api.js';
 import { useFetch, useLive, Loading, ErrorBox, Empty, Field, Modal, toast, errText } from '../ui.js';
@@ -20,7 +20,7 @@ function when(c) {
 }
 const STATE_CLS = { planned: 'tag', running: 'tag warn-text', done: 'tag ok-text', rolled_back: 'tag err-text', cancelled: 'tag muted' };
 
-function ChangeForm({ initial, onClose, onSaved }) {
+export function ChangeForm({ initial, onClose, onSaved }) {
   const c = initial || {};
   const pol = useFetch(() => get('/policies'), []);
   const ch = useFetch(() => get('/channels'), []);
@@ -103,32 +103,77 @@ function FinishForm({ change, state, onClose, onDone }) {
   <//>`;
 }
 
+// The names a change notice can use, in the order offered.
+const CHG_NAMES = ['Title', 'Start', 'End', 'Duration', 'Impact', 'Description', 'Monitors', 'In', 'By', 'Note', 'Now'];
+
+// Templates edits the notices of changes. Each notice says when it is sent
+// and shows what it looks like; editing inserts names with buttons and
+// previews an example change with and without the optional parts. A line
+// whose names are all empty is left out, so no conditions are needed.
 function Templates({ onClose }) {
   const d = useFetch(() => get('/changes/templates'), []);
   const [edits, setEdits] = useState({});
+  const [open, setOpen] = useState('');
   const [err, setErr] = useState(null);
   if (!d.data) return html`<${Modal} title=${t('ui.chg.templates')} onClose=${onClose}>${d.error ? html`<${ErrorBox} error=${d.error} />` : html`<${Loading} />`}<//>`;
   const cur = (ev) => edits[ev] || d.data.templates[ev];
-  const set = (ev, k, v) => setEdits({ ...edits, [ev]: { ...cur(ev), [k]: v } });
   const save = async () => {
     setErr(null);
     const out = {};
     for (const ev of d.data.events) if (edits[ev] || d.data.custom[ev]) out[ev] = cur(ev);
     try { await put('/changes/templates', out); toast(t('ui.saved')); onClose(); } catch (e) { setErr(e); }
   };
-  const reset = (ev) => setEdits({ ...edits, [ev]: { title: '', body: '' } });
   return html`<${Modal} title=${t('ui.chg.templates')} onClose=${onClose} wide>
-    <div class="col" style=${{ gap: '12px' }}>
-      <p class="small muted" style=${{ margin: 0 }}>${t('ui.chg.templates_hint')}</p>
-      ${d.data.events.map(ev => html`<div class="card"><div class="bd col" style=${{ gap: '6px' }}>
-        <div class="row"><b class="spacer">${t('ui.chg.ev.' + ev)}</b>${(d.data.custom[ev] || edits[ev]) && html`<button class="btn sm ghost" onClick=${() => reset(ev)}>${t('ui.chg.builtin')}</button>`}</div>
-        <input type="text" value=${cur(ev).title} onInput=${(e) => set(ev, 'title', e.target.value)} placeholder=${t('ui.chg.builtin')} />
-        <textarea rows="3" class="mono" value=${cur(ev).body} onInput=${(e) => set(ev, 'body', e.target.value)}></textarea>
-      </div></div>`)}
+    <div class="col" style=${{ gap: '10px' }}>
+      <p class="small muted" style=${{ margin: 0 }}>${t('ui.chg.templates_hint2')}</p>
+      ${d.data.events.map(ev => html`<${NoticeEditor} key=${ev} ev=${ev} tpl=${cur(ev)} def=${d.data.defaults[ev]} custom=${!!(d.data.custom[ev] || edits[ev])}
+        open=${open === ev} onToggle=${() => setOpen(open === ev ? '' : ev)} onChange=${(v) => setEdits({ ...edits, [ev]: v })} />`)}
       ${err && html`<div class="banner error">${errText(err)}</div>`}
       <div class="row"><div class="spacer"></div><button class="btn" onClick=${onClose}>${t('ui.cancel')}</button><button class="btn primary" onClick=${save}>${t('ui.save')}</button></div>
     </div>
   <//>`;
+}
+
+function NoticeEditor({ ev, tpl, def, custom, open, onToggle, onChange }) {
+  const [pv, setPv] = useState(null);
+  const [focus, setFocus] = useState('body');
+  const title = useRef(null), body = useRef(null);
+  useEffect(() => {
+    const id = setTimeout(async () => {
+      try { setPv(await post('/changes/templates/preview', tpl)); } catch (e) { setPv({ ok: false, error: errText(e) }); }
+    }, 350);
+    return () => clearTimeout(id);
+  }, [tpl.title, tpl.body]);
+  const insert = (name) => {
+    const el = (focus === 'title' ? title : body).current, k = focus === 'title' ? 'title' : 'body', tok = '{{.' + name + '}}';
+    const v = tpl[k] || '';
+    const a = el ? el.selectionStart ?? v.length : v.length, b = el ? el.selectionEnd ?? v.length : v.length;
+    onChange({ ...tpl, [k]: v.slice(0, a) + tok + v.slice(b) });
+    requestAnimationFrame(() => { if (el) { el.focus(); el.selectionStart = el.selectionEnd = a + tok.length; } });
+  };
+  const full = pv && pv.ok && pv.full;
+  return html`<div class="card notice-ed"><div class="bd col" style=${{ gap: '6px' }}>
+    <div class="row" style=${{ gap: '8px', alignItems: 'flex-start' }}>
+      <div class="spacer">
+        <b>${t('ui.chg.ev.' + ev)}</b> ${custom && html`<span class="tag">${t('ui.chg.customised')}</span>`}
+        <div class="small muted">${t('ui.chg.when.' + ev)}</div>
+        ${!open && full && html`<div class="small notice-line"><b>${full.title}</b> · ${full.body.split('\n')[0]}</div>`}
+      </div>
+      <button type="button" class="btn sm" onClick=${onToggle}>${open ? t('ui.chg.close_edit') : t('ui.edit')}</button>
+    </div>
+    ${open && html`
+      <label class="small muted">${t('ui.chg.tpl_title')}</label>
+      <input ref=${title} type="text" value=${tpl.title} onFocus=${() => setFocus('title')} onInput=${(e) => onChange({ ...tpl, title: e.target.value })} />
+      <label class="small muted">${t('ui.chg.tpl_body')}</label>
+      <textarea ref=${body} rows="5" class="mono" value=${tpl.body} onFocus=${() => setFocus('body')} onInput=${(e) => onChange({ ...tpl, body: e.target.value })}></textarea>
+      <div class="chips">${CHG_NAMES.map(n => html`<button type="button" class="btn sm" title=${'{{.' + n + '}}'} onMouseDown=${(e) => e.preventDefault()} onClick=${() => insert(n)}>${t('ui.chg.var.' + n)}</button>`)}</div>
+      <div class="small muted">${t('ui.chg.lines_hint')}</div>
+      ${pv && (pv.ok ? html`<div class="two">
+          <div class="tpl-preview"><div class="small muted">${t('ui.chg.pv_full')}</div><b>${pv.full.title}</b><pre>${pv.full.body}</pre></div>
+          <div class="tpl-preview"><div class="small muted">${t('ui.chg.pv_short')}</div><b>${pv.short.title}</b><pre>${pv.short.body}</pre></div></div>`
+        : html`<div class="small err-text">${pv.error}</div>`)}
+      ${(custom || tpl.title !== def.title || tpl.body !== def.body) && html`<div><button type="button" class="btn sm ghost" onClick=${() => onChange({ ...def })}>${t('ui.chg.restore')}</button></div>`}`}
+  </div></div>`;
 }
 
 export function ChangesTab() {

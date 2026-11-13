@@ -1,6 +1,6 @@
 // Monitor editor and quick add. Both write records into monitors.conf.
 import { html, useState, useEffect } from '../lib.js';
-import { t, detailText } from '../i18n.js';
+import { t, has, detailText } from '../i18n.js';
 import { get, post, put, ifMatch, newKey, me } from '../api.js';
 import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, teamTitle, regionTitle, writableTeams, Copy } from '../ui.js';
 
@@ -59,6 +59,22 @@ const TYPE_OPTS = {
   EXEC: ['args', 'address'],
   PUSH: ['period', 'grace'],
 };
+// An example value of each option, shown in the value box; what the
+// option does is in the language catalogue (ui.opt.<key>).
+const OPT_EXAMPLE = {
+  timeout: '5s', retry: '15s', attempts: '3', 'recover-attempts': '2', degraded: '800ms', scope: 'wan', authorized: 'yes', family: '6',
+  'on-filtered': 'abstain', parent: 'core-gw', 'cert-days': '30', 'cert-critical-days': '7', handler: 'restart-web $SERVICESTATE$',
+  method: 'POST', expect: '200-299', keyword: 'OK', 'keyword-regex': 'version [0-9.]+', absent: 'Maintenance', 'json-path': '$.status',
+  'json-expect': 'up', 'json-expect-num': '< 500', body: '{"ping":1}', host: 'www.example.com', basic: 'user:${secret:web_pw}',
+  bearer: '${secret:api_token}', proxy: 'http://10.0.0.8:3128', 'no-follow': 'yes', insecure: 'yes', 'user-agent': 'unagikuma',
+  'header.Authorization': 'Bearer ${secret:api_token}', send: 'PING\\r\\n', 'send-hex': '0a0b0c', 'expect-hex': '0d0e', 'expect-regex': '^\\+OK',
+  tls: 'yes', servername: 'mail.example.com', count: '3', loss: '20', rtt: '150ms', size: '64', query: 'www.example.com', qtype: 'AAAA',
+  rcode: 'NOERROR', recurse: 'no', community: '${secret:snmp_ro}', version: '2c', oid: '1.3.6.1.2.1.1.3.0', 'expect-program': '100003',
+  'accept-from': 'any', 'expect-all': '10.0.0.1,10.0.0.2', password: '${secret:db_pw}', user: 'monitor', role: 'master', database: 'app',
+  ssl: 'yes', service: 'grpc.health.v1.Health', socket: '/var/run/docker.sock', days: '30', 'critical-days': '7', rdap: 'https://rdap.example.net/',
+  whois: 'whois.example.net', 'expect-num': '> 0', args: '-w 20% -c 10%', address: '10.0.0.21', period: '24h', grace: '2h',
+};
+
 // Options shown as their own form fields rather than in the table
 // ("proto" is implied by the service types).
 const META = new Set(['title', 'description', 'tags', 'group', 'policy', 'team', 'region', 'proto', 'mute', 'system-channel']);
@@ -244,17 +260,32 @@ export function MonitorEditor({ name }) {
             </select><//>`}
         </div>
         <${Field} label=${t('ui.description')}><textarea rows="2" value=${f.description} onInput=${set('description')}></textarea><//>
-        <${Field} label=${t('ui.mon.options')} hint=${t('ui.mon.options_hint')}>
-          <datalist id="optkeys">${suggestions.map(k => html`<option value=${k} />`)}</datalist>
+        <details class="adv-opts" open=${f.opts.some(o => !own.includes(o.k))}>
+          <summary>${t('ui.mon.options')} <span class="small muted">${t('ui.mon.options_summary')}</span></summary>
+          <p class="small muted" style=${{ margin: '6px 0 8px' }}>${t('ui.mon.options_hint2')}</p>
           <div class="col">
-            ${f.opts.map((o, i) => own.includes(o.k) ? null : html`<div class="row nowrap">
-              <input type="text" class="ltr" list="optkeys" value=${o.k} onInput=${(e) => setOpt(i, 'k', e.target.value)} placeholder=${t('ui.key')} style=${{ maxWidth: '220px' }} />
-              <input type="text" class="ltr" value=${o.v} onInput=${(e) => setOpt(i, 'v', e.target.value)} placeholder=${t('ui.value')} />
-              <button type="button" class="btn sm ghost" onClick=${() => setF({ ...f, opts: f.opts.filter((_, j) => j !== i) })} aria-label=${t('ui.remove')}>✕</button>
-            </div>`)}
+            ${f.opts.map((o, i) => {
+              if (own.includes(o.k)) return null;
+              const known = suggestions.includes(o.k);
+              const custom = o.custom || (o.k && !known);
+              return html`<div class="opt-row">
+                <div class="row nowrap" style=${{ gap: '6px' }}>
+                  <select value=${custom ? '__custom' : o.k} aria-label=${t('ui.key')} style=${{ maxWidth: '260px' }}
+                    onChange=${(e) => { const opts = f.opts.slice(); opts[i] = e.target.value === '__custom' ? { k: '', v: o.v, custom: true } : { k: e.target.value, v: o.v }; setF({ ...f, opts }); }}>
+                    <option value="">${t('ui.mon.opt_pick')}</option>
+                    ${suggestions.map(k => html`<option value=${k} disabled=${k !== o.k && f.opts.some(x => x.k === k)}>${has('ui.opt.' + k) ? t('ui.opt.' + k).split(' — ')[0] + ' (' + k + ')' : k}</option>`)}
+                    <option value="__custom">${t('ui.mon.opt_custom')}</option>
+                  </select>
+                  ${custom && html`<input type="text" class="ltr" value=${o.k} onInput=${(e) => setOpt(i, 'k', e.target.value)} placeholder=${t('ui.key')} style=${{ maxWidth: '180px' }} />`}
+                  <input type="text" class="ltr" value=${o.v} onInput=${(e) => setOpt(i, 'v', e.target.value)} placeholder=${OPT_EXAMPLE[o.k] ? t('ui.mon.opt_example', { v: OPT_EXAMPLE[o.k] }) : t('ui.value')} />
+                  <button type="button" class="btn sm ghost" onClick=${() => setF({ ...f, opts: f.opts.filter((_, j) => j !== i) })} aria-label=${t('ui.remove')}>✕</button>
+                </div>
+                ${o.k && has('ui.opt.' + o.k) && html`<div class="small muted">${t('ui.opt.' + o.k).split(' — ').slice(1).join(' — ')}</div>`}
+              </div>`;
+            })}
             <div><button type="button" class="btn sm" onClick=${() => setF({ ...f, opts: [...f.opts, { k: '', v: '' }] })}>+ ${t('ui.mon.add_option')}</button></div>
           </div>
-        <//>
+        </details>
         ${editing && html`<${Field} label=${t('ui.config.message')}><input type="text" value=${f.message} onInput=${set('message')} placeholder=${t('ui.config.message_ph')} /><//>`}
         ${err && html`<div class="banner error"><div>${errText(err)}${diags && html`<ul class="small">${diags.map(d => html`<li class="ltr">${d.pos.line}:${d.pos.col} ${d.message}</li>`)}</ul>`}</div></div>`}
         ${probe && (probe.error ? html`<div class="banner error">${errText(probe.error)}</div>` : html`<${ProbeResult} r=${probe} />`)}

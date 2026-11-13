@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -119,6 +120,21 @@ func (e *env) setup() {
 		e.t.Fatalf("setup: %d", code)
 	}
 	e.csrf = r.CSRF
+}
+
+func TestSetupShownDespiteAnOldSessionCookie(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	u, _ := url.Parse(e.ts.URL)
+	e.c.Jar.SetCookies(u, []*http.Cookie{{Name: sessionCookie, Value: "left-by-an-earlier-installation", Path: "/"}})
+	var er struct{ Code string }
+	if code := e.do("GET", "/api/v1/session", nil, &er); code != 401 || er.Code != CodeSetupRequired {
+		t.Fatalf("with an old cookie: %d %s", code, er.Code)
+	}
+	e.setup()
+	e.c.Jar.SetCookies(u, []*http.Cookie{{Name: sessionCookie, Value: "left-by-an-earlier-installation", Path: "/"}})
+	if code := e.do("GET", "/api/v1/session", nil, &er); code != 401 || er.Code != CodeUnauthorized {
+		t.Fatalf("after setup: %d %s", code, er.Code)
+	}
 }
 
 func TestSetupLoginCSRF(t *testing.T) {

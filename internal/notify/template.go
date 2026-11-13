@@ -41,6 +41,10 @@ func messageData(m *Message, o map[string]string) map[string]any {
 		"StatusText": statusText(m), "KindText": i18n.T(m.Lang, "msg.kind."+m.Kind), "ReasonText": reason,
 		"DurationText": i18n.Duration(m.Duration, m.Lang), "Started": started, "Icon": kindIcon(m),
 	}
+	// Uptime Kuma's names, for templates pasted from Kuma.
+	for k, v := range kumaData(m, d["Text"].(string)) {
+		d[k] = v
+	}
 	for k, v := range o {
 		if _, taken := d[k]; !taken {
 			d[k] = v
@@ -72,9 +76,12 @@ func templateData(m *Message, o map[string]string, escapeJSON bool) map[string]a
 // escapeForJSON escapes every string for use inside a JSON string literal.
 func escapeForJSON(d map[string]any) {
 	for k, v := range d {
-		if s, ok := v.(string); ok {
-			b, _ := json.Marshal(s)
+		switch x := v.(type) {
+		case string:
+			b, _ := json.Marshal(x)
 			d[k] = string(b[1 : len(b)-1])
+		case map[string]any:
+			escapeForJSON(x) // Kuma's monitorJSON and heartbeatJSON
 		}
 	}
 }
@@ -210,7 +217,7 @@ var funcs = template.FuncMap{
 }
 
 func renderTemplate(src string, data map[string]any) (string, error) {
-	t, err := template.New("t").Funcs(funcs).Option("missingkey=zero").Parse(src)
+	t, err := template.New("t").Funcs(funcs).Option("missingkey=zero").Parse(kumaToGo(src))
 	if err != nil {
 		return "", fmt.Errorf("template: %v", err)
 	}
@@ -225,7 +232,7 @@ func renderTemplate(src string, data map[string]any) (string, error) {
 
 // ValidateTemplate parses a body template (for configuration checks).
 func ValidateTemplate(src string) error {
-	_, err := template.New("t").Funcs(funcs).Parse(src)
+	_, err := template.New("t").Funcs(funcs).Parse(kumaToGo(src))
 	return err
 }
 
@@ -236,7 +243,7 @@ func checkTemplate(what, src string, o map[string]string) error {
 	if src == "" || strings.Contains(src, "${") {
 		return nil // references are resolved later
 	}
-	t, err := template.New("t").Funcs(funcs).Option("missingkey=error").Parse(src)
+	t, err := template.New("t").Funcs(funcs).Option("missingkey=error").Parse(kumaToGo(src))
 	if err != nil {
 		return fmt.Errorf("%s: %s", what, templateError(err))
 	}

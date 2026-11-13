@@ -15,6 +15,7 @@ type Preset struct {
 	Name        string            `json:"name"`
 	Label       string            `json:"label"`
 	Group       string            `json:"group"` // menu section in the channel form
+	Docs        string            `json:"docs"`  // the service's API documentation
 	Fields      []Field           `json:"fields"`
 	Method      string            `json:"method"`
 	URL         string            `json:"url"`

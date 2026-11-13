@@ -4,16 +4,11 @@ import { t, tn, dur, fmtTime, currentLang, langList } from '../i18n.js';
 import { get, post, put, del, setCSRF, getCSRF, me } from '../api.js';
 import { Nodes } from './nodes.js';
 import { Appearance } from './appearance.js';
-import { ChannelList } from './alerts.js';
+import { ChannelList, DELIVERY_KEYS } from './alerts.js';
 import { IssueDot } from './contacts.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, regionTitle, msText } from '../ui.js';
 
 const EXIT_KEY = 'localnet.exit-target';
-
-// regionName is a country or region in the reader's language.
-function regionName(code) {
-  try { return new Intl.DisplayNames([currentLang()], { type: 'region' }).of(code) || code; } catch { return code; }
-}
 
 // routeText is the traced route, without the run of silent hops at its
 // end (routers that do not answer, or the trace stopping short).
@@ -49,9 +44,10 @@ function General() {
       toast(t('ui.saved'));
     } catch (e2) { toastError(e2); }
   };
-  // Two ways to choose the internet gateway: the public resolvers of a
-  // country, or what this host's own route and country suggest.
-  const countries = useFetch(() => get('/settings/exit-countries'), []);
+  // Two ways to choose the internet gateway: the public resolvers near a
+  // city (cities only, no country names), or what this host's own route
+  // suggests.
+  const cities = useFetch(() => get('/settings/exit-countries'), []);
   const [cc, setCc] = useState('');
   const suggest = async (body) => {
     setSug({ busy: true });
@@ -72,13 +68,13 @@ function General() {
       <div class="row nowrap"><input type="text" class="ltr" value=${exit ?? ''} onInput=${(e) => setExit(e.target.value)} placeholder=${t('ui.set.exit_off')} style=${{ maxWidth: '320px' }} />
       </div>
       <div class="row nowrap" style=${{ marginTop: '8px' }}>
-        <select value=${cc} onChange=${(e) => { setCc(e.target.value); if (e.target.value) suggest({ mode: 'country', country: e.target.value }); }} aria-label=${t('ui.set.exit_by_country')} style=${{ maxWidth: '320px' }}>
-          <option value="">${t('ui.set.exit_by_country')}</option>
-          ${(countries.data || []).map(c => html`<option value=${c.code}>${c.code === 'ANY' ? t('ui.set.exit_anycast') : regionName(c.code)} — ${c.label}</option>`)}</select>
+        <select value=${cc} onChange=${(e) => { setCc(e.target.value); if (e.target.value) suggest({ mode: 'city', city: e.target.value }); }} aria-label=${t('ui.set.exit_by_city')} style=${{ maxWidth: '360px' }}>
+          <option value="">${t('ui.set.exit_by_city')}</option>
+          ${(cities.data || []).map(c => html`<option value=${c.id}>${t('ui.city.' + c.id)} — ${c.label}${c.anycast ? ' (' + t('ui.set.exit_anycast_tag') + ')' : ''}</option>`)}</select>
         <button type="button" class="btn" onClick=${() => { setCc(''); suggest({ mode: 'auto' }); }} disabled=${sug && sug.busy}>${sug && sug.busy ? t('ui.set.exit_measuring') : t('ui.set.exit_suggest')}</button></div><//>`}
     ${sug && sug.err && html`<div class="banner error">${errText(sug.err)}</div>`}
     ${sug && sug.candidates && html`<div class="card"><div class="bd col" style=${{ gap: '8px' }}>
-      <p class="small muted" style=${{ margin: 0 }}>${t('ui.set.exit_result')}${sug.public_addr ? ' · ' + t('ui.set.exit_public', { addr: sug.public_addr }) : ''}${sug.mode === 'auto' && sug.country ? ' · ' + regionName(sug.country) : ''}</p>
+      <p class="small muted" style=${{ margin: 0 }}>${t('ui.set.exit_result')}${sug.public_addr ? ' · ' + t('ui.set.exit_public', { addr: sug.public_addr }) : ''}</p>
       ${sug.mode === 'auto' && html`<div class="small muted">${sug.trace_error ? t('ui.set.exit_no_trace') : t('ui.set.exit_route') + ': ' + routeText(sug.hops)}</div>`}
       ${!sug.suggested.length && html`<div class="banner warning">${t('ui.set.exit_none')}</div>`}
       <table class="tbl small"><tbody>${sug.candidates.map(c => html`<tr class=${c.ok ? '' : 'muted'}>
@@ -89,11 +85,62 @@ function General() {
       </tr>`)}</tbody></table>
     </div></div>`}
     <${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
-      <div class="row nowrap"><input type="url" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
+      <div class="row nowrap"><input type="text" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
         <button type="button" class="btn" onClick=${testHb} disabled=${!s.data.heartbeat_url}>${t('ui.set.heartbeat_test')}</button></div><//>
+    <${HeartbeatForm} f=${f} setF=${setF} />
     ${hb && !hb.busy && html`<div class=${'banner ' + (hb.err || hb.LastError ? 'error' : 'ok')}>${hb.err ? errText(hb.err) : hb.LastError || t('ui.set.heartbeat_ok')}</div>`}
     <div class="row"><div class="spacer"></div><button class="btn primary">${t('ui.save')}</button></div>
   </div></form>`;
+}
+
+const HB_FIELDS = ['host', 'status', 'problems', 'monitors', 'time'];
+
+// HeartbeatForm sets how the external heartbeat is sent, field by field
+// as an API client does it, and previews the request.
+function HeartbeatForm({ f, setF }) {
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? (e.target.checked ? 'on' : 'off') : e.target.value });
+  const push = f.heartbeat_method === 'PUSH';
+  const auth = f.heartbeat_auth || 'none';
+  // Empty means every field (the default); "none" means none.
+  const fields = !f.heartbeat_fields ? HB_FIELDS : f.heartbeat_fields === 'none' ? [] : f.heartbeat_fields.split(',');
+  const toggleField = (k, on) => {
+    const next = HB_FIELDS.filter(x => x === k ? on : fields.includes(x));
+    setF({ ...f, heartbeat_fields: next.length === HB_FIELDS.length ? '' : next.length ? next.join(',') : 'none' });
+  };
+  const [pv, setPv] = useState(null);
+  useEffect(() => {
+    if (!f.heartbeat_url) { setPv(null); return; }
+    const id = setTimeout(async () => {
+      const form = Object.fromEntries(Object.entries(f).filter(([k]) => k.startsWith('heartbeat_')));
+      try { setPv(await post('/settings/heartbeat/preview', form)); } catch (e) { setPv({ err: e }); }
+    }, 300);
+    return () => clearTimeout(id);
+  }, [JSON.stringify(f)]);
+  return html`<div class="col" style=${{ gap: '10px' }}>
+    <div class="two">
+      <${Field} label=${t('ui.hb.method')}><select value=${push ? 'PUSH' : 'GET'} onChange=${set('heartbeat_method')}>
+        <option value="GET">GET</option><option value="PUSH">PUSH (POST)</option></select><//>
+      ${push && html`<${Field} label=${t('ui.hb.format')}><select value=${f.heartbeat_format || 'json'} onChange=${set('heartbeat_format')}>
+          <option value="json">JSON</option><option value="text">${t('ui.hb.text')}</option></select><//>`}
+    </div>
+    <${Field} label=${t('ui.hb.host_info')} hint=${push ? '' : t('ui.hb.host_info_hint')}>
+      <div class="row" style=${{ gap: '16px' }}>${HB_FIELDS.map(k => html`<label class="switch"><input type="checkbox" checked=${fields.includes(k)}
+        onChange=${(e) => toggleField(k, e.target.checked)} /> ${t('ui.hb.field.' + k)} <span class="muted small ltr">${k}</span></label>`)}</div><//>
+    <div class="two">
+      <${Field} label=${t('ui.hb.auth')}><select value=${auth} onChange=${set('heartbeat_auth')}>
+        <option value="none">${t('ui.hb.auth_none')}</option><option value="basic">${t('ui.hb.auth_basic')}</option><option value="apikey">API Key</option></select><//>
+      ${auth === 'apikey' && html`<${Field} label=${t('ui.hb.key_in')}><select value=${f.heartbeat_key_in || 'header'} onChange=${set('heartbeat_key_in')}>
+        <option value="header">${t('ui.hb.in_header')}</option><option value="query">${t('ui.hb.in_query')}</option></select><//>`}
+    </div>
+    ${auth === 'basic' && html`<div class="two">
+      <${Field} label=${t('ui.hb.user')}><input type="text" class="ltr" autocomplete="off" value=${f.heartbeat_user || ''} onInput=${set('heartbeat_user')} /><//>
+      <${Field} label=${t('ui.hb.password')}><input type="password" class="ltr" autocomplete="new-password" value=${f.heartbeat_password || ''} onInput=${set('heartbeat_password')} /><//></div>`}
+    ${auth === 'apikey' && html`<div class="two">
+      <${Field} label=${t('ui.hb.key_name')}><input type="text" class="ltr" value=${f.heartbeat_key_name || ''} placeholder="X-Api-Key" onInput=${set('heartbeat_key_name')} /><//>
+      <${Field} label=${t('ui.hb.key_value')}><input type="password" class="ltr" autocomplete="new-password" value=${f.heartbeat_key_value || ''} onInput=${set('heartbeat_key_value')} /><//></div>`}
+    ${pv && html`<div><div class="small muted">${t('ui.hb.preview')}</div>${pv.err ? html`<div class="banner error">${errText(pv.err)}</div>`
+      : html`<pre class="ltr small" style=${{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: '4px 0 0' }}>${pv.method + ' ' + pv.url + '\n' + pv.headers.map(([k, v]) => k + ': ' + v).join('\n') + (pv.body ? '\n\n' + pv.body : '')}</pre>`}</div>`}
+  </div>`;
 }
 
 function Tunables() {
@@ -107,7 +154,7 @@ function Tunables() {
   const rows = useMemo(() => {
     if (!list.data) return [];
     const q = filter.toLowerCase();
-    return list.data.filter(x => (!onlyChanged || x.overridden) && (!q || x.key.includes(q) || x.desc.toLowerCase().includes(q) || x.desc_zh.includes(q)));
+    return list.data.filter(x => !DELIVERY_KEYS.includes(x.key) && (!onlyChanged || x.overridden) && (!q || x.key.includes(q) || x.desc.toLowerCase().includes(q) || x.desc_zh.includes(q)));
   }, [list.data, filter, onlyChanged]);
   if (!list.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
   const pending = Object.keys(edits).length + unset.size;
@@ -162,6 +209,9 @@ const ROLES = ['admin', 'operator', 'viewer'];
 function Users() {
   const list = useFetch(() => get('/users'), []);
   const teams = useFetch(() => get('/teams'), []);
+  // The contact each login is linked to (set in the contact's form).
+  const dir = useFetch(() => get('/people').catch(() => ({ people: [] })), []);
+  const contactOf = (u) => ((dir.data && dir.data.people) || []).find(p => p.username === u.username);
   const [form, setForm] = useState(null);
   if (!list.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
   const teamItems = (teams.data && teams.data.items) || [];
@@ -191,12 +241,13 @@ function Users() {
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.user.intro')}</p>
       <button class="btn primary" onClick=${() => setForm({ username: '', password: '', role: 'operator', areas: '', teams: [] })}>${t('ui.user.add')}</button></div>
     <div class="card"><div class="bd flush tbl-wrap"><table class="tbl">
-      <thead><tr><th>${t('ui.name')}</th><th>${t('ui.user.role')}</th>${multi && html`<th>${t('ui.user.teams')}</th>`}<th>${t('ui.user.areas')}</th><th>${t('ui.tok.created_at')}</th><th></th></tr></thead>
+      <thead><tr><th>${t('ui.name')}</th><th>${t('ui.user.role')}</th>${multi && html`<th>${t('ui.user.teams')}</th>`}<th>${t('ui.user.areas')}</th><th>${t('ui.user.contact')}</th><th>${t('ui.tok.created_at')}</th><th></th></tr></thead>
       <tbody>${list.data.items.map(u => html`<tr>
         <td class="name">${u.username}</td>
         <td><span class="tag">${t('ui.user.role.' + u.role)}</span></td>
         ${multi && html`<td class="small">${(u.teams || []).map(titleOf).join(', ')}</td>`}
         <td class="small mono">${u.areas.length ? u.areas.join(', ') : html`<span class="faint">${t('ui.user.all')}</span>`}</td>
+        <td class="small">${contactOf(u) ? html`<a href="#/alerts/contacts">${contactOf(u).name}</a>` : html`<span class="faint" title=${t('ui.user.contact_none_hint')}>–</span>`}</td>
         <td class="small">${fmtTime(u.created_at)}</td>
         <td class="right nowrap"><button class="btn sm" onClick=${() => setForm({ id: u.id, username: u.username, password: '', role: u.role, areas: u.areas.join(', '), teams: u.teams || [] })}>${t('ui.edit')}</button>
           ${' '}<button class="btn sm danger" onClick=${() => remove(u)}>${t('ui.delete')}</button></td>
@@ -228,6 +279,17 @@ function Teams() {
   const admin = me.role === 'admin';
   const chans = useFetch(() => (admin ? get('/channels') : Promise.resolve([])), [admin]);
   const [form, setForm] = useState(null);
+  // #/advanced/teams?edit=admin opens that team's form (from the overview's
+  // first steps), once the list has loaded.
+  const [opened, setOpened] = useState(false);
+  useEffect(() => {
+    const m = /[?&]edit=([^&]+)/.exec(location.hash);
+    if (opened || !m || !list.data) return;
+    setOpened(true);
+    const name = decodeURIComponent(m[1]);
+    const tm = list.data.items.find(x => x.name === name || (name === 'admin' && x.builtin));
+    if (tm && admin) edit(tm);
+  }, [list.data]);
   if (!list.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
   const save = async (e) => {
     e.preventDefault();
@@ -245,7 +307,9 @@ function Teams() {
   const edit = (tm) => setForm({ edit: true, builtin: tm.builtin, name: tm.name, title: tm.title === tm.name ? '' : tm.title, description: tm.description || '', members: tm.members.slice(),
     channels: tm.channels.slice(), mode: tm.mode || 'fallback' });
   const people = (l) => l.length ? l.join(', ') : html`<span class="faint">–</span>`;
-  const userNames = ((users.data && users.data.items) || []).map(u => u.username);
+  const userList = (users.data && users.data.items) || [];
+  const userNames = userList.map(u => u.username);
+  const roleOf = (n) => (userList.find(u => u.username === n) || {}).role;
   const toggle = (n) => setForm({ ...form, members: form.members.includes(n) ? form.members.filter(x => x !== n) : [...form.members, n] });
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.team.intro')}</p>
@@ -267,10 +331,12 @@ function Teams() {
     </div></div>
     ${form && html`<${Modal} title=${form.edit ? form.name : t('ui.team.add')} onClose=${() => setForm(null)}>
       <form class="form" onSubmit=${save}>
-        ${!form.edit && html`<${Field} label=${t('ui.name')} hint=${t('ui.team.name_hint')}><input type="text" class="ltr" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}" value=${form.name} onInput=${(e) => setForm({ ...form, name: e.target.value })} /><//>`}
-        <${Field} label=${t('ui.title')}><input type="text" value=${form.title} onInput=${(e) => setForm({ ...form, title: e.target.value })} placeholder=${form.builtin ? t('ui.team.admin') : form.name} /><//>
-        <${Field} label=${t('ui.team.members')} hint=${t('ui.team.members_hint')}>
-          <div class="col">${userNames.map(n => html`<label class="switch"><input type="checkbox" checked=${form.members.includes(n)} onChange=${() => toggle(n)} /> ${n}</label>`)}</div><//>
+        ${!form.edit && html`<${Field} label=${t('ui.name')} hint=${t('ui.team.name_hint')}><input type="text" class="ltr" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}" value=${form.name} placeholder=${t('ui.team.name_ph')} onInput=${(e) => setForm({ ...form, name: e.target.value })} /><//>`}
+        <${Field} label=${t('ui.team.display_name')}><input type="text" value=${form.title} onInput=${(e) => setForm({ ...form, title: e.target.value })} placeholder=${form.builtin ? t('ui.team.admin') : t('ui.team.display_ph')} /><//>
+        <${Field} label=${t('ui.team.members_label')} hint=${t('ui.team.members_hint')}>
+          <div class="col">${userNames.map(n => html`<div class="row" style=${{ gap: '8px' }}><label class="switch"><input type="checkbox" checked=${form.members.includes(n)} onChange=${() => toggle(n)} /> ${n}</label>
+            ${roleOf(n) && html`<span class="tag" title=${t('ui.user.role.' + roleOf(n) + '_hint')}>${t('ui.user.role.' + roleOf(n))}</span>`}</div>`)}
+          ${userNames.length <= 1 && html`<div class="small muted">${t('ui.team.add_users_hint')} <a href="#/settings/users">${t('ui.nav.settings')} › ${t('ui.set.tab.users')}</a></div>`}</div><//>
         <${Field} label=${t('ui.team.channels')} hint=${t('ui.team.channels_hint')}>
           <${ChannelList} value=${form.channels} channels=${chans.data || []} onChange=${(channels) => setForm({ ...form, channels })} /><//>
         ${form.channels.length > 1 && html`<${Field} label=${t('ui.team.mode')}><select value=${form.mode} onChange=${(e) => setForm({ ...form, mode: e.target.value })}>

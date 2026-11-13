@@ -4,7 +4,6 @@ import { html, useState } from '../lib.js';
 import { t } from '../i18n.js';
 import { get, post, put, me } from '../api.js';
 import { NoticesTab } from './notices.js';
-import { ChangesTab } from './changes.js';
 import { LinkCard } from './appearance.js';
 import { useFetch, Loading, ErrorBox, toast, toastError, useDocTitle } from '../ui.js';
 
@@ -62,12 +61,14 @@ function ScreensTab() {
   return html`<div class="links2"><${LinkCard} page="wall" k="wall" /></div>`;
 }
 
-export const NOTICE_TABS = [['changes', 'ui.chg.tab'], ['pages', 'ui.notice.tab'], ['report', 'ui.report.tab'], ['screens', 'ui.notice.screens_tab']];
+// Change notices went to Alerts and notifications; this page is about
+// what the public and the duty room see.
+export const NOTICE_TABS = [['pages', 'ui.notice.tab'], ['report', 'ui.report.tab'], ['screens', 'ui.notice.screens_tab']];
 
 export function Notices({ tab }) {
   useDocTitle(t('ui.nav.notices'));
   return html`<div class="page">
     <div class="tabs">${NOTICE_TABS.map(([k, label]) => html`<a href=${'#/notices/' + k} class=${tab === k ? 'on' : ''}>${t(label)}</a>`)}</div>
-    ${tab === 'pages' ? html`<${NoticesTab} />` : tab === 'report' ? html`<${ReportTab} />` : tab === 'screens' ? html`<${ScreensTab} />` : html`<${ChangesTab} />`}
+    ${tab === 'report' ? html`<${ReportTab} />` : tab === 'screens' ? html`<${ScreensTab} />` : html`<${NoticesTab} />`}
   </div>`;
 }

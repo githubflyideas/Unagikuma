@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"text/template"
@@ -42,21 +43,18 @@ type ChangeTemplate struct {
 	Body  string `json:"body"`
 }
 
+// A line whose names are all empty is left out (renderLines), so the
+// templates need no {{if}}: "Impact: {{.Impact}}" disappears when the
+// change has no impact.
 const enWindow = `When: {{.Start}} – {{.End}} ({{.Duration}})
-{{- if .Impact}}
-Impact: {{.Impact}}{{end}}
-{{- if .Description}}
-{{.Description}}{{end}}
-{{- if .Monitors}}
-In maintenance: {{.Monitors}}{{end}}`
+Impact: {{.Impact}}
+{{.Description}}
+In maintenance: {{.Monitors}}`
 
 const zhWindow = `时间：{{.Start}} – {{.End}}（{{.Duration}}）
-{{- if .Impact}}
-影响：{{.Impact}}{{end}}
-{{- if .Description}}
-{{.Description}}{{end}}
-{{- if .Monitors}}
-维护中的监控：{{.Monitors}}{{end}}`
+影响：{{.Impact}}
+{{.Description}}
+维护中的监控：{{.Monitors}}`
 
 // defaultChangeTemplates are the built-in notices; other languages use
 // the English ones. Each can be replaced under Notices & status › Changes.
@@ -67,9 +65,9 @@ var defaultChangeTemplates = map[string]map[string]ChangeTemplate{
 		ChangeRemind:      {"In {{.In}}: {{.Title}}", enWindow},
 		ChangeStarted:     {"Change started: {{.Title}}", enWindow},
 		ChangeOverdue:     {"Change overdue: {{.Title}}", "It was due to end at {{.End}} and is not marked as done or rolled back. Its monitors are out of maintenance again."},
-		ChangeFinished:    {"Change done: {{.Title}}", "Done at {{.Now}} by {{.By}}.{{if .Note}}\n{{.Note}}{{end}}"},
-		ChangeRolledBack:  {"Change rolled back: {{.Title}}", "Rolled back at {{.Now}} by {{.By}}.{{if .Note}}\n{{.Note}}{{end}}"},
-		ChangeCancelled:   {"Change cancelled: {{.Title}}", "Planned for {{.Start}}; cancelled by {{.By}}.{{if .Note}}\n{{.Note}}{{end}}"},
+		ChangeFinished:    {"Change done: {{.Title}}", "Done at {{.Now}} by {{.By}}.\n{{.Note}}"},
+		ChangeRolledBack:  {"Change rolled back: {{.Title}}", "Rolled back at {{.Now}} by {{.By}}.\n{{.Note}}"},
+		ChangeCancelled:   {"Change cancelled: {{.Title}}", "Planned for {{.Start}}; cancelled by {{.By}}.\n{{.Note}}"},
 	},
 	"zh": {
 		ChangeAnnounced:   {"变更通知：{{.Title}}", zhWindow + "\n发布人：{{.By}}"},
@@ -77,9 +75,9 @@ var defaultChangeTemplates = map[string]map[string]ChangeTemplate{
 		ChangeRemind:      {"{{.In}}后开始：{{.Title}}", zhWindow},
 		ChangeStarted:     {"变更开始：{{.Title}}", zhWindow},
 		ChangeOverdue:     {"变更超时：{{.Title}}", "原定 {{.End}} 结束，但还没有标记为完成或已回滚。相关监控已退出维护状态。"},
-		ChangeFinished:    {"变更完成：{{.Title}}", "{{.By}} 于 {{.Now}} 完成。{{if .Note}}\n{{.Note}}{{end}}"},
-		ChangeRolledBack:  {"变更已回滚：{{.Title}}", "{{.By}} 于 {{.Now}} 回滚。{{if .Note}}\n{{.Note}}{{end}}"},
-		ChangeCancelled:   {"变更取消：{{.Title}}", "原定 {{.Start}}，已由 {{.By}} 取消。{{if .Note}}\n{{.Note}}{{end}}"},
+		ChangeFinished:    {"变更完成：{{.Title}}", "{{.By}} 于 {{.Now}} 完成。\n{{.Note}}"},
+		ChangeRolledBack:  {"变更已回滚：{{.Title}}", "{{.By}} 于 {{.Now}} 回滚。\n{{.Note}}"},
+		ChangeCancelled:   {"变更取消：{{.Title}}", "原定 {{.Start}}，已由 {{.By}} 取消。\n{{.Note}}"},
 	},
 }
 
@@ -168,7 +166,25 @@ func (a *App) RenderChange(c store.Change, event, by, in string) (title, body st
 	data := map[string]any{"Title": c.Title, "Description": c.Description, "Impact": c.Impact, "Start": f(c.Start), "End": f(c.End),
 		"Duration": shortDuration(c.End.Sub(c.Start)), "Monitors": strings.Join(mons, ", "), "Note": c.Note, "By": by, "In": in,
 		"Now": f(a.now()), "State": c.State}
-	render := func(s string) (string, error) {
+	return renderChangeTemplate(tpl, data)
+}
+
+func renderChangeTemplate(tpl ChangeTemplate, data map[string]any) (title, body string, err error) {
+	if title, err = renderLines(tpl.Title, data); err != nil {
+		return "", "", err
+	}
+	body, err = renderLines(tpl.Body, data)
+	return title, body, err
+}
+
+var templateAction = regexp.MustCompile(`\{\{.*?\}\}`)
+
+// renderLines renders a notice template. A template without blocks
+// ({{if}}, {{range}}, …) is rendered line by line, and a line whose names
+// all came out empty ("Impact: " for a change without an impact) is left
+// out, so plain templates need no conditions.
+func renderLines(src string, data map[string]any) (string, error) {
+	exec := func(s string) (string, error) {
 		t, err := template.New("t").Option("missingkey=zero").Parse(s)
 		if err != nil {
 			return "", err
@@ -177,13 +193,46 @@ func (a *App) RenderChange(c store.Change, event, by, in string) (title, body st
 		if err := t.Execute(&b, data); err != nil {
 			return "", err
 		}
-		return strings.TrimSpace(b.String()), nil
+		return strings.ReplaceAll(b.String(), "<no value>", ""), nil
 	}
-	if title, err = render(tpl.Title); err != nil {
-		return "", "", err
+	if strings.Contains(src, "{{if") || strings.Contains(src, "{{- if") || strings.Contains(src, "{{range") || strings.Contains(src, "{{with") {
+		out, err := exec(src)
+		return strings.TrimSpace(out), err
 	}
-	body, err = render(tpl.Body)
-	return title, body, err
+	if _, err := exec(src); err != nil {
+		return "", err
+	}
+	var kept []string
+	for _, line := range strings.Split(src, "\n") {
+		out, _ := exec(line)
+		if templateAction.MatchString(line) && strings.TrimSpace(out) == strings.TrimSpace(templateAction.ReplaceAllString(line, "")) {
+			continue // every name on the line is empty
+		}
+		kept = append(kept, out)
+	}
+	return strings.TrimSpace(strings.Join(kept, "\n")), nil
+}
+
+// ChangeTemplateDefaults are the built-in notices for a language.
+func ChangeTemplateDefaults(lang string) map[string]ChangeTemplate {
+	if t, ok := defaultChangeTemplates[strings.SplitN(lang, "-", 2)[0]]; ok {
+		return t
+	}
+	return defaultChangeTemplates["en"]
+}
+
+// PreviewChangeTemplate renders a notice for an example change, for the
+// form that edits the templates.
+func (a *App) PreviewChangeTemplate(tpl ChangeTemplate, withImpact bool) (title, body string, err error) {
+	loc := a.opts.Location
+	start := a.now().Add(2 * time.Hour).Truncate(time.Hour)
+	f := func(t time.Time) string { return t.In(loc).Format("2006-01-02 15:04") }
+	data := map[string]any{"Title": "Core switch upgrade", "Description": "", "Impact": "", "Start": f(start), "End": f(start.Add(time.Hour)),
+		"Duration": shortDuration(time.Hour), "Monitors": "core-sw1, core-sw2", "Note": "", "By": "admin", "In": "30m", "Now": f(a.now()), "State": "open"}
+	if withImpact {
+		data["Impact"], data["Description"], data["Note"] = "VPN down for 10 minutes", "Firmware 17.9; links checked after", "Upgraded, links checked"
+	}
+	return renderChangeTemplate(tpl, data)
 }
 
 // NotifyChange sends one notice of a change to its audience.

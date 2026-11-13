@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | Imported | 30 monitors, 10 notification channels, 9 notification policies |
-| Needs a look | 7 items (imported; see below) |
+| Needs a look | 6 items (imported; see below) |
 | Not imported | 9 items (see below for what to do) |
 
 Added to `monitors.conf`.
@@ -57,7 +57,7 @@ Added to `monitors.conf`.
 | ops-email \* | channel (Email) | to ops@example.com,lead@example.com |
 | ops-telegram | channel (Telegram) | chat -1001234567 |
 | team-slack \* | channel (Slack) |  |
-| webhook-custom-body \* | channel (Webhook) | https://hooks.example.com/… |
+| webhook-custom-body | channel (Webhook) | https://hooks.example.com/… |
 | wecom-bot | channel (WeCom) |  |
 | notify-dingtalk-bot-feishu-bot | policy | sends to dingtalk-bot, feishu-bot |
 | notify-discord-alerts | policy | sends to discord-alerts |
@@ -85,11 +85,8 @@ _* needs a look: see below._
    Messages go to the webhook's own channel; the channel override (#alerts) is not used.
 5. **Channel "Generic webhook" → generic-webhook**  
    The message body differs from Uptime Kuma's.  
-   To do: Check that the receiving side understands it (Alerting › Channels › Test).
-6. **Channel "Webhook custom body" → webhook-custom-body**  
-   The message body differs from Uptime Kuma's. Its custom body template was not carried over (the template language differs).  
-   To do: Check that the receiving side understands it (Alerting › Channels › Test). Write the body again under Alerting › Channels (body=).
-7. **Channel "Ops email" → ops-email**  
+   To do: Check that the receiving side understands it (Alerts & notifications › Channels › Test).
+6. **Channel "Ops email" → ops-email**  
    Copy (CC/BCC) addresses are sent to as normal recipients.
 
 ## Not imported
@@ -120,7 +117,7 @@ _* needs a look: see below._
    To do: Nothing to do: groups appear here as soon as a monitor uses them (group=).
 9. **Channels: Pushover (Pushover), Teams (Microsoft Teams), Gotify (Gotify), PagerDuty (PagerDuty), Unused Matrix (Matrix)**  
    Why: No imported monitor uses them.  
-   To do: Add them under Alerting › Channels if you still need them.
+   To do: Add them under Alerts & notifications › Channels if you still need them.
 
 ## Good to know
 

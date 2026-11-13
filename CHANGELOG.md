@@ -1,5 +1,26 @@
 # Changelog
 
+## v2.6.10 — 2026-11-13
+
+**Added**
+- Uptime Kuma webhook templates work as pasted; imports keep them.
+- Channel forms show the request in each service's own format, with ready-made bodies.
+- Delivery rules are set on the channels tab.
+- Simpler external heartbeat form: GET or PUSH, host information and credentials as fields.
+- Internet gateway chosen by city.
+
+**Changed**
+- Menus renamed and reordered; run mode shown in the top bar.
+- Monitor list, status pages and problems pages tidied; expiry moved under problems.
+- Channel kinds grouped by type, with search and sorting.
+- Bright and Modern themes redesigned; themes picked from colour dots.
+- Change-notice templates, team form and monitor options easier to use.
+- Dialogs open over the page content.
+
+**Fixed**
+- First-account setup appears even when the browser holds an old session cookie.
+- Form validation messages follow the interface language.
+
 ## v2.6.9 — 2026-11-13
 
 **Added**
