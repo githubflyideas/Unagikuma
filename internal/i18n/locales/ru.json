@@ -561,6 +561,7 @@
 "ui.ch.kind.custom-sms": "Свой SMS-шлюз",
 "ui.ch.kind.custom-voice": "Свой голосовой шлюз",
 "ui.ch.custom_hint": "Один запрос на номер. В адресе, заголовках (в файле header.Имя=значение) и теле {{.Phone}} — номер, {{.Title}} — сообщение; доступны все имена шаблона сообщения.",
+"ui.ch.webhook_body_hint": "Имена вроде {{.Name}}, {{.StatusText}}, {{.Detail}}. Тело, скопированное из Uptime Kuma, работает без изменений: {% if %}, {{ monitorJSON.name }}, {{ heartbeatJSON.status }} (1 работает, 0 сбой), {{ heartbeatJSON.msg }}, {{ heartbeatJSON.localDateTime }}, {{ msg }}.",
 "ui.notice.edit_page": "Изменить страницу",
 "ui.notice.delete_page": "Удалить страницу",
 "ui.notice.delete_page_confirm": "Удалить страницу статуса «{title}»? Её адрес перестанет работать. Объявления и подписчики сохраняются и вернутся, если снова добавить страницу с тем же именем.",

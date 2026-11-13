@@ -548,6 +548,7 @@
 "ui.ch.kind.custom-sms": "Eigenes SMS-Gateway",
 "ui.ch.kind.custom-voice": "Eigenes Sprach-Gateway",
 "ui.ch.custom_hint": "Eine Anfrage je Nummer. In Adresse, Kopfzeilen (in der Datei header.Name=Wert) und Inhalt ist {{.Phone}} die Nummer und {{.Title}} die Nachricht; alle Namen der Nachrichtenvorlage gehen.",
+"ui.ch.webhook_body_hint": "Namen wie {{.Name}}, {{.StatusText}}, {{.Detail}}. Ein aus Uptime Kuma kopierter Body funktioniert unverändert: {% if %}, {{ monitorJSON.name }}, {{ heartbeatJSON.status }} (1 ok, 0 gestört), {{ heartbeatJSON.msg }}, {{ heartbeatJSON.localDateTime }}, {{ msg }}.",
 "ui.notice.edit_page": "Seite bearbeiten",
 "ui.notice.delete_page": "Seite löschen",
 "ui.notice.delete_page_confirm": "Statusseite „{title}“ löschen? Ihre Adresse funktioniert dann nicht mehr. Meldungen und Abonnenten bleiben und kommen zurück, wenn eine Seite gleichen Namens wieder angelegt wird.",

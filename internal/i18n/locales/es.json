@@ -548,6 +548,7 @@
 "ui.ch.kind.custom-sms": "Pasarela SMS personalizada",
 "ui.ch.kind.custom-voice": "Pasarela de voz personalizada",
 "ui.ch.custom_hint": "Una solicitud por número. En la dirección, las cabeceras (header.Nombre=valor en el archivo) y el cuerpo, {{.Phone}} es el número y {{.Title}} el mensaje; sirven todos los nombres de la plantilla.",
+"ui.ch.webhook_body_hint": "Nombres como {{.Name}}, {{.StatusText}}, {{.Detail}}. Un cuerpo copiado de Uptime Kuma funciona tal cual: {% if %}, {{ monitorJSON.name }}, {{ heartbeatJSON.status }} (1 arriba, 0 caído), {{ heartbeatJSON.msg }}, {{ heartbeatJSON.localDateTime }}, {{ msg }}.",
 "ui.notice.edit_page": "Editar página",
 "ui.notice.delete_page": "Eliminar página",
 "ui.notice.delete_page_confirm": "¿Eliminar la página de estado «{title}»? Su dirección dejará de funcionar. Los avisos y suscriptores se conservan y vuelven si se añade una página con el mismo nombre.",

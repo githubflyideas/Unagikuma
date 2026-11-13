@@ -543,6 +543,7 @@
 "ui.ch.kind.custom-sms": "Cổng SMS tùy chỉnh",
 "ui.ch.kind.custom-voice": "Cổng thoại tùy chỉnh",
 "ui.ch.custom_hint": "Mỗi số một yêu cầu. Trong địa chỉ, header (trong tệp: header.Tên=giá trị) và nội dung, {{.Phone}} là số và {{.Title}} là tin nhắn; mọi tên trong mẫu tin nhắn đều dùng được.",
+"ui.ch.webhook_body_hint": "Dùng các tên như {{.Name}}, {{.StatusText}}, {{.Detail}}. Phần thân sao chép từ Uptime Kuma dùng được ngay: {% if %}, {{ monitorJSON.name }}, {{ heartbeatJSON.status }} (1 bình thường, 0 sự cố), {{ heartbeatJSON.msg }}, {{ heartbeatJSON.localDateTime }}, {{ msg }}.",
 "ui.notice.edit_page": "Sửa trang",
 "ui.notice.delete_page": "Xóa trang",
 "ui.notice.delete_page_confirm": "Xóa trang trạng thái “{title}”? Địa chỉ của nó sẽ không còn hoạt động. Thông báo và người theo dõi được giữ lại và quay lại nếu thêm trang cùng tên.",

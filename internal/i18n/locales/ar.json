@@ -573,6 +573,7 @@
 "ui.ch.kind.custom-sms": "بوابة رسائل SMS مخصصة",
 "ui.ch.kind.custom-voice": "بوابة صوتية مخصصة",
 "ui.ch.custom_hint": "طلب واحد لكل رقم. في العنوان والترويسات (header.الاسم=القيمة في الملف) والمتن، {{.Phone}} هو الرقم و{{.Title}} هو الرسالة؛ وتعمل كل أسماء قالب الرسالة.",
+"ui.ch.webhook_body_hint": "أسماء مثل {{.Name}} و{{.StatusText}} و{{.Detail}}. ويعمل جسم الطلب المنسوخ من Uptime Kuma كما هو: {% if %} و{{ monitorJSON.name }} و{{ heartbeatJSON.status }} (1 يعمل، 0 متعطل) و{{ heartbeatJSON.msg }} و{{ heartbeatJSON.localDateTime }} و{{ msg }}.",
 "ui.notice.edit_page": "تعديل الصفحة",
 "ui.notice.delete_page": "حذف الصفحة",
 "ui.notice.delete_page_confirm": "حذف صفحة الحالة «{title}»؟ سيتوقف عنوانها عن العمل. تبقى الإعلانات والمشتركون وتعود إذا أُضيفت صفحة بالاسم نفسه.",

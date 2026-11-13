@@ -82,6 +82,7 @@
 "ui.ch.kind.custom-sms": "Custom SMS gateway",
 "ui.ch.kind.custom-voice": "Custom voice gateway",
 "ui.ch.custom_hint": "One request per number. In the address, headers (header.Name=value in the file) and body, {{.Phone}} is the number and {{.Title}} the message; every name of a message template works.",
+"ui.ch.webhook_body_hint": "Names such as {{.Name}}, {{.StatusText}}, {{.Detail}}. A body copied from Uptime Kuma works as it is: {% if %}, {{ monitorJSON.name }}, {{ heartbeatJSON.status }} (1 up, 0 down), {{ heartbeatJSON.msg }}, {{ heartbeatJSON.localDateTime }}, {{ msg }}.",
 "ui.notice.edit_page": "Edit page",
 "ui.notice.delete_page": "Delete page",
 "ui.notice.delete_page_confirm": "Delete the status page “{title}”? Its address stops working. Its announcements and subscribers are kept and come back if a page of the same name is added again.",

@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | Imported | 30 monitors, 10 notification channels, 9 notification policies, 1 maintenance window, 1 status page, 1 account |
-| Needs a look | 8 items (imported; see below) |
+| Needs a look | 7 items (imported; see below) |
 | Not imported | 10 items (see below for what to do) |
 
 Added to `monitors.conf`.
@@ -57,7 +57,7 @@ Added to `monitors.conf`.
 | ops-email \* | channel (Email) | to ops@example.com,lead@example.com |
 | ops-telegram | channel (Telegram) | chat -1001234567 |
 | team-slack \* | channel (Slack) |  |
-| webhook-custom-body \* | channel (Webhook) | https://hooks.example.com/… |
+| webhook-custom-body | channel (Webhook) | https://hooks.example.com/… |
 | wecom-bot | channel (WeCom) |  |
 | notify-dingtalk-bot-feishu-bot | policy | sends to dingtalk-bot, feishu-bot |
 | notify-discord-alerts | policy | sends to discord-alerts |
@@ -89,12 +89,9 @@ _* needs a look: see below._
 5. **Channel "Generic webhook" → generic-webhook**  
    The message body differs from Uptime Kuma's.  
    To do: Check that the receiving side understands it (Alerting › Channels › Test).
-6. **Channel "Webhook custom body" → webhook-custom-body**  
-   The message body differs from Uptime Kuma's. Its custom body template was not carried over (the template language differs).  
-   To do: Check that the receiving side understands it (Alerting › Channels › Test). Write the body again under Alerting › Channels (body=).
-7. **Channel "Ops email" → ops-email**  
+6. **Channel "Ops email" → ops-email**  
    Copy (CC/BCC) addresses are sent to as normal recipients.
-8. **Status page "Public status" → public**  
+7. **Status page "Public status" → public**  
    Its monitors are shown in one list; the sections of the Uptime Kuma page are not kept.
 
 ## Not imported

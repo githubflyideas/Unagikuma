@@ -549,6 +549,7 @@
 "ui.ch.kind.custom-sms": "कस्टम SMS गेटवे",
 "ui.ch.kind.custom-voice": "कस्टम वॉइस गेटवे",
 "ui.ch.custom_hint": "हर नंबर के लिए एक अनुरोध। पते, हेडर (फ़ाइल में header.नाम=मान) और बॉडी में {{.Phone}} नंबर है और {{.Title}} संदेश; संदेश टेम्पलेट के सभी नाम चलते हैं।",
+"ui.ch.webhook_body_hint": "{{.Name}}, {{.StatusText}}, {{.Detail}} जैसे नाम। Uptime Kuma से कॉपी किया गया बॉडी वैसे ही चलता है: {% if %}, {{ monitorJSON.name }}, {{ heartbeatJSON.status }} (1 ठीक, 0 बंद), {{ heartbeatJSON.msg }}, {{ heartbeatJSON.localDateTime }}, {{ msg }}।",
 "ui.notice.edit_page": "पेज संपादित करें",
 "ui.notice.delete_page": "पेज हटाएँ",
 "ui.notice.delete_page_confirm": "स्थिति पेज “{title}” हटाएँ? इसका पता काम करना बंद कर देगा। घोषणाएँ और सदस्य बने रहेंगे और उसी नाम का पेज फिर जोड़ने पर लौट आएँगे।",

@@ -543,6 +543,7 @@
 "ui.ch.kind.custom-sms": "カスタム SMS ゲートウェイ",
 "ui.ch.kind.custom-voice": "カスタム音声ゲートウェイ",
 "ui.ch.custom_hint": "番号ごとに 1 回リクエストします。アドレス、ヘッダー（ファイルでは header.名前=値）、本文で {{.Phone}} が番号、{{.Title}} がメッセージです。メッセージテンプレートの名前はすべて使えます。",
+"ui.ch.webhook_body_hint": "{{.Name}}、{{.StatusText}}、{{.Detail}} などの名前が使えます。Uptime Kuma の本文もそのまま使えます：{% if %}、{{ monitorJSON.name }}、{{ heartbeatJSON.status }}（1 正常、0 障害）、{{ heartbeatJSON.msg }}、{{ heartbeatJSON.localDateTime }}、{{ msg }}。",
 "ui.notice.edit_page": "ページを編集",
 "ui.notice.delete_page": "ページを削除",
 "ui.notice.delete_page_confirm": "ステータスページ「{title}」を削除しますか？アドレスは使えなくなります。お知らせと購読者は残り、同じ名前で追加し直すと戻ります。",

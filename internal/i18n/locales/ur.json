@@ -549,6 +549,7 @@
 "ui.ch.kind.custom-sms": "حسب ضرورت SMS گیٹ وے",
 "ui.ch.kind.custom-voice": "حسب ضرورت وائس گیٹ وے",
 "ui.ch.custom_hint": "ہر نمبر کے لیے ایک درخواست۔ پتے، ہیڈر (فائل میں header.نام=قدر) اور باڈی میں {{.Phone}} نمبر ہے اور {{.Title}} پیغام؛ پیغام کے سانچے کے سب نام چلتے ہیں۔",
+"ui.ch.webhook_body_hint": "{{.Name}}، {{.StatusText}}، {{.Detail}} جیسے نام۔ Uptime Kuma سے کاپی کیا گیا باڈی ویسے ہی چلتا ہے: {% if %}، {{ monitorJSON.name }}، {{ heartbeatJSON.status }} (1 ٹھیک، 0 خراب)، {{ heartbeatJSON.msg }}، {{ heartbeatJSON.localDateTime }}، {{ msg }}۔",
 "ui.notice.edit_page": "صفحہ میں ترمیم",
 "ui.notice.delete_page": "صفحہ حذف کریں",
 "ui.notice.delete_page_confirm": "اسٹیٹس صفحہ “{title}” حذف کریں؟ اس کا پتہ کام کرنا بند کر دے گا۔ اعلانات اور سبسکرائبرز محفوظ رہیں گے اور اسی نام کا صفحہ دوبارہ بنانے پر واپس آ جائیں گے۔",

@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.6.10 — unreleased
+
+**Added**
+- A webhook body copied from Uptime Kuma works as it is: Liquid tags (`{% if %}`, `{% elsif %}`, `{% else %}`, `{% endif %}`, `{% unless %}`, with `==`, `!=`, `>`, `<`, `and`, `or`) and Kuma's names — `{{ monitorJSON.name }}`, `type`, `hostname`, `port`, `url`; `{{ heartbeatJSON.status }}` (1 up, 0 down), `msg`, `time`, `localDateTime`, `timezone`; `{{ msg }}`, `{{ name }}`, `{{ status }}`, `{{ hostnameOrURL }}`. Values are escaped for the JSON body. The webhook form says so.
+- Importing from Uptime Kuma carries a webhook's custom body over instead of dropping it.
+
 ## v2.6.9 — unreleased
 
 **Added**

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/config"
+	"github.com/githubflyideas/unagikuma/internal/notify"
 )
 
 // Result is a conversion: records to add, secrets to store, and the report.
@@ -1190,9 +1191,16 @@ func (ch *kumaChannel) webhook() bool {
 	if ch.str("webhookContentType") == "form-data" {
 		ch.plain("content-type", "form")
 	}
-	ch.it.attention("The message body differs from Uptime Kuma's.", "Check that the receiving side understands it (Alerting › Channels › Test).")
-	if ch.str("webhookContentType") == "custom" {
-		ch.it.attention("Its custom body template was not carried over (the template language differs).", "Write the body again under Alerting › Channels (body=).")
+	switch body := ch.str("webhookCustomBody"); {
+	case ch.str("webhookContentType") == "custom" && body != "" && notify.ValidateTemplate(oneLine(body)) == nil:
+		// Kuma's template (Liquid, monitorJSON, heartbeatJSON, msg) is
+		// read the Kuma way, so the body is carried over as it is.
+		ch.plain("content-type", "json")
+		ch.plain("body", oneLine(body))
+	case ch.str("webhookContentType") == "custom":
+		ch.it.attention("Its custom body template could not be carried over: it uses Liquid that is not understood here.", "Write the body again under Alerting › Channels (body=).")
+	default:
+		ch.it.attention("The message body differs from Uptime Kuma's.", "Check that the receiving side understands it (Alerting › Channels › Test).")
 	}
 	var hs map[string]any
 	if h := ch.str("webhookAdditionalHeaders"); h == "" || json.Unmarshal([]byte(h), &hs) != nil {
@@ -1730,4 +1738,11 @@ func channelKind(ch *config.Channel) string {
 		return "webhook:" + ch.Opts["preset"]
 	}
 	return ch.Kind
+}
+
+// oneLine puts a JSON body on one line, as a configuration value is: line
+// breaks between JSON tokens are only spacing (inside a JSON string they
+// would not be valid anyway).
+func oneLine(s string) string {
+	return strings.Join(strings.Fields(strings.ReplaceAll(s, "\r", "")), " ")
 }

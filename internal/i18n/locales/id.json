@@ -543,6 +543,7 @@
 "ui.ch.kind.custom-sms": "Gateway SMS kustom",
 "ui.ch.kind.custom-voice": "Gateway suara kustom",
 "ui.ch.custom_hint": "Satu permintaan per nomor. Di alamat, header (di berkas: header.Nama=nilai) dan isi, {{.Phone}} adalah nomor dan {{.Title}} pesannya; semua nama templat pesan bisa dipakai.",
+"ui.ch.webhook_body_hint": "Nama seperti {{.Name}}, {{.StatusText}}, {{.Detail}}. Body yang disalin dari Uptime Kuma langsung berfungsi: {% if %}, {{ monitorJSON.name }}, {{ heartbeatJSON.status }} (1 normal, 0 gangguan), {{ heartbeatJSON.msg }}, {{ heartbeatJSON.localDateTime }}, {{ msg }}.",
 "ui.notice.edit_page": "Ubah halaman",
 "ui.notice.delete_page": "Hapus halaman",
 "ui.notice.delete_page_confirm": "Hapus halaman status “{title}”? Alamatnya tidak akan berfungsi lagi. Pengumuman dan pelanggannya disimpan dan kembali bila halaman dengan nama sama ditambahkan lagi.",

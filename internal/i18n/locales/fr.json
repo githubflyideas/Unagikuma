@@ -548,6 +548,7 @@
 "ui.ch.kind.custom-sms": "Passerelle SMS personnalisée",
 "ui.ch.kind.custom-voice": "Passerelle vocale personnalisée",
 "ui.ch.custom_hint": "Une requête par numéro. Dans l’adresse, les en-têtes (header.Nom=valeur dans le fichier) et le corps, {{.Phone}} est le numéro et {{.Title}} le message ; tous les noms du modèle de message sont permis.",
+"ui.ch.webhook_body_hint": "Noms comme {{.Name}}, {{.StatusText}}, {{.Detail}}. Un corps copié d’Uptime Kuma fonctionne tel quel : {% if %}, {{ monitorJSON.name }}, {{ heartbeatJSON.status }} (1 ok, 0 en panne), {{ heartbeatJSON.msg }}, {{ heartbeatJSON.localDateTime }}, {{ msg }}.",
 "ui.notice.edit_page": "Modifier la page",
 "ui.notice.delete_page": "Supprimer la page",
 "ui.notice.delete_page_confirm": "Supprimer la page d’état « {title} » ? Son adresse ne répondra plus. Ses annonces et abonnés sont conservés et reviennent si une page du même nom est ajoutée.",

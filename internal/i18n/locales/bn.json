@@ -549,6 +549,7 @@
 "ui.ch.kind.custom-sms": "কাস্টম SMS গেটওয়ে",
 "ui.ch.kind.custom-voice": "কাস্টম ভয়েস গেটওয়ে",
 "ui.ch.custom_hint": "প্রতিটি নম্বরে একটি অনুরোধ। ঠিকানা, হেডার (ফাইলে header.নাম=মান) ও বডিতে {{.Phone}} নম্বর এবং {{.Title}} বার্তা; বার্তা টেমপ্লেটের সব নাম চলে।",
+"ui.ch.webhook_body_hint": "{{.Name}}, {{.StatusText}}, {{.Detail}}-এর মতো নাম। Uptime Kuma থেকে কপি করা বডি যেমন আছে তেমনই চলে: {% if %}, {{ monitorJSON.name }}, {{ heartbeatJSON.status }} (1 চালু, 0 বন্ধ), {{ heartbeatJSON.msg }}, {{ heartbeatJSON.localDateTime }}, {{ msg }}।",
 "ui.notice.edit_page": "পেজ সম্পাদনা",
 "ui.notice.delete_page": "পেজ মুছুন",
 "ui.notice.delete_page_confirm": "স্ট্যাটাস পেজ “{title}” মুছবেন? এর ঠিকানা আর কাজ করবে না। ঘোষণা ও গ্রাহক থেকে যাবে এবং একই নামে পেজ আবার যোগ করলে ফিরে আসবে।",
