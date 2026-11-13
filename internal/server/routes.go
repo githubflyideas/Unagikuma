@@ -108,6 +108,7 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/settings/exit-suggest", "admin", s.exitSuggest)
 	s.handle("PUT /api/v1/settings", "admin", s.settingsPut)
 	s.handle("POST /api/v1/settings/heartbeat/test", "admin", s.heartbeatTest)
+	s.handle("POST /api/v1/settings/heartbeat/preview", "admin", s.heartbeatPreview)
 	s.handle("GET /api/v1/preferences", "read", s.prefsGet)
 	s.handle("PUT /api/v1/preferences", "read", s.prefsPut)
 	s.handle("GET /api/v1/hosts", "read", s.hosts)

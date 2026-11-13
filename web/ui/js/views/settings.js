@@ -87,54 +87,50 @@ function General() {
     <${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
       <div class="row nowrap"><input type="text" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
         <button type="button" class="btn" onClick=${testHb} disabled=${!s.data.heartbeat_url}>${t('ui.set.heartbeat_test')}</button></div><//>
-    <${HeartbeatShape} f=${f} setF=${setF} />
+    <${HeartbeatForm} f=${f} setF=${setF} />
     ${hb && !hb.busy && html`<div class=${'banner ' + (hb.err || hb.LastError ? 'error' : 'ok')}>${hb.err ? errText(hb.err) : hb.LastError || t('ui.set.heartbeat_ok')}</div>`}
     <div class="row"><div class="spacer"></div><button class="btn primary">${t('ui.save')}</button></div>
   </div></form>`;
 }
 
-// Ready-made shapes for common heartbeat receivers; the user can change
-// every part afterwards.
-const HB_PRESETS = {
-  healthchecks: { heartbeat_method: 'GET', heartbeat_headers: '', heartbeat_body: '' },
-  healthchecks_log: { heartbeat_method: 'POST', heartbeat_headers: '', heartbeat_body: '{{.Instance}}: {{.Problems}} problems, {{.Monitors}} monitors' },
-  kuma: { heartbeat_method: 'GET', heartbeat_headers: '', heartbeat_body: '', query: 'status=up&msg={{.Status}}&ping=' },
-  json: { heartbeat_method: 'POST', heartbeat_headers: '', heartbeat_body: '{\n  "instance": {{json .Instance}},\n  "status": {{json .Status}},\n  "problems": {{.Problems}},\n  "time": {{json .Time}}\n}' },
-};
-const HB_VARS = ['Instance', 'Status', 'Problems', 'Monitors', 'Time', 'Unix', 'Uptime', 'Version'];
-
-// HeartbeatShape sets how the heartbeat is sent: by default a GET of the
-// URL with no body, where any 2xx answer counts as delivered.
-function HeartbeatShape({ f, setF }) {
-  const method = (f.heartbeat_method || 'GET').toUpperCase();
-  const hasBody = method === 'POST' || method === 'PUT';
-  const shaped = method !== 'GET' || !!f.heartbeat_headers || !!f.heartbeat_body || (f.heartbeat_url || '').includes('{{');
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
-  const preset = (id) => {
-    const { query, ...p } = HB_PRESETS[id];
-    let url = f.heartbeat_url || '';
-    if (query && !url.includes('?')) url += (url ? '?' : '') + query;
-    setF({ ...f, ...p, heartbeat_url: url });
-  };
-  return html`<details class="adv-opts" open=${shaped}>
-    <summary>${t('ui.set.hb_format')} <span class="muted small">${shaped ? method : t('ui.set.hb_default')}</span></summary>
-    <div class="col" style=${{ gap: '10px', marginTop: '10px' }}>
-      <div class="row small"><span class="muted">${t('ui.set.hb_presets')}</span>
-        <button type="button" class="btn sm" onClick=${() => preset('healthchecks')}>Healthchecks</button>
-        <button type="button" class="btn sm" onClick=${() => preset('healthchecks_log')}>Healthchecks + log</button>
-        <button type="button" class="btn sm" onClick=${() => preset('kuma')}>Uptime Kuma Push</button>
-        <button type="button" class="btn sm" onClick=${() => preset('json')}>JSON POST</button></div>
-      <div class="two">
-        <${Field} label=${t('ui.set.hb_method')}><select value=${method} onChange=${set('heartbeat_method')}>
-          ${['GET', 'HEAD', 'POST', 'PUT'].map(m => html`<option value=${m}>${m}</option>`)}</select><//>
-        <${Field} label=${t('ui.set.hb_headers')} hint=${t('ui.set.hb_headers_hint')}>
-          <textarea rows="2" class="ltr mono" value=${f.heartbeat_headers || ''} onInput=${set('heartbeat_headers')} placeholder="Authorization: Bearer …"></textarea><//>
-      </div>
-      <${Field} label=${t('ui.set.hb_body')} hint=${hasBody ? t('ui.set.hb_body_hint') : t('ui.set.hb_body_off')}>
-        <textarea rows="7" class="ltr mono" value=${f.heartbeat_body || ''} onInput=${set('heartbeat_body')} disabled=${!hasBody}></textarea><//>
-      <div class="small muted">${t('ui.set.hb_vars')} ${HB_VARS.map(v => html`<code class="ltr">{{.${v}}}</code> `)}</div>
+// HeartbeatForm sets how the external heartbeat is sent, field by field
+// as an API client does it, and previews the request.
+function HeartbeatForm({ f, setF }) {
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? (e.target.checked ? 'on' : 'off') : e.target.value });
+  const push = f.heartbeat_method === 'PUSH';
+  const auth = f.heartbeat_auth || 'none';
+  const [pv, setPv] = useState(null);
+  useEffect(() => {
+    if (!f.heartbeat_url) { setPv(null); return; }
+    const id = setTimeout(async () => {
+      const form = Object.fromEntries(Object.entries(f).filter(([k]) => k.startsWith('heartbeat_')));
+      try { setPv(await post('/settings/heartbeat/preview', form)); } catch (e) { setPv({ err: e }); }
+    }, 300);
+    return () => clearTimeout(id);
+  }, [JSON.stringify(f)]);
+  return html`<div class="col" style=${{ gap: '10px' }}>
+    <div class="two">
+      <${Field} label=${t('ui.hb.method')}><select value=${push ? 'PUSH' : 'GET'} onChange=${set('heartbeat_method')}>
+        <option value="GET">GET</option><option value="PUSH">PUSH (POST)</option></select><//>
+      ${push ? html`<${Field} label=${t('ui.hb.format')}><select value=${f.heartbeat_format || 'json'} onChange=${set('heartbeat_format')}>
+          <option value="json">JSON</option><option value="text">${t('ui.hb.text')}</option></select><//>`
+        : html`<${Field} label=" " hint=${t('ui.hb.host_info_hint')}><label class="switch"><input type="checkbox" checked=${f.heartbeat_host_info !== 'off'} onChange=${set('heartbeat_host_info')} /> ${t('ui.hb.host_info')}</label><//>`}
     </div>
-  </details>`;
+    <div class="two">
+      <${Field} label=${t('ui.hb.auth')}><select value=${auth} onChange=${set('heartbeat_auth')}>
+        <option value="none">${t('ui.hb.auth_none')}</option><option value="basic">${t('ui.hb.auth_basic')}</option><option value="apikey">API Key</option></select><//>
+      ${auth === 'apikey' && html`<${Field} label=${t('ui.hb.key_in')}><select value=${f.heartbeat_key_in || 'header'} onChange=${set('heartbeat_key_in')}>
+        <option value="header">${t('ui.hb.in_header')}</option><option value="query">${t('ui.hb.in_query')}</option></select><//>`}
+    </div>
+    ${auth === 'basic' && html`<div class="two">
+      <${Field} label=${t('ui.hb.user')}><input type="text" class="ltr" autocomplete="off" value=${f.heartbeat_user || ''} onInput=${set('heartbeat_user')} /><//>
+      <${Field} label=${t('ui.hb.password')}><input type="password" class="ltr" autocomplete="new-password" value=${f.heartbeat_password || ''} onInput=${set('heartbeat_password')} /><//></div>`}
+    ${auth === 'apikey' && html`<div class="two">
+      <${Field} label=${t('ui.hb.key_name')}><input type="text" class="ltr" value=${f.heartbeat_key_name || ''} placeholder="X-Api-Key" onInput=${set('heartbeat_key_name')} /><//>
+      <${Field} label=${t('ui.hb.key_value')}><input type="password" class="ltr" autocomplete="new-password" value=${f.heartbeat_key_value || ''} onInput=${set('heartbeat_key_value')} /><//></div>`}
+    ${pv && html`<div><div class="small muted">${t('ui.hb.preview')}</div>${pv.err ? html`<div class="banner error">${errText(pv.err)}</div>`
+      : html`<pre class="ltr small" style=${{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: '4px 0 0' }}>${pv.method + ' ' + pv.url + '\n' + pv.headers.map(([k, v]) => k + ': ' + v).join('\n') + (pv.body ? '\n\n' + pv.body : '')}</pre>`}</div>`}
+  </div>`;
 }
 
 function Tunables() {

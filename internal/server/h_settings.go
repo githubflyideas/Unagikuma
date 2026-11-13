@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/githubflyideas/unagikuma/internal/app"
 	"github.com/githubflyideas/unagikuma/internal/backup"
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/directory"
@@ -569,12 +570,15 @@ func (s *Server) system(w http.ResponseWriter, r *http.Request) (any, error) {
 	}, nil
 }
 
-var settingKeys = []string{"heartbeat_url", "heartbeat_method", "heartbeat_headers", "heartbeat_body", "message_lang", "base_url", "instance_name"}
+var settingKeys = append([]string{"message_lang", "base_url", "instance_name"}, app.HeartbeatKeys...)
 
 func (s *Server) settingsGet(w http.ResponseWriter, r *http.Request) (any, error) {
 	out := map[string]string{}
 	for _, k := range settingKeys {
 		out[k] = s.app.Setting(k)
+		if app.HeartbeatSecretKeys[k] && out[k] != "" {
+			out[k] = "***" // a saved password or key is never sent back
+		}
 	}
 	return out, nil
 }
@@ -588,11 +592,33 @@ func (s *Server) settingsPut(w http.ResponseWriter, r *http.Request) (any, error
 		if k == "message_lang" {
 			v = i18n.Normalize(v)
 		}
+		if app.HeartbeatSecretKeys[k] && v == "***" {
+			continue // unchanged
+		}
 		if err := s.app.SetSetting(k, v); err != nil {
 			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 		}
 	}
 	return s.settingsGet(w, r)
+}
+
+// heartbeatPreview shows the request the heartbeat form would make, with
+// credentials masked.
+func (s *Server) heartbeatPreview(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req map[string]string
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	hr, err := s.app.PreviewHeartbeat(req)
+	if err != nil {
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
+	}
+	headers := [][]string{}
+	for k := range hr.Header {
+		headers = append(headers, []string{k, hr.Header.Get(k)})
+	}
+	sort.Slice(headers, func(i, j int) bool { return headers[i][0] < headers[j][0] })
+	return map[string]any{"method": hr.Method, "url": hr.URL, "headers": headers, "body": hr.Body}, nil
 }
 
 func (s *Server) heartbeatTest(w http.ResponseWriter, r *http.Request) (any, error) {

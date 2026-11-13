@@ -1,145 +1,187 @@
 package app
 
 import (
-	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/textproto"
 	"net/url"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/engine"
 )
 
-// The external heartbeat is a plain GET unless the user shapes it: services
-// differ (Healthchecks takes a GET or a POST with a log line, an Uptime Kuma
-// push monitor reads status and msg from the query, others want JSON), so
-// the method, headers and body can be set, and the URL and body can carry
-// a few facts about this machine.
+// The external heartbeat is a GET of a URL, or a PUSH (a POST) whose body is
+// one JSON object or one line of text. Either can carry a few facts about
+// this machine; a GET carries them as URL parameters. Credentials are
+// filled in from fields the way an API client does it: a user name and
+// password (basic authentication) or an API key in a header or a URL
+// parameter.
 
-// heartbeatMethods are the methods a heartbeat may use.
-var heartbeatMethods = map[string]bool{"GET": true, "HEAD": true, "POST": true, "PUT": true}
+// HeartbeatKeys are the settings of the external heartbeat.
+var HeartbeatKeys = []string{"heartbeat_url", "heartbeat_method", "heartbeat_format", "heartbeat_host_info",
+	"heartbeat_auth", "heartbeat_user", "heartbeat_password", "heartbeat_key_name", "heartbeat_key_value", "heartbeat_key_in"}
 
-var heartbeatFuncs = template.FuncMap{
-	// json writes a value as a JSON literal, for use inside a JSON body.
-	"json": func(v any) (string, error) {
-		b, err := json.Marshal(v)
-		return string(b), err
-	},
+// HeartbeatSecretKeys are shown masked and kept when "***" comes back.
+var HeartbeatSecretKeys = map[string]bool{"heartbeat_password": true, "heartbeat_key_value": true}
+
+var heartbeatChoices = map[string][]string{
+	"heartbeat_method":    {"", "GET", "PUSH"},
+	"heartbeat_format":    {"", "json", "text"},
+	"heartbeat_host_info": {"", "on", "off"},
+	"heartbeat_auth":      {"", "none", "basic", "apikey"},
+	"heartbeat_key_in":    {"", "header", "query"},
 }
 
-// parseHeartbeatHeaders reads one "Name: value" per line.
-func parseHeartbeatHeaders(s string) (http.Header, error) {
-	h := http.Header{}
-	for i, line := range strings.Split(s, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
+func isHeartbeatKey(key string) bool {
+	for _, k := range HeartbeatKeys {
+		if k == key {
+			return true
 		}
-		name, value, ok := strings.Cut(line, ":")
-		name = strings.TrimSpace(name)
-		if !ok || name == "" || strings.ContainsAny(name, " \t") {
-			return nil, fmt.Errorf("heartbeat header line %d: write it as Name: value", i+1)
-		}
-		h.Add(textproto.CanonicalMIMEHeaderKey(name), strings.TrimSpace(value))
 	}
-	return h, nil
+	return false
 }
 
 // checkHeartbeatSetting validates one of the heartbeat settings.
 func checkHeartbeatSetting(key, value string) error {
-	switch key {
-	case "heartbeat_method":
-		if value != "" && !heartbeatMethods[strings.ToUpper(value)] {
-			return fmt.Errorf("heartbeat method must be GET, HEAD, POST or PUT")
+	if choices, ok := heartbeatChoices[key]; ok {
+		for _, c := range choices {
+			if value == c {
+				return nil
+			}
 		}
-	case "heartbeat_headers":
-		_, err := parseHeartbeatHeaders(value)
-		return err
-	case "heartbeat_url", "heartbeat_body":
-		if _, err := template.New(key).Funcs(heartbeatFuncs).Option("missingkey=error").Parse(value); err != nil {
-			return fmt.Errorf("%s: %v", strings.TrimPrefix(key, "heartbeat_"), err)
-		}
+		return fmt.Errorf("%s must be one of %s", key, strings.Join(choices[1:], ", "))
+	}
+	if key == "heartbeat_key_name" && strings.ContainsAny(value, " \t\r\n:") {
+		return fmt.Errorf("the API key name must be one word")
 	}
 	return nil
 }
 
-// heartbeatData is what a heartbeat URL or body can insert.
-// The monitor counts come from the engine loop, so they are read only when
-// the URL or body asks for them.
-func (a *App) heartbeatData(counts bool) map[string]any {
-	now := a.now()
-	d := map[string]any{"Instance": a.instance(), "Status": "ok", "Problems": 0, "Monitors": 0,
-		"Time": now.UTC().Format(time.RFC3339), "Unix": now.Unix(),
-		"Uptime": int64(now.Sub(a.started).Seconds()), "Version": a.opts.Version}
-	if counts && a.engine != nil {
-		ov := a.engine.Overview()
-		n := 0
-		for _, c := range ov.Counts {
-			n += c
-		}
-		d["Monitors"], d["Problems"] = n, ov.Unhandled
-		if ov.Unhandled > 0 {
-			d["Status"] = "problems"
-		}
-	}
-	return d
+// HeartbeatInfo is what a heartbeat says about this machine.
+type HeartbeatInfo struct {
+	Host     string `json:"host"`
+	Status   string `json:"status"` // ok or problems
+	Problems int    `json:"problems"`
+	Monitors int    `json:"monitors"`
+	Time     string `json:"time"`
 }
 
-// prepareHeartbeat builds the call from the URL and the heartbeat settings.
-// Values inserted into the URL are escaped for it.
+func (a *App) heartbeatInfo() HeartbeatInfo {
+	in := HeartbeatInfo{Host: a.instance(), Status: "ok", Time: a.now().UTC().Format(time.RFC3339)}
+	if a.engine != nil {
+		ov := a.engine.Overview()
+		for _, c := range ov.Counts {
+			in.Monitors += c
+		}
+		in.Problems = ov.Unhandled
+		if ov.Unhandled > 0 {
+			in.Status = "problems"
+		}
+	}
+	return in
+}
+
+// buildHeartbeat makes the call from the settings (get reads one) and the
+// facts about this machine.
+func buildHeartbeat(get func(string) string, raw string, in HeartbeatInfo) (engine.HeartbeatRequest, error) {
+	hr := engine.HeartbeatRequest{Method: http.MethodGet, Header: http.Header{}}
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+		return hr, fmt.Errorf("invalid heartbeat URL")
+	}
+	q, changed := u.Query(), false
+	withInfo := get("heartbeat_host_info") != "off"
+	push := get("heartbeat_method") == "PUSH"
+	if push {
+		hr.Method = http.MethodPost
+		if get("heartbeat_format") == "text" {
+			hr.Header.Set("Content-Type", "text/plain; charset=utf-8")
+			hr.Body = fmt.Sprintf("%s %s %d problems %d monitors %s", in.Host, in.Status, in.Problems, in.Monitors, in.Time)
+		} else {
+			hr.Header.Set("Content-Type", "application/json")
+			b, _ := json.Marshal(in)
+			hr.Body = string(b)
+		}
+	} else if withInfo {
+		// A parameter the URL already has is the receiver's own (an Uptime
+		// Kuma push URL brings status=up): it is kept as it is.
+		for k, v := range map[string]string{"host": in.Host, "status": in.Status, "problems": fmt.Sprint(in.Problems),
+			"monitors": fmt.Sprint(in.Monitors), "time": in.Time} {
+			if !q.Has(k) {
+				q.Set(k, v)
+				changed = true
+			}
+		}
+	}
+	switch get("heartbeat_auth") {
+	case "basic":
+		hr.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(get("heartbeat_user")+":"+get("heartbeat_password"))))
+	case "apikey":
+		name := get("heartbeat_key_name")
+		if name == "" {
+			name = "X-Api-Key"
+		}
+		if get("heartbeat_key_in") == "query" {
+			q.Set(name, get("heartbeat_key_value"))
+			changed = true
+		} else {
+			hr.Header.Set(name, get("heartbeat_key_value"))
+		}
+	}
+	if changed { // otherwise the URL goes out exactly as written
+		u.RawQuery = q.Encode()
+	}
+	hr.URL = u.String()
+	return hr, nil
+}
+
+// prepareHeartbeat builds the call from the saved settings.
 func (a *App) prepareHeartbeat(raw string) (engine.HeartbeatRequest, error) {
-	body := a.Setting("heartbeat_body")
-	needs := false
-	for _, k := range []string{".Status", ".Problems", ".Monitors"} {
-		needs = needs || strings.Contains(raw, k) || strings.Contains(body, k)
+	return buildHeartbeat(a.Setting, raw, a.heartbeatInfo())
+}
+
+// PreviewHeartbeat builds the call from settings that are not saved yet
+// (the form), with credentials masked. A secret sent back as "***" is the
+// saved one.
+func (a *App) PreviewHeartbeat(form map[string]string) (engine.HeartbeatRequest, error) {
+	get := func(k string) string {
+		v := form[k]
+		if HeartbeatSecretKeys[k] && v == "***" {
+			v = a.Setting(k)
+		}
+		return v
 	}
-	data := a.heartbeatData(needs)
-	render := func(name, src string, esc func(string) string) (string, error) {
-		if !strings.Contains(src, "{{") {
-			return src, nil
+	for k, v := range form {
+		if err := checkHeartbeatSetting(k, v); err != nil {
+			return engine.HeartbeatRequest{}, err
 		}
-		vals := data
-		if esc != nil {
-			vals = map[string]any{}
-			for k, v := range data {
-				vals[k] = esc(fmt.Sprint(v))
-			}
-		}
-		t, err := template.New(name).Funcs(heartbeatFuncs).Option("missingkey=error").Parse(src)
-		if err != nil {
-			return "", fmt.Errorf("heartbeat %s: %v", name, err)
-		}
-		var b bytes.Buffer
-		if err := t.Execute(&b, vals); err != nil {
-			return "", fmt.Errorf("heartbeat %s: %v", name, err)
-		}
-		return b.String(), nil
 	}
-	hr := engine.HeartbeatRequest{Method: strings.ToUpper(a.Setting("heartbeat_method"))}
-	if hr.Method == "" {
-		hr.Method = http.MethodGet
-	}
-	var err error
-	if hr.URL, err = render("url", raw, url.QueryEscape); err != nil {
+	hr, err := buildHeartbeat(get, form["heartbeat_url"], a.heartbeatInfo())
+	if err != nil {
 		return hr, err
 	}
-	if hr.Header, err = parseHeartbeatHeaders(a.Setting("heartbeat_headers")); err != nil {
-		return hr, err
-	}
-	if hr.Method == http.MethodPost || hr.Method == http.MethodPut {
-		if hr.Body, err = render("body", body, nil); err != nil {
-			return hr, err
-		}
-		if hr.Body != "" && hr.Header.Get("Content-Type") == "" {
-			ct := "text/plain; charset=utf-8"
-			if json.Valid([]byte(hr.Body)) {
-				ct = "application/json"
+	// Show where the credentials go, not what they are.
+	for _, k := range []string{"Authorization", get("heartbeat_key_name"), "X-Api-Key"} {
+		if v := hr.Header.Get(k); v != "" && k != "" {
+			if scheme, _, ok := strings.Cut(v, " "); ok && k == "Authorization" {
+				hr.Header.Set(k, scheme+" ***")
+			} else {
+				hr.Header.Set(k, "***")
 			}
-			hr.Header.Set("Content-Type", ct)
+		}
+	}
+	if get("heartbeat_auth") == "apikey" && get("heartbeat_key_in") == "query" {
+		if u, err := url.Parse(hr.URL); err == nil {
+			q := u.Query()
+			name := get("heartbeat_key_name")
+			if name == "" {
+				name = "X-Api-Key"
+			}
+			q.Set(name, "MASKED")
+			u.RawQuery = q.Encode()
+			hr.URL = strings.Replace(u.String(), "MASKED", "***", 1)
 		}
 	}
 	return hr, nil

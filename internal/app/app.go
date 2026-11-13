@@ -746,9 +746,11 @@ func (a *App) Instance() string { return a.instance() }
 // SetSetting changes a runtime setting and re-applies what depends on it.
 func (a *App) SetSetting(key, value string) error {
 	switch key {
-	case "heartbeat_url", "heartbeat_method", "heartbeat_headers", "heartbeat_body", "message_lang", "base_url", "instance_name":
+	case "message_lang", "base_url", "instance_name":
 	default:
-		return fmt.Errorf("unknown setting %q", key)
+		if !isHeartbeatKey(key) {
+			return fmt.Errorf("unknown setting %q", key)
+		}
 	}
 	if err := checkHeartbeatSetting(key, value); err != nil {
 		return err

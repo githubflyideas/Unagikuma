@@ -17,7 +17,8 @@
 - The sidebar and the content stay together as one block in the middle of a wide window.
 - The monitor list keeps to two rows: every button (pause, resume, check, move, delete, quick add, add) on one row, and the status filters with the view switch below.
 - **Alerts and notifications › Channels** shows the delivery rules that apply to every channel (timeout, retries, wait before a retry, longest rate-limit wait, resend after every channel failed, rate limit) and edits them there; they no longer appear among the tunables.
-- The external heartbeat can be shaped for the receiving service: method (GET, HEAD, POST, PUT), headers and a body, with variables such as `{{.Status}}`, `{{.Problems}}` and `{{.Instance}}` in the URL and body, and ready-made shapes for Healthchecks, an Uptime Kuma push monitor and a JSON POST. A plain URL still sends a GET as before.
+- The external heartbeat is filled in field by field: a GET (with the host's name, status, problem and monitor counts and time as URL parameters, unless switched off) or a PUSH whose body is JSON or one line of text, with no authentication, a user name and password, or an API key in a header or URL parameter. The form shows the request it will send, credentials masked; a saved password or key is never sent back to the browser.
+- Dialogs open over the page content, not over the menu beside it.
 - The top bar names the run mode (single machine, two machines, cluster with nodes online) instead of "Live" and opens the run mode page; it says it is reconnecting when live updates stop.
 - **Status pages** has **New announcement** and **Announce a change** at the top, next to **New status page**, instead of a button on every page; a new announcement asks which page it goes on.
 - Certificate and domain expiry moved from the monitor toolbar to a tab under **Problems** (`#/problems/expiry`); the old address still opens it.
