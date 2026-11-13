@@ -8,7 +8,7 @@ import { Overview } from './views/overview.js';
 import { Monitors } from './views/monitors.js';
 import { MonitorDetail } from './views/monitor.js';
 import { MonitorEditor } from './views/editor.js';
-import { Problems, setupIssues } from './views/problems.js';
+import { Problems, ProblemsExpiry, setupIssues } from './views/problems.js';
 import { Events } from './views/events.js';
 import { ConfigView } from './views/config.js';
 import { Alerts } from './views/alerts.js';
@@ -16,7 +16,6 @@ import { Notices } from './views/announce.js';
 import { brand, product, logoURL, loadBrand, brandColors } from './brand.js';
 import { Settings, ADVANCED_TABS } from './views/settings.js';
 import { Nodes } from './views/nodes.js';
-import { Expiry } from './views/expiry.js';
 import { IncidentReport } from './views/incident.js';
 import { DrawerHost } from './views/drawer.js';
 import { PaletteHost, openPalette } from './views/palette.js';
@@ -193,7 +192,7 @@ function Shell({ user, onLogout, onLang }) {
   const p = route.parts;
   switch (p[0]) {
     case undefined: view = html`<${Overview} />`; break;
-    case 'problems': view = html`<${Problems} tab=${p[1] || 'unhandled'} />`; break;
+    case 'problems': view = p[1] === 'expiry' ? html`<${ProblemsExpiry} />` : html`<${Problems} tab=${p[1] || 'unhandled'} />`; break;
     case 'monitors':
       if (p[1] === 'new') view = html`<${MonitorEditor} />`;
       else if (p[1] && p[2] === 'edit') view = html`<${MonitorEditor} name=${p[1]} />`;
@@ -201,7 +200,7 @@ function Shell({ user, onLogout, onLang }) {
       else view = html`<${Monitors} query=${route.query} />`;
       break;
     case 'events': view = html`<${Events} tab=${p[1] || 'events'} />`; break;
-    case 'expiry': view = html`<${Expiry} />`; break;
+    case 'expiry': view = html`<${ProblemsExpiry} />`; break; // its old address
     case 'incidents': view = p[1] ? html`<${IncidentReport} id=${p[1]} />` : html`<${Problems} tab="all" />`; break;
     // Changes, status pages and the report used to live under Alerting;
     // their old addresses still open them.
@@ -250,7 +249,7 @@ function Shell({ user, onLogout, onLang }) {
     <div class="main">
       <header class="top">
         <button class="btn sm" onClick=${toggleSide} aria-label=${mini ? t('ui.side.expand') : t('ui.side.collapse')} title=${mini ? t('ui.side.expand') : t('ui.side.collapse')}>☰</button>
-        <div class="crumbs">${t((NAV.find(n => n[0] === (first === '/expiry' ? '/monitors' : first)) || NAV[0])[1])}</div>
+        <div class="crumbs">${t((NAV.find(n => n[0] === (first === '/expiry' ? '/problems' : first)) || NAV[0])[1])}</div>
         <${Search} route=${route} />
         ${ov.data && html`<${Verdict} ov=${ov.data} />`}
         <div class="spacer"></div>

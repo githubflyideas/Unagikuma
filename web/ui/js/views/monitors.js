@@ -156,7 +156,6 @@ export function Monitors({ query }) {
     <div class="row">
       <${Seg} value=${view} onChange=${changeView} options=${[['list', t('ui.mon.view_list')], ['hive', t('ui.mon.view_hive')]]} />
       <div class="spacer"></div>
-      <a class="btn" href="#/expiry">${t('ui.exp.title')}</a>
       <button class="btn" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
       <a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a>
       <select class="bulk" value="" aria-label=${t('ui.mon.bulk')} title=${picked.length ? '' : t('ui.mon.select_first')}
