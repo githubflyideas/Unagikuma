@@ -439,48 +439,20 @@ Reading the audit log needs a registered installation; see [Registration and quo
 
 For a TV in the operations room: every monitor as a large hexagon, problems first and lit (critical ones pulse until someone acknowledges them), with the counts, a clock and the latest problems along the bottom. It is read-only and refreshes every 10 seconds; if no new data arrives for a minute, a red banner says so, so a frozen screen is never mistaken for a quiet one.
 
-- Signed in, open `/wall` (or **Advanced › Appearance › Open the wall screen**).
+- Signed in, open `/wall` (or **Status pages › Wall screen**).
 - For a TV that should not sign in, use **Create a link for a TV**. The link looks like `https://monitor.example.com/wall#token=uka_…`: it carries a read-only API token after the `#`, which browsers do not send to the server or in the Referer header. Anyone with the link can see monitor names and states, so treat it like a password; revoke it under **Advanced › API tokens**.
 
-The wall uses the active theme pack's colours (dark unless the pack is built on a light look).
+The wall uses the Industrial theme.
 
 ## Summary for managers
 
 `/summary` is one page for people who do not run the monitoring: whether everything is running right now, availability over 7, 30 or 90 days compared with the period before, the number of incidents, the average time to recover and the total downtime, daily availability as a chart, the services that need attention and the latest incidents. It is read-only, refreshes every minute and prints on A4.
 
-Open it signed in (**Advanced › Appearance › Summary for managers**), or create a link there for someone who does not sign in; like the wall screen's, it carries a read-only API token after `#` and can be revoked under **Advanced › API tokens**. Readers see only the monitors their account or token may see. The figures come from `GET /api/v1/reports/summary?range=7d|30d|90d`.
+Open it signed in (**Status pages › Daily report › Summary for managers**), or create a link there for someone who does not sign in; like the wall screen's, it carries a read-only API token after `#` and can be revoked under **Advanced › API tokens**. Readers see only the monitors their account or token may see. The figures come from `GET /api/v1/reports/summary?range=7d|30d|90d`.
 
-## Theme packs
+## Themes
 
-A theme pack changes how the console looks: its colours and, on a registered installation, the product name and logo (white label). Manage packs under **Advanced › Appearance**: upload, use, export to share with another installation, delete. The pack in use becomes everyone's default look; each person can still choose another theme at the bottom of the sidebar.
-
-A pack is a zip file holding:
-
-- `theme.json` (required)
-- `logo.png` or `logo.jpg` (optional): sidebar and login page, at least 16 and at most 2048 pixels wide and high
-- `favicon.png` (optional): the browser tab icon
-
-A complete example is in [`docs/theme-pack-example`](theme-pack-example/); zip its three files to try it.
-
-```json
-{
-  "name": "Harbour Blue",
-  "author": "Example Co.",
-  "version": "1.0",
-  "base": "light",
-  "layout": "standard",
-  "brand": { "product": "Harbour Monitor", "short": "HM", "hide_powered": false },
-  "colors": { "bg": "#f2f6fa", "side": "#e3ebf3", "accent": "#0a5fc2" }
-}
-```
-
-- `name` (required, up to 60 characters); `author`, `version` are shown in the list.
-- `base` is `light` or `dark`: every colour the pack does not set comes from that look.
-- `colors` sets any of these, written `#rrggbb`: `bg` (page), `side` (sidebar), `panel` (cards and the top bar), `panel-2`, `border`, `border-strong`, `text`, `muted`, `faint`, `accent`, `accent-soft`, `accent-text`, `link`, `ok`, `ok-soft`, `degraded`, `degraded-soft`, `critical`, `critical-soft`, `unknown`, `unknown-soft`, `pending`, `pending-soft`, `maint`, `maint-soft`, `on-status` (text on status blocks), `on-degraded`, `empty`.
-- `layout` is `standard`, `duty`, `wall` or `exec`: the page layout the pack prefers.
-- `brand` needs a registration with the branding feature: `product` (up to 40 characters) replaces "Unagikuma" in the console, the browser title and every notification and report; `short` (up to 12) is a short form; `hide_powered` leaves "Powered by" out of status pages. Without the registration a pack's colours are still used and the console says what is held back.
-
-For safety a pack holds data only: no CSS, SVG or scripts, and images must be PNG or JPEG. Packs are kept in `<data>/themes/`, go into backups, and in a cluster every site takes the main server's packs (whether a site shows the product name and logo depends on that site's own registration). The program name on the command line stays `unagikuma`.
+Pick a theme with the coloured dots under the product name: Country, Industrial, Calm, Sport or Passion, or follow the system (Calm by day, Industrial at night). The choice is kept per browser. Status colours mean the same in every theme.
 
 ## Registration and quotas
 

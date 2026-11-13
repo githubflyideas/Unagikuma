@@ -20,7 +20,7 @@ Friendly, self-hosted monitoring: know the moment your websites and servers go d
 - **Alerts where you already are.** Email, SMS and calls; Feishu, DingTalk, WeCom, Telegram, Slack, Discord, Teams, LINE, Mattermost, Google Chat; PagerDuty, Opsgenie, Datadog; ntfy, Gotify, Bark, Pushover, Pushbullet, ServerChan, Apprise; and any webhook. Each can have its own message template.
 - **Status pages** to keep your users in the loop.
 - **Easy to switch.** Bring your monitors over from Uptime Kuma, Nagios, Checkmate or Gatus, in the web page or on the command line.
-- **Seven themes, or your own.** Five tones from white to black (Paper, Mist, Slate, Graphite, Ink) plus Sky and Violet, with Nagios-style status colours; upload a theme pack for your own colours, and with a registration your own product name and logo.
+- **Five themes.** Country, Industrial, Calm, Sport and Passion, or follow the system; status colours mean the same in each.
 - **Speaks your language.** The interface comes in 15 languages.
 
 ## Quick start

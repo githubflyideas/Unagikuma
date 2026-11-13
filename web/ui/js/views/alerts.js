@@ -183,6 +183,29 @@ function RequestPanel({ kind, opts, docs }) {
   </details>`;
 }
 
+// Kinds that send to an address the user wrote take extra request headers.
+const takesHeaders = (kind) => kind === 'webhook' || kind.startsWith('webhook:') || kind === 'custom-sms' || kind === 'custom-voice';
+
+// HeadersField edits the header.<name> options, one "Name: value" a line.
+// A credential header comes back masked (***) and stays as saved unless
+// it is typed again.
+function HeadersField({ opts, setOpts }) {
+  const fromOpts = () => Object.entries(opts).filter(([k]) => k.startsWith('header.')).map(([k, v]) => k.slice(7) + ': ' + v).join('\n');
+  const [text, setText] = useState(fromOpts);
+  const change = (s) => {
+    setText(s);
+    const next = Object.fromEntries(Object.entries(opts).filter(([k]) => !k.startsWith('header.')));
+    for (const line of s.split('\n')) {
+      const i = line.indexOf(':');
+      const k = line.slice(0, i).trim().toLowerCase();
+      if (i > 0 && /^[a-z0-9-]+$/.test(k)) next['header.' + k] = line.slice(i + 1).trim();
+    }
+    setOpts(next);
+  };
+  return html`<${Field} label=${t('ui.ch.headers')} hint=${t('ui.ch.headers_hint')}>
+    <textarea class="ltr mono" rows="3" value=${text} placeholder="Content-Type: application/json" onInput=${(e) => change(e.target.value)}></textarea><//>`;
+}
+
 // The e-mail options that only an SMTP server uses.
 const SMTP_ONLY = ['host', 'port', 'username', 'password', 'tls'];
 
@@ -210,13 +233,18 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
   const required = (f) => f.required || (kind === 'email' && !viaSendmail && (f.key === 'host' || f.key === 'from'));
   const set = (k, v) => setOpts({ ...opts, [k]: v });
   const values = () => {
+    // Options this form does not show (retries=, rate=, an option written
+    // in the file) are kept as they are; only what the form edits changes.
     const o = {};
+    if (editing) for (const [k, v] of Object.entries(initial.opts)) if (v !== '' && !k.startsWith('header.')) o[k] = v;
     for (const f of info.fields) {
       const v = opts[f.key] !== undefined ? opts[f.key] : '';
-      if (v !== '') o[f.key] = v;
+      if (v !== '') o[f.key] = v; else delete o[f.key];
     }
+    delete o.system; delete o.report;
     if (opts.system === 'yes') o.system = 'yes';
-    if (opts.report === 'no') o.report = 'no';
+    if (opts.report === 'no' || opts.report === 'yes') o.report = opts.report;
+    for (const [k, v] of Object.entries(opts)) if (k.startsWith('header.') && v !== '') o[k] = v;
     return o;
   };
   // store saves the channel; then (optional) runs once it exists.
@@ -298,6 +326,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
           <input type=${f.type === 'secret' ? 'password' : f.type === 'number' ? 'number' : 'text'} class="ltr" value=${v} required=${required(f) && !editing}
             placeholder=${f.type === 'secret' && editing ? '***' : f.placeholder || ''} autocomplete="off" onInput=${(e) => set(f.key, e.target.value)} /><//>`;
       })}
+      ${takesHeaders(kind) && html`<${HeadersField} opts=${opts} setOpts=${setOpts} />`}
       ${kind !== 'group' && html`<${RequestPanel} kind=${kind} opts=${values()} docs=${found && found.docs} />`}
       <label class="switch"><input type="checkbox" checked=${opts.system === 'yes'} onChange=${(e) => set('system', e.target.checked ? 'yes' : '')} /> ${t('ui.ch.system')}</label>
       <p class="small muted" style=${{ margin: 0 }}>${t('ui.ch.system_hint')}</p>

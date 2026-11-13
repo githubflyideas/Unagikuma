@@ -153,13 +153,6 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/audit/export", "admin", requireFeature(s, license.FeatAudit, s.auditExport))
 	s.handle("GET /api/v1/audit/verify", "admin", requireFeature(s, license.FeatAudit, s.auditVerify))
 	s.handle("GET /api/v1/license", "read", s.licenseGet)
-	s.handle("GET /api/v1/brand", "", s.brandGet)
-	s.handle("GET /api/v1/themes", "admin", s.themesList)
-	s.handle("POST /api/v1/themes", "admin", s.themesUpload)
-	s.handle("PUT /api/v1/themes/active", "admin", s.themesActivate)
-	s.handle("DELETE /api/v1/themes/{id}", "admin", s.themesDelete)
-	s.handle("GET /api/v1/themes/{id}/export", "admin", s.themesExport)
-	s.handle("GET /api/v1/themes/{id}/image/{which}", "admin", s.themesImage)
 	s.handle("PUT /api/v1/license", "admin", s.licensePut)
 	s.handle("DELETE /api/v1/license", "admin", s.licenseDelete)
 	s.handle("POST /api/v1/users", "admin", s.userCreate)
@@ -236,9 +229,6 @@ func (s *Server) routes() {
 				r2.URL.Path = "/status.html"
 				w.Header().Set("Cache-Control", "no-cache")
 				files.ServeHTTP(w, r2)
-				return
-			}
-			if (p == "logo.png" && s.brandImage(w, r, "logo")) || (p == "favicon.png" && s.brandImage(w, r, "favicon")) {
 				return
 			}
 			if p == "wall" || p == "wall/" || p == "summary" || p == "summary/" {

@@ -109,9 +109,6 @@ func (a *App) keepReplicaCopy(archive, key string) error {
 	if err := a.copySecrets(tmp); err != nil {
 		return fmt.Errorf("copy notification configuration: %w", err)
 	}
-	if err := a.copyThemes(tmp); err != nil {
-		a.log.Warn("could not take the master's theme packs", "err", err)
-	}
 	if c, err := readCarry(tmp, a.now()); err != nil {
 		a.log.Warn("could not read silences and changes from the master's state", "err", err)
 	} else if cb, err := json.Marshal(c); err == nil {
@@ -140,20 +137,6 @@ func (a *App) keepReplicaCopy(archive, key string) error {
 		a.Reapply()
 	}
 	return nil
-}
-
-// copyThemes makes this site's theme packs those of the master, so every
-// site looks the same. Whether the white-label part shows still depends on
-// this site's own registration.
-func (a *App) copyThemes(dir string) error {
-	src, dst := filepath.Join(dir, "themes"), a.themes.Dir()
-	if err := os.RemoveAll(dst); err != nil {
-		return err
-	}
-	if _, err := os.Stat(src); err != nil {
-		return nil // the master uses the built-in look
-	}
-	return os.Rename(src, dst)
 }
 
 func (a *App) copySecrets(dir string) error {

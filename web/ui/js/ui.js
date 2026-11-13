@@ -2,8 +2,10 @@
 import { html, useState, useEffect, useRef, useCallback, useLayoutEffect } from './lib.js';
 import { t, ago, fmtTime, fmtNum, detailText } from './i18n.js';
 import { onLive } from './live.js';
-import { product } from './brand.js';
 import { me } from './api.js';
+
+// The product's name, in titles and headers.
+export const PRODUCT = 'Unagikuma';
 
 // ---- routing (hash based, so the server needs no fallback routes) ----
 
@@ -275,7 +277,7 @@ export function reasonText(reason, detail) {
 }
 
 export function useDocTitle(title) {
-  useEffect(() => { document.title = title ? title + ' · ' + product() : product(); }, [title]);
+  useEffect(() => { document.title = title ? title + ' · ' + PRODUCT : PRODUCT; }, [title]);
 }
 
 // quorumText says how a round was decided, in the UI language: failures

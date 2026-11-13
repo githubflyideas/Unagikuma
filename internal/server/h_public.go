@@ -161,7 +161,7 @@ func (s *Server) statusPageBody(sp *config.StatusPage) []byte {
 	}
 	b, _ := json.Marshal(map[string]any{"title": sp.Title, "footer": sp.Footer, "theme": sp.Theme, "logo": sp.Logo,
 		"windows": sp.Windows, "status": worst, "monitors": mons, "updated_at": now,
-		"announcements": anns, "maintenance": maints, "subscribe": sp.Subscribe != "", "powered": !s.brandView().HidePowered, "support": s.supportText()})
+		"announcements": anns, "maintenance": maints, "subscribe": sp.Subscribe != "", "powered": true, "support": s.supportText()})
 	return b
 }
 

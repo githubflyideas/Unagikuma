@@ -3,7 +3,6 @@ import { html, useState, useEffect, useMemo } from '../lib.js';
 import { t, tn, dur, fmtTime, currentLang, langList } from '../i18n.js';
 import { get, post, put, del, setCSRF, getCSRF, me } from '../api.js';
 import { Nodes } from './nodes.js';
-import { Appearance } from './appearance.js';
 import { ChannelList, DELIVERY_KEYS } from './alerts.js';
 import { IssueDot } from './contacts.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, regionTitle, msText } from '../ui.js';
@@ -53,6 +52,16 @@ function General() {
     setSug({ busy: true });
     try { setSug(await post('/settings/exit-suggest', body)); } catch (e) { setSug({ err: e }); }
   };
+  // Picking a measured address saves it at once: the form's own save
+  // button is far below and easy to miss.
+  const useExit = async (addr) => {
+    setExit(addr);
+    try {
+      await put('/tunables', addr === exitTun.default ? { set: {}, unset: [EXIT_KEY] } : { set: { [EXIT_KEY]: addr }, unset: [] });
+      tun.reload();
+      toast(t('ui.set.exit_saved', { addr }));
+    } catch (e) { toastError(e); }
+  };
   const testHb = async () => {
     setHb({ busy: true });
     try { setHb(await post('/settings/heartbeat/test')); } catch (e) { setHb({ err: e }); }
@@ -81,7 +90,7 @@ function General() {
         <td class="ltr mono">${c.addr}</td><td>${c.source === 'route' ? t('ui.set.exit_hop', { label: c.label }) : c.label}</td>
         <td class="right nowrap">${c.ok ? msText(c.rtt_ms) + (c.loss > 0 ? ' · ' + Math.round(c.loss * 100) + '%' : '') + (c.via && c.via !== 'icmp' ? ' · ' + c.via : '') : t('ui.ov.exit_down')}</td>
         <td class="right nowrap">${sug.suggested.includes(c.addr) && html`<span class="tag">${t('ui.set.exit_recommended')}</span>`}
-          ${c.ok && html` <button type="button" class=${'btn sm' + (sug.suggested[0] === c.addr ? ' primary' : '')} onClick=${() => setExit(c.addr)}>${t('ui.set.exit_use')}</button>`}</td>
+          ${c.ok && html` <button type="button" class=${'btn sm' + (sug.suggested[0] === c.addr ? ' primary' : '')} onClick=${() => useExit(c.addr)}>${t('ui.set.exit_use')}</button>`}</td>
       </tr>`)}</tbody></table>
     </div></div>`}
     <${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
@@ -778,7 +787,7 @@ function Audit() {
 // Everyday settings, and the advanced ones that most installations set
 // once or never: they have their own place in the sidebar.
 const TABS = ['general', 'users', 'audit', 'scripts', 'system', 'registration', 'account'];
-export const ADVANCED_TABS = ['appearance', 'teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
+export const ADVANCED_TABS = ['teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
 export function Settings({ tab, user, advanced }) {
   useDocTitle(t(advanced ? 'ui.nav.advanced' : 'ui.nav.settings'));
@@ -789,7 +798,6 @@ export function Settings({ tab, user, advanced }) {
   if (!tabs.includes(tab)) tab = tabs[0];
   let body;
   switch (tab) {
-    case 'appearance': body = html`<${Appearance} />`; break;
     case 'nodes': body = html`<${Nodes} embedded />`; break;
     case 'users': body = html`<${Users} />`; break;
     case 'teams': body = html`<${Teams} />`; break;

@@ -4,8 +4,7 @@ import { html, useState } from '../lib.js';
 import { t } from '../i18n.js';
 import { get, post, put, me } from '../api.js';
 import { NoticesTab } from './notices.js';
-import { LinkCard } from './appearance.js';
-import { useFetch, Loading, ErrorBox, toast, toastError, useDocTitle } from '../ui.js';
+import { useFetch, Loading, ErrorBox, toast, toastError, useDocTitle, Copy } from '../ui.js';
 
 // viaText names where a report goes: a team's channels or the system ones
 // (a policy name only for a file written before teams had channels).
@@ -71,4 +70,27 @@ export function Notices({ tab }) {
     <div class="tabs">${NOTICE_TABS.map(([k, label]) => html`<a href=${'#/notices/' + k} class=${tab === k ? 'on' : ''}>${t(label)}</a>`)}</div>
     ${tab === 'report' ? html`<${ReportTab} />` : tab === 'screens' ? html`<${ScreensTab} />` : html`<${NoticesTab} />`}
   </div>`;
+}
+
+// LinkCard opens a read-only page (the wall screen or the managers'
+// summary) here, or, with share, makes a link with a read-only token for
+// someone or something that does not sign in.
+export function LinkCard({ page, k, share = true }) {
+  const [link, setLink] = useState('');
+  const make = async () => {
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      const r = await post('/tokens', { name: t('ui.look.' + k + '_token', { date: day }), scopes: ['read'] });
+      setLink(location.origin + '/' + page + '#token=' + encodeURIComponent(r.token));
+    } catch (err) { toastError(err); }
+  };
+  return html`<div class="card"><div class="hd"><h2>${t('ui.look.' + k)}</h2></div><div class="bd col" style=${{ gap: '10px' }}>
+    <p class="small muted" style=${{ margin: 0 }}>${t('ui.look.' + k + '_hint')}</p>
+    <div class="row">
+      <a class="btn" href=${'/' + page} target="_blank" rel="noopener">${t('ui.look.' + k + '_open')}</a>
+      ${share && html`<button class="btn" onClick=${make}>${t('ui.look.' + k + '_link')}</button>`}
+    </div>
+    ${link && html`<div class="banner ok"><div class="spacer col" style=${{ gap: '6px' }}>
+      <span>${t('ui.look.' + k + '_link_done')}</span><code class="ltr small" style=${{ wordBreak: 'break-all' }}>${link}</code></div><${Copy} text=${link} /></div>`}
+  </div></div>`;
 }

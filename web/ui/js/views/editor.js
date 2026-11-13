@@ -201,7 +201,7 @@ export function MonitorEditor({ name }) {
     <form class="card" onSubmit=${save}>
       <div class="hd"><h2>${editing ? t('ui.mon.edit_title', { name }) : t('ui.mon.add')}</h2></div>
       <div class="bd form">
-        <${Field} label=${t('ui.type')} hint=${t('ui.mon.type_hint.' + f.type)}>
+        <${Field} label=${t('ui.type')} hint=${editing && f.type === 'PUSH' ? t('ui.mon.push_type_locked') : t('ui.mon.type_hint.' + f.type)}>
           <select value=${f.type} onChange=${(e) => setF({ ...f, type: e.target.value, port: '' })} disabled=${editing && f.type === 'PUSH'}>
             ${TYPE_GROUPS.map(([g, list]) => html`<optgroup label=${t('ui.mon.tgroup.' + g)}>${list.map(x => html`<option value=${x}>${x} — ${t('ui.mon.tname.' + x)}</option>`)}</optgroup>`)}
           </select><//>

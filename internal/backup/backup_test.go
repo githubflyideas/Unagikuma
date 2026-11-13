@@ -149,16 +149,14 @@ func TestLegacyEncryptedHeaderRestores(t *testing.T) {
 	}
 }
 
-// Theme packs travel with a backup; names outside the pack layout do not.
-func TestBackupKeepsThemePacks(t *testing.T) {
+// Theme packs are no longer part of a backup; an older archive that has
+// them restores, and they are left out.
+func TestThemePacksLeftOut(t *testing.T) {
 	src := t.TempDir()
 	cfg := filepath.Join(src, "monitors.conf")
 	os.WriteFile(cfg, []byte("; empty\n"), 0o600)
 	os.MkdirAll(filepath.Join(src, "themes", "acme"), 0o755)
 	os.WriteFile(filepath.Join(src, "themes", "acme", "theme.json"), []byte(`{"name":"Acme"}`), 0o644)
-	os.WriteFile(filepath.Join(src, "themes", "acme", "logo"), []byte("png"), 0o644)
-	os.WriteFile(filepath.Join(src, "themes", "active"), []byte("acme\n"), 0o644)
-	os.WriteFile(filepath.Join(src, "themes", "acme", "notes.txt"), []byte("left out"), 0o644)
 	var buf bytes.Buffer
 	db := func(ctx context.Context, which string, w io.Writer) error {
 		_, err := w.Write([]byte("db"))
@@ -167,17 +165,30 @@ func TestBackupKeepsThemePacks(t *testing.T) {
 	if _, err := Write(context.Background(), &buf, db, Options{DataDir: src, ConfigPath: cfg, Now: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
+	if bytes.Contains(buf.Bytes(), []byte("themes/")) {
+		t.Error("a theme pack was backed up")
+	}
+
+	var old bytes.Buffer
+	gz := gzip.NewWriter(&old)
+	tw := tar.NewWriter(gz)
+	body, theme := []byte("; old\n"), []byte(`{"name":"Acme"}`)
+	man := []byte(`{"format":1,"files":["monitors.conf"]}`)
+	for _, e := range []struct {
+		name string
+		b    []byte
+	}{{"manifest.json", man}, {"monitors.conf", body}, {"themes/acme/theme.json", theme}} {
+		tw.WriteHeader(&tar.Header{Name: e.name, Mode: 0o640, Size: int64(len(e.b)), Typeflag: tar.TypeReg})
+		tw.Write(e.b)
+	}
+	tw.Close()
+	gz.Close()
 	dst := t.TempDir()
-	if _, err := Restore(&buf, dst, filepath.Join(dst, "monitors.conf"), "", false); err != nil {
+	if _, err := Restore(&old, dst, filepath.Join(dst, "monitors.conf"), "", false); err != nil {
 		t.Fatal(err)
 	}
-	for _, f := range []string{"themes/acme/theme.json", "themes/acme/logo", "themes/active"} {
-		if _, err := os.Stat(filepath.Join(dst, f)); err != nil {
-			t.Errorf("%s not restored", f)
-		}
-	}
-	if _, err := os.Stat(filepath.Join(dst, "themes", "acme", "notes.txt")); err == nil {
-		t.Error("a file outside the pack layout was backed up")
+	if _, err := os.Stat(filepath.Join(dst, "themes")); err == nil {
+		t.Error("an old archive's theme pack was restored")
 	}
 }
 

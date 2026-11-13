@@ -3,7 +3,7 @@ import { html, render, useState, useEffect } from './lib.js';
 import { t, tn, setLang, detectLang, loadLanguages, langList, currentLang, fmtTime, detailText } from './i18n.js';
 import { get, post, del, setCSRF, setMe, me, onUnauthorized } from './api.js';
 import { startLive, stopLive, onConnection } from './live.js';
-import { useRoute, href, Toasts, ConfirmHost, useFetch, useLive, errText, Field, replaceRoute, monitorsPath, MON_SORTS } from './ui.js';
+import { useRoute, href, Toasts, ConfirmHost, useFetch, useLive, errText, Field, replaceRoute, monitorsPath, MON_SORTS, PRODUCT } from './ui.js';
 import { Overview } from './views/overview.js';
 import { Monitors } from './views/monitors.js';
 import { MonitorDetail } from './views/monitor.js';
@@ -13,46 +13,37 @@ import { Events } from './views/events.js';
 import { ConfigView } from './views/config.js';
 import { Alerts } from './views/alerts.js';
 import { Notices } from './views/announce.js';
-import { brand, product, logoURL, loadBrand, brandColors } from './brand.js';
 import { Settings, ADVANCED_TABS } from './views/settings.js';
 import { Nodes } from './views/nodes.js';
 import { IncidentReport } from './views/incident.js';
 import { DrawerHost } from './views/drawer.js';
 import { PaletteHost, openPalette } from './views/palette.js';
 
-// Three grey tones, then Sky (light blue) and Violet (purple); "auto"
-// follows the device with Mist by day and Graphite at night. The console
-// is Graphite unless the user picks another. Paper (white) and Ink (black)
-// were removed in 2.6: those settings, and the older light/dark ones, map
-// to the nearest remaining tone.
-// When an administrator has made a theme pack active, it is one more
-// choice ("brand") and the default for anyone who has not picked one.
-const TONES = ['mist', 'slate', 'graphite', 'sky', 'violet'];
-const OLD_TONES = { light: 'mist', paper: 'mist', dark: 'graphite', ink: 'graphite' };
-// What each theme looks like, for its dot in the sidebar.
+// Five themes, each its own mood, and "auto", which follows the device:
+// Calm by day, Industrial at night. Names stored by earlier versions map
+// to the nearest new theme.
+const TONES = ['country', 'industrial', 'calm', 'sport', 'passion'];
+const OLD_TONES = { light: 'calm', paper: 'calm', dark: 'industrial', ink: 'industrial', mist: 'sport', slate: 'industrial',
+  graphite: 'industrial', sky: 'calm', violet: 'country', brand: 'auto' };
+// Each dot shows its theme's own sidebar and accent colours.
 const SWATCH = {
-  auto: 'linear-gradient(135deg, #ffffff 50%, #050608 50%)',
-  mist: 'linear-gradient(135deg, #c2410c, #be185d 55%, #5b21b6)',
-  slate: 'linear-gradient(135deg, #313a46 50%, #46c69a 50%)',
-  graphite: 'linear-gradient(135deg, #000000 50%, #a78bfa 50%)',
-  sky: 'linear-gradient(135deg, #f9fcff 50%, #2a78c8 50%)',
-  violet: 'linear-gradient(135deg, #f3e9d2 50%, #1d4e9e 50%)',
+  auto: 'linear-gradient(135deg, #eef1ee 50%, #1f2428 50%)',
+  country: 'linear-gradient(135deg, #4a3426 50%, #e0a526 50%)',
+  industrial: 'linear-gradient(135deg, #15181b 50%, #f28c28 50%)',
+  calm: 'linear-gradient(135deg, #dfe5e0 50%, #3d7c78 50%)',
+  sport: 'linear-gradient(135deg, #0b1f3a 50%, #2563eb 50%)',
+  passion: 'linear-gradient(135deg, #2b0b24 50%, #e0246f 50%)',
 };
 function toneOf(v) {
   v = OLD_TONES[v] || v;
-  if (v === 'brand') return brand().id ? 'brand' : 'graphite';
-  if (!v) return brand().id ? 'brand' : 'graphite';
-  return v === 'auto' || TONES.includes(v) ? v : 'graphite';
+  return v === 'auto' || TONES.includes(v) ? v : 'auto';
 }
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 let themeChoice = '';
 function applyTheme(v) {
   v = toneOf(v);
   themeChoice = v;
-  brandColors(v === 'brand');
-  if (v === 'brand') document.documentElement.dataset.theme = brand().base === 'dark' ? 'graphite' : 'mist';
-  else if (v === 'auto') document.documentElement.dataset.theme = darkQuery.matches ? 'graphite' : 'mist';
-  else document.documentElement.dataset.theme = v;
+  document.documentElement.dataset.theme = v === 'auto' ? (darkQuery.matches ? 'industrial' : 'calm') : v;
 }
 darkQuery.addEventListener('change', () => { if (themeChoice === 'auto') applyTheme('auto'); });
 
@@ -68,7 +59,7 @@ function localZone() {
   try { return Intl.DateTimeFormat('en').resolvedOptions().timeZone; } catch { return ''; }
 }
 
-function Logo() { return html`<img src=${logoURL()} alt="" />`; }
+function Logo() { return html`<img src="/logo.png" alt="" />`; }
 
 function LangSelect({ onChange }) {
   return html`<select aria-label=${t('ui.language')} value=${currentLang()} onChange=${(e) => onChange(e.target.value)}>
@@ -97,7 +88,7 @@ function Setup({ local, onDone, onLang }) {
   };
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return html`<div class="auth"><div>
-    <div class="logo"><${Logo} /> ${product()}</div>
+    <div class="logo"><${Logo} /> ${PRODUCT}</div>
     <form class="card" onSubmit=${submit}>
       <div class="hd"><h2>${t('ui.setup.title')}</h2><div class="spacer"></div><${LangSelect} onChange=${onLang} /></div>
       <div class="bd form">
@@ -128,7 +119,7 @@ function Login({ onDone, onLang }) {
     setBusy(false);
   };
   return html`<div class="auth"><div>
-    <div class="logo"><${Logo} /> ${product()}</div>
+    <div class="logo"><${Logo} /> ${PRODUCT}</div>
     <form class="card" onSubmit=${submit}>
       <div class="hd"><h2>${t('ui.login.title')}</h2><div class="spacer"></div><${LangSelect} onChange=${onLang} /></div>
       <div class="bd form">
@@ -224,11 +215,11 @@ function Shell({ user, onLogout, onLang }) {
   const nav = NAV.filter(([path]) => (!me.teams || TEAM_NAV.has(path) || path === '/settings') && (path !== '/advanced' || me.role === 'admin'));
   return html`<div class=${'shell' + (mini ? ' mini' : '')}>
     <aside class=${'side' + (open ? ' open' : '')}>
-      <a class="brand" href="#/"><${Logo} /><div>${product()}
+      <a class="brand" href="#/"><${Logo} /><div>${PRODUCT}
         <div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div></div></a>
       <div class="themes" role="group" aria-label=${t('ui.theme')}>
-        ${['auto', ...(brand().id ? ['brand'] : []), ...TONES].map((v) => html`<button type="button" aria-pressed=${String(theme === v)}
-          title=${v === 'brand' ? brand().name : t('ui.theme.' + v)} aria-label=${v === 'brand' ? brand().name : t('ui.theme.' + v)}
+        ${['auto', ...TONES].map((v) => html`<button type="button" aria-pressed=${String(theme === v)}
+          title=${t('ui.theme.' + v)} aria-label=${t('ui.theme.' + v)}
           style=${{ background: SWATCH[v] || 'var(--accent)' }} onClick=${() => changeTheme(v)}></button>`)}
       </div>
       <nav class="nav">
@@ -379,7 +370,7 @@ function Root() {
   };
   let body;
   switch (st.phase) {
-    case 'loading': body = html`<div class="boot">${product()}</div>`; break;
+    case 'loading': body = html`<div class="boot">${PRODUCT}</div>`; break;
     case 'setup': body = html`<${Setup} local=${st.local} onDone=${signedIn} onLang=${changeLang} />`; break;
     case 'login': body = html`<${Login} onDone=${signedIn} onLang=${changeLang} />`; break;
     case 'error': body = html`<div class="auth"><div class="banner error">${errText(st.error)} <button class="btn sm" onClick=${check}>${t('ui.retry')}</button></div></div>`; break;
@@ -389,7 +380,6 @@ function Root() {
 }
 
 (async () => {
-  await loadBrand();
   applyTheme(storage('unagikuma.theme'));
   await loadLanguages();
   // The browser's own message for a value of the wrong form is in its

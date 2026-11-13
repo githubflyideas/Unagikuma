@@ -33,6 +33,12 @@ func (s *Server) channelKinds(w http.ResponseWriter, r *http.Request) (any, erro
 }
 
 func isSecretKey(k string) bool {
+	// A request header that carries a credential (Authorization, a token
+	// or key header) is stored as a secret like the credential fields.
+	if h, ok := strings.CutPrefix(k, "header."); ok {
+		return h == "authorization" || h == "cookie" || h == "proxy-authorization" ||
+			strings.Contains(h, "token") || strings.Contains(h, "key") || strings.Contains(h, "secret") || strings.Contains(h, "auth")
+	}
 	switch k {
 	case "token", "secret", "password", "sendkey", "device-key", "user-key", "routing-key", "api-key", "community",
 		"access-key-secret", "secret-key", "auth-token":
@@ -150,7 +156,7 @@ func (s *Server) channelSave(w http.ResponseWriter, r *http.Request) (any, error
 		case v == "***" && existing != nil:
 			v = existing.Opts[k] // unchanged masked value
 		case v != "" && !strings.Contains(v, "${") && (isSecretKey(k) || (k == "url" && kind != "webhook")):
-			name := "ch_" + req.Name + "_" + strings.ReplaceAll(k, "-", "_")
+			name := "ch_" + req.Name + "_" + strings.NewReplacer("-", "_", ".", "_").Replace(k)
 			if err := s.app.SecretStore().Put(name, v, []string{kind}); err != nil {
 				return nil, err
 			}

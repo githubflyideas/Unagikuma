@@ -4,7 +4,8 @@
 // or by anyone already signed in to the console.
 import { html, render, useState, useEffect, useRef } from './lib.js';
 import { t, setLang, detectLang, loadLanguages, ago } from './i18n.js';
-import { loadBrand, brand, brandColors, product, logoURL } from './brand.js';
+
+const PRODUCT = 'Unagikuma';
 
 const REFRESH = 10000; // ms between updates
 const STALE = 60000;   // older data than this is called out
@@ -100,7 +101,7 @@ function Wall() {
     const id2 = setInterval(() => tick(x => x + 1), 5000);
     return () => { live = false; clearInterval(id); clearInterval(id2); };
   }, []);
-  useEffect(() => { document.title = product() + ' · ' + t('ui.wall.title'); }, []);
+  useEffect(() => { document.title = PRODUCT + ' · ' + t('ui.wall.title'); }, []);
 
   if (err && err.status === 401 && !rows) {
     return html`<div class="wall-msg"><h1>${t('ui.wall.need_link')}</h1><p>${t('ui.wall.need_link_hint')}</p></div>`;
@@ -114,7 +115,7 @@ function Wall() {
   const stale = at && Date.now() - at > STALE;
   return html`<div class="wall">
     <header class=${'wall-top ' + overall}>
-      <img src=${logoURL()} alt="" /><b class="prod">${product()}</b>
+      <img src="/logo.png" alt="" /><b class="prod">${PRODUCT}</b>
       <span class="overall">${overall === 'ok' ? '✓ ' + t('ui.wall.all_ok') : t('ui.wall.problems', { n: crit + warn })}</span>
       <span class="spacer"></span>
       ${[['critical', crit], ['degraded', warn], ['unknown', unk], ['ok', count('ok')]].map(([k, n]) => html`<span class=${'cnt ' + k + (n ? '' : ' zero')}>${n}<small>${t('status.' + k)}</small></span>`)}
@@ -128,13 +129,7 @@ function Wall() {
 }
 
 (async () => {
-  await loadBrand();
-  // A wall is dark unless the active theme pack is built on a light look.
-  const b = brand();
-  if (b.id) {
-    document.documentElement.dataset.theme = b.base === 'light' ? 'mist' : 'graphite';
-    brandColors(true);
-  }
+  document.documentElement.dataset.theme = 'industrial';
   await loadLanguages();
   await setLang(detectLang(), false);
   render(html`<${Wall} />`, document.getElementById('app'));
