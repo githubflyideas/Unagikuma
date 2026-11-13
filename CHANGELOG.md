@@ -28,6 +28,10 @@
 - The users list shows each login's contact, and the contact list each contact's login. A phone number of an odd length is pointed out (saving is still allowed).
 - A name of the wrong form (a channel, team or monitor name, an @name) is answered with what the field takes, in the console's language, instead of the browser's "Please match the requested format". The channel form gives an example name and says what the name is for.
 
+### Fixed
+
+- A browser holding a session cookie from an earlier installation on the same address now gets the first-account setup page instead of the sign-in page; clearing cookies is no longer needed.
+
 ## v2.6.9 — 2026-11-13
 
 **Added**

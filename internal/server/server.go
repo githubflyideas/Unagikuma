@@ -305,6 +305,11 @@ func (s *Server) authenticate(r *http.Request) (*authInfo, error) {
 	}
 	se, err := st.SessionByID(c.Value)
 	if err != nil {
+		// A cookie left by an earlier installation on the same address
+		// must not hide that this one still needs its first account.
+		if n, _ := st.UserCount(); n == 0 {
+			return nil, Errorf(http.StatusUnauthorized, CodeSetupRequired, "setup required")
+		}
 		return nil, errUnauthorized
 	}
 	ai := &authInfo{user: se.User.Username, userID: se.User.ID, csrf: se.CSRF, session: true, sessionTag: sessionTag(c.Value),
