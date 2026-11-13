@@ -7,6 +7,9 @@
 - Importing from Uptime Kuma carries a webhook's custom body over instead of dropping it.
 - The custom webhook form fills in the request body of a common API — WeCom app message (touser, agentid), WeCom, DingTalk and Feishu robots, Slack/Mattermost/Rocket.Chat, Discord, Telegram, a generic JSON with every field, or the Uptime Kuma way — so only the text needs changing.
 
+**Changed**
+- A name of the wrong form (a channel, team or monitor name, an @name) is answered with what the field takes, in the console's language, instead of the browser's "Please match the requested format". The channel form gives an example name and says what the name is for.
+
 ## v2.6.9 — unreleased
 
 **Added**

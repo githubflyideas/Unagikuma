@@ -371,6 +371,15 @@ function Root() {
   await loadBrand();
   applyTheme(storage('unagikuma.theme'));
   await loadLanguages();
+  // The browser's own message for a value of the wrong form is in its
+  // language and says nothing useful; say what the field takes instead.
+  document.addEventListener('invalid', (e) => {
+    const el = e.target, v = el.validity;
+    if (!v || !el.setCustomValidity) return;
+    if (v.patternMismatch) el.setCustomValidity(t(/^\[a-z0-9\]/.test(el.getAttribute('pattern') || '') ? 'ui.err.pattern_handle' : 'ui.err.pattern_name'));
+    else if (v.valueMissing) el.setCustomValidity(t('ui.err.required'));
+  }, true);
+  for (const ev of ['input', 'change']) document.addEventListener(ev, (e) => { if (e.target.setCustomValidity) e.target.setCustomValidity(''); }, true);
   await setLang(detectLang(), false);
   render(html`<${Root} />`, document.getElementById('app'));
 })();

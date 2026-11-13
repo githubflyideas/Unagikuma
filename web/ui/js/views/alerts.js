@@ -211,7 +211,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
             ${nativeGroups(kinds).map(([g, list]) => list.length > 0 && html`<optgroup label=${t('ui.ch.ngroup.' + g)}>${list.map(k => html`<option value=${k.kind}>${kindLabel(k)}</option>`)}</optgroup>`)}
             ${PRESET_GROUPS.map(g => html`<optgroup label=${t('ui.ch.group.' + g)}>${kinds.filter(k => k.preset && k.group === g).sort((a, b) => a.label.localeCompare(b.label)).map(k => html`<option value=${k.kind}>${k.label}</option>`)}</optgroup>`)}
           </select><//>
-        <${Field} label=${t('ui.name')}><input type="text" class="ltr" value=${name} onInput=${(e) => setName(e.target.value)} required disabled=${editing} pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" /><//>
+        <${Field} label=${t('ui.name')} hint=${editing ? '' : t('ui.ch.name_hint')}><input type="text" class="ltr" value=${name} onInput=${(e) => setName(e.target.value)} required disabled=${editing} pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" placeholder=${t('ui.ch.name_ph')} /><//>
       </div>
       ${info.fields.map(f => {
         const v = opts[f.key] !== undefined ? opts[f.key] : (editing ? '' : f.default || '');
