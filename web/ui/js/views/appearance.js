@@ -14,9 +14,9 @@ function Swatches({ pack }) {
 }
 
 // LinkCard opens a read-only page (the wall screen or the managers'
-// summary) here, or makes a link with a read-only token for someone or
-// something that does not sign in.
-export function LinkCard({ page, k }) {
+// summary) here, or, with share, makes a link with a read-only token for
+// someone or something that does not sign in.
+export function LinkCard({ page, k, share = true }) {
   const [link, setLink] = useState('');
   const make = async () => {
     try {
@@ -29,7 +29,7 @@ export function LinkCard({ page, k }) {
     <p class="small muted" style=${{ margin: 0 }}>${t('ui.look.' + k + '_hint')}</p>
     <div class="row">
       <a class="btn" href=${'/' + page} target="_blank" rel="noopener">${t('ui.look.' + k + '_open')}</a>
-      <button class="btn" onClick=${make}>${t('ui.look.' + k + '_link')}</button>
+      ${share && html`<button class="btn" onClick=${make}>${t('ui.look.' + k + '_link')}</button>`}
     </div>
     ${link && html`<div class="banner ok"><div class="spacer col" style=${{ gap: '6px' }}>
       <span>${t('ui.look.' + k + '_link_done')}</span><code class="ltr small" style=${{ wordBreak: 'break-all' }}>${link}</code></div><${Copy} text=${link} /></div>`}

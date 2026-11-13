@@ -14,7 +14,7 @@ import { ConfigView } from './views/config.js';
 import { Alerts } from './views/alerts.js';
 import { Notices } from './views/announce.js';
 import { brand, product, logoURL, loadBrand, brandColors } from './brand.js';
-import { Settings } from './views/settings.js';
+import { Settings, ADVANCED_TABS } from './views/settings.js';
 import { Nodes } from './views/nodes.js';
 import { Expiry } from './views/expiry.js';
 import { IncidentReport } from './views/incident.js';
@@ -146,6 +146,7 @@ const NAV = [
   ['/config', 'ui.nav.config', '{}'],
   ['/nodes', 'ui.nav.runmode', '⌖'],
   ['/settings', 'ui.nav.settings', '⚙'],
+  ['/advanced', 'ui.nav.advanced', '⚒'],
 ];
 
 const TEAM_NAV = new Set(['/', '/monitors', '/problems', '/events']);
@@ -168,7 +169,7 @@ function Shell({ user, onLogout, onLang }) {
   const scriptProblems = ov.data ? ov.data.script_problems || 0 : 0;
   const contactIssues = ov.data ? ov.data.contact_issues || 0 : 0;
   const setup = setupIssues(ov.data);
-  const first = '/' + (route.parts[0] || '');
+  const first = route.parts[0] === 'settings' && ADVANCED_TABS.includes(route.parts[1]) ? '/advanced' : '/' + (route.parts[0] || '');
   const changeTheme = (v) => { setTheme(v); storage('unagikuma.theme', v); applyTheme(v); };
   // On a wide screen the button folds the sidebar to icons; on a phone it
   // slides the sidebar in.
@@ -198,7 +199,10 @@ function Shell({ user, onLogout, onLang }) {
     case 'notices': view = html`<${Notices} tab=${p[1] || 'changes'} />`; break;
     case 'config': view = html`<${ConfigView} tab=${p[1] || 'edit'} />`; break;
     // Nodes used to be a Settings tab; its old address opens Run mode.
-    case 'settings': view = p[1] === 'nodes' ? html`<div class="page"><${Nodes} /></div>` : html`<${Settings} tab=${p[1] || 'general'} user=${user} />`; break;
+    case 'settings': view = p[1] === 'nodes' ? html`<div class="page"><${Nodes} /></div>`
+      : ADVANCED_TABS.includes(p[1]) ? html`<${Settings} advanced tab=${p[1]} user=${user} />` // old addresses of the advanced tabs
+      : html`<${Settings} tab=${p[1] || 'general'} user=${user} />`; break;
+    case 'advanced': view = html`<${Settings} advanced tab=${p[1] || ADVANCED_TABS[0]} user=${user} />`; break;
     case 'nodes': view = html`<div class="page"><${Nodes} /></div>`; break;
     default: view = html`<div class="page"><div class="empty"><b>404</b></div></div>`;
   }
@@ -207,7 +211,7 @@ function Shell({ user, onLogout, onLang }) {
   // has its own place in the sidebar.
   // A team member works with their teams' monitors only.
   // Everyone has Settings for their own account (password).
-  const nav = NAV.filter(([path]) => (!me.teams || TEAM_NAV.has(path) || path === '/settings'));
+  const nav = NAV.filter(([path]) => (!me.teams || TEAM_NAV.has(path) || path === '/settings') && (path !== '/advanced' || me.role === 'admin'));
   return html`<div class=${'shell' + (mini ? ' mini' : '')}>
     <aside class=${'side' + (open ? ' open' : '')}>
       <a class="brand" href="#/"><${Logo} /><div>${product()}

@@ -23,7 +23,7 @@ var customFields = []Field{
 	{Key: "content-type", Type: "select", Options: []string{"json", "form", "text"}, Default: "json"},
 	{Key: "body", Type: "textarea", Placeholder: customDefaultBody},
 	{Key: "success-match", Type: "text", Placeholder: `"code":0`},
-	tplField,
+	tplField, prefixField,
 }
 
 func init() {

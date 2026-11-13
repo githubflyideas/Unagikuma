@@ -135,7 +135,9 @@ type Field struct {
 // names who a chat robot mentions.
 var (
 	tplField = Field{Key: "template", Type: "textarea", Placeholder: "{{.Icon}} {{.KindText}}: {{.Name}} {{.StatusText}}\n{{.ReasonText}} — {{.Detail}}\n{{.DetailURL}}"}
-	atField  = Field{Key: "at", Type: "text", Placeholder: "all | 13800000000,13900000000"}
+	// prefixField marks each text message with the site that sent it.
+	prefixField = Field{Key: "prefix", Type: "text", Placeholder: "[Beijing unagi-host1]"}
+	atField     = Field{Key: "at", Type: "text", Placeholder: "all | 13800000000,13900000000"}
 )
 
 var nativeKinds = []KindInfo{

@@ -709,12 +709,17 @@ function Audit() {
   </div>`;
 }
 
-const TABS = ['general', 'appearance', 'users', 'teams', 'regions', 'audit', 'scripts', 'tunables', 'tokens', 'secrets', 'keywords', 'system', 'registration', 'account'];
+// Everyday settings, and the advanced ones that most installations set
+// once or never: they have their own place in the sidebar.
+const TABS = ['general', 'users', 'audit', 'scripts', 'system', 'registration', 'account'];
+export const ADVANCED_TABS = ['appearance', 'teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
-export function Settings({ tab, user }) {
-  useDocTitle(t('ui.nav.settings'));
+export function Settings({ tab, user, advanced }) {
+  useDocTitle(t(advanced ? 'ui.nav.advanced' : 'ui.nav.settings'));
   // Operators and viewers have their own account here: the password.
-  const tabs = me.role === 'admin' ? TABS : ['account'];
+  if (me.role !== 'admin') advanced = false;
+  const base = advanced ? '#/advanced/' : '#/settings/';
+  const tabs = me.role !== 'admin' ? ['account'] : advanced ? ADVANCED_TABS : TABS;
   if (!tabs.includes(tab)) tab = tabs[0];
   let body;
   switch (tab) {
@@ -735,7 +740,7 @@ export function Settings({ tab, user }) {
     default: body = html`<${General} />`;
   }
   return html`<div class="page">
-    <div class="tabs">${tabs.map(k => html`<a href=${'#/settings/' + k} class=${tab === k ? 'on' : ''}>${t('ui.set.tab.' + k)}</a>`)}</div>
+    <div class="tabs">${tabs.map(k => html`<a href=${base + k} class=${tab === k ? 'on' : ''}>${t('ui.set.tab.' + k)}</a>`)}</div>
     ${body}
   </div>`;
 }

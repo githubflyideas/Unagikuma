@@ -1,5 +1,6 @@
 /* unagikuma UI. Logical properties keep the layout correct in RTL.
-   The console offers mist, slate, graphite, sky and violet. The paper
+   The console offers bright ("mist"), slate, modern ("graphite"), sky and
+   Egypt ("violet"); the stored names stay so earlier choices still apply. The paper
    and ink palettes (also called light and dark) remain for status pages
    and theme packs. Status colours are Nagios-style: solid blocks that read
    at a glance, tuned per tone so they stay calm on white and bright on black. */
@@ -19,15 +20,16 @@
   color-scheme: light;
 }
 :root[data-theme="mist"] {
-  --bg: #e9edf1; --side: #dce2e8; --panel: #f6f8fa; --panel-2: #eef1f4; --border: #d3dae2; --border-strong: #b9c3ce;
-  --text: #1a2430; --muted: #556273; --faint: #606b79;
-  --accent: #1d7350; --accent-soft: #dcece3; --accent-text: #ffffff; --link: #1a6646;
-  --ok: #1c8f4e; --ok-soft: #d8eee0; --degraded: #b97d0e; --degraded-soft: #f5e9c9;
-  --critical: #cc3434; --critical-soft: #f5dcdc; --unknown: #7c52de; --unknown-soft: #e6def8;
-  --pending: #627082; --pending-soft: #dde3e9; --maint: #2a69cc; --maint-soft: #d9e4f6;
-  --on-status: #ffffff; --on-degraded: #241800;
-  --empty: #d9dfe5; --stripe: rgba(26, 36, 48, .03);
-  --shadow: 0 1px 2px rgba(15, 23, 42, .06); color-scheme: light;
+  /* Bright: white panels, a vivid blue and clear status colours. */
+  --bg: #f5f8fc; --side: #ebf1f8; --panel: #ffffff; --panel-2: #f3f7fb; --border: #e0e7f0; --border-strong: #c6d2df;
+  --text: #0f1b2d; --muted: #4f5e72; --faint: #5b6a7e;
+  --accent: #0a6fd8; --accent-soft: #e0eefc; --accent-text: #ffffff; --link: #075fb9;
+  --ok: #12803c; --ok-soft: #dcf7e5; --degraded: #cf8a00; --degraded-soft: #fff1cc;
+  --critical: #e0244a; --critical-soft: #ffe3e8; --unknown: #7c3aed; --unknown-soft: #efe7fe;
+  --pending: #64748b; --pending-soft: #e6ebf2; --maint: #2563eb; --maint-soft: #dfe9fd;
+  --on-status: #ffffff; --on-degraded: #2a1c00;
+  --empty: #e3e9f1; --stripe: rgba(15, 27, 45, .025);
+  --shadow: 0 1px 2px rgba(15, 27, 45, .05), 0 4px 14px rgba(15, 27, 45, .04); --bg-image: none; color-scheme: light;
 }
 :root[data-theme="slate"] {
   --bg: #29313b; --side: #212830; --panel: #313a46; --panel-2: #38424f; --border: #434e5c; --border-strong: #566273;
@@ -41,15 +43,17 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, .18); color-scheme: dark;
 }
 :root[data-theme="graphite"] {
-  --bg: #15181c; --side: #0e1013; --panel: #1c2025; --panel-2: #22272d; --border: #2c3239; --border-strong: #3b434c;
-  --text: #e6e9ed; --muted: #959fab; --faint: #88909a;
-  --accent: #34d0a6; --accent-soft: #163029; --accent-text: #06231b; --link: #6fe0c0;
-  --ok: #3ddc84; --ok-soft: #15301f; --degraded: #f6c343; --degraded-soft: #362c12;
-  --critical: #ff5c6c; --critical-soft: #3c1a20; --unknown: #b197fc; --unknown-soft: #2b2442;
-  --pending: #8f99a5; --pending-soft: #262c33; --maint: #6aa8ff; --maint-soft: #18273d;
-  --on-status: #0e1114; --on-degraded: #1d1600;
-  --empty: #262b31; --stripe: rgba(255, 255, 255, .02);
+  /* Modern: a neutral near-black with an electric indigo. */
+  --bg: #0b0d12; --side: #08090d; --panel: #12151c; --panel-2: #181c25; --border: #242a37; --border-strong: #353d50;
+  --text: #eef1f7; --muted: #9ca5b8; --faint: #8b94a7;
+  --accent: #8090ff; --accent-soft: #1e2344; --accent-text: #0b0d1a; --link: #a9b3ff;
+  --ok: #34d399; --ok-soft: #0f2a21; --degraded: #fbbf24; --degraded-soft: #2f2510;
+  --critical: #fb7185; --critical-soft: #3a1520; --unknown: #c084fc; --unknown-soft: #2a1838;
+  --pending: #94a3b8; --pending-soft: #1a1f2a; --maint: #60a5fa; --maint-soft: #132238;
+  --on-status: #0b0d12; --on-degraded: #1d1600;
+  --empty: #1c212c; --stripe: rgba(255, 255, 255, .02);
   --shadow: none; color-scheme: dark;
+  --bg-image: radial-gradient(900px 500px at 85% -10%, rgba(128, 144, 255, .09), transparent 60%);
 }
 :root[data-theme="ink"], :root[data-theme="dark"] {
   --bg: #050608; --side: #0e1115; --panel: #0b0d10; --panel-2: #111418; --border: #1b1f25; --border-strong: #2a3038;
@@ -62,8 +66,8 @@
   --shadow: none; color-scheme: dark;
   --bg-image: radial-gradient(1200px 600px at 75% -10%, rgba(94,234,212,.05), transparent 60%);
 }
-/* Two colour themes beside the tones: Sky, a light blue, and Violet, a
-   deep purple. Status colours stay the same blocks as in the tones. */
+/* Two colour themes beside the tones: Sky, a light blue, and Egypt
+   (stored as "violet"), papyrus and lapis lazuli. */
 :root[data-theme="sky"] {
   --bg: #eaf3fb; --side: #dbe9f6; --panel: #f9fcff; --panel-2: #eef5fc; --border: #cfe0f0; --border-strong: #a9c4de;
   --text: #13263a; --muted: #4d6680; --faint: #5a6f84;
@@ -76,15 +80,18 @@
   --shadow: 0 1px 2px rgba(19, 38, 58, .06); --bg-image: none; color-scheme: light;
 }
 :root[data-theme="violet"] {
-  --bg: #1b1428; --side: #140e1f; --panel: #241a35; --panel-2: #2c2040; --border: #3a2c52; --border-strong: #4f3d6e;
-  --text: #ece6f7; --muted: #b3a6cc; --faint: #9589ac;
-  --accent: #b18cff; --accent-soft: #3a2a5c; --accent-text: #1b1028; --link: #c7aaff;
-  --ok: #4fdc95; --ok-soft: #1c3a30; --degraded: #f6c96a; --degraded-soft: #3d321b;
-  --critical: #ff6b8a; --critical-soft: #452033; --unknown: #8fb0ff; --unknown-soft: #262f52;
-  --pending: #a497bd; --pending-soft: #2e2442; --maint: #7fb4ff; --maint-soft: #1f2d4f;
-  --on-status: #1b1428; --on-degraded: #1d1600;
-  --empty: #31254a; --stripe: rgba(255, 255, 255, .025);
-  --shadow: none; --bg-image: none; color-scheme: dark;
+  /* Egypt: papyrus and sandstone, lapis-lazuli blue, gold, terracotta
+     for failures and turquoise for maintenance. */
+  --bg: #f3e9d2; --side: #e9dab7; --panel: #fbf5e6; --panel-2: #f5ecd6; --border: #e2d1ab; --border-strong: #c8ae78;
+  --text: #2a1c0d; --muted: #67502f; --faint: #6f5939;
+  --accent: #1d4e9e; --accent-soft: #dfe6f3; --accent-text: #ffffff; --link: #1a468f;
+  --ok: #25744a; --ok-soft: #dcefdf; --degraded: #b7791f; --degraded-soft: #f5e5c0;
+  --critical: #b8391f; --critical-soft: #f5dbd2; --unknown: #7b4fa8; --unknown-soft: #ece1f3;
+  --pending: #7a6a52; --pending-soft: #ebe0c9; --maint: #17808a; --maint-soft: #d5ecec;
+  --on-status: #ffffff; --on-degraded: #2a1c00;
+  --empty: #e8dcc1; --stripe: rgba(42, 28, 13, .03);
+  --shadow: 0 1px 2px rgba(80, 55, 20, .08); color-scheme: light;
+  --bg-image: linear-gradient(180deg, rgba(201, 162, 39, .10), transparent 260px);
 }
 /* "System" follows the device: paper by day, ink at night. */
 @media (prefers-color-scheme: dark) {
@@ -507,7 +514,10 @@ p a:not(.btn), .pub footer a { text-decoration: underline; text-underline-offset
 .formula .small { flex-basis: 100%; }
 
 /* ---- console look for every page ---- */
-.page { max-width: 1640px; gap: 18px; }
+/* On a wide screen the content keeps a readable width and sits in the
+   middle; the top bar's contents line up with it. */
+.page { max-width: 1640px; gap: 18px; margin-inline: auto; }
+.top { padding-inline: max(22px, calc((100% - 1640px) / 2 + 22px)); }
 .card { border-radius: 14px; overflow: hidden; }
 .card > .hd { padding: 13px 18px; }
 .card > .hd h2 { font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
@@ -767,3 +777,10 @@ body.summarypage { background: var(--bg); }
 
 .quick-examples { margin-top: 4px; }
 .quick-examples .tbl td { padding: 4px 8px; }
+
+/* Channel form: message template preview and removable mention chips. */
+.tpl-preview { padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--border-strong); background: var(--panel-2); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tpl-preview pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; color: var(--muted); }
+.tpl-preview.err { border-color: var(--critical); }
+.linkbtn { border: 0; background: none; padding: 0 2px; cursor: pointer; color: inherit; font: inherit; line-height: 1; }
+.linkbtn:hover { color: var(--critical); }

@@ -54,7 +54,13 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
   const [f, setF] = useState({ handle: p.handle || '', name: p.name || '', emails: (p.emails || []).join(', '), phones: (p.phones || []).join(', '),
     username: p.username || '', note: p.note || '', notify: p.notify || [], status: p.status || 'active', report: !p.no_report });
   const has = { email: list(f.emails).length > 0, phone: list(f.phones).length > 0 };
-  const toggle = (name) => setF({ ...f, notify: f.notify.includes(name) ? f.notify.filter(n => n !== name) : [...f.notify, name] });
+  // Until the channels are picked by hand, they follow the addresses: an
+  // e-mail address selects the e-mail channels, a phone number the SMS and
+  // voice ones.
+  const [picked, setPicked] = useState(!!(p.notify && p.notify.length));
+  const auto = channels.filter(c => has[c.contact]).map(c => c.name);
+  const notify = picked ? f.notify : auto;
+  const toggle = (name) => { setPicked(true); setF({ ...f, notify: notify.includes(name) ? notify.filter(n => n !== name) : [...notify, name] }); };
   const [err, setErr] = useState(null);
   // Logins that can be linked, so a person who leaves loses theirs too.
   const users = useFetch(() => (me.role === 'admin' ? get('/users') : Promise.resolve(null)), []);
@@ -64,9 +70,9 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
     e.preventDefault();
     setErr(null);
     if (!has.email && !has.phone) { setErr({ message: t('ui.dir.need_address') }); return; }
-    if (channels.length && !f.notify.length) { setErr({ message: t('ui.dir.need_notify') }); return; }
+    if (channels.length && !notify.length) { setErr({ message: t('ui.dir.need_notify') }); return; }
     const body = { handle: f.handle.trim() || handleFrom(f.name, f.emails, f.phones), name: f.name.trim(), emails: list(f.emails), phones: list(f.phones),
-      username: f.username.trim(), note: f.note.trim(), notify: f.notify };
+      username: f.username.trim(), note: f.note.trim(), notify };
     try {
       let id = p.id;
       if (id) await put('/people/' + id, body);
@@ -83,24 +89,31 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
     <form class="form" onSubmit=${save}>
       <div class="two">
         <${Field} label=${t('ui.dir.name')}><input type="text" value=${f.name} onInput=${set('name')} required /><//>
-        <${Field} label=${t('ui.dir.handle')} hint=${t('ui.dir.handle_hint')}><input type="text" class="ltr" value=${f.handle} onInput=${set('handle')} placeholder=${handleFrom(f.name, f.emails, f.phones)} pattern="[a-z0-9][a-z0-9._\\-]{0,62}" /><//>
+        <${Field} label=${t('ui.dir.status')} hint=${t('ui.dir.status_hint')}><select value=${f.status} onChange=${set('status')}>
+          ${STATUSES.map(st => html`<option value=${st}>${t('ui.dir.status.' + st)}</option>`)}</select><//>
       </div>
       <${Field} label=${t('ui.dir.emails')} hint=${t('ui.dir.list_hint')}><input type="text" class="ltr" value=${f.emails} onInput=${set('emails')} placeholder="li@example.com" /><//>
       <${Field} label=${t('ui.dir.phones')} hint=${t('ui.dir.list_hint')}><input type="text" class="ltr" value=${f.phones} onInput=${set('phones')} placeholder="+8613800000000" /><//>
-      <${Field} label=${t('ui.dir.notify') + ' *'} hint=${channels.length ? t('ui.dir.notify_hint') : t('ui.dir.notify_none')}>
-        <div class="col">${channels.map(c => html`<label class="switch">
-          <input type="checkbox" checked=${f.notify.includes(c.name)} disabled=${!has[c.contact] && !f.notify.includes(c.name)} onChange=${() => toggle(c.name)} />
-          <b class="ltr">${c.name}</b> <span class="small muted">${t('ui.dir.via.' + viaOf(c))}</span></label>`)}</div><//>
-      <div class="two">
-        <${Field} label=${t('ui.dir.status')}><select value=${f.status} onChange=${set('status')}>
-          ${STATUSES.map(st => html`<option value=${st}>${t('ui.dir.status.' + st)}</option>`)}</select><//>
-        <${Field} label=${t('ui.dir.username')} hint=${t('ui.dir.username_hint')}>
-          <select value=${f.username} onChange=${set('username')}>
-            <option value="">${t('ui.dir.no_login')}</option>
-            ${[...new Set([...logins, ...(f.username ? [f.username] : [])])].map(u => html`<option value=${u}>${u}</option>`)}</select><//>
-      </div>
       <label class="switch"><input type="checkbox" checked=${f.report} onChange=${(e) => setF({ ...f, report: e.target.checked })} /> ${t('ui.report.receives')}</label>
-      <${Field} label=${t('ui.dir.note')} hint=${t('ui.dir.note_hint')}><input type="text" value=${f.note} onInput=${set('note')} /><//>
+      <p class="small muted" style=${{ margin: 0 }}>${!channels.length ? t('ui.dir.notify_none')
+        : notify.length ? t('ui.dir.notify_auto', { list: notify.join(', ') }) : t('ui.dir.notify_auto_none')}</p>
+      <details open=${!!(p.username || p.note || picked)}>
+        <summary class="small">${t('ui.dir.more')}</summary>
+        <div class="col" style=${{ gap: '10px', marginTop: '10px' }}>
+          ${channels.length > 0 && html`<${Field} label=${t('ui.dir.notify')} hint=${t('ui.dir.notify_hint')}>
+            <div class="col">${channels.map(c => html`<label class="switch">
+              <input type="checkbox" checked=${notify.includes(c.name)} disabled=${!has[c.contact] && !notify.includes(c.name)} onChange=${() => toggle(c.name)} />
+              <b class="ltr">${c.name}</b> <span class="small muted">${t('ui.dir.via.' + viaOf(c))}</span></label>`)}</div><//>`}
+          <div class="two">
+            <${Field} label=${t('ui.dir.note')} hint=${t('ui.dir.note_hint')}><input type="text" value=${f.note} onInput=${set('note')} /><//>
+            <${Field} label=${t('ui.dir.username')} hint=${t('ui.dir.username_hint')}>
+              <select value=${f.username} onChange=${set('username')}>
+                <option value="">${t('ui.dir.no_login')}</option>
+                ${[...new Set([...logins, ...(f.username ? [f.username] : [])])].map(u => html`<option value=${u}>${u}</option>`)}</select><//>
+          </div>
+          <${Field} label=${t('ui.dir.handle')} hint=${t('ui.dir.handle_hint')}><input type="text" class="ltr" value=${f.handle} onInput=${set('handle')} placeholder=${handleFrom(f.name, f.emails, f.phones)} pattern="[a-z0-9][a-z0-9._\\-]{0,62}" /><//>
+        </div>
+      </details>
       ${err && html`<div class="banner error">${errText(err)}</div>`}
       <div class="row"><div class="spacer"></div>
         <button type="button" class="btn" onClick=${onClose}>${t('ui.cancel')}</button>

@@ -100,7 +100,7 @@ main     IN STATUSPAGE "Service status" select="group:public"
 ```
 
 - After editing the file by hand, **increase the revision** on the `$FILE` line; Unagikuma then validates and applies it. Saving a monitor, channel or team in the web UI raises it for you. Files from earlier releases start with an `@ IN SOA … ( serial interval retry timeout attempts )` line instead; it still works the same way, and its first number is the revision. **Configuration › monitors.conf** shows the file read-only, with a copy button; edit it on the server. A file with errors is never applied: the last good version keeps running and the UI shows what is wrong.
-- Credentials never need to be in the file: store them under **Settings › Secrets** and refer to them as `${secret:name}`. A secret the configuration still uses cannot be deleted: the refusal names the records that use it. Values from the environment can be used as `${env:NAME}` when the server is started with `--allow-env NAME`.
+- Credentials never need to be in the file: store them under **Advanced › Secrets** and refer to them as `${secret:name}`. A secret the configuration still uses cannot be deleted: the refusal names the records that use it. Values from the environment can be used as `${env:NAME}` when the server is started with `--allow-env NAME`.
 - Monitors are grouped into hosts by the address they check; `device=core-sw1` groups monitors of several addresses under one name. A host with a PING monitor is UP or DOWN by that ping.
 - `parent=gw` (or `parent=sw1,gw`) declares a dependency: while a parent is down, a failing child is shown as UNREACHABLE and not notified. If the child is still down once its parents are back, it is notified as usual.
 - Maintenance windows hold notifications for the monitors they select; that time does not count against uptime, and a monitor still down when the window closes is notified then:
@@ -140,7 +140,7 @@ nrpe-web  IN EXEC "check_nrpe -H $HOSTADDRESS$ -c check_users" address=10.0.0.21
 
 ## Alerting
 
-Notifications go through **channels** (where a message is sent). Each team has an ordered list of them (see [Teams](#teams)); channels are records in `monitors.conf` with forms under **Alerting**, and a team's list is set under **Settings › Teams**.
+Notifications go through **channels** (where a message is sent). Each team has an ordered list of them (see [Teams](#teams)); channels are records in `monitors.conf` with forms under **Alerting**, and a team's list is set under **Advanced › Teams**.
 
 ```text
 ops-im    IN CHANNEL feishu url=${secret:feishu_ops}
@@ -227,7 +227,7 @@ Functions: `upper`, `lower`, `trunc 20 .Name`, `join ", " .Tags`, `json .Tags`, 
   ```
 
   Nothing else is needed: whatever mail system the machine runs (postfix, sendmail, exim, OpenSMTPD, msmtp, ssmtp, nullmailer, dma) installs a `sendmail` command, and that is used, with its own relay, queue and retries. It is looked for in `/usr/sbin`, `/usr/lib`, `/usr/bin`, `/usr/local/sbin` and `/usr/local/bin`; `program=` names another place (only a mail system's own command, such as `/usr/bin/msmtp`, is accepted). Without `from=` the mail system chooses the sender, as it does for Nagios. The message counts as sent once the mail system has accepted it; whether it then reaches the mailbox depends on that mail system, so try **Test** once after setting it up. Not available on Windows.
-- **How often.** `notify.repeat`, `notify.max` and the other `notify.*` tunables (**Settings › Tunables**) set how often a problem is repeated and how many notices it sends.
+- **How often.** `notify.repeat`, `notify.max` and the other `notify.*` tunables (**Advanced › Tunables**) set how often a problem is repeated and how many notices it sends.
 - **Time periods.** `PERIOD` records are weekly rules (`mon-fri 09:00-18:00`, ranges past midnight such as `22:00-07:00`, `24:00` for end of day). `period=office` on a channel uses it only inside the period, `period=!office` only outside it. A skipped channel is not a failure: the next one in a fallback chain is tried.
 - **Contact groups.** A `group` channel notifies all its `members=` at once; it succeeds if any member does. Members keep their own time periods.
 - **Summaries say what kind of problem it is.** When many notices queue up at once (`notify.coalesce-queue`, `notify.coalesce-wait`) they are replaced by a summary, and the summary tells services from the network:
@@ -236,7 +236,7 @@ Functions: `upper`, `lower`, `trunc 20 .Name`, `join ", " .Tags`, `json .Tags`, 
 
 - **When this host loses its network** it cannot notify anyone, so nothing is sent while it lasts and nothing queued meanwhile is sent afterwards. Failures that began just before the outage was recognised (`localnet.backdate`) and that nobody was told about are taken back. When the network is back every monitor is re-checked, and one message says how long the host was blind and what is still failing; outages shorter than `localnet.notify-after` (5 minutes) are only recorded. A recovery is sent only for problems someone actually received. To be told *while* the host is offline, use an external heartbeat (`--heartbeat-url`) or a second node.
 
-  How the host recognises its own outage: its gateway stops answering; or internet targets in at least `localnet.min-domains` (3) different networks (an IPv4 /24, an IPv6 /48 or a registered domain) fail together while none of them answers; or every WAN anchor fails (**Run mode › Edit** on this machine, **Anchors** `wan:IP,IP`). Before an internet failure becomes an alert, the host also asks a few **reference points** on the internet (`localnet.references`: 223.5.5.5, 1.1.1.1 and 8.8.8.8, on TCP 443). If any of them answers, its own network works and the target is alerted as usual, even when all your targets fail at once; if none answers, they count towards the three networks, so a machine watching only one or two sites still recognises its own outage and sends the summary afterwards. Where your network blocks these addresses, set ones it can reach under **Settings › Tunables**.
+  How the host recognises its own outage: its gateway stops answering; or internet targets in at least `localnet.min-domains` (3) different networks (an IPv4 /24, an IPv6 /48 or a registered domain) fail together while none of them answers; or every WAN anchor fails (**Run mode › Edit** on this machine, **Anchors** `wan:IP,IP`). Before an internet failure becomes an alert, the host also asks a few **reference points** on the internet (`localnet.references`: 223.5.5.5, 1.1.1.1 and 8.8.8.8, on TCP 443). If any of them answers, its own network works and the target is alerted as usual, even when all your targets fail at once; if none answers, they count towards the three networks, so a machine watching only one or two sites still recognises its own outage and sends the summary afterwards. Where your network blocks these addresses, set ones it can reach under **Advanced › Tunables**.
 - **SMS and voice calls.** `aliyun-sms`, `aliyun-voice`, `tencent-sms`, `tencent-voice`, `twilio-sms` and `twilio-voice` channels. Template parameters default to the monitor name and the status; `params="{{.Monitor}}|{{.StatusText}}"` changes them. Keys are stored as secrets when saved from the UI.
 - **Event handlers.** `handler="restart-web $SERVICESTATE$ $SERVICESTATETYPE$"` on a monitor runs a script from the check-scripts directory on each state change, Nagios style, with `UNAGIKUMA_MONITOR`, `UNAGIKUMA_STATE`, `UNAGIKUMA_STATE_TYPE`, `UNAGIKUMA_ATTEMPT`, `UNAGIKUMA_ADDRESS` and `UNAGIKUMA_REASON` in its environment. It runs on the master, one at a time per monitor, for at most `engine.handler-timeout`; the result is in the event log. Only administrators may set it.
 - **Contacts.** **Alerting › Contacts** lists everyone who may receive alerts, with their e-mail addresses, phone numbers and status: **active**, **on leave**, **transferred** or **left**. E-mail, SMS and voice channels send only to active people in it (chat and webhook channels are not checked):
@@ -358,7 +358,7 @@ Only the sites named check these monitors. `nodes=bj,sh` (or `nodes=region:north
 
 ### Site-local configuration
 
-Under **Nodes › Site-local configuration** (`<data>/site-local.conf`, same format as `monitors.conf`, with its own `$FILE` line) each machine can have monitors and channels of its own — a router in that office, say. They are checked and alerted on there in every role, never sent to other machines, and never overwritten by the master's copy, a join or a promotion. A name the shared configuration already uses keeps the shared definition.
+Under **Nodes › Site-local configuration** (`<data>/local.monitors.conf`, same format as `monitors.conf`; the `$FILE` line is added when you save, and a short form such as `ping 8.8.8.8` is answered with the full line to write). On a single machine the section is hidden until the file holds something. Each machine can have monitors and channels of its own — a router in that office, say. They are checked and alerted on there in every role, never sent to other machines, and never overwritten by the master's copy, a join or a promotion. A name the shared configuration already uses keeps the shared definition.
 
 ### Node status
 
@@ -390,7 +390,7 @@ An operator can also be limited to some `$SCOPE` sections (`region:north`, `bj`)
 
 Every monitor belongs to one team. The built-in **admin** team always exists, cannot be renamed or deleted, and owns every monitor without `team=`. While it is the only team, everyone is in it and works as before.
 
-**Settings › Teams** (administrators) adds teams and their members. Teams are `TEAM` records in monitors.conf, so they reach every node with the rest of the configuration:
+**Advanced › Teams** (administrators) adds teams and their members. Teams are `TEAM` records in monitors.conf, so they reach every node with the rest of the configuration:
 
 ```text
 web   IN TEAM title="Web team" members=li,wang,zhang
@@ -412,16 +412,16 @@ Names are unique across the whole file, so a name another team uses cannot be ta
 
 ### Regions
 
-A region is a group of nodes (`region=` on `NODE` records). A monitor is checked by the nodes of its region (`region=north`); **global**, the default, is every node. **Settings › Regions** (administrators) adds regions from nodes, changes their nodes, and deletes them: a deleted region's monitors move to global. Select monitors in the list and use **Move** to change their team or region in one change (administrators; it is in the audit log).
+A region is a group of nodes (`region=` on `NODE` records). A monitor is checked by the nodes of its region (`region=north`); **global**, the default, is every node. **Advanced › Regions** (administrators) adds regions from nodes, changes their nodes, and deletes them: a deleted region's monitors move to global. Select monitors in the list and use **Move** to change their team or region in one change (administrators; it is in the audit log).
 
 The monitor list filters by team, region and tag; the search accepts `team:web`, `region:north` and `tag:db` as well.
 
 Notifications follow the teams too:
 
-- Each team has an ordered list of channels (`channels=` on its `TEAM` record; administrators set it under **Settings › Teams**). They are tried in order until one succeeds, or all are sent to with `mode=all`. Every monitor of the team uses them.
+- Each team has an ordered list of channels (`channels=` on its `TEAM` record; administrators set it under **Advanced › Teams**). They are tried in order until one succeeds, or all are sent to with `mode=all`. Every monitor of the team uses them.
 - A monitor may have one of two exceptions: `mute=yes` (problems are recorded, nothing is sent) or `system-channel=yes` (it goes to the system channels instead).
 - **System channels** are channels with `system=yes`. They receive the system's own notices, the problems of a team with no channels, and the problems a team's channels failed to deliver. In both cases the team's administrators are told as well (the administrators in the team, or every administrator when it has none).
-- When a monitor of the shared infrastructure fails, the administrators of the teams it affects are told too: the teams with monitors that depend on it (`parent=`, directly or further up), or every team when none does. Each is reached at their own address through the channels chosen under **Notify via** in their contact entry, which must be linked to their login. This is sent right away, capped and logged, and not once the problem is acknowledged; they hear of the recovery too. **Settings › Teams** names administrators who cannot be reached.
+- When a monitor of the shared infrastructure fails, the administrators of the teams it affects are told too: the teams with monitors that depend on it (`parent=`, directly or further up), or every team when none does. Each is reached at their own address through the channels chosen under **Notify via** in their contact entry, which must be linked to their login. This is sent right away, capped and logged, and not once the problem is acknowledged; they hear of the recovery too. **Advanced › Teams** names administrators who cannot be reached.
 
 Releases before 2.6 used `POLICY` records. When the server starts, a policy that only lists channels (`chain=`, `mode=`) becomes the channels of the teams that used it: the `default` policy those of the admin team and of teams without a policy, and the channels of the `system` policy (or, without one, of `default`) get `system=yes`. `policy=system` on a monitor becomes `system-channel=yes`. The file is kept as `monitors.conf.before-teams` and the change is in the audit log. Policies with other options (`repeat=`, `escalate=`, …) stay and keep working for whatever names them; edit them in the file. In a cluster, upgrade the other machines before the master, because older releases do not read the new options.
 
@@ -439,8 +439,8 @@ Reading the audit log needs a registered installation; see [Registration and quo
 
 For a TV in the operations room: every monitor as a large hexagon, problems first and lit (critical ones pulse until someone acknowledges them), with the counts, a clock and the latest problems along the bottom. It is read-only and refreshes every 10 seconds; if no new data arrives for a minute, a red banner says so, so a frozen screen is never mistaken for a quiet one.
 
-- Signed in, open `/wall` (or **Settings › Appearance › Open the wall screen**).
-- For a TV that should not sign in, use **Create a link for a TV**. The link looks like `https://monitor.example.com/wall#token=uka_…`: it carries a read-only API token after the `#`, which browsers do not send to the server or in the Referer header. Anyone with the link can see monitor names and states, so treat it like a password; revoke it under **Settings › API tokens**.
+- Signed in, open `/wall` (or **Advanced › Appearance › Open the wall screen**).
+- For a TV that should not sign in, use **Create a link for a TV**. The link looks like `https://monitor.example.com/wall#token=uka_…`: it carries a read-only API token after the `#`, which browsers do not send to the server or in the Referer header. Anyone with the link can see monitor names and states, so treat it like a password; revoke it under **Advanced › API tokens**.
 
 The wall uses the active theme pack's colours (dark unless the pack is built on a light look).
 
@@ -448,11 +448,11 @@ The wall uses the active theme pack's colours (dark unless the pack is built on 
 
 `/summary` is one page for people who do not run the monitoring: whether everything is running right now, availability over 7, 30 or 90 days compared with the period before, the number of incidents, the average time to recover and the total downtime, daily availability as a chart, the services that need attention and the latest incidents. It is read-only, refreshes every minute and prints on A4.
 
-Open it signed in (**Settings › Appearance › Summary for managers**), or create a link there for someone who does not sign in; like the wall screen's, it carries a read-only API token after `#` and can be revoked under **Settings › API tokens**. Readers see only the monitors their account or token may see. The figures come from `GET /api/v1/reports/summary?range=7d|30d|90d`.
+Open it signed in (**Advanced › Appearance › Summary for managers**), or create a link there for someone who does not sign in; like the wall screen's, it carries a read-only API token after `#` and can be revoked under **Advanced › API tokens**. Readers see only the monitors their account or token may see. The figures come from `GET /api/v1/reports/summary?range=7d|30d|90d`.
 
 ## Theme packs
 
-A theme pack changes how the console looks: its colours and, on a registered installation, the product name and logo (white label). Manage packs under **Settings › Appearance**: upload, use, export to share with another installation, delete. The pack in use becomes everyone's default look; each person can still choose another theme at the bottom of the sidebar.
+A theme pack changes how the console looks: its colours and, on a registered installation, the product name and logo (white label). Manage packs under **Advanced › Appearance**: upload, use, export to share with another installation, delete. The pack in use becomes everyone's default look; each person can still choose another theme at the bottom of the sidebar.
 
 A pack is a zip file holding:
 
@@ -571,7 +571,7 @@ With a passphrase the archive is encrypted (argon2id, AES-256-GCM) and a restore
 
 ## API
 
-Everything the UI does goes through a REST API under `/api/v1`. Create a token under **Settings › API tokens** and send it as `Authorization: Bearer uk_…`; tokens are scoped to read, ack, write or admin.
+Everything the UI does goes through a REST API under `/api/v1`. Create a token under **Advanced › API tokens** and send it as `Authorization: Bearer uk_…`; tokens are scoped to read, ack, write or admin.
 
 - **Concurrent edits.** Every monitor, channel, policy, node and maintenance window the API returns carries an `etag`. Send it back as `If-Match` when changing or deleting the record: if someone changed that record in the meantime the request fails with `412` and code `record_changed`, and nothing is overwritten. Changes to other records never conflict. Without `If-Match` the last write wins.
 - **Safe retries.** A `POST` with an `Idempotency-Key` header (any unique string, at most 255 characters) is applied once; repeating it within `api.idempotency-ttl` (24 hours) returns the first answer with `Idempotent-Replayed: true`. Failed requests are not remembered, so they can be retried with the same key.

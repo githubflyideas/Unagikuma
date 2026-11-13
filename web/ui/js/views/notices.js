@@ -84,7 +84,12 @@ function PageNotices({ page, onChanged }) {
 // PageForm adds a status page (a STATUSPAGE record) for the monitors a
 // filter selects, or changes the title and the filter of one.
 function PageForm({ page, onDone }) {
-  const [f, setF] = useState(page ? { name: page.name, title: page.title, select: page.select || '' } : { name: 'status', title: '', select: 'group:public' });
+  const ov = useFetch(() => (page ? Promise.resolve(null) : get('/overview')), []);
+  const [f, setF] = useState(page ? { name: page.name, title: page.title, select: page.select || '' } : { name: 'status', title: null, select: 'group:public' });
+  // A new page starts with "<this host> Unagikuma notice board" as its
+  // title; it can be changed here at any time.
+  const suggested = t('ui.notice.page_title_default', { host: (ov.data && ov.data.instance) || 'Unagikuma' });
+  if (f.title === null && ov.data !== undefined && (ov.data || ov.error)) setF({ ...f, title: suggested });
   const [err, setErr] = useState(null);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async (e) => {
@@ -92,10 +97,10 @@ function PageForm({ page, onDone }) {
     setErr(null);
     try {
       if (page) {
-        await put('/status-pages/' + encodeURIComponent(page.name), { title: f.title.trim(), select: f.select.trim() });
+        await put('/status-pages/' + encodeURIComponent(page.name), { title: (f.title || '').trim(), select: f.select.trim() });
         toast(t('ui.saved'));
       } else {
-        const r = await post('/status-pages', { name: f.name.trim(), title: f.title.trim(), select: f.select.trim() });
+        const r = await post('/status-pages', { name: f.name.trim(), title: (f.title || '').trim(), select: f.select.trim() });
         toast(t('ui.notice.page_created', { url: r.url || '' }));
       }
       onDone();
@@ -103,7 +108,7 @@ function PageForm({ page, onDone }) {
   };
   return html`<form class="form" onSubmit=${save}>
       <div class="two">
-        <${Field} label=${t('ui.notice.page_title')}><input type="text" value=${f.title} onInput=${set('title')} required placeholder=${t('ui.notice.page_title_ph')} /><//>
+        <${Field} label=${t('ui.notice.page_title')} hint=${t('ui.notice.page_title_hint', { example: suggested })}><input type="text" value=${f.title || ''} onInput=${set('title')} required placeholder=${suggested} /><//>
         <${Field} label=${t('ui.name')}><input type="text" class="ltr" value=${f.name} onInput=${set('name')} required disabled=${!!page} pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}" /><//>
       </div>
       <${Field} label=${t('ui.notice.page_select')} hint=${t('ui.notice.page_select_hint')}><input type="text" class="ltr" value=${f.select} onInput=${set('select')} required /><//>

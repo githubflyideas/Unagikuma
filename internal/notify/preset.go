@@ -68,6 +68,10 @@ func init() {
 				panic(fmt.Sprintf("notify: preset %s: %v", p.Name, err))
 			}
 		}
+		// Text messages carry a site mark in front when one is set.
+		if p.Group == "sms" || p.Group == "whatsapp" {
+			p.Fields = append(p.Fields, prefixField)
+		}
 		presets[p.Name] = p
 	}
 }

@@ -533,3 +533,38 @@ func TestEveryPreset(t *testing.T) {
 		}
 	}
 }
+
+func TestPreviewTemplate(t *testing.T) {
+	title, body, err := PreviewTemplate(`{{.Icon}} {{.Name}}\n{{.Detail}}`, "zh", "host1")
+	if err != nil || !strings.Contains(title, "Example service") || !strings.Contains(body, "HTTP 503") {
+		t.Fatalf("%q %q %v", title, body, err)
+	}
+	if _, _, err := PreviewTemplate(`{{.Nope}}`, "en", ""); err == nil {
+		t.Fatal("unknown name accepted")
+	}
+	if title, _, err := PreviewTemplate("", "en", ""); err != nil || title == "" {
+		t.Fatalf("built-in text: %q %v", title, err)
+	}
+}
+
+// prefix= goes in front of every message of an SMS channel.
+func TestSMSPrefix(t *testing.T) {
+	cap := &capture{}
+	srv := cap.server(t)
+	o := map[string]string{"url": srv.URL + "/sms?to={{.Phone}}", "phones": "13800000000", "prefix": "【北京 host1】"}
+	if err := ValidateChannel("custom-sms", o); err != nil {
+		t.Fatal(err)
+	}
+	if a := (&Sender{}).Send(context.Background(), Channel{Name: "s", Kind: "custom-sms", Opts: o}, problem()); !a.OK {
+		t.Fatalf("%+v", a)
+	}
+	if _, body := cap.last(); !strings.Contains(string(body), `"message":"【北京 host1】 `) {
+		t.Fatalf("body %s", body)
+	}
+	if err := ValidateChannel("webhook", map[string]string{"preset": "plivo", "username": "u", "password": "p", "from": "1", "to": "2", "prefix": "[x]"}); err != nil {
+		t.Fatalf("sms preset refused prefix: %v", err)
+	}
+	if err := ValidateChannel("feishu", map[string]string{"url": "https://x", "prefix": "[x]"}); err == nil {
+		t.Fatal("prefix accepted on a chat channel")
+	}
+}

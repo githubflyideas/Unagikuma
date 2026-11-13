@@ -85,6 +85,16 @@ func escapeForJSON(d map[string]any) {
 // fails or renders nothing never costs the alert: the built-in text goes
 // out instead.
 func textOf(o map[string]string, m *Message) (title, body string) {
+	title, body = channelText(o, m)
+	// prefix= puts a fixed mark such as "[Beijing host1]" in front, so a
+	// text message says which site sent it.
+	if p := strings.TrimSpace(o["prefix"]); p != "" {
+		title = p + " " + title
+	}
+	return title, body
+}
+
+func channelText(o map[string]string, m *Message) (title, body string) {
 	title, body = Render(m)
 	tpl := templateLines(o["template"])
 	if tpl == "" {
@@ -248,4 +258,22 @@ func templateError(err error) string {
 		s = rest
 	}
 	return s
+}
+
+// PreviewTemplate is what a channel with this template= sends for an
+// example problem, for the form that edits it: the title and the body, or
+// why the template does not work. An empty template shows the built-in
+// text.
+func PreviewTemplate(tpl, lang, instance string) (title, body string, err error) {
+	m := sampleMessage(&Message{Lang: lang, Instance: instance})
+	if strings.TrimSpace(tpl) == "" {
+		title, body = Render(m)
+		return title, body, nil
+	}
+	o := map[string]string{"template": tpl}
+	if err := checkTemplate("template", templateLines(tpl), o); err != nil {
+		return "", "", err
+	}
+	title, body = textOf(o, m)
+	return title, body, nil
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/githubflyideas/unagikuma/internal/app"
 	"github.com/githubflyideas/unagikuma/internal/cluster"
+	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/i18n"
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
@@ -138,7 +139,7 @@ func (s *Server) clusterLeave(w http.ResponseWriter, r *http.Request) (any, erro
 
 // siteLocal shows this site's own configuration (never synced).
 func (s *Server) siteLocal(w http.ResponseWriter, r *http.Request) (any, error) {
-	return map[string]any{"text": s.app.SiteLocal()}, nil
+	return map[string]any{"text": s.app.SiteLocal(), "file": app.SiteLocalFile}, nil
 }
 
 // siteLocalSave replaces this site's own configuration.
@@ -149,12 +150,41 @@ func (s *Server) siteLocalSave(w http.ResponseWriter, r *http.Request) (any, err
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
-	diags, err := s.app.SetSiteLocal(req.Text, authOf(r).user)
+	text, diags, err := s.app.SetSiteLocal(req.Text, authOf(r).user)
 	if err != nil {
 		if diags != nil {
-			return map[string]any{"ok": false, "diagnostics": diags}, nil
+			return map[string]any{"ok": false, "text": text, "diagnostics": diags, "suggestions": recordSuggestions(text, diags)}, nil
 		}
 		return nil, err
 	}
-	return map[string]any{"ok": true}, nil
+	return map[string]any{"ok": true, "text": text}, nil
+}
+
+// suggestion is the full record for a line written the quick-add way.
+type suggestion struct {
+	Line int    `json:"line"`
+	From string `json:"from"`
+	Text string `json:"text"`
+}
+
+// recordSuggestions offers the full record for each line that is not a
+// record but reads as a quick-add line ("ping 8.8.8.4"), so a person who
+// typed the short form sees what to write instead.
+func recordSuggestions(text string, diags []config.Diagnostic) []suggestion {
+	lines := strings.Split(text, "\n")
+	used := map[string]bool{}
+	out := []suggestion{}
+	for _, d := range diags {
+		if d.Code != "syntax" || d.Pos.Line < 1 || d.Pos.Line > len(lines) || !strings.HasPrefix(d.Msg, "expected \"<name>") {
+			continue
+		}
+		line := strings.TrimSpace(lines[d.Pos.Line-1])
+		spec, err := quickRecord(line, used)
+		if err != nil {
+			continue
+		}
+		used[spec.Name] = true
+		out = append(out, suggestion{Line: d.Pos.Line, From: line, Text: spec.Render()})
+	}
+	return out
 }

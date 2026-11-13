@@ -44,7 +44,7 @@ export function Nodes({ embedded }) {
     </table></div></div>
     <p class="faint small ltr" style=${{ margin: 0 }}>${t('ui.node.fingerprint')}: <span class="mono">${d.fingerprint}</span></p>
     <${Diverged} />
-    <${SiteLocal} />
+    <${SiteLocal} single=${d.layout === 'single'} />
     ${editing && html`<${NodeEdit} n=${editing} onClose=${() => { setEditing(null); list.reload(); }} />`}
     ${joinCode && html`<${JoinCode} server=${d.server} onClose=${() => { setJoinCode(false); list.reload(); }} />`}
     ${joining && html`<${JoinForm} d=${d} onClose=${() => { setJoining(false); list.reload(); }} />`}
@@ -197,27 +197,56 @@ function Membership({ state, d, reload }) {
 }
 
 // SiteLocal edits this site's own configuration: checked and alerted on
-// here only, never synced, never overwritten by the master.
-function SiteLocal() {
+// here only, never synced, never overwritten by the master. On a single
+// machine it is the same as the main configuration, so it stays out of the
+// way there unless it already holds something.
+const SL_EXAMPLE = 'router IN PING 192.168.1.1\nprinter IN TCP 192.168.1.20:9100\nnas IN HTTP http://192.168.1.30:5000/';
+
+function SiteLocal({ single }) {
   const r = useFetch(() => get('/cluster/site-local'), []);
   const [text, setText] = useState(null);
-  const [diags, setDiags] = useState(null);
+  const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
-  const cur = text === null ? (r.data ? r.data.text : '') : text;
+  if (!r.data) return null;
+  if (single && !r.data.text && text === null) return null;
+  const cur = text === null ? r.data.text : text;
   const save = async () => {
     setBusy(true);
     try {
       const x = await put('/cluster/site-local', { text: cur });
-      if (x.ok) { toast(t('ui.sl.saved')); setDiags(null); r.reload(); } else setDiags(x.diagnostics || []);
+      if (x.text !== undefined && x.text !== cur) setText(x.text);
+      if (x.ok) { toast(t('ui.sl.saved')); setRes(null); setText(null); r.reload(); } else setRes(x);
     } catch (e) { toastError(e); }
     setBusy(false);
   };
-  return html`<div class="card"><div class="hd"><h2>${t('ui.sl.title')}</h2></div><div class="bd form">
+  const lines = cur.split('\n');
+  const replace = (list) => {
+    const next = [...lines];
+    for (const sg of list) if (next[sg.line - 1] !== undefined && next[sg.line - 1].trim() === sg.from) next[sg.line - 1] = sg.text;
+    setText(next.join('\n')); setRes(null);
+  };
+  const msg = (d) => d.code === 'syntax' && /^expected "<name>/.test(d.message || d.msg || '') ? t('ui.sl.err_record') : (d.message || d.msg);
+  const sugg = (res && res.suggestions) || [];
+  return html`<div class="card"><div class="hd"><h2>${t('ui.sl.title')}</h2><span class="tag mono ltr" title=${t('ui.sl.file_hint')}>${r.data.file}</span></div><div class="bd form">
     <p class="small muted" style=${{ margin: 0 }}>${t('ui.sl.hint')}</p>
+    <div class="small" style=${{ margin: 0 }}>
+      <div>${t('ui.sl.howto')}</div>
+      <pre class="mono ltr small" style=${{ margin: '6px 0 0' }}>${SL_EXAMPLE}</pre>
+      <div class="muted">${t('ui.sl.howto_more')}</div>
+    </div>
     <textarea class="ltr mono" rows="6" value=${cur} onInput=${(e) => setText(e.target.value)} aria-label=${t('ui.sl.title')}
-      placeholder=${'$FILE revision=1\nrouter IN PING 192.168.1.1'}></textarea>
-    ${diags && html`<ul class="small err-text">${diags.map(x => html`<li>${x.pos ? x.pos.line + ': ' : ''}${x.message || x.msg}</li>`)}</ul>`}
-    <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${busy || text === null} onClick=${save}>${t('ui.save')}</button></div>
+      placeholder=${SL_EXAMPLE}></textarea>
+    ${res && res.diagnostics && html`<ul class="small err-text">${res.diagnostics.map(d => html`<li>${d.pos && d.pos.line ? t('ui.sl.line', { n: d.pos.line }) + ' ' : ''}${msg(d)}</li>`)}</ul>`}
+    ${sugg.length > 0 && html`<div class="small">
+      <div>${t('ui.sl.suggest')}</div>
+      <ul style=${{ margin: '4px 0 0' }}>${sugg.map(sg => html`<li class="row" style=${{ gap: '8px' }}>
+        <span>${t('ui.sl.line', { n: sg.line })}</span><code class="ltr">${sg.text}</code>
+        <button class="btn sm" onClick=${() => replace([sg])}>${t('ui.sl.replace')}</button></li>`)}</ul>
+      ${sugg.length > 1 && html`<button class="btn" style=${{ marginTop: '6px' }} onClick=${() => replace(sugg)}>${t('ui.sl.replace_all')}</button>`}
+    </div>`}
+    <div class="row">
+      ${!cur.trim() && html`<button class="btn" onClick=${() => setText(SL_EXAMPLE + '\n')}>${t('ui.sl.insert_example')}</button>`}
+      <div class="spacer"></div><button class="btn primary" disabled=${busy || text === null} onClick=${save}>${t('ui.save')}</button></div>
   </div></div>`;
 }
 
