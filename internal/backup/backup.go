@@ -46,7 +46,6 @@ const (
 	legacyConfigEntry = "monitors.bind"
 )
 
-
 // DB writes a consistent copy of a database ("core" or "history").
 type DB func(ctx context.Context, which string, w io.Writer) error
 
