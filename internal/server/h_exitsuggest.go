@@ -43,26 +43,58 @@ import (
 //   - nothing is saved: the administrator picks one and saves it as the
 //     tunable it already is.
 
-type exitCountry struct {
-	Code  string   `json:"code"`
-	Addrs []string `json:"addrs"`
-	Label string   `json:"label"`
+// exitCity is a city whose nearby public resolvers can be measured. The
+// list names cities only; Country is used to match automatic detection and
+// is never shown.
+type exitCity struct {
+	ID      string   `json:"id"`
+	Country string   `json:"-"`
+	Addrs   []string `json:"addrs"`
+	Label   string   `json:"label"`
+	Anycast bool     `json:"anycast,omitempty"` // served from the nearest site of a global service
 }
 
-// exitCountries are well-known public resolvers by where they are local.
-var exitCountries = []exitCountry{
-	{"CN", []string{"114.114.114.114", "223.5.5.5", "119.29.29.29"}, "114DNS · AliDNS · DNSPod"},
-	{"HK", []string{"203.80.96.10"}, "HKBN"},
-	{"TW", []string{"101.101.101.101", "168.95.1.1"}, "Quad101 · HiNet"},
-	{"KR", []string{"168.126.63.1", "164.124.101.2"}, "KT · LG U+"},
-	{"RU", []string{"77.88.8.8", "77.88.8.1"}, "Yandex"},
-	{"US", []string{"8.8.8.8", "208.67.222.222"}, "Google · OpenDNS"},
-	{"DE", []string{"84.200.69.80", "84.200.70.40"}, "DNS.WATCH"},
-	{"CH", []string{"9.9.9.9", "149.112.112.112"}, "Quad9"},
-	{"FR", []string{"80.67.169.12", "80.67.169.40"}, "FDN"},
-	{"GB", []string{"1.1.1.1", "8.8.8.8"}, "Cloudflare · Google (anycast)"},
-	{"JP", []string{"1.1.1.1", "8.8.8.8"}, "Cloudflare · Google (anycast)"},
-	{"ANY", []string{"1.1.1.1", "1.0.0.1", "94.140.14.14"}, "Cloudflare · AdGuard (anycast)"},
+// anycastDNS answer from the nearest of their many sites.
+var anycastDNS = []string{"1.1.1.1", "8.8.8.8", "9.9.9.9"}
+
+const anycastLabel = "Cloudflare · Google · Quad9"
+
+// exitCities are well-known public resolvers by the city they are run
+// from, or anycast where a city has none of its own that answers anyone.
+var exitCities = []exitCity{
+	{"beijing", "CN", []string{"202.106.0.20", "219.141.136.10"}, "China Unicom · China Telecom", false},
+	{"shanghai", "CN", []string{"202.96.209.133", "210.22.70.3"}, "China Telecom · China Unicom", false},
+	{"guangzhou", "CN", []string{"202.96.128.86", "210.21.196.6"}, "China Telecom · China Unicom", false},
+	{"shenzhen", "CN", []string{"119.29.29.29", "202.96.134.33"}, "DNSPod · China Telecom", false},
+	{"hangzhou", "CN", []string{"223.5.5.5", "223.6.6.6"}, "AliDNS", false},
+	{"nanjing", "CN", []string{"114.114.114.114", "114.114.115.115"}, "114DNS", false},
+	{"chengdu", "CN", []string{"61.139.2.69", "119.6.6.6"}, "China Telecom · China Unicom", false},
+	{"hongkong", "HK", []string{"203.80.96.10", "1.1.1.1"}, "HKBN · Cloudflare", false},
+	{"taipei", "TW", []string{"168.95.1.1", "101.101.101.101"}, "HiNet · Quad101", false},
+	{"seoul", "KR", []string{"168.126.63.1", "164.124.101.2", "210.220.163.82"}, "KT · LG U+ · SK", false},
+	{"tokyo", "JP", anycastDNS, anycastLabel, true},
+	{"singapore", "SG", anycastDNS, anycastLabel, true},
+	{"jakarta", "ID", anycastDNS, anycastLabel, true},
+	{"hochiminh", "VN", anycastDNS, anycastLabel, true},
+	{"mumbai", "IN", anycastDNS, anycastLabel, true},
+	{"dhaka", "BD", anycastDNS, anycastLabel, true},
+	{"karachi", "PK", anycastDNS, anycastLabel, true},
+	{"dubai", "AE", anycastDNS, anycastLabel, true},
+	{"riyadh", "SA", anycastDNS, anycastLabel, true},
+	{"cairo", "EG", anycastDNS, anycastLabel, true},
+	{"moscow", "RU", []string{"77.88.8.8", "77.88.8.1"}, "Yandex", false},
+	{"frankfurt", "DE", []string{"84.200.69.80", "84.200.70.40"}, "DNS.WATCH", false},
+	{"zurich", "CH", []string{"9.9.9.9", "149.112.112.112"}, "Quad9", false},
+	{"paris", "FR", []string{"80.67.169.12", "80.67.169.40"}, "FDN", false},
+	{"london", "GB", anycastDNS, anycastLabel, true},
+	{"madrid", "ES", anycastDNS, anycastLabel, true},
+	{"lisbon", "PT", anycastDNS, anycastLabel, true},
+	{"newyork", "US", []string{"8.8.8.8", "208.67.222.222"}, "Google · OpenDNS", false},
+	{"losangeles", "US", []string{"8.8.8.8", "208.67.222.222"}, "Google · OpenDNS", false},
+	{"mexicocity", "MX", anycastDNS, anycastLabel, true},
+	{"saopaulo", "BR", anycastDNS, anycastLabel, true},
+	{"buenosaires", "AR", anycastDNS, anycastLabel, true},
+	{"sydney", "AU", anycastDNS, anycastLabel, true},
 }
 
 type exitMeasure struct {
@@ -88,14 +120,14 @@ var (
 
 const exitMinGap = 20 * time.Second
 
-func (s *Server) exitCountries(w http.ResponseWriter, r *http.Request) (any, error) {
-	return exitCountries, nil
+func (s *Server) exitCities(w http.ResponseWriter, r *http.Request) (any, error) {
+	return exitCities, nil
 }
 
 func (s *Server) exitSuggest(w http.ResponseWriter, r *http.Request) (any, error) {
 	var req struct {
-		Mode    string `json:"mode"` // country | auto
-		Country string `json:"country"`
+		Mode string `json:"mode"` // city | auto
+		City string `json:"city"`
 	}
 	if r.ContentLength != 0 {
 		if err := decodeJSON(r, 4096, &req); err != nil { // two short fields
@@ -103,17 +135,17 @@ func (s *Server) exitSuggest(w http.ResponseWriter, r *http.Request) (any, error
 		}
 	}
 	key := "auto"
-	var country *exitCountry
-	if req.Mode == "country" {
-		for i := range exitCountries {
-			if exitCountries[i].Code == req.Country {
-				country = &exitCountries[i]
+	var city *exitCity
+	if req.Mode == "city" {
+		for i := range exitCities {
+			if exitCities[i].ID == req.City {
+				city = &exitCities[i]
 			}
 		}
-		if country == nil {
-			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "choose one of the listed countries")
+		if city == nil {
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "choose one of the listed cities")
 		}
-		key = "country:" + country.Code
+		key = "city:" + city.ID
 	}
 	exitMu.Lock()
 	defer exitMu.Unlock()
@@ -123,9 +155,9 @@ func (s *Server) exitSuggest(w http.ResponseWriter, r *http.Request) (any, error
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 	defer cancel()
 	var out map[string]any
-	if country != nil {
-		res := measureAll(ctx, targetsOf(*country))
-		out = map[string]any{"mode": "country", "country": country.Code, "candidates": res, "suggested": best(res, 2)}
+	if city != nil {
+		res := measureAll(ctx, targetsOf(*city))
+		out = map[string]any{"mode": "city", "city": city.ID, "candidates": res, "suggested": best(res, 2)}
 	} else {
 		out = autoSuggest(ctx)
 	}
@@ -134,10 +166,10 @@ func (s *Server) exitSuggest(w http.ResponseWriter, r *http.Request) (any, error
 	return out, nil
 }
 
-func targetsOf(c exitCountry) []exitMeasure {
+func targetsOf(c exitCity) []exitMeasure {
 	var out []exitMeasure
 	for _, a := range c.Addrs {
-		out = append(out, exitMeasure{Addr: a, Label: c.Label, Source: c.Code})
+		out = append(out, exitMeasure{Addr: a, Label: c.Label, Source: c.ID})
 	}
 	return out
 }
@@ -157,16 +189,25 @@ func autoSuggest(ctx context.Context) map[string]any {
 		hops, traceErr = exitTrace(ctx, netip.MustParseAddr("1.1.1.1"), 12, 900*time.Millisecond)
 	}()
 	wg.Wait()
+	// The resolvers of the cities in this host's country, each address
+	// once; anycast ones where the country has none listed.
 	var cands []exitMeasure
-	home := "ANY"
-	for _, c := range exitCountries {
-		if c.Code == cc {
-			home = cc
-			cands = append(cands, targetsOf(c)...)
+	seen := map[string]bool{}
+	for _, c := range exitCities {
+		if c.Country != cc {
+			continue
+		}
+		for _, m := range targetsOf(c) {
+			if !seen[m.Addr] {
+				seen[m.Addr] = true
+				cands = append(cands, m)
+			}
 		}
 	}
-	if home == "ANY" {
-		cands = append(cands, targetsOf(exitCountries[len(exitCountries)-1])...)
+	if len(cands) == 0 {
+		for _, a := range anycastDNS {
+			cands = append(cands, exitMeasure{Addr: a, Label: anycastLabel, Source: "anycast"})
+		}
 	}
 	// The first public routers on the way out: the provider's edge, as near
 	// as an internet address gets.
@@ -180,11 +221,11 @@ func autoSuggest(ctx context.Context) map[string]any {
 		edge++
 	}
 	res := measureAll(ctx, cands)
-	// One from each source: the country's best resolver and the edge.
+	// One of each kind: the best nearby resolver and the edge.
 	sug := []string{}
-	for _, src := range []string{home, "route"} {
+	for _, route := range []bool{false, true} {
 		for _, m := range res {
-			if m.OK && m.Source == src {
+			if m.OK && (m.Source == "route") == route {
 				sug = append(sug, m.Addr)
 				break
 			}
