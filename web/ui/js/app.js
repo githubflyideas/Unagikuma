@@ -30,6 +30,15 @@ import { PaletteHost, openPalette } from './views/palette.js';
 // choice ("brand") and the default for anyone who has not picked one.
 const TONES = ['mist', 'slate', 'graphite', 'sky', 'violet'];
 const OLD_TONES = { light: 'mist', paper: 'mist', dark: 'graphite', ink: 'graphite' };
+// What each theme looks like, for its dot in the sidebar.
+const SWATCH = {
+  auto: 'linear-gradient(135deg, #ffffff 50%, #050608 50%)',
+  mist: 'linear-gradient(135deg, #c2410c, #be185d 55%, #5b21b6)',
+  slate: 'linear-gradient(135deg, #313a46 50%, #46c69a 50%)',
+  graphite: 'linear-gradient(135deg, #000000 50%, #a78bfa 50%)',
+  sky: 'linear-gradient(135deg, #f9fcff 50%, #2a78c8 50%)',
+  violet: 'linear-gradient(135deg, #f3e9d2 50%, #1d4e9e 50%)',
+};
 function toneOf(v) {
   v = OLD_TONES[v] || v;
   if (v === 'brand') return brand().id ? 'brand' : 'graphite';
@@ -218,6 +227,11 @@ function Shell({ user, onLogout, onLang }) {
     <aside class=${'side' + (open ? ' open' : '')}>
       <a class="brand" href="#/"><${Logo} /><div>${product()}
         <div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div></div></a>
+      <div class="themes" role="group" aria-label=${t('ui.theme')}>
+        ${['auto', ...(brand().id ? ['brand'] : []), ...TONES].map((v) => html`<button type="button" aria-pressed=${String(theme === v)}
+          title=${v === 'brand' ? brand().name : t('ui.theme.' + v)} aria-label=${v === 'brand' ? brand().name : t('ui.theme.' + v)}
+          style=${{ background: SWATCH[v] || 'var(--accent)' }} onClick=${() => changeTheme(v)}></button>`)}
+      </div>
       <nav class="nav">
         ${nav.map(([path, key, ico]) => html`<a href=${href(path)} class=${first === path ? 'on' : ''}>
           <span class="ico" title=${mini ? t(key) : ''}>${ico}</span><span class="lbl">${t(key)}</span>
@@ -229,11 +243,6 @@ function Shell({ user, onLogout, onLang }) {
       </nav>
       <div class="foot">
         <${LangSelect} onChange=${onLang} />
-        <select aria-label=${t('ui.theme')} value=${theme} onChange=${(e) => changeTheme(e.target.value)}>
-          <option value="auto">${t('ui.theme.auto')}</option>
-          ${brand().id && html`<option value="brand">${brand().name}</option>`}
-          ${TONES.map((v) => html`<option value=${v}>${t('ui.theme.' + v)}</option>`)}
-        </select>
         <div class="row"><span class="ellipsis">${user}</span><div class="spacer"></div><button class="btn sm ghost" onClick=${onLogout}>${t('ui.logout')}</button></div>
         ${ov.data && ov.data.instance && html`<div class="host ellipsis" title=${ov.data.instance}>${ov.data.instance}</div>`}
       </div>
