@@ -6,12 +6,23 @@
 - A webhook body copied from Uptime Kuma works as it is: Liquid tags (`{% if %}`, `{% elsif %}`, `{% else %}`, `{% endif %}`, `{% unless %}`, with `==`, `!=`, `>`, `<`, `and`, `or`) and Kuma's names — `{{ monitorJSON.name }}`, `type`, `hostname`, `port`, `url`; `{{ heartbeatJSON.status }}` (1 up, 0 down), `msg`, `time`, `localDateTime`, `timezone`; `{{ msg }}`, `{{ name }}`, `{{ status }}`, `{{ hostnameOrURL }}`. Values are escaped for the JSON body. The webhook form says so.
 - Importing from Uptime Kuma carries a webhook's custom body over instead of dropping it.
 - The custom webhook form fills in the request body of a common API — WeCom app message (touser, agentid), WeCom, DingTalk and Feishu robots, Slack/Mattermost/Rocket.Chat, Discord, Telegram, a generic JSON with every field, or the Uptime Kuma way — so only the text needs changing.
+- Change notice templates: each notice says when it is sent and shows its current look; editing inserts names with buttons and previews an example change with and without the optional parts. A line whose names are all empty is left out, so templates need no `{{if}}` (templates with blocks still work). `POST /api/v1/changes/templates/preview`.
+- A monitor's advanced options are picked from the options of its check type, each with its name, what it does and an example value; Custom still takes any option.
+- The internet gateway is chosen by city (33 cities, named in every language) instead of by country or region. Each city lists the resolvers run there, or anycast ones marked as such; automatic detection measures the resolvers of every city of this host's country.
+- Channel kinds can be searched and sorted by how common they are (the default), by name or by type.
 - Every channel form shows the request the channel sends for an example problem, in the receiving service's own format — address, parameters, headers and body, built by the same code as a real alert, with credentials shown as `***` — and links to the service's API documentation (built-in kinds and 27 presets). Nothing is sent. `POST /api/v1/channels/request-preview`.
 
 **Changed**
+- Menus: Alerting is Alerts & notifications and holds the change notices; Notices is Status pages; Config & history is Config & import; Run mode is last. Old addresses still open the moved pages.
+- The sidebar and the content stay together as one block in the middle of a wide window.
+- The monitor list's bulk actions (pause, resume, check, move, delete) are one menu, so the toolbar keeps to one line.
+- Channel kinds are grouped by type only (chat, push, SMS, calls, e-mail, WhatsApp, incident, automation, custom); the regional groups are gone, and built-in kinds have names in every language.
+- Themes: Bright (white panels, a coloured sidebar, warm orange, round shapes) and Modern (black and white, thin lines, square corners, a violet accent) are new designs; themes are picked with dots under the product name.
+- The team form says what the name, the display name and the members (logins, with their role) are. The first steps open the administrators' team to choose its channels, or ask for a channel first.
+- The users list shows each login's contact, and the contact list each contact's login. A phone number of an odd length is pointed out (saving is still allowed).
 - A name of the wrong form (a channel, team or monitor name, an @name) is answered with what the field takes, in the console's language, instead of the browser's "Please match the requested format". The channel form gives an example name and says what the name is for.
 
-## v2.6.9 — unreleased
+## v2.6.9 — 2026-11-13
 
 **Added**
 - Custom SMS and voice gateways (`custom-sms`, `custom-voice`): an operator's own HTTP interface, one request per number, with `{{.Phone}}` and the message names in the address, headers and body. They follow the contact directory like the provider channels. The generic webhook is shown as a custom webhook.
