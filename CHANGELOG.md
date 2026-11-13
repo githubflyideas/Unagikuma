@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.6.9 — unreleased
+## v2.6.9 — 2026-11-13
 
 **Added**
 - Custom SMS and voice gateways (`custom-sms`, `custom-voice`): an operator's own HTTP interface, one request per number, with `{{.Phone}}` and the message names in the address, headers and body. They follow the contact directory like the provider channels. The generic webhook is shown as a custom webhook.
