@@ -1816,8 +1816,6 @@
 "ui.mon.all_regions": "All regions",
 "ui.mon.all_tags": "All tags",
 "ui.mon.move": "Move",
-"ui.mon.bulk": "Bulk actions (select monitors first)",
-"ui.mon.bulk_n": "Bulk actions ({n} selected)",
 "ui.mon.move_title": "Move {n} monitors",
 "ui.mon.moved_n": "Monitors moved: {n}",
 "ui.mon.move_keep": "Keep as is",

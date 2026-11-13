@@ -1807,8 +1807,6 @@
 "ui.mon.all_regions": "すべてのリージョン",
 "ui.mon.all_tags": "すべてのタグ",
 "ui.mon.move": "移動",
-"ui.mon.bulk": "一括操作（先に監視を選択）",
-"ui.mon.bulk_n": "一括操作（{n} 件選択）",
 "ui.mon.move_title": "{n} 件の監視項目を移動",
 "ui.mon.moved_n": "移動した監視項目: {n}",
 "ui.mon.move_keep": "変更しない",

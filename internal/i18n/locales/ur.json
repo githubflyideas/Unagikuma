@@ -1816,8 +1816,6 @@
 "ui.mon.all_regions": "تمام علاقے",
 "ui.mon.all_tags": "تمام ٹیگز",
 "ui.mon.move": "منتقل کریں",
-"ui.mon.bulk": "اجتماعی کارروائی (پہلے مانیٹر منتخب کریں)",
-"ui.mon.bulk_n": "اجتماعی کارروائی ({n} منتخب)",
 "ui.mon.move_title": "{n} مانیٹر منتقل کریں",
 "ui.mon.moved_n": "منتقل شدہ مانیٹرز: {n}",
 "ui.mon.move_keep": "جیسا ہے ویسا",

@@ -1816,8 +1816,6 @@
 "ui.mon.all_regions": "Toutes les régions",
 "ui.mon.all_tags": "Toutes les étiquettes",
 "ui.mon.move": "Déplacer",
-"ui.mon.bulk": "Actions groupées (sélectionnez d’abord)",
-"ui.mon.bulk_n": "Actions groupées ({n} sélectionnés)",
 "ui.mon.move_title": "Déplacer {n} moniteurs",
 "ui.mon.moved_n": "Moniteurs déplacés : {n}",
 "ui.mon.move_keep": "Inchangé",

@@ -1852,8 +1852,6 @@
 "ui.mon.all_regions": "كل المناطق",
 "ui.mon.all_tags": "كل الوسوم",
 "ui.mon.move": "نقل",
-"ui.mon.bulk": "إجراءات جماعية (اختر المراقبات أولًا)",
-"ui.mon.bulk_n": "إجراءات جماعية ({n} محددة)",
 "ui.mon.move_title": "نقل {n} مراقبات",
 "ui.mon.moved_n": "المراقبات المنقولة: {n}",
 "ui.mon.move_keep": "كما هو",

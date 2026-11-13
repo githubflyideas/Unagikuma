@@ -1816,8 +1816,6 @@
 "ui.mon.all_regions": "Todas las regiones",
 "ui.mon.all_tags": "Todas las etiquetas",
 "ui.mon.move": "Mover",
-"ui.mon.bulk": "Acciones en lote (seleccione primero)",
-"ui.mon.bulk_n": "Acciones en lote ({n} seleccionados)",
 "ui.mon.move_title": "Mover {n} monitores",
 "ui.mon.moved_n": "Monitores movidos: {n}",
 "ui.mon.move_keep": "Sin cambios",

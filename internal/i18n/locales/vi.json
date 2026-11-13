@@ -1807,8 +1807,6 @@
 "ui.mon.all_regions": "Mọi khu vực",
 "ui.mon.all_tags": "Mọi thẻ",
 "ui.mon.move": "Di chuyển",
-"ui.mon.bulk": "Thao tác hàng loạt (chọn giám sát trước)",
-"ui.mon.bulk_n": "Thao tác hàng loạt (đã chọn {n})",
 "ui.mon.move_title": "Di chuyển {n} giám sát",
 "ui.mon.moved_n": "Đã di chuyển giám sát: {n}",
 "ui.mon.move_keep": "Giữ nguyên",

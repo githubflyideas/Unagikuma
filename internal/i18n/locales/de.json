@@ -1816,8 +1816,6 @@
 "ui.mon.all_regions": "Alle Regionen",
 "ui.mon.all_tags": "Alle Tags",
 "ui.mon.move": "Verschieben",
-"ui.mon.bulk": "Sammelaktionen (zuerst Monitore wählen)",
-"ui.mon.bulk_n": "Sammelaktionen ({n} gewählt)",
 "ui.mon.move_title": "{n} Monitore verschieben",
 "ui.mon.moved_n": "Verschobene Monitore: {n}",
 "ui.mon.move_keep": "Unverändert",

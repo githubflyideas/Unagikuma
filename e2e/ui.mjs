@@ -90,8 +90,7 @@ await step('ticked monitors are deleted together', async () => {
   const names = (await api('/monitors')).items.filter((m) => /^127\.0\.0\.1:[23]$/.test(m.target)).map((m) => m.name);
   await page.goto(base + '/#/monitors?q=' + encodeURIComponent('127.0.0.1:'));
   for (const n of names) await page.check(`tr:has(a.name[href="#/monitors/${encodeURIComponent(n)}"]) td.sel input`);
-  await until('the bulk menu counts both', async () => /2/.test(await page.textContent('select.bulk option[value=""]')));
-  await page.selectOption('select.bulk', 'delete');
+  await page.click('button.danger:has-text("Delete (2)")');
   await page.click('.modal .btn.danger');
   await until('both monitors deleted', async () => !(await api('/monitors')).items.some((m) => names.includes(m.name)));
   if (!(await api('/monitors')).items.some((m) => m.target === '127.0.0.1:1')) throw new Error('an unticked monitor was deleted');

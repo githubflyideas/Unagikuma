@@ -15,7 +15,7 @@
 **Changed**
 - Menus: Alerting is Alerts & notifications and holds the change notices; Notices is Status pages; Config & history is Config & import; Run mode is last. Old addresses still open the moved pages.
 - The sidebar and the content stay together as one block in the middle of a wide window.
-- The monitor list's bulk actions (pause, resume, check, move, delete) are one menu, so the toolbar keeps to one line.
+- The monitor list's actions on ticked monitors (pause, resume, check, move, delete) sit on the filter row, so the top toolbar keeps to one line.
 - Certificate and domain expiry moved from the monitor toolbar to a tab under **Problems** (`#/problems/expiry`); the old address still opens it.
 - Channel kinds are grouped by type only (chat, push, SMS, calls, e-mail, WhatsApp, incident, automation, custom); the regional groups are gone, and built-in kinds have names in every language.
 - Themes: Bright (white panels, a coloured sidebar, warm orange, round shapes) and Modern (black and white, thin lines, square corners, a violet accent) are new designs; themes are picked with dots under the product name.

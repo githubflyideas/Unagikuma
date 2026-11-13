@@ -1807,8 +1807,6 @@
 "ui.mon.all_regions": "所有区域",
 "ui.mon.all_tags": "所有标签",
 "ui.mon.move": "移动",
-"ui.mon.bulk": "批量操作（先勾选监控）",
-"ui.mon.bulk_n": "批量操作（已选 {n} 个）",
 "ui.mon.move_title": "移动 {n} 个监控项",
 "ui.mon.moved_n": "已移动监控项：{n}",
 "ui.mon.move_keep": "保持不变",

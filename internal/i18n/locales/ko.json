@@ -1807,8 +1807,6 @@
 "ui.mon.all_regions": "모든 리전",
 "ui.mon.all_tags": "모든 태그",
 "ui.mon.move": "이동",
-"ui.mon.bulk": "일괄 작업(먼저 모니터 선택)",
-"ui.mon.bulk_n": "일괄 작업({n}개 선택)",
 "ui.mon.move_title": "모니터 {n}개 이동",
 "ui.mon.moved_n": "이동한 모니터: {n}",
 "ui.mon.move_keep": "그대로 유지",

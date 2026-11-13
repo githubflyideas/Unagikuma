@@ -1807,8 +1807,6 @@
 "ui.mon.all_regions": "Semua wilayah",
 "ui.mon.all_tags": "Semua tag",
 "ui.mon.move": "Pindahkan",
-"ui.mon.bulk": "Aksi massal (pilih monitor dulu)",
-"ui.mon.bulk_n": "Aksi massal ({n} dipilih)",
 "ui.mon.move_title": "Pindahkan {n} monitor",
 "ui.mon.moved_n": "Monitor dipindahkan: {n}",
 "ui.mon.move_keep": "Biarkan",

@@ -158,15 +158,6 @@ export function Monitors({ query }) {
       <div class="spacer"></div>
       <button class="btn" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
       <a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a>
-      <select class="bulk" value="" aria-label=${t('ui.mon.bulk')} title=${picked.length ? '' : t('ui.mon.select_first')}
-        onChange=${(e) => { const a = e.target.value; e.target.value = ''; ({ pause: () => pauseAll(true), resume: () => pauseAll(false), check: checkNow, move: () => setMoving({ team: '', region: '' }), delete: remove })[a]?.(); }}>
-        <option value="">${picked.length ? t('ui.mon.bulk_n', { n: fmtNum(picked.length) }) : t('ui.mon.bulk')}</option>
-        <option value="pause" disabled=${picked.length === nPaused}>${t('ui.mon.pause')}${picked.length > nPaused ? ' (' + fmtNum(picked.length - nPaused) + ')' : ''}</option>
-        <option value="resume" disabled=${!nPaused}>${t('ui.mon.resume')}${nPaused ? ' (' + fmtNum(nPaused) + ')' : ''}</option>
-        <option value="check" disabled=${!picked.length}>${t('ui.mon.check_all')}</option>
-        ${me.role === 'admin' && html`<option value="move" disabled=${!picked.length}>${t('ui.mon.move')}</option>`}
-        <option value="delete" disabled=${!picked.length}>${t('ui.delete')}</option>
-      </select>
     </div>
     <div class="row filters">
       ${teams.data && teams.data.items.length > 1 && html`<select value=${termOf('team')} onChange=${(e) => setTerm('team', e.target.value)} aria-label=${t('ui.team.field')}>
@@ -178,6 +169,12 @@ export function Monitors({ query }) {
       ${tagKeys.length > 0 && html`<select value=${termOf('tag')} onChange=${(e) => setTerm('tag', e.target.value)} aria-label=${t('ui.tags')}>
         <option value="">${t('ui.mon.all_tags')}</option>
         ${tagKeys.map(k => html`<option value=${k.toLowerCase()}>${k}</option>`)}</select>`}
+      <div class="spacer"></div>
+      <button class="btn" onClick=${() => pauseAll(true)} disabled=${picked.length === nPaused} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.pause')}${picked.length > nPaused ? ' (' + fmtNum(picked.length - nPaused) + ')' : ''}</button>
+      <button class="btn" onClick=${() => pauseAll(false)} disabled=${!nPaused} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.resume')}${nPaused ? ' (' + fmtNum(nPaused) + ')' : ''}</button>
+      <button class="btn" onClick=${checkNow} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.check_all')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
+      ${me.role === 'admin' && html`<button class="btn" onClick=${() => setMoving({ team: '', region: '' })} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.move')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>`}
+      <button class="btn danger" onClick=${remove} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.delete')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
     </div>
     ${moving && html`<${Modal} title=${tn('ui.mon.move_title', picked.length)} onClose=${() => setMoving(null)}>
       <form class="form" onSubmit=${move}>

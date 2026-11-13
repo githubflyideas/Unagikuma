@@ -794,7 +794,6 @@ body.summarypage { background: var(--bg); }
 .req-preview pre { margin: 8px 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
 
 /* Bulk actions on the selected monitors, in one menu. */
-select.bulk { width: auto; font-weight: 600; }
 
 /* Channel kind menu: search and sort above the list. */
 .kind-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }

@@ -1816,8 +1816,6 @@
 "ui.mon.all_regions": "সব অঞ্চল",
 "ui.mon.all_tags": "সব ট্যাগ",
 "ui.mon.move": "সরান",
-"ui.mon.bulk": "একসাথে কাজ (আগে মনিটর বাছুন)",
-"ui.mon.bulk_n": "একসাথে কাজ ({n}টি বাছাই)",
 "ui.mon.move_title": "{n}টি মনিটর সরান",
 "ui.mon.moved_n": "সরানো মনিটর: {n}",
 "ui.mon.move_keep": "যেমন আছে",
