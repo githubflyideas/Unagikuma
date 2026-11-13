@@ -4,7 +4,7 @@ import { t, tn, dur, fmtTime, currentLang, langList } from '../i18n.js';
 import { get, post, put, del, setCSRF, getCSRF, me } from '../api.js';
 import { Nodes } from './nodes.js';
 import { Appearance } from './appearance.js';
-import { ChannelList } from './alerts.js';
+import { ChannelList, DELIVERY_KEYS } from './alerts.js';
 import { IssueDot } from './contacts.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, regionTitle, msText } from '../ui.js';
 
@@ -148,7 +148,7 @@ function Tunables() {
   const rows = useMemo(() => {
     if (!list.data) return [];
     const q = filter.toLowerCase();
-    return list.data.filter(x => (!onlyChanged || x.overridden) && (!q || x.key.includes(q) || x.desc.toLowerCase().includes(q) || x.desc_zh.includes(q)));
+    return list.data.filter(x => !DELIVERY_KEYS.includes(x.key) && (!onlyChanged || x.overridden) && (!q || x.key.includes(q) || x.desc.toLowerCase().includes(q) || x.desc_zh.includes(q)));
   }, [list.data, filter, onlyChanged]);
   if (!list.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
   const pending = Object.keys(edits).length + unset.size;

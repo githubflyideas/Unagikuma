@@ -2,7 +2,7 @@
 // their channels (Settings > Teams).
 import { html, useState, useEffect, useRef } from '../lib.js';
 import { t, has, currentLang } from '../i18n.js';
-import { get, post, del, put, ifMatch } from '../api.js';
+import { get, post, del, put, ifMatch, me } from '../api.js';
 import { ContactsTab, IssueDot, NewAddresses, addressKey } from './contacts.js';
 import { ChangesTab } from './changes.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle } from '../ui.js';
@@ -350,6 +350,7 @@ function ChannelsTab() {
   if (!list.data || !kinds.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.ch.intro')}</p><button class="btn primary" onClick=${() => setEdit({})}>${t('ui.ch.add')}</button></div>
+    <${DeliveryRules} />
     <div class="card"><div class="bd flush tbl-wrap">
       ${!list.data.length ? html`<${Empty} title=${t('ui.ch.none')}>${t('ui.ch.none_hint')}<//>` : html`<table class="tbl">
         <thead><tr><th>${t('ui.name')}</th><th>${t('ui.ch.kind')}</th><th>${t('ui.ch.teams')}</th><th></th></tr></thead>
@@ -371,6 +372,55 @@ function ChannelsTab() {
 
 // ChannelList edits an ordered list of channels: a team's primary channel
 // first, then its backups.
+// DELIVERY_KEYS are the settings that govern how every channel delivers:
+// timeout, retries, waits and the fallback to the next channel. They are
+// tunables, edited here next to the channels they apply to.
+export const DELIVERY_KEYS = ['notify.channel-timeout', 'notify.channel-retries', 'notify.retry-backoff',
+  'notify.retry-after-max', 'notify.failed-retry', 'notify.channel-rate'];
+
+function DeliveryRules() {
+  const tun = useFetch(() => get('/tunables'), []);
+  const [open, setOpen] = useState(false);
+  const [vals, setVals] = useState({});
+  const [busy, setBusy] = useState(false);
+  if (!tun.data) return null;
+  const defs = DELIVERY_KEYS.map(k => tun.data.find(x => x.key === k)).filter(Boolean);
+  const zh = currentLang() === 'zh';
+  const summary = defs.map(d => t('ui.dr.short.' + d.key.replace('notify.', '')) + ' ' + d.value).join(' · ');
+  const start = () => { setVals(Object.fromEntries(defs.map(d => [d.key, d.overridden ? d.value : '']))); setOpen(true); };
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const set = {}, unset = [];
+      for (const d of defs) {
+        const v = (vals[d.key] || '').trim();
+        if (!v || v === d.default) { if (d.overridden) unset.push(d.key); } else if (v !== d.value) set[d.key] = v;
+      }
+      if (Object.keys(set).length || unset.length) await put('/tunables', { set, unset });
+      toast(t('ui.saved'));
+      setOpen(false);
+      tun.reload();
+    } catch (e2) { toastError(e2); }
+    setBusy(false);
+  };
+  return html`<div class="card"><div class="bd row small" style=${{ padding: '10px 14px' }}>
+      <b>${t('ui.dr.title')}</b><span class="muted spacer">${summary}</span>
+      ${me.role === 'admin' && html`<button class="btn sm" onClick=${start}>${t('ui.edit')}</button>`}</div>
+    ${open && html`<${Modal} title=${t('ui.dr.title')} onClose=${() => setOpen(false)} wide>
+      <form class="form" onSubmit=${save}>
+        <p class="small muted" style=${{ margin: 0 }}>${t('ui.dr.intro')}</p>
+        <div class="two">${defs.map(d => html`<${Field} label=${t('ui.dr.short.' + d.key.replace('notify.', ''))}
+            hint=${(zh ? d.desc_zh : d.desc) + (d.min ? ' (' + d.min + ' – ' + d.max + ')' : '')}>
+          <input type="text" class="ltr" value=${vals[d.key]} placeholder=${t('ui.dr.default', { v: d.default })}
+            onInput=${(e) => setVals({ ...vals, [d.key]: e.target.value })} /><//>`)}</div>
+        <div class="row"><div class="spacer"></div>
+          <button type="button" class="btn" onClick=${() => setOpen(false)}>${t('ui.cancel')}</button>
+          <button class="btn primary" disabled=${busy}>${t('ui.save')}</button></div>
+      </form><//>`}
+  </div>`;
+}
+
 export function ChannelList({ value, channels, onChange }) {
   const toggle = (c) => onChange(value.includes(c) ? value.filter(x => x !== c) : [...value, c]);
   const move = (i, d) => { const ch = value.slice(); [ch[i], ch[i + d]] = [ch[i + d], ch[i]]; onChange(ch); };
