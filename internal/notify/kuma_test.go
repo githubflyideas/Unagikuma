@@ -60,3 +60,31 @@ func TestKumaToGo(t *testing.T) {
 		}
 	}
 }
+
+// Every example body of the webhook form sends valid JSON for a problem
+// and a recovery.
+func TestWebhookExamples(t *testing.T) {
+	cap := &capture{}
+	srv := cap.server(t)
+	for _, ex := range webhookExamples {
+		o := map[string]string{"url": srv.URL, "content-type": "json", "body": ex.Body}
+		if err := ValidateChannel("webhook", o); err != nil {
+			t.Fatalf("%s: %v", ex.ID, err)
+		}
+		if p := TemplateProblems("webhook", o); len(p) > 0 {
+			t.Fatalf("%s: %v", ex.ID, p)
+		}
+		for _, kind := range []string{"PROBLEM", "RECOVERY"} {
+			m := problem()
+			m.Kind = kind
+			if a := (&Sender{}).Send(context.Background(), Channel{Name: "w", Kind: "webhook", Opts: o}, m); !a.OK {
+				t.Fatalf("%s %s: %+v", ex.ID, kind, a)
+			}
+			_, got := cap.last()
+			var v any
+			if err := json.Unmarshal(got, &v); err != nil || strings.Contains(string(got), "{{") || strings.Contains(string(got), "{%") {
+				t.Fatalf("%s %s: %v\n%s", ex.ID, kind, err, got)
+			}
+		}
+	}
+}

@@ -129,6 +129,29 @@ type Field struct {
 	Default     string   `json:"default,omitempty"`
 	Placeholder string   `json:"placeholder,omitempty"`
 	Options     []string `json:"options,omitempty"`
+	// Examples are ready request bodies the form offers for this field.
+	Examples []Example `json:"examples,omitempty"`
+}
+
+// Example is a ready request body for a common receiving API: the form
+// fills it in, and only the text needs changing.
+type Example struct {
+	ID   string `json:"id"`
+	Body string `json:"body"`
+}
+
+// webhookExamples are the request bodies of the APIs a custom webhook is
+// most often pointed at. {{.Text}} is the whole message (title and body).
+var webhookExamples = []Example{
+	{"wecom-app", `{"touser":"@all","msgtype":"text","agentid":1000002,"text":{"content":"{{.Text}}"}}`},
+	{"wecom-bot", `{"msgtype":"text","text":{"content":"{{.Text}}"}}`},
+	{"dingtalk", `{"msgtype":"text","text":{"content":"{{.Text}}"},"at":{"isAtAll":false}}`},
+	{"feishu", `{"msg_type":"text","content":{"text":"{{.Text}}"}}`},
+	{"slack", `{"text":"{{.Text}}"}`},
+	{"discord", `{"content":"{{.Text}}"}`},
+	{"telegram", `{"chat_id":"123456789","text":"{{.Text}}"}`},
+	{"generic", `{"title":"{{.Title}}","kind":"{{.Kind}}","status":"{{.StatusText}}","monitor":"{{.Name}}","target":"{{.Target}}","reason":"{{.ReasonText}}","detail":"{{.Detail}}","started":"{{.Started}}","duration":"{{.DurationText}}","url":"{{.DetailURL}}"}`},
+	{"kuma", `{"touser":"@all","msgtype":"text","text":{"content":"{% if heartbeatJSON.status == 1 %}✅ UP{% else %}🔴 DOWN{% endif %} {{ monitorJSON.name }}\n{{ monitorJSON.hostname }}\n{{ heartbeatJSON.msg }}\n{{ heartbeatJSON.localDateTime }}"}}`},
 }
 
 // tplField is the message template of a channel that sends text; atField
@@ -148,7 +171,7 @@ var nativeKinds = []KindInfo{
 	{Kind: "slack", Label: "Slack", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://hooks.slack.com/services/…"}, tplField}},
 	{Kind: "discord", Label: "Discord", Fields: []Field{{Key: "url", Type: "secret", Required: true, Placeholder: "https://discord.com/api/webhooks/…"}, tplField}},
 	{Kind: "email", Label: "Email", Fields: []Field{{Key: "via", Type: "select", Options: []string{"smtp", "sendmail"}, Default: "smtp"}, {Key: "host", Type: "text"}, {Key: "port", Type: "number", Default: "587"}, {Key: "username", Type: "text"}, {Key: "password", Type: "secret"}, {Key: "tls", Type: "select", Options: []string{"starttls", "tls", "none"}}, {Key: "program", Type: "text", Placeholder: "/usr/sbin/sendmail"}, {Key: "from", Type: "text"}, {Key: "to", Type: "email-list", Required: true}, tplField}},
-	{Kind: "webhook", Label: "Custom webhook", Fields: []Field{{Key: "url", Type: "url", Required: true}, {Key: "method", Type: "select", Options: []string{"POST", "PUT", "GET"}, Default: "POST"}, {Key: "content-type", Type: "select", Options: []string{"json", "form", "text"}, Default: "json"}, {Key: "body", Type: "textarea"}, {Key: "success-match", Type: "text"}}},
+	{Kind: "webhook", Label: "Custom webhook", Fields: []Field{{Key: "url", Type: "url", Required: true}, {Key: "method", Type: "select", Options: []string{"POST", "PUT", "GET"}, Default: "POST"}, {Key: "content-type", Type: "select", Options: []string{"json", "form", "text"}, Default: "json"}, {Key: "body", Type: "textarea", Examples: webhookExamples}, {Key: "success-match", Type: "text"}}},
 	{Kind: "log", Label: "Log only", Fields: nil},
 }
 

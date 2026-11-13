@@ -224,7 +224,17 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
           return html`<${Field} label=${label}><select value=${v} onChange=${(e) => set(f.key, e.target.value)}>${['', ...(f.options || [])].map(o => html`<option value=${o}>${o || '–'}</option>`)}</select><//>`;
         }
         if (f.type === 'textarea') {
-          return html`<${Field} label=${label} hint=${f.key === 'template' ? t('ui.ch.template_hint') : f.key === 'body' && kind.startsWith('custom-') ? t('ui.ch.custom_hint') : f.key === 'body' && kind === 'webhook' ? t('ui.ch.webhook_body_hint') : ''}><textarea class="ltr mono" rows="5" value=${f.key === 'template' ? v.replace(/\\n/g, '\n') : v} placeholder=${(f.placeholder || '').replace(/\\n/g, '\n')} onInput=${(e) => set(f.key, e.target.value)}></textarea><//>`;
+          // Ready bodies for common APIs: pick one, then change only the text.
+          const pick = async (e) => {
+            const ex = (f.examples || []).find(x => x.id === e.target.value);
+            e.target.value = '';
+            if (!ex || (v.trim() && !await confirmDialog(t('ui.ch.example_replace')))) return;
+            setOpts({ ...opts, [f.key]: ex.body, 'content-type': 'json' });
+          };
+          const examples = f.examples && f.examples.length > 0 && html`<select value="" onChange=${pick} aria-label=${t('ui.ch.example_pick')} style=${{ marginBottom: '6px' }}>
+            <option value="">${t('ui.ch.example_pick')}</option>
+            ${f.examples.map(x => html`<option value=${x.id}>${t('ui.ch.example.' + x.id)}</option>`)}</select>`;
+          return html`<${Field} label=${label} hint=${f.key === 'template' ? t('ui.ch.template_hint') : f.key === 'body' && kind.startsWith('custom-') ? t('ui.ch.custom_hint') : f.key === 'body' && kind === 'webhook' ? t('ui.ch.webhook_body_hint') : ''}>${examples || ''}<textarea class="ltr mono" rows="5" value=${f.key === 'template' ? v.replace(/\\n/g, '\n') : v} placeholder=${(f.placeholder || '').replace(/\\n/g, '\n')} onInput=${(e) => set(f.key, e.target.value)}></textarea><//>`;
         }
         const hint = f.type === 'secret' ? t('ui.ch.secret_hint') : f.type === 'email-list' ? t('ui.ch.email_list') : f.key === 'period' ? t('ui.ch.period_hint') : f.key === 'members' ? t('ui.ch.members_hint')
           : f.key === 'at' ? t('ui.ch.at_hint') : f.key === 'program' ? t('ui.ch.program_hint') : f.key === 'from' && viaSendmail ? t('ui.ch.from_sendmail_hint') : '';
