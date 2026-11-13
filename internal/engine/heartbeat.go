@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,9 +26,21 @@ type Heartbeat struct {
 	Now      func() time.Time
 	// UserAgent identifies the instance, e.g. "unagikuma/home-nas".
 	UserAgent string
+	// Prepare, when set, turns the configured URL into the request to make
+	// (method, headers, body and variables filled in). Without it every
+	// beat is a plain GET of the URL.
+	Prepare func(raw string) (HeartbeatRequest, error)
 
 	mu     sync.Mutex
 	status HeartbeatStatus
+}
+
+// HeartbeatRequest is one call as the user shaped it.
+type HeartbeatRequest struct {
+	Method string
+	URL    string
+	Header http.Header
+	Body   string
 }
 
 // HeartbeatStatus feeds the "this machine" health card.
@@ -84,12 +97,28 @@ func (h *Heartbeat) Beat(ctx context.Context) {
 func (h *Heartbeat) call(ctx context.Context, raw string) error {
 	ctx, cancel := context.WithTimeout(ctx, h.Timeout())
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
+	hr := HeartbeatRequest{Method: http.MethodGet, URL: raw}
+	if h.Prepare != nil {
+		var err error
+		if hr, err = h.Prepare(raw); err != nil {
+			return err
+		}
+	}
+	var body io.Reader
+	if hr.Body != "" {
+		body = strings.NewReader(hr.Body)
+	}
+	req, err := http.NewRequestWithContext(ctx, hr.Method, hr.URL, body)
 	if err != nil {
 		return fmt.Errorf("invalid heartbeat URL")
 	}
 	if h.UserAgent != "" {
 		req.Header.Set("User-Agent", h.UserAgent)
+	}
+	for k, vs := range hr.Header {
+		for _, v := range vs {
+			req.Header.Add(k, v)
+		}
 	}
 	resp, err := h.Client.Do(req)
 	if err != nil {

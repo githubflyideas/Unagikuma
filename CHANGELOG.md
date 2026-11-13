@@ -16,6 +16,8 @@
 - Menus: Alerting is Alerts & notifications and holds the change notices; Notices is Status pages; Config & history is Config & import; Run mode is last. Old addresses still open the moved pages.
 - The sidebar and the content stay together as one block in the middle of a wide window.
 - The monitor list keeps to two rows: every button (pause, resume, check, move, delete, quick add, add) on one row, and the status filters with the view switch below.
+- The external heartbeat can be shaped for the receiving service: method (GET, HEAD, POST, PUT), headers and a body, with variables such as `{{.Status}}`, `{{.Problems}}` and `{{.Instance}}` in the URL and body, and ready-made shapes for Healthchecks, an Uptime Kuma push monitor and a JSON POST. A plain URL still sends a GET as before.
+- The top bar names the run mode (single machine, two machines, cluster with nodes online) instead of "Live" and opens the run mode page; it says it is reconnecting when live updates stop.
 - **Status pages** has **New announcement** and **Announce a change** at the top, next to **New status page**, instead of a button on every page; a new announcement asks which page it goes on.
 - Certificate and domain expiry moved from the monitor toolbar to a tab under **Problems** (`#/problems/expiry`); the old address still opens it.
 - Channel kinds are grouped by type only (chat, push, SMS, calls, e-mail, WhatsApp, incident, automation, custom); the regional groups are gone, and built-in kinds have names in every language.

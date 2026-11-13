@@ -253,7 +253,7 @@ function Shell({ user, onLogout, onLang }) {
         <${Search} route=${route} />
         ${ov.data && html`<${Verdict} ov=${ov.data} />`}
         <div class="spacer"></div>
-        <span class=${'live' + (live ? ' on' : '')} title=${live ? t('ui.live.on') : t('ui.live.off')}><i></i><span class="hide-sm">${live ? t('ui.live.on') : t('ui.live.off')}</span></span>
+        <${RunMode} ov=${ov.data} live=${live} />
       </header>
       ${banner && html`<div class="page" style=${{ paddingBottom: 0 }}><${ConfigBanner} banner=${banner} /></div>`}
       ${ov.data && ov.data.storage && ov.data.storage.failing && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner error">
@@ -279,11 +279,22 @@ function Verdict({ ov }) {
   else if ((ov.counts.unknown || 0) > 0) { cls = 'unknown'; text = t('ui.top.unknown', { n: ov.counts.unknown }); }
   const week = ov.value_week || {};
   const saved = Object.values(week).reduce((a, n) => a + (n || 0), 0);
-  const online = paths.filter(p => p.online).length;
   const sub = [t('ui.top.monitors', { n: ov.counts.total || 0 }),
-    ov.layout === 'cluster' ? t('ui.top.nodes', { online, n: paths.length }) : t('ui.top.single'),
     saved ? t('ui.top.saved', { n: saved }) : ''].filter(Boolean).join(' · ');
   return html`<a class=${'verdict ' + cls} href=${cls === 'critical' ? '#/problems' : '#/'}><i></i>${text}</a><span class="top-sub">${sub}</span>`;
+}
+
+// RunMode names how this installation runs and opens the run mode page.
+// The dot is green while live updates arrive; when they stop the label says
+// it is reconnecting instead.
+function RunMode({ ov, live }) {
+  const layout = (ov && ov.layout) || 'single';
+  const paths = (ov && ov.paths) || [];
+  const label = layout === 'cluster'
+    ? t('ui.top.mode.cluster', { online: paths.filter(p => p.online).length, n: paths.length })
+    : t('ui.top.mode.' + (layout === 'replica' ? 'replica' : 'single'));
+  return html`<a class=${'live' + (live ? ' on' : '')} href="#/nodes" title=${live ? t('ui.live.on') : t('ui.live.off')}>
+    <i></i><span class="hide-sm">${live ? label : t('ui.live.off')}</span></a>`;
 }
 
 // Search filters the monitor list, with the list's own query syntax

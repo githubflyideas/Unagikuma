@@ -85,11 +85,56 @@ function General() {
       </tr>`)}</tbody></table>
     </div></div>`}
     <${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
-      <div class="row nowrap"><input type="url" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
+      <div class="row nowrap"><input type="text" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
         <button type="button" class="btn" onClick=${testHb} disabled=${!s.data.heartbeat_url}>${t('ui.set.heartbeat_test')}</button></div><//>
+    <${HeartbeatShape} f=${f} setF=${setF} />
     ${hb && !hb.busy && html`<div class=${'banner ' + (hb.err || hb.LastError ? 'error' : 'ok')}>${hb.err ? errText(hb.err) : hb.LastError || t('ui.set.heartbeat_ok')}</div>`}
     <div class="row"><div class="spacer"></div><button class="btn primary">${t('ui.save')}</button></div>
   </div></form>`;
+}
+
+// Ready-made shapes for common heartbeat receivers; the user can change
+// every part afterwards.
+const HB_PRESETS = {
+  healthchecks: { heartbeat_method: 'GET', heartbeat_headers: '', heartbeat_body: '' },
+  healthchecks_log: { heartbeat_method: 'POST', heartbeat_headers: '', heartbeat_body: '{{.Instance}}: {{.Problems}} problems, {{.Monitors}} monitors' },
+  kuma: { heartbeat_method: 'GET', heartbeat_headers: '', heartbeat_body: '', query: 'status=up&msg={{.Status}}&ping=' },
+  json: { heartbeat_method: 'POST', heartbeat_headers: '', heartbeat_body: '{\n  "instance": {{json .Instance}},\n  "status": {{json .Status}},\n  "problems": {{.Problems}},\n  "time": {{json .Time}}\n}' },
+};
+const HB_VARS = ['Instance', 'Status', 'Problems', 'Monitors', 'Time', 'Unix', 'Uptime', 'Version'];
+
+// HeartbeatShape sets how the heartbeat is sent: by default a GET of the
+// URL with no body, where any 2xx answer counts as delivered.
+function HeartbeatShape({ f, setF }) {
+  const method = (f.heartbeat_method || 'GET').toUpperCase();
+  const hasBody = method === 'POST' || method === 'PUT';
+  const shaped = method !== 'GET' || !!f.heartbeat_headers || !!f.heartbeat_body || (f.heartbeat_url || '').includes('{{');
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const preset = (id) => {
+    const { query, ...p } = HB_PRESETS[id];
+    let url = f.heartbeat_url || '';
+    if (query && !url.includes('?')) url += (url ? '?' : '') + query;
+    setF({ ...f, ...p, heartbeat_url: url });
+  };
+  return html`<details class="adv-opts" open=${shaped}>
+    <summary>${t('ui.set.hb_format')} <span class="muted small">${shaped ? method : t('ui.set.hb_default')}</span></summary>
+    <div class="col" style=${{ gap: '10px', marginTop: '10px' }}>
+      <div class="row small"><span class="muted">${t('ui.set.hb_presets')}</span>
+        <button type="button" class="btn sm" onClick=${() => preset('healthchecks')}>Healthchecks</button>
+        <button type="button" class="btn sm" onClick=${() => preset('healthchecks_log')}>Healthchecks + log</button>
+        <button type="button" class="btn sm" onClick=${() => preset('kuma')}>Uptime Kuma Push</button>
+        <button type="button" class="btn sm" onClick=${() => preset('json')}>JSON POST</button></div>
+      <div class="two">
+        <${Field} label=${t('ui.set.hb_method')}><select value=${method} onChange=${set('heartbeat_method')}>
+          ${['GET', 'HEAD', 'POST', 'PUT'].map(m => html`<option value=${m}>${m}</option>`)}</select><//>
+        <${Field} label=${t('ui.set.hb_headers')} hint=${t('ui.set.hb_headers_hint')}>
+          <textarea rows="2" class="ltr mono" value=${f.heartbeat_headers || ''} onInput=${set('heartbeat_headers')} placeholder="Authorization: Bearer …"></textarea><//>
+      </div>
+      <${Field} label=${t('ui.set.hb_body')} hint=${hasBody ? t('ui.set.hb_body_hint') : t('ui.set.hb_body_off')}>
+        <textarea rows="7" class="ltr mono" value=${f.heartbeat_body || ''} onInput=${set('heartbeat_body')} disabled=${!hasBody}></textarea><//>
+      <div class="small muted">${t('ui.set.hb_vars')} ${HB_VARS.map(v => html`<code class="ltr">{{.${v}}}</code> `)}</div>
+    </div>
+  </details>`;
 }
 
 function Tunables() {

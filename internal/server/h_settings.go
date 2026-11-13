@@ -569,7 +569,7 @@ func (s *Server) system(w http.ResponseWriter, r *http.Request) (any, error) {
 	}, nil
 }
 
-var settingKeys = []string{"heartbeat_url", "message_lang", "base_url", "instance_name"}
+var settingKeys = []string{"heartbeat_url", "heartbeat_method", "heartbeat_headers", "heartbeat_body", "message_lang", "base_url", "instance_name"}
 
 func (s *Server) settingsGet(w http.ResponseWriter, r *http.Request) (any, error) {
 	out := map[string]string{}

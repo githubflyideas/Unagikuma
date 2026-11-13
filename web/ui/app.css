@@ -140,7 +140,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .top .crumbs { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .top .crumbs a { color: var(--muted); }
 .top .spacer { flex: 1; }
-.live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.live { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); display: inline-block; }
 .live.on i { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
 .page { padding: 18px 22px 40px; display: flex; flex-direction: column; gap: 16px; max-width: 1500px; width: 100%; }
