@@ -418,7 +418,7 @@ export function Overview() {
           ${cluster && html`<${Seg} value=${view} onChange=${setView} options=${[['hive', t('ui.ov.view_hive')], ['matrix', t('ui.ov.view_matrix')]]} />`}`}>
           ${!mons.data ? html`<${Loading} />` : view === 'matrix' && cluster ? html`<${Matrix} rows=${rows} nodes=${d.paths || []} />` : html`<${Hive} rows=${rows} />`}
         <//>
-        ${d.expiring.length > 0 && html`<${Card} title=${t('ui.ov.expiring')} flush actions=${html`<a class="btn sm" href="#/problems/expiry">${t('ui.exp.all')}</a>`}>
+        ${d.expiring.length > 0 && html`<${Card} title=${t('ui.ov.expiring')} flush actions=${html`<a class="btn sm" href="#/expiry">${t('ui.exp.all')}</a>`}>
           <table class="tbl"><tbody>${d.expiring.map(x => html`<tr class="click" onClick=${() => { location.hash = '#/monitors/' + enc(x.monitor); }}>
             <td class="name">${x.title} <span class="tag">${t('ui.exp.kind.' + x.what)}</span></td><td class="right"><span class=${x.days < 7 ? 'err-text' : 'warn-text'}>${tn('ui.ov.days_left', Math.floor(x.days))}</span></td></tr>`)}</tbody></table>
         <//>`}

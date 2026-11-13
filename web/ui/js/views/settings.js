@@ -75,12 +75,13 @@ function General() {
       <select value=${f.message_lang || 'en'} onChange=${set('message_lang')}>${langList().map(l => html`<option value=${l.code}>${l.name}</option>`)}</select><//>
     ${exitTun && html`<${Field} label=${t('ui.set.exit')} hint=${t('ui.set.exit_hint', { addr: exitTun.default })}>
       <div class="row nowrap"><input type="text" class="ltr" value=${exit ?? ''} onInput=${(e) => setExit(e.target.value)} placeholder=${t('ui.set.exit_off')} style=${{ maxWidth: '320px' }} />
-      </div>
-      <div class="row nowrap" style=${{ marginTop: '8px' }}>
+      </div><//>`}
+    ${exitTun && html`<div class="subopts">
+      <div class="row nowrap">
         <select value=${cc} onChange=${(e) => { setCc(e.target.value); if (e.target.value) suggest({ mode: 'city', city: e.target.value }); }} aria-label=${t('ui.set.exit_by_city')} style=${{ maxWidth: '360px' }}>
           <option value="">${t('ui.set.exit_by_city')}</option>
           ${(cities.data || []).map(c => html`<option value=${c.id}>${t('ui.city.' + c.id)} — ${c.label}${c.anycast ? ' (' + t('ui.set.exit_anycast_tag') + ')' : ''}</option>`)}</select>
-        <button type="button" class="btn" onClick=${() => { setCc(''); suggest({ mode: 'auto' }); }} disabled=${sug && sug.busy}>${sug && sug.busy ? t('ui.set.exit_measuring') : t('ui.set.exit_suggest')}</button></div><//>`}
+        <button type="button" class="btn" onClick=${() => { setCc(''); suggest({ mode: 'auto' }); }} disabled=${sug && sug.busy}>${sug && sug.busy ? t('ui.set.exit_measuring') : t('ui.set.exit_suggest')}</button></div>
     ${sug && sug.err && html`<div class="banner error">${errText(sug.err)}</div>`}
     ${sug && sug.candidates && html`<div class="card"><div class="bd col" style=${{ gap: '8px' }}>
       <p class="small muted" style=${{ margin: 0 }}>${t('ui.set.exit_result')}${sug.public_addr ? ' · ' + t('ui.set.exit_public', { addr: sug.public_addr }) : ''}</p>
@@ -93,6 +94,7 @@ function General() {
           ${c.ok && html` <button type="button" class=${'btn sm' + (sug.suggested[0] === c.addr ? ' primary' : '')} onClick=${() => useExit(c.addr)}>${t('ui.set.exit_use')}</button>`}</td>
       </tr>`)}</tbody></table>
     </div></div>`}
+    </div>`}
     <${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
       <div class="row nowrap"><input type="text" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
         <button type="button" class="btn" onClick=${testHb} disabled=${!s.data.heartbeat_url}>${t('ui.set.heartbeat_test')}</button></div><//>
@@ -125,7 +127,7 @@ function HeartbeatForm({ f, setF }) {
     }, 300);
     return () => clearTimeout(id);
   }, [JSON.stringify(f)]);
-  return html`<div class="col" style=${{ gap: '10px' }}>
+  return html`<div class="subopts col" style=${{ gap: '10px' }}>
     <div class="two">
       <${Field} label=${t('ui.hb.method')}><select value=${push ? 'PUSH' : 'GET'} onChange=${set('heartbeat_method')}>
         <option value="GET">GET</option><option value="PUSH">PUSH (POST)</option></select><//>
@@ -569,7 +571,9 @@ function BackupCard() {
   <//>`;
 }
 
-function Account({ user }) {
+// Account changes the signed-in person's password. It opens from their
+// name at the bottom of the sidebar.
+export function Account({ user, embedded }) {
   const [f, setF] = useState({ old: '', new: '', confirm: '' });
   const [err, setErr] = useState('');
   const save = async (e) => {
@@ -584,7 +588,7 @@ function Account({ user }) {
       setErr('');
     } catch (e2) { setErr(errText(e2)); }
   };
-  return html`<form class="card" onSubmit=${save} style=${{ maxWidth: '480px' }}><div class="bd form">
+  return html`<form class=${embedded ? '' : 'card'} onSubmit=${save} style=${embedded ? null : { maxWidth: '480px' }}><div class=${embedded ? 'form' : 'bd form'}>
     <p class="muted">${t('ui.acc.signed_in', { user })}</p>
     <${Field} label=${t('ui.acc.old')}><input type="password" value=${f.old} onInput=${(e) => setF({ ...f, old: e.target.value })} required autocomplete="current-password" /><//>
     <${Field} label=${t('ui.acc.new')}><input type="password" value=${f.new} onInput=${(e) => setF({ ...f, new: e.target.value })} required autocomplete="new-password" /><//>
@@ -786,15 +790,16 @@ function Audit() {
 
 // Everyday settings, and the advanced ones that most installations set
 // once or never: they have their own place in the sidebar.
-const TABS = ['general', 'users', 'audit', 'scripts', 'system', 'registration', 'account'];
+const TABS = ['general', 'users', 'audit', 'scripts', 'system', 'registration'];
 export const ADVANCED_TABS = ['teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
 export function Settings({ tab, user, advanced }) {
   useDocTitle(t(advanced ? 'ui.nav.advanced' : 'ui.nav.settings'));
-  // Operators and viewers have their own account here: the password.
-  if (me.role !== 'admin') advanced = false;
+  // Operators and viewers have no settings; an old link still shows the
+  // password form, which now opens from their name in the sidebar.
+  if (me.role !== 'admin' || tab === 'account') return html`<div class="page"><${Account} user=${user} /></div>`;
   const base = advanced ? '#/advanced/' : '#/settings/';
-  const tabs = me.role !== 'admin' ? ['account'] : advanced ? ADVANCED_TABS : TABS;
+  const tabs = advanced ? ADVANCED_TABS : TABS;
   if (!tabs.includes(tab)) tab = tabs[0];
   let body;
   switch (tab) {
@@ -810,7 +815,6 @@ export function Settings({ tab, user, advanced }) {
     case 'secrets': body = html`<${Secrets} />`; break;
     case 'keywords': body = html`<${Keywords} />`; break;
     case 'system': body = html`<${System} />`; break;
-    case 'account': body = html`<${Account} user=${user} />`; break;
     default: body = html`<${General} />`;
   }
   return html`<div class="page">

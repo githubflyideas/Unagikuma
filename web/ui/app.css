@@ -847,3 +847,10 @@ body.summarypage { background: var(--bg); }
 .adv-opts summary { cursor: pointer; font-weight: 600; }
 .opt-row { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .notice-ed .notice-line { margin-top: 4px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The signed-in name opens the account dialog. */
+.linkish { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; text-align: start; }
+.linkish:hover { color: var(--side-on-text, var(--link)); }
+/* Options that belong to the field above them sit indented under it. */
+.subopts { margin-top: -6px; margin-inline-start: 12px; padding: 10px 14px; border-inline-start: 3px solid var(--border-strong); background: var(--panel-2); border-radius: 0 var(--radius) var(--radius) 0; display: flex; flex-direction: column; gap: 10px; }
+[dir="rtl"] .subopts { border-radius: var(--radius) 0 0 var(--radius); }

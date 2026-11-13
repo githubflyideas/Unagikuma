@@ -3,17 +3,18 @@ import { html, render, useState, useEffect } from './lib.js';
 import { t, tn, setLang, detectLang, loadLanguages, langList, currentLang, fmtTime, detailText } from './i18n.js';
 import { get, post, del, setCSRF, setMe, me, onUnauthorized } from './api.js';
 import { startLive, stopLive, onConnection } from './live.js';
-import { useRoute, href, Toasts, ConfirmHost, useFetch, useLive, errText, Field, replaceRoute, monitorsPath, MON_SORTS, PRODUCT } from './ui.js';
+import { useRoute, href, Toasts, ConfirmHost, useFetch, useLive, errText, Field, replaceRoute, monitorsPath, MON_SORTS, PRODUCT, Modal } from './ui.js';
 import { Overview } from './views/overview.js';
 import { Monitors } from './views/monitors.js';
 import { MonitorDetail } from './views/monitor.js';
 import { MonitorEditor } from './views/editor.js';
-import { Problems, ProblemsExpiry, setupIssues } from './views/problems.js';
+import { Problems, setupIssues } from './views/problems.js';
+import { Expiry } from './views/expiry.js';
 import { Events } from './views/events.js';
 import { ConfigView } from './views/config.js';
 import { Alerts } from './views/alerts.js';
 import { Notices } from './views/announce.js';
-import { Settings, ADVANCED_TABS } from './views/settings.js';
+import { Settings, ADVANCED_TABS, Account } from './views/settings.js';
 import { Nodes } from './views/nodes.js';
 import { IncidentReport } from './views/incident.js';
 import { DrawerHost } from './views/drawer.js';
@@ -160,6 +161,7 @@ function Shell({ user, onLogout, onLang }) {
   // A removed tone is stored as its replacement.
   useEffect(() => { const v = storage('unagikuma.theme'); if (v && OLD_TONES[v]) storage('unagikuma.theme', OLD_TONES[v]); }, []);
   const [mini, setMini] = useState(storage('unagikuma.side') === 'mini');
+  const [acct, setAcct] = useState(false);
   const ov = useFetch(() => get('/overview'), []);
   useLive(['incident', 'state', 'serial', 'banner', 'directory'], ov.reload, 1500);
   useEffect(() => onConnection(setLive), []);
@@ -183,7 +185,7 @@ function Shell({ user, onLogout, onLang }) {
   const p = route.parts;
   switch (p[0]) {
     case undefined: view = html`<${Overview} />`; break;
-    case 'problems': view = p[1] === 'expiry' ? html`<${ProblemsExpiry} />` : html`<${Problems} tab=${p[1] || 'unhandled'} />`; break;
+    case 'problems': view = p[1] === 'expiry' ? html`<${Expiry} />` : html`<${Problems} tab=${p[1] || 'unhandled'} />`; break;
     case 'monitors':
       if (p[1] === 'new') view = html`<${MonitorEditor} />`;
       else if (p[1] && p[2] === 'edit') view = html`<${MonitorEditor} name=${p[1]} />`;
@@ -191,7 +193,7 @@ function Shell({ user, onLogout, onLang }) {
       else view = html`<${Monitors} query=${route.query} />`;
       break;
     case 'events': view = html`<${Events} tab=${p[1] || 'events'} />`; break;
-    case 'expiry': view = html`<${ProblemsExpiry} />`; break; // its old address
+    case 'expiry': view = html`<${Expiry} />`; break;
     case 'incidents': view = p[1] ? html`<${IncidentReport} id=${p[1]} />` : html`<${Problems} tab="all" />`; break;
     // Changes, status pages and the report used to live under Alerting;
     // their old addresses still open them.
@@ -212,7 +214,7 @@ function Shell({ user, onLogout, onLang }) {
   // has its own place in the sidebar.
   // A team member works with their teams' monitors only.
   // Everyone has Settings for their own account (password).
-  const nav = NAV.filter(([path]) => (!me.teams || TEAM_NAV.has(path) || path === '/settings') && (path !== '/advanced' || me.role === 'admin'));
+  const nav = NAV.filter(([path]) => (!me.teams || TEAM_NAV.has(path)) && ((path !== '/advanced' && path !== '/settings') || me.role === 'admin'));
   return html`<div class=${'shell' + (mini ? ' mini' : '')}>
     <aside class=${'side' + (open ? ' open' : '')}>
       <a class="brand" href="#/"><${Logo} /><div>${PRODUCT}
@@ -233,14 +235,15 @@ function Shell({ user, onLogout, onLang }) {
       </nav>
       <div class="foot">
         <${LangSelect} onChange=${onLang} />
-        <div class="row"><span class="ellipsis">${user}</span><div class="spacer"></div><button class="btn sm ghost" onClick=${onLogout}>${t('ui.logout')}</button></div>
+        <div class="row"><button type="button" class="linkish ellipsis" title=${t('ui.acc.open')} onClick=${() => setAcct(true)}>${user}</button><div class="spacer"></div><button class="btn sm ghost" onClick=${onLogout}>${t('ui.logout')}</button></div>
         ${ov.data && ov.data.instance && html`<div class="host ellipsis" title=${ov.data.instance}>${ov.data.instance}</div>`}
       </div>
+      ${acct && html`<${Modal} title=${t('ui.acc.title')} onClose=${() => setAcct(false)}><${Account} user=${user} embedded /><//>`}
     </aside>
     <div class="main">
       <header class="top">
         <button class="btn sm" onClick=${toggleSide} aria-label=${mini ? t('ui.side.expand') : t('ui.side.collapse')} title=${mini ? t('ui.side.expand') : t('ui.side.collapse')}>☰</button>
-        <div class="crumbs">${t((NAV.find(n => n[0] === (first === '/expiry' ? '/problems' : first)) || NAV[0])[1])}</div>
+        <div class="crumbs">${t((NAV.find(n => n[0] === (first === '/expiry' ? '/monitors' : first)) || NAV[0])[1])}</div>
         <${Search} route=${route} />
         ${ov.data && html`<${Verdict} ov=${ov.data} />`}
         <div class="spacer"></div>

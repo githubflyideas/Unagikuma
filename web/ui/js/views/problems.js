@@ -1,5 +1,4 @@
 // Problems: open incidents split by whether someone is on them.
-import { Expiry } from './expiry.js';
 import { html, useState } from '../lib.js';
 import { t, tn, dur, detailText } from '../i18n.js';
 import { get, post, del } from '../api.js';
@@ -174,16 +173,10 @@ function SetupIssues() {
     </div>`)}</div></div>`;
 }
 
-const TABS = [['unhandled', 'ui.inc.tab.unhandled'], ['handled', 'ui.inc.tab.handled'], ['resolved', 'ui.inc.tab.resolved'], ['all', 'ui.inc.tab.all'], ['expiry', 'ui.exp.title']];
+const TABS = [['unhandled', 'ui.inc.tab.unhandled'], ['handled', 'ui.inc.tab.handled'], ['resolved', 'ui.inc.tab.resolved'], ['all', 'ui.inc.tab.all']];
 
 const ProblemTabs = ({ tab }) => html`<div class="tabs">${TABS.map(([k, label]) => html`<a href=${'#/problems/' + k} class=${tab === k ? 'on' : ''}>${t(label)}</a>`)}</div>`;
 
-// Certificates and domains that run out are problems in waiting, so their
-// list sits beside the problems rather than in the monitors' toolbar.
-export function ProblemsExpiry() {
-  useDocTitle(t('ui.exp.title'));
-  return html`<div class="page list"><${ProblemTabs} tab="expiry" /><${Expiry} embedded /></div>`;
-}
 
 export function Problems({ tab }) {
   useDocTitle(t('ui.nav.problems'));

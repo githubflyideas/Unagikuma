@@ -20,6 +20,12 @@ function splitStatus(q) {
   return { status: m ? m[2] : '', rest: q.replace(/(^|\s)status:\w+/, '').trim() };
 }
 
+// MonitorTabs switches between the monitor list and the certificate and
+// domain expiry dates the checks found.
+export function MonitorTabs({ tab }) {
+  return html`<div class="tabs"><a href="#/monitors" class=${tab === 'list' ? 'on' : ''}>${t('ui.mon.tab_list')}</a><a href="#/expiry" class=${tab === 'expiry' ? 'on' : ''}>${t('ui.exp.title')}</a></div>`;
+}
+
 export function Monitors({ query }) {
   useDocTitle(t('ui.nav.monitors'));
   const [q, setQ] = useState(query.get('q') || '');
@@ -153,6 +159,7 @@ export function Monitors({ query }) {
 
   const total = list.data ? list.data.items.length : 0;
   return html`<div class="page list">
+    <${MonitorTabs} tab="list" />
     <div class="row">
       <div class="spacer"></div>
       <button class="btn" onClick=${() => pauseAll(true)} disabled=${picked.length === nPaused} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.pause')}${picked.length > nPaused ? ' (' + fmtNum(picked.length - nPaused) + ')' : ''}</button>
@@ -160,8 +167,8 @@ export function Monitors({ query }) {
       <button class="btn" onClick=${checkNow} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.check_all')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
       ${me.role === 'admin' && html`<button class="btn" onClick=${() => setMoving({ team: '', region: '' })} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.move')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>`}
       <button class="btn danger" onClick=${remove} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.delete')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
-      <button class="btn" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
-      <a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a>
+      <button class="btn primary" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
+      <a class="btn" href="#/monitors/new">${t('ui.mon.add')}</a>
     </div>
     <div class="row filters">
       <div class="chips">
