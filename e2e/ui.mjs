@@ -308,10 +308,10 @@ await step('the daily report is chosen per team and can be switched off per pers
 
 await step('an announcement reaches the public status page', async () => {
   await page.goto(base + '/#/notices/pages');
-  await page.click('button:has-text("Announce a change")');
-  await page.fill('.modal .field:has(label:text-is("Title")) input', 'Planned database upgrade');
-  await page.selectOption('.modal .field:has(label:has-text("Status page")) select', 'public');
-  await page.click('.modal .btn.primary:has-text("Announce")');
+  await page.click('button:has-text("New announcement")');
+  if (await page.locator('.modal select:has(option[value="public"])').count()) await page.selectOption('.modal select:has(option[value="public"])', 'public');
+  await page.fill('.modal input[type=text]', 'Planned database upgrade');
+  await page.click('.modal .btn.primary');
   await page.waitForSelector('td:has-text("Planned database upgrade")');
   const pub = await browser.newPage();
   watch(pub);

@@ -16,7 +16,7 @@
 - Menus: Alerting is Alerts & notifications and holds the change notices; Notices is Status pages; Config & history is Config & import; Run mode is last. Old addresses still open the moved pages.
 - The sidebar and the content stay together as one block in the middle of a wide window.
 - The monitor list keeps to two rows: every button (pause, resume, check, move, delete, quick add, add) on one row, and the status filters with the view switch below.
-- **Status pages** has one **Announce a change** button at the top, next to **New status page**; it posts the notice to the chosen status page. The per-page announcement button is gone; existing announcements can still be edited and deleted.
+- **Status pages** has **New announcement** and **Announce a change** at the top, next to **New status page**, instead of a button on every page; a new announcement asks which page it goes on.
 - Certificate and domain expiry moved from the monitor toolbar to a tab under **Problems** (`#/problems/expiry`); the old address still opens it.
 - Channel kinds are grouped by type only (chat, push, SMS, calls, e-mail, WhatsApp, incident, automation, custom); the regional groups are gone, and built-in kinds have names in every language.
 - Themes: Bright (white panels, a coloured sidebar, warm orange, round shapes) and Modern (black and white, thin lines, square corners, a violet accent) are new designs; themes are picked with dots under the product name.

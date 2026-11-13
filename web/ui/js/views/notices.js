@@ -8,8 +8,12 @@ import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, er
 
 const SEVERITIES = ['info', 'minor', 'major', 'maintenance'];
 
-function NoticeForm({ page, initial, onClose, onSaved }) {
+// A new announcement from the top of the tab picks its page; one opened
+// from a page's list belongs to that page.
+function NoticeForm({ page: fixed, pages, initial, onClose, onSaved }) {
   const a = initial || {};
+  const [pageName, setPageName] = useState(fixed ? fixed.name : pages[0].name);
+  const page = fixed || pages.find(p => p.name === pageName) || pages[0];
   const [f, setF] = useState({ title: a.title || '', body: a.body || '', severity: a.severity || 'minor', resolved: !!a.resolved_at, notify: !!page.subscribe });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -28,6 +32,8 @@ function NoticeForm({ page, initial, onClose, onSaved }) {
   };
   return html`<${Modal} title=${a.id ? t('ui.notice.edit') : t('ui.notice.add')} onClose=${onClose}>
     <form class="form" onSubmit=${save}>
+      ${!fixed && pages.length > 1 && html`<${Field} label=${t('ui.notice.tab')}><select value=${pageName} onChange=${(e) => setPageName(e.target.value)}>
+        ${pages.map(p => html`<option value=${p.name}>${p.title}</option>`)}</select><//>`}
       <div class="two">
         <${Field} label=${t('ui.notice.title')}><input type="text" value=${f.title} maxlength="200" required onInput=${set('title')} /><//>
         <${Field} label=${t('ui.notice.severity')}><select value=${f.severity} onChange=${set('severity')}>
@@ -145,6 +151,7 @@ export function NoticesTab() {
   const pages = useFetch(() => get('/status-pages'), []);
   const [adding, setAdding] = useState(false);
   const [change, setChange] = useState(false);
+  const [notice, setNotice] = useState(false);
   const [round, setRound] = useState(0);
   if (!pages.data) return pages.error ? html`<${ErrorBox} error=${pages.error} />` : html`<${Loading} />`;
   if (!pages.data.length) return html`<div class="col" style=${{ gap: '12px' }}>
@@ -153,8 +160,10 @@ export function NoticesTab() {
   </div>`;
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.notice.intro')}</p>
-      ${me.role !== 'viewer' && html`<button class="btn primary" onClick=${() => setChange(true)}>${t('ui.chg.add')}</button>
+      <button class="btn primary" onClick=${() => setNotice(true)}>${t('ui.notice.add')}</button>
+      ${me.role !== 'viewer' && html`<button class="btn" onClick=${() => setChange(true)}>${t('ui.chg.add')}</button>
         <button class="btn" onClick=${() => setAdding(true)}>${t('ui.notice.new_page')}</button>`}</div>
+    ${notice && html`<${NoticeForm} pages=${pages.data} onClose=${() => setNotice(false)} onSaved=${() => { setNotice(false); setRound(round + 1); }} />`}
     ${change && html`<${ChangeForm} initial=${{ status_page: pages.data[0].name }} onClose=${() => setChange(false)} onSaved=${() => { setChange(false); setRound(round + 1); }} />`}
     ${adding && html`<${Modal} title=${t('ui.notice.new_page')} onClose=${() => setAdding(false)}><${PageForm} onDone=${() => { setAdding(false); pages.reload(); }} /><//>`}
     ${pages.data.map(p => html`<${PageNotices} key=${p.name + ':' + round} page=${p} onChanged=${pages.reload} />`)}
