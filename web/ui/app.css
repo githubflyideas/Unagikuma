@@ -784,3 +784,8 @@ body.summarypage { background: var(--bg); }
 .tpl-preview.err { border-color: var(--critical); }
 .linkbtn { border: 0; background: none; padding: 0 2px; cursor: pointer; color: inherit; font: inherit; line-height: 1; }
 .linkbtn:hover { color: var(--critical); }
+
+/* Channel form: the request a channel sends, in the service's own format. */
+.req-preview { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; background: var(--panel-2); min-width: 0; }
+.req-preview summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+.req-preview pre { margin: 8px 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }

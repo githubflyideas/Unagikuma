@@ -134,6 +134,34 @@ function PeriodField({ label, value, onChange, periods }) {
     </div><//>`;
 }
 
+// RequestPanel shows what the channel sends for an example problem, in
+// the receiving service's own format (credentials masked), next to a link
+// to that service's API documentation. Nothing is sent.
+function RequestPanel({ kind, opts, docs }) {
+  const [pv, setPv] = useState(null);
+  const key = kind + JSON.stringify(opts);
+  useEffect(() => {
+    const id = setTimeout(async () => {
+      try { setPv(await post('/channels/request-preview', { kind, opts, lang: currentLang() })); } catch (e) { setPv({ ok: false, error: errText(e) }); }
+    }, 400);
+    return () => clearTimeout(id);
+  }, [key]);
+  const p = pv && pv.preview;
+  let text = '';
+  if (p && pv.http) {
+    text = p.method + ' ' + p.url + '\n'
+      + (p.query || []).map(([k, v]) => '  ' + k + '=' + v).join('\n') + ((p.query || []).length ? '\n' : '')
+      + (p.headers || []).map(([k, v]) => k + ': ' + v).join('\n') + '\n\n' + (p.body || '');
+  }
+  return html`<details class="req-preview" open>
+    <summary>${t('ui.ch.req_title')}${docs && html` · <a href=${docs} target="_blank" rel="noopener noreferrer" onClick=${(e) => e.stopPropagation()}>${t('ui.ch.req_docs')}</a>`}</summary>
+    ${!pv ? html`<div class="small muted">…</div>`
+      : !pv.ok ? html`<div class="small err-text">${pv.error}</div>`
+      : !pv.http ? html`<div class="small muted">${t(kind === 'email' ? 'ui.ch.req_email' : 'ui.ch.req_none')}</div>${p && html`<pre class="mono small">${p.title + '\n' + p.text}</pre>`}`
+      : html`<pre class="mono small ltr">${text}</pre><div class="small muted">${t('ui.ch.req_hint')}</div>`}
+  </details>`;
+}
+
 // The e-mail options that only an SMTP server uses.
 const SMTP_ONLY = ['host', 'port', 'username', 'password', 'tls'];
 
@@ -242,6 +270,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
           <input type=${f.type === 'secret' ? 'password' : f.type === 'number' ? 'number' : 'text'} class="ltr" value=${v} required=${required(f) && !editing}
             placeholder=${f.type === 'secret' && editing ? '***' : f.placeholder || ''} autocomplete="off" onInput=${(e) => set(f.key, e.target.value)} /><//>`;
       })}
+      ${kind !== 'group' && html`<${RequestPanel} kind=${kind} opts=${values()} docs=${found && found.docs} />`}
       <label class="switch"><input type="checkbox" checked=${opts.system === 'yes'} onChange=${(e) => set('system', e.target.checked ? 'yes' : '')} /> ${t('ui.ch.system')}</label>
       <p class="small muted" style=${{ margin: 0 }}>${t('ui.ch.system_hint')}</p>
       <label class="switch"><input type="checkbox" checked=${smsOrVoice ? opts.report === 'yes' : opts.report !== 'no'} onChange=${(e) => set('report', smsOrVoice ? (e.target.checked ? 'yes' : '') : (e.target.checked ? '' : 'no'))} /> ${t('ui.ch.takes_report')}</label>

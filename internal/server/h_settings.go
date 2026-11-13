@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -192,6 +193,28 @@ func (s *Server) periods(w http.ResponseWriter, r *http.Request) (any, error) {
 		}
 	}
 	return map[string]any{"items": out}, nil
+}
+
+// channelRequestPreview shows the request a channel form would send for
+// an example problem, in the receiving service's own format, with the
+// credentials masked. Nothing is sent.
+func (s *Server) channelRequestPreview(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req struct {
+		Kind string            `json:"kind"`
+		Opts map[string]string `json:"opts"`
+		Lang string            `json:"lang"`
+	}
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	pv, err := notify.PreviewRequest(req.Kind, req.Opts, req.Lang, s.app.Instance())
+	switch {
+	case errors.Is(err, notify.ErrNoHTTP):
+		return map[string]any{"ok": true, "http": false, "preview": pv}, nil
+	case err != nil:
+		return map[string]any{"ok": false, "error": err.Error(), "preview": pv}, nil
+	}
+	return map[string]any{"ok": true, "http": true, "preview": pv}, nil
 }
 
 // channelPreview shows what a message template makes of an example

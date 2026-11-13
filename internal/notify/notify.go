@@ -117,6 +117,7 @@ type KindInfo struct {
 	Label  string  `json:"label"`
 	Preset bool    `json:"preset,omitempty"`
 	Group  string  `json:"group,omitempty"`
+	Docs   string  `json:"docs,omitempty"` // the service's API documentation
 	Fields []Field `json:"fields"`
 }
 
@@ -187,11 +188,14 @@ func Kinds() []KindInfo {
 	sort.Strings(names)
 	for _, n := range names {
 		p := presets[n]
-		out = append(out, KindInfo{Kind: "webhook:" + n, Label: p.Label, Preset: true, Group: p.Group, Fields: append(append([]Field(nil), p.Fields...), tplField)})
+		out = append(out, KindInfo{Kind: "webhook:" + n, Label: p.Label, Preset: true, Group: p.Group, Docs: p.Docs, Fields: append(append([]Field(nil), p.Fields...), tplField)})
 	}
 	// A contact group is resolved by the engine, not sent here.
 	out = append(out, KindInfo{Kind: "group", Label: "Contact group", Fields: []Field{{Key: "members", Type: "text", Required: true, Placeholder: "ops-feishu,ops-sms"}}})
 	for i := range out {
+		if d, ok := nativeDocs[out[i].Kind]; ok {
+			out[i].Docs = d
+		}
 		if out[i].Fields == nil {
 			out[i].Fields = []Field{} // JSON [] rather than null
 		}
@@ -384,4 +388,18 @@ func withoutHandles(v string) string {
 		}
 	}
 	return strings.Join(keep, ", ")
+}
+
+// nativeDocs is the API documentation of the built-in kinds.
+var nativeDocs = map[string]string{
+	"aliyun-sms":   "https://help.aliyun.com/zh/sms/developer-reference/api-dysmsapi-2017-05-25-sendsms",
+	"dingtalk":     "https://open.dingtalk.com/document/robots/custom-robot-access",
+	"discord":      "https://discord.com/developers/docs/resources/webhook",
+	"feishu":       "https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot",
+	"slack":        "https://api.slack.com/messaging/webhooks",
+	"telegram":     "https://core.telegram.org/bots/api",
+	"tencent-sms":  "https://cloud.tencent.com/document/product/382/55981",
+	"twilio-sms":   "https://www.twilio.com/docs/messaging/api/message-resource",
+	"twilio-voice": "https://www.twilio.com/docs/voice/api/call-resource",
+	"wecom":        "https://developer.work.weixin.qq.com/document/path/91770",
 }

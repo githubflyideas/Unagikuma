@@ -67,6 +67,7 @@ func (s *Server) routes() {
 	s.handle("DELETE /api/v1/channels/{name}", "admin", global(s.channelDelete))
 	s.handle("POST /api/v1/channels/test", "admin", global(s.channelTest))
 	s.handle("POST /api/v1/channels/preview", "admin", s.channelPreview)
+	s.handle("POST /api/v1/channels/request-preview", "admin", s.channelRequestPreview)
 	s.handle("GET /api/v1/periods", "read", s.periods)
 	s.handle("GET /api/v1/changes", "read", s.changes)
 	s.handle("POST /api/v1/changes", "write", s.changeCreate)

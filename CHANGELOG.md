@@ -6,6 +6,7 @@
 - A webhook body copied from Uptime Kuma works as it is: Liquid tags (`{% if %}`, `{% elsif %}`, `{% else %}`, `{% endif %}`, `{% unless %}`, with `==`, `!=`, `>`, `<`, `and`, `or`) and Kuma's names — `{{ monitorJSON.name }}`, `type`, `hostname`, `port`, `url`; `{{ heartbeatJSON.status }}` (1 up, 0 down), `msg`, `time`, `localDateTime`, `timezone`; `{{ msg }}`, `{{ name }}`, `{{ status }}`, `{{ hostnameOrURL }}`. Values are escaped for the JSON body. The webhook form says so.
 - Importing from Uptime Kuma carries a webhook's custom body over instead of dropping it.
 - The custom webhook form fills in the request body of a common API — WeCom app message (touser, agentid), WeCom, DingTalk and Feishu robots, Slack/Mattermost/Rocket.Chat, Discord, Telegram, a generic JSON with every field, or the Uptime Kuma way — so only the text needs changing.
+- Every channel form shows the request the channel sends for an example problem, in the receiving service's own format — address, parameters, headers and body, built by the same code as a real alert, with credentials shown as `***` — and links to the service's API documentation (built-in kinds and 27 presets). Nothing is sent. `POST /api/v1/channels/request-preview`.
 
 **Changed**
 - A name of the wrong form (a channel, team or monitor name, an @name) is answered with what the field takes, in the console's language, instead of the browser's "Please match the requested format". The channel form gives an example name and says what the name is for.

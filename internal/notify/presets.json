@@ -31,7 +31,8 @@
     "limits": {
       "body_bytes": 4000
     },
-    "group": "push"
+    "group": "push",
+    "docs": "https://docs.ntfy.sh/publish/"
   },
   {
     "name": "gotify",
@@ -52,7 +53,8 @@
     "url": "{{.server}}/message?token={{urlquery .token}}",
     "content_type": "json",
     "body": "{\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\",\"priority\":{{if eq .Priority \"low\"}}4{{else}}8{{end}}}",
-    "group": "push"
+    "group": "push",
+    "docs": "https://gotify.net/docs/pushmsg"
   },
   {
     "name": "bark",
@@ -81,7 +83,8 @@
       "title": 200,
       "body_bytes": 3000
     },
-    "group": "push"
+    "group": "push",
+    "docs": "https://github.com/Finb/Bark"
   },
   {
     "name": "pushover",
@@ -110,7 +113,8 @@
       "title": 250,
       "body": 1024
     },
-    "group": "push"
+    "group": "push",
+    "docs": "https://pushover.net/api"
   },
   {
     "name": "serverchan",
@@ -205,7 +209,8 @@
       "Authorization": "Bearer {{.token}}"
     },
     "body": "{\"msgtype\":\"m.text\",\"body\":\"{{.Text}}\"}",
-    "group": "chat"
+    "group": "chat",
+    "docs": "https://spec.matrix.org/latest/client-server-api/"
   },
   {
     "name": "mattermost",
@@ -224,7 +229,8 @@
     "limits": {
       "text": 16000
     },
-    "group": "chat"
+    "group": "chat",
+    "docs": "https://developers.mattermost.com/integrate/webhooks/incoming/"
   },
   {
     "name": "pagerduty",
@@ -243,7 +249,8 @@
     "limits": {
       "title": 1024
     },
-    "group": "incident"
+    "group": "incident",
+    "docs": "https://developer.pagerduty.com/docs/events-api-v2/trigger-events/"
   },
   {
     "name": "opsgenie",
@@ -274,7 +281,8 @@
     "limits": {
       "body": 15000
     },
-    "group": "incident"
+    "group": "incident",
+    "docs": "https://docs.opsgenie.com/docs/alert-api"
   },
   {
     "name": "googlechat",
@@ -293,7 +301,8 @@
     "limits": {
       "text": 4000
     },
-    "group": "chat"
+    "group": "chat",
+    "docs": "https://developers.google.com/workspace/chat/quickstart/webhooks"
   },
   {
     "name": "pushbullet",
@@ -316,7 +325,8 @@
       "title": 250,
       "body": 8000
     },
-    "group": "push"
+    "group": "push",
+    "docs": "https://docs.pushbullet.com/"
   },
   {
     "name": "line",
@@ -344,7 +354,8 @@
     "limits": {
       "text": 5000
     },
-    "group": "chat"
+    "group": "chat",
+    "docs": "https://developers.line.biz/en/reference/messaging-api/"
   },
   {
     "name": "clicksend",
@@ -425,7 +436,8 @@
       "title": 500,
       "body": 4000
     },
-    "group": "incident"
+    "group": "incident",
+    "docs": "https://docs.datadoghq.com/api/latest/events/"
   },
   {
     "name": "apprise",
@@ -451,7 +463,8 @@
     "url": "{{.server}}/notify/{{pathescape .key}}",
     "content_type": "json",
     "body": "{\"title\":\"{{.Title}}\",\"body\":\"{{.Body}}\",\"type\":\"{{if eq .Kind \"RECOVERY\"}}success{{else if eq .Priority \"low\"}}warning{{else}}failure{{end}}\"{{if .tag}},\"tag\":\"{{.tag}}\"{{end}}}",
-    "group": "push"
+    "group": "push",
+    "docs": "https://github.com/caronc/apprise-api"
   },
   {
     "name": "rocketchat",
@@ -554,7 +567,8 @@
     "limits": {
       "text": 7000
     },
-    "group": "chat"
+    "group": "chat",
+    "docs": "https://developer.webex.com/docs/api/v1/messages/create-a-message"
   },
   {
     "name": "zulip",
@@ -601,7 +615,8 @@
     "limits": {
       "text": 9000
     },
-    "group": "chat"
+    "group": "chat",
+    "docs": "https://zulip.com/api/send-message"
   },
   {
     "name": "nextcloudtalk",
@@ -1160,7 +1175,8 @@
     "url": "{{.url}}",
     "content_type": "json",
     "body": "{\"alert_uid\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\",\"state\":\"{{if eq .Kind \"RECOVERY\"}}ok{{else}}alerting{{end}}\"}",
-    "group": "incident"
+    "group": "incident",
+    "docs": "https://grafana.com/docs/oncall/latest/"
   },
   {
     "name": "pagertree",
@@ -1192,7 +1208,8 @@
     "url": "{{.url}}",
     "content_type": "json",
     "body": "{\"title\":\"{{.Title}}\",\"message\":\"{{.Body}}\",\"X-S4-SourceSystem\":\"unagikuma\",\"X-S4-ExternalID\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"X-S4-Status\":\"{{if eq .Kind \"RECOVERY\"}}resolved{{else}}new{{end}}\"}",
-    "group": "incident"
+    "group": "incident",
+    "docs": "https://docs.signl4.com/integrations/webhook/"
   },
   {
     "name": "splunk",
@@ -1230,7 +1247,8 @@
     "url": "{{.url}}",
     "content_type": "json",
     "body": "{\"message\":\"{{.Title}}\",\"description\":\"{{.Body}}\",\"event_id\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"status\":\"{{if eq .Kind \"RECOVERY\"}}resolve{{else}}trigger{{end}}\",\"source\":\"unagikuma\"}",
-    "group": "incident"
+    "group": "incident",
+    "docs": "https://support.squadcast.com/integrations/incident-webhook-incident-webhook-api"
   },
   {
     "name": "flashduty",
@@ -1369,7 +1387,8 @@
     "url": "https://maker.ifttt.com/trigger/{{pathescape .event}}/with/key/{{pathescape .key}}",
     "content_type": "json",
     "body": "{\"value1\":\"{{.Title}}\",\"value2\":\"{{.Body}}\",\"value3\":\"{{.Kind}}\"}",
-    "group": "automation"
+    "group": "automation",
+    "docs": "https://ifttt.com/maker_webhooks"
   },
   {
     "name": "zapier",
@@ -1431,7 +1450,8 @@
       "title": 250,
       "body": 60000
     },
-    "group": "incident"
+    "group": "incident",
+    "docs": "https://docs.github.com/en/rest/issues/issues"
   },
   {
     "name": "gitea",
@@ -1537,7 +1557,8 @@
     "limits": {
       "title": 1600
     },
-    "group": "sms"
+    "group": "sms",
+    "docs": "https://developers.telnyx.com/api/messaging/send-message"
   },
   {
     "name": "vonage",
@@ -1573,7 +1594,8 @@
     "limits": {
       "title": 900
     },
-    "group": "sms"
+    "group": "sms",
+    "docs": "https://developer.vonage.com/en/api/sms"
   },
   {
     "name": "messagebird",
@@ -1840,7 +1862,8 @@
     "limits": {
       "title": 1600
     },
-    "group": "sms"
+    "group": "sms",
+    "docs": "https://www.infobip.com/docs/api/channels/sms/sms-messaging/outbound-sms/send-sms-messages"
   },
   {
     "name": "threema",
@@ -1906,7 +1929,8 @@
     "limits": {
       "title": 900
     },
-    "group": "email"
+    "group": "email",
+    "docs": "https://www.twilio.com/docs/sendgrid/api-reference/mail-send/mail-send"
   },
   {
     "name": "brevo",
@@ -1974,7 +1998,8 @@
     "limits": {
       "title": 900
     },
-    "group": "email"
+    "group": "email",
+    "docs": "https://resend.com/docs/api-reference/emails/send-email"
   },
   {
     "name": "whatsapp",
@@ -2008,7 +2033,8 @@
     "limits": {
       "text": 4096
     },
-    "group": "whatsapp"
+    "group": "whatsapp",
+    "docs": "https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages"
   },
   {
     "name": "callmebot",
@@ -2410,7 +2436,8 @@
     },
     "content_type": "json",
     "body": "{\"title\":\"{{.Title}}\",\"description\":\"{{.Body}}\",\"fingerprint\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"monitoring_tool\":\"unagikuma\",\"severity\":\"{{if eq .Priority \"low\"}}medium{{else}}critical{{end}}\"{{if eq .Kind \"RECOVERY\"}},\"end_time\":\"{{rfc3339 .Time}}\"{{end}}}",
-    "group": "incident"
+    "group": "incident",
+    "docs": "https://docs.gitlab.com/ee/operations/incident_management/integrations.html"
   },
   {
     "name": "clickup",
