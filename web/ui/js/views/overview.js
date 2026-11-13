@@ -373,7 +373,9 @@ function Onboarding({ d, reload }) {
         <div class="row"><button class="btn primary" disabled=${busy || !text.trim()} onClick=${add}>${t('ui.ob.add')}</button>
           <a class="btn" href="#/config/import">${t('ui.ob.import')}</a></div></div>`)}
       ${step(1, t('ui.ob.s2'), t('ui.ob.s2_hint'), html`<a class="btn primary" href="#/alerts/channels">${t('ui.ov.add_channel')}</a>`)}
-      ${step(2, t('ui.ob.s3'), t('ui.ob.s3_hint'), html`<a class="btn" href="#/advanced/teams">${t('ui.ob.policy')}</a>`)}
+      ${step(2, t('ui.ob.s3'), t('ui.ob.s3_hint'), steps[1]
+        ? html`<a class="btn" href="#/advanced/teams?edit=admin">${t('ui.ob.policy')}</a>`
+        : html`<a class="btn" href="#/alerts/channels">${t('ui.ob.channel_first')}</a>`)}
       ${step(3, t('ui.ob.s4'), t('ui.ob.s4_hint'), html`<a class="btn" href="#/alerts/contacts">${t('ui.ob.contacts')}</a>`)}
       ${step(4, t('ui.ob.s5'), t('ui.ob.s5_hint'), html`<a class="btn" href="#/notices/pages">${t('ui.ob.status_page')}</a>`)}
     </div>

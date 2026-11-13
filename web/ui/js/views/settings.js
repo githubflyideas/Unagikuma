@@ -162,6 +162,9 @@ const ROLES = ['admin', 'operator', 'viewer'];
 function Users() {
   const list = useFetch(() => get('/users'), []);
   const teams = useFetch(() => get('/teams'), []);
+  // The contact each login is linked to (set in the contact's form).
+  const dir = useFetch(() => get('/people').catch(() => ({ people: [] })), []);
+  const contactOf = (u) => ((dir.data && dir.data.people) || []).find(p => p.username === u.username);
   const [form, setForm] = useState(null);
   if (!list.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
   const teamItems = (teams.data && teams.data.items) || [];
@@ -191,12 +194,13 @@ function Users() {
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.user.intro')}</p>
       <button class="btn primary" onClick=${() => setForm({ username: '', password: '', role: 'operator', areas: '', teams: [] })}>${t('ui.user.add')}</button></div>
     <div class="card"><div class="bd flush tbl-wrap"><table class="tbl">
-      <thead><tr><th>${t('ui.name')}</th><th>${t('ui.user.role')}</th>${multi && html`<th>${t('ui.user.teams')}</th>`}<th>${t('ui.user.areas')}</th><th>${t('ui.tok.created_at')}</th><th></th></tr></thead>
+      <thead><tr><th>${t('ui.name')}</th><th>${t('ui.user.role')}</th>${multi && html`<th>${t('ui.user.teams')}</th>`}<th>${t('ui.user.areas')}</th><th>${t('ui.user.contact')}</th><th>${t('ui.tok.created_at')}</th><th></th></tr></thead>
       <tbody>${list.data.items.map(u => html`<tr>
         <td class="name">${u.username}</td>
         <td><span class="tag">${t('ui.user.role.' + u.role)}</span></td>
         ${multi && html`<td class="small">${(u.teams || []).map(titleOf).join(', ')}</td>`}
         <td class="small mono">${u.areas.length ? u.areas.join(', ') : html`<span class="faint">${t('ui.user.all')}</span>`}</td>
+        <td class="small">${contactOf(u) ? html`<a href="#/alerts/contacts">${contactOf(u).name}</a>` : html`<span class="faint" title=${t('ui.user.contact_none_hint')}>–</span>`}</td>
         <td class="small">${fmtTime(u.created_at)}</td>
         <td class="right nowrap"><button class="btn sm" onClick=${() => setForm({ id: u.id, username: u.username, password: '', role: u.role, areas: u.areas.join(', '), teams: u.teams || [] })}>${t('ui.edit')}</button>
           ${' '}<button class="btn sm danger" onClick=${() => remove(u)}>${t('ui.delete')}</button></td>
@@ -228,6 +232,17 @@ function Teams() {
   const admin = me.role === 'admin';
   const chans = useFetch(() => (admin ? get('/channels') : Promise.resolve([])), [admin]);
   const [form, setForm] = useState(null);
+  // #/advanced/teams?edit=admin opens that team's form (from the overview's
+  // first steps), once the list has loaded.
+  const [opened, setOpened] = useState(false);
+  useEffect(() => {
+    const m = /[?&]edit=([^&]+)/.exec(location.hash);
+    if (opened || !m || !list.data) return;
+    setOpened(true);
+    const name = decodeURIComponent(m[1]);
+    const tm = list.data.items.find(x => x.name === name || (name === 'admin' && x.builtin));
+    if (tm && admin) edit(tm);
+  }, [list.data]);
   if (!list.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
   const save = async (e) => {
     e.preventDefault();
@@ -245,7 +260,9 @@ function Teams() {
   const edit = (tm) => setForm({ edit: true, builtin: tm.builtin, name: tm.name, title: tm.title === tm.name ? '' : tm.title, description: tm.description || '', members: tm.members.slice(),
     channels: tm.channels.slice(), mode: tm.mode || 'fallback' });
   const people = (l) => l.length ? l.join(', ') : html`<span class="faint">–</span>`;
-  const userNames = ((users.data && users.data.items) || []).map(u => u.username);
+  const userList = (users.data && users.data.items) || [];
+  const userNames = userList.map(u => u.username);
+  const roleOf = (n) => (userList.find(u => u.username === n) || {}).role;
   const toggle = (n) => setForm({ ...form, members: form.members.includes(n) ? form.members.filter(x => x !== n) : [...form.members, n] });
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.team.intro')}</p>
@@ -267,10 +284,12 @@ function Teams() {
     </div></div>
     ${form && html`<${Modal} title=${form.edit ? form.name : t('ui.team.add')} onClose=${() => setForm(null)}>
       <form class="form" onSubmit=${save}>
-        ${!form.edit && html`<${Field} label=${t('ui.name')} hint=${t('ui.team.name_hint')}><input type="text" class="ltr" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}" value=${form.name} onInput=${(e) => setForm({ ...form, name: e.target.value })} /><//>`}
-        <${Field} label=${t('ui.title')}><input type="text" value=${form.title} onInput=${(e) => setForm({ ...form, title: e.target.value })} placeholder=${form.builtin ? t('ui.team.admin') : form.name} /><//>
-        <${Field} label=${t('ui.team.members')} hint=${t('ui.team.members_hint')}>
-          <div class="col">${userNames.map(n => html`<label class="switch"><input type="checkbox" checked=${form.members.includes(n)} onChange=${() => toggle(n)} /> ${n}</label>`)}</div><//>
+        ${!form.edit && html`<${Field} label=${t('ui.name')} hint=${t('ui.team.name_hint')}><input type="text" class="ltr" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}" value=${form.name} placeholder=${t('ui.team.name_ph')} onInput=${(e) => setForm({ ...form, name: e.target.value })} /><//>`}
+        <${Field} label=${t('ui.team.display_name')}><input type="text" value=${form.title} onInput=${(e) => setForm({ ...form, title: e.target.value })} placeholder=${form.builtin ? t('ui.team.admin') : t('ui.team.display_ph')} /><//>
+        <${Field} label=${t('ui.team.members_label')} hint=${t('ui.team.members_hint')}>
+          <div class="col">${userNames.map(n => html`<div class="row" style=${{ gap: '8px' }}><label class="switch"><input type="checkbox" checked=${form.members.includes(n)} onChange=${() => toggle(n)} /> ${n}</label>
+            ${roleOf(n) && html`<span class="tag" title=${t('ui.user.role.' + roleOf(n) + '_hint')}>${t('ui.user.role.' + roleOf(n))}</span>`}</div>`)}
+          ${userNames.length <= 1 && html`<div class="small muted">${t('ui.team.add_users_hint')} <a href="#/settings/users">${t('ui.nav.settings')} › ${t('ui.set.tab.users')}</a></div>`}</div><//>
         <${Field} label=${t('ui.team.channels')} hint=${t('ui.team.channels_hint')}>
           <${ChannelList} value=${form.channels} channels=${chans.data || []} onChange=${(channels) => setForm({ ...form, channels })} /><//>
         ${form.channels.length > 1 && html`<${Field} label=${t('ui.team.mode')}><select value=${form.mode} onChange=${(e) => setForm({ ...form, mode: e.target.value })}>
