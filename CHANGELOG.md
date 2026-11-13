@@ -3,34 +3,23 @@
 ## v2.6.10 — 2026-11-13
 
 **Added**
-- A webhook body copied from Uptime Kuma works as it is: Liquid tags (`{% if %}`, `{% elsif %}`, `{% else %}`, `{% endif %}`, `{% unless %}`, with `==`, `!=`, `>`, `<`, `and`, `or`) and Kuma's names — `{{ monitorJSON.name }}`, `type`, `hostname`, `port`, `url`; `{{ heartbeatJSON.status }}` (1 up, 0 down), `msg`, `time`, `localDateTime`, `timezone`; `{{ msg }}`, `{{ name }}`, `{{ status }}`, `{{ hostnameOrURL }}`. Values are escaped for the JSON body. The webhook form says so.
-- Importing from Uptime Kuma carries a webhook's custom body over instead of dropping it.
-- The custom webhook form fills in the request body of a common API — WeCom app message (touser, agentid), WeCom, DingTalk and Feishu robots, Slack/Mattermost/Rocket.Chat, Discord, Telegram, a generic JSON with every field, or the Uptime Kuma way — so only the text needs changing.
-- Change notice templates: each notice says when it is sent and shows its current look; editing inserts names with buttons and previews an example change with and without the optional parts. A line whose names are all empty is left out, so templates need no `{{if}}` (templates with blocks still work). `POST /api/v1/changes/templates/preview`.
-- A monitor's advanced options are picked from the options of its check type, each with its name, what it does and an example value; Custom still takes any option.
-- The internet gateway is chosen by city (33 cities, named in every language) instead of by country or region. Each city lists the resolvers run there, or anycast ones marked as such; automatic detection measures the resolvers of every city of this host's country.
-- Channel kinds can be searched and sorted by how common they are (the default), by name or by type.
-- Every channel form shows the request the channel sends for an example problem, in the receiving service's own format — address, parameters, headers and body, built by the same code as a real alert, with credentials shown as `***` — and links to the service's API documentation (built-in kinds and 27 presets). Nothing is sent. `POST /api/v1/channels/request-preview`.
+- Uptime Kuma webhook templates work as pasted; imports keep them.
+- Channel forms show the request in each service's own format, with ready-made bodies.
+- Delivery rules are set on the channels tab.
+- Simpler external heartbeat form: GET or PUSH, host information and credentials as fields.
+- Internet gateway chosen by city.
 
 **Changed**
-- Menus: Alerting is Alerts & notifications and holds the change notices; Notices is Status pages; Config & history is Config & import; Run mode is last. Old addresses still open the moved pages.
-- The sidebar and the content stay together as one block in the middle of a wide window.
-- The monitor list keeps to two rows: every button (pause, resume, check, move, delete, quick add, add) on one row, and the status filters with the view switch below.
-- **Alerts and notifications › Channels** shows the delivery rules that apply to every channel (timeout, retries, wait before a retry, longest rate-limit wait, resend after every channel failed, rate limit) and edits them there; they no longer appear among the tunables.
-- The external heartbeat is filled in field by field: a GET (with the ticked items among host name, status, problem count, monitor count and time as URL parameters) or a PUSH whose body is those items as JSON or one line of text, with no authentication, a user name and password, or an API key in a header or URL parameter. The form shows the request it will send, credentials masked; a saved password or key is never sent back to the browser.
-- Dialogs open over the page content, not over the menu beside it.
-- The top bar names the run mode (single machine, two machines, cluster with nodes online) instead of "Live" and opens the run mode page; it says it is reconnecting when live updates stop.
-- **Status pages** has **New announcement** and **Announce a change** at the top, next to **New status page**, instead of a button on every page; a new announcement asks which page it goes on.
-- Certificate and domain expiry moved from the monitor toolbar to a tab under **Problems** (`#/problems/expiry`); the old address still opens it.
-- Channel kinds are grouped by type only (chat, push, SMS, calls, e-mail, WhatsApp, incident, automation, custom); the regional groups are gone, and built-in kinds have names in every language.
-- Themes: Bright (white panels, a coloured sidebar, warm orange, round shapes) and Modern (black and white, thin lines, square corners, a violet accent) are new designs; themes are picked with dots under the product name.
-- The team form says what the name, the display name and the members (logins, with their role) are. The first steps open the administrators' team to choose its channels, or ask for a channel first.
-- The users list shows each login's contact, and the contact list each contact's login. A phone number of an odd length is pointed out (saving is still allowed).
-- A name of the wrong form (a channel, team or monitor name, an @name) is answered with what the field takes, in the console's language, instead of the browser's "Please match the requested format". The channel form gives an example name and says what the name is for.
+- Menus renamed and reordered; run mode shown in the top bar.
+- Monitor list, status pages and problems pages tidied; expiry moved under problems.
+- Channel kinds grouped by type, with search and sorting.
+- Bright and Modern themes redesigned; themes picked from colour dots.
+- Change-notice templates, team form and monitor options easier to use.
+- Dialogs open over the page content.
 
-### Fixed
-
-- A browser holding a session cookie from an earlier installation on the same address now gets the first-account setup page instead of the sign-in page; clearing cookies is no longer needed.
+**Fixed**
+- First-account setup appears even when the browser holds an old session cookie.
+- Form validation messages follow the interface language.
 
 ## v2.6.9 — 2026-11-13
 
