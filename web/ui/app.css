@@ -831,3 +831,8 @@ select.bulk { width: auto; font-weight: 600; }
 :root[data-theme="mist"] .themes button { border-color: rgba(255, 255, 255, .7); }
 :root[data-theme="mist"] .themes button[aria-pressed="true"] { outline-color: #fff; }
 .shell.mini .themes { display: none; }
+
+/* Monitor form: advanced options picked from a list. */
+.adv-opts { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; }
+.adv-opts summary { cursor: pointer; font-weight: 600; }
+.opt-row { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
