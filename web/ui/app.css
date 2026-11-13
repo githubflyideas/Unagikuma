@@ -514,10 +514,13 @@ p a:not(.btn), .pub footer a { text-decoration: underline; text-underline-offset
 .formula .small { flex-basis: 100%; }
 
 /* ---- console look for every page ---- */
-/* On a wide screen the content keeps a readable width and sits in the
-   middle; the top bar's contents line up with it. */
-.page { max-width: 1640px; gap: 18px; margin-inline: auto; }
-.top { padding-inline: max(22px, calc((100% - 1640px) / 2 + 22px)); }
+/* On a wide screen the sidebar and the content stay together as one block
+   of readable width in the middle of the window. */
+.page { max-width: none; gap: 18px; }
+.shell { max-width: 1880px; margin-inline: auto; background-color: var(--bg); box-shadow: 0 0 0 1px var(--border), 0 0 40px rgba(0, 0, 0, .06); }
+/* The margins outside the block are a shade darker, so the block reads as one. */
+body:has(.shell) { background-color: color-mix(in srgb, var(--bg) 92%, var(--text)); }
+@media (max-width: 860px) { .shell { box-shadow: none; } body:has(.shell) { background-color: var(--bg); } }
 .card { border-radius: 14px; overflow: hidden; }
 .card > .hd { padding: 13px 18px; }
 .card > .hd h2 { font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
@@ -789,3 +792,12 @@ body.summarypage { background: var(--bg); }
 .req-preview { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; background: var(--panel-2); min-width: 0; }
 .req-preview summary { cursor: pointer; font-weight: 600; font-size: 13px; }
 .req-preview pre { margin: 8px 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
+
+/* Bulk actions on the selected monitors, in one menu. */
+select.bulk { width: auto; font-weight: 600; }
+
+/* Channel kind menu: search and sort above the list. */
+.kind-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.kind-tools input[type=search] { flex: 1 1 140px; min-width: 0; }
+.seg.sm button { padding: 3px 9px; font-size: 12.5px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }

@@ -86,8 +86,8 @@ Needs a look (imported)
    not used.
 5. Channel "Generic webhook" → generic-webhook
    The message body differs from Uptime Kuma's.
-   To do: Check that the receiving side understands it (Alerting › Channels ›
-          Test).
+   To do: Check that the receiving side understands it (Alerts & notifications ›
+          Channels › Test).
 6. Channel "Ops email" → ops-email
    Copy (CC/BCC) addresses are sent to as normal recipients.
 7. Status page "Public status" → public
@@ -128,7 +128,8 @@ Not imported
 9. Channels: Pushover (Pushover), Teams (Microsoft Teams), Gotify (Gotify),
    PagerDuty (PagerDuty), Unused Matrix (Matrix)
    Why: No imported monitor uses them.
-   To do: Add them under Alerting › Channels if you still need them.
+   To do: Add them under Alerts & notifications › Channels if you still need
+          them.
 10. Maintenance "Manual maintenance"
     Why: It is switched on and off by hand, which has no schedule to copy. It
          was on when exported.

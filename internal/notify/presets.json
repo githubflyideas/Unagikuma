@@ -137,7 +137,7 @@
     "limits": {
       "title": 32
     },
-    "group": "asia"
+    "group": "push"
   },
   {
     "name": "pushplus",
@@ -161,7 +161,7 @@
       "title": 100,
       "body": 20000
     },
-    "group": "asia"
+    "group": "push"
   },
   {
     "name": "teams",
@@ -688,7 +688,7 @@
     "limits": {
       "text": 3500
     },
-    "group": "ru"
+    "group": "chat"
   },
   {
     "name": "kook",
@@ -720,7 +720,7 @@
     "limits": {
       "text": 4000
     },
-    "group": "asia"
+    "group": "chat"
   },
   {
     "name": "signal",
@@ -778,7 +778,7 @@
     "limits": {
       "text": 4000
     },
-    "group": "ru"
+    "group": "chat"
   },
   {
     "name": "onebot",
@@ -819,7 +819,7 @@
     "limits": {
       "text": 4500
     },
-    "group": "asia"
+    "group": "chat"
   },
   {
     "name": "homeassistant",
@@ -930,7 +930,7 @@
     "limits": {
       "text": 40000
     },
-    "group": "asia"
+    "group": "push"
   },
   {
     "name": "pushdeer",
@@ -955,7 +955,7 @@
       "field": "code",
       "equals": "0"
     },
-    "group": "asia"
+    "group": "push"
   },
   {
     "name": "wpush",
@@ -989,7 +989,7 @@
       "field": "code",
       "equals": "0"
     },
-    "group": "asia"
+    "group": "push"
   },
   {
     "name": "spug",
@@ -1009,7 +1009,7 @@
       "field": "code",
       "equals": "200"
     },
-    "group": "asia"
+    "group": "push"
   },
   {
     "name": "yzj",
@@ -1028,7 +1028,7 @@
     "limits": {
       "text": 4000
     },
-    "group": "asia"
+    "group": "chat"
   },
   {
     "name": "techulus",
@@ -1264,7 +1264,7 @@
     "url": "https://api.flashcat.cloud/event/push/alert/standard?integration_key={{urlquery .key}}",
     "content_type": "json",
     "body": "{\"title_rule\":\"{{.Title}}\",\"event_status\":\"{{if eq .Kind \"RECOVERY\"}}Ok{{else if eq .Priority \"low\"}}Warning{{else}}Critical{{end}}\",\"alert_key\":\"unagikuma-{{if .GlobalIncidentID}}{{.GlobalIncidentID}}{{else}}{{.DeliveryID}}{{end}}\",\"description\":\"{{.Body}}\"}",
-    "group": "asia"
+    "group": "incident"
   },
   {
     "name": "heii",
@@ -2271,7 +2271,7 @@
     "limits": {
       "body": 10000
     },
-    "group": "asia"
+    "group": "chat"
   },
   {
     "name": "kakaowork",
@@ -2304,7 +2304,7 @@
     "limits": {
       "text": 4000
     },
-    "group": "asia"
+    "group": "chat"
   },
   {
     "name": "dooray",
@@ -2323,7 +2323,7 @@
     "limits": {
       "text": 4000
     },
-    "group": "asia"
+    "group": "chat"
   },
   {
     "name": "jandi",
@@ -2346,7 +2346,7 @@
       "title": 300,
       "body": 4000
     },
-    "group": "asia"
+    "group": "chat"
   },
   {
     "name": "unifonic",
@@ -2496,7 +2496,7 @@
     "limits": {
       "text": 4000
     },
-    "group": "ru"
+    "group": "chat"
   },
   {
     "name": "bale",
@@ -2524,7 +2524,7 @@
     "limits": {
       "text": 4000
     },
-    "group": "ru"
+    "group": "chat"
   },
   {
     "name": "max",
@@ -2556,7 +2556,7 @@
     "limits": {
       "text": 4000
     },
-    "group": "ru"
+    "group": "chat"
   },
   {
     "name": "onechat",
@@ -2590,7 +2590,7 @@
     "limits": {
       "text": 2000
     },
-    "group": "asia"
+    "group": "chat"
   },
   {
     "name": "milky",
@@ -2631,7 +2631,7 @@
     "limits": {
       "text": 4500
     },
-    "group": "asia"
+    "group": "chat"
   },
   {
     "name": "openwa",

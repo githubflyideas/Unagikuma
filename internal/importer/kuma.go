@@ -438,10 +438,10 @@ func (c *kumaConvert) channels() {
 		return
 	}
 	it := Item{Kind: "channel", Source: unusedName, Status: StatusLeftOut,
-		Why: "No imported monitor uses it.", Todo: "Add it under Alerting › Channels if you still need it."}
+		Why: "No imported monitor uses it.", Todo: "Add it under Alerts & notifications › Channels if you still need it."}
 	if len(unused) > 1 {
 		it.Kind, it.Source = "channels", strings.Join(unused, ", ")
-		it.Why, it.Todo = "No imported monitor uses them.", "Add them under Alerting › Channels if you still need them."
+		it.Why, it.Todo = "No imported monitor uses them.", "Add them under Alerts & notifications › Channels if you still need them."
 	}
 	res.add(it)
 }
@@ -1018,7 +1018,7 @@ func kumaChannelLabel(n kumaNotification) string {
 func (k *kumaImport) channel(n kumaNotification, existing *config.Config, it *Item) *config.RecordSpec {
 	var c map[string]any
 	if err := json.Unmarshal([]byte(n.Config), &c); err != nil {
-		it.Why, it.Todo = "Its settings could not be read.", "Add it by hand under Alerting › Channels."
+		it.Why, it.Todo = "Its settings could not be read.", "Add it by hand under Alerts & notifications › Channels."
 		return nil
 	}
 	ch := &kumaChannel{k: k, c: c, it: it}
@@ -1026,7 +1026,7 @@ func (k *kumaImport) channel(n kumaNotification, existing *config.Config, it *It
 	kind := kumaChannelKinds[typ]
 	if kind == "" {
 		it.Why = "Unagikuma cannot send to “" + typ + "”."
-		it.Todo = "Pick a similar channel under Alerting › Channels (a webhook reaches most services), then add it to the monitor's policy."
+		it.Todo = "Pick a similar channel under Alerts & notifications › Channels (a webhook reaches most services), then add it to the monitor's policy."
 		return nil
 	}
 	if name := slug(n.Name); existing != nil && name != "" {
@@ -1115,7 +1115,7 @@ func (ch *kumaChannel) plain(key, value string) {
 func (ch *kumaChannel) missing(fields ...string) bool {
 	for _, f := range fields {
 		if ch.str(f) == "" {
-			ch.drop("Its settings are incomplete ("+f+" is empty).", "Add it by hand under Alerting › Channels.")
+			ch.drop("Its settings are incomplete ("+f+" is empty).", "Add it by hand under Alerts & notifications › Channels.")
 			return true
 		}
 	}
@@ -1198,9 +1198,9 @@ func (ch *kumaChannel) webhook() bool {
 		ch.plain("content-type", "json")
 		ch.plain("body", oneLine(body))
 	case ch.str("webhookContentType") == "custom":
-		ch.it.attention("Its custom body template could not be carried over: it uses Liquid that is not understood here.", "Write the body again under Alerting › Channels (body=).")
+		ch.it.attention("Its custom body template could not be carried over: it uses Liquid that is not understood here.", "Write the body again under Alerts & notifications › Channels (body=).")
 	default:
-		ch.it.attention("The message body differs from Uptime Kuma's.", "Check that the receiving side understands it (Alerting › Channels › Test).")
+		ch.it.attention("The message body differs from Uptime Kuma's.", "Check that the receiving side understands it (Alerts & notifications › Channels › Test).")
 	}
 	var hs map[string]any
 	if h := ch.str("webhookAdditionalHeaders"); h == "" || json.Unmarshal([]byte(h), &hs) != nil {
@@ -1316,7 +1316,7 @@ func (ch *kumaChannel) bark() bool {
 	}
 	u, err := url.Parse(ch.str("barkEndpoint"))
 	if err != nil || u.Host == "" {
-		ch.drop("Its Bark address could not be read.", "Add it by hand under Alerting › Channels.")
+		ch.drop("Its Bark address could not be read.", "Add it by hand under Alerts & notifications › Channels.")
 		return false
 	}
 	key := strings.Trim(u.Path, "/")

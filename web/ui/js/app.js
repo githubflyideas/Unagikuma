@@ -151,7 +151,7 @@ const NAV = [
 
 const TEAM_NAV = new Set(['/', '/monitors', '/problems', '/events']);
 
-const OLD_ALERT_TABS = { changes: 'changes', notices: 'pages', report: 'report' };
+const OLD_ALERT_TABS = { notices: 'pages', report: 'report' };
 
 function Shell({ user, onLogout, onLang }) {
   const route = useRoute();
@@ -169,7 +169,8 @@ function Shell({ user, onLogout, onLang }) {
   const scriptProblems = ov.data ? ov.data.script_problems || 0 : 0;
   const contactIssues = ov.data ? ov.data.contact_issues || 0 : 0;
   const setup = setupIssues(ov.data);
-  const first = route.parts[0] === 'settings' && ADVANCED_TABS.includes(route.parts[1]) ? '/advanced' : '/' + (route.parts[0] || '');
+  const first = route.parts[0] === 'settings' && ADVANCED_TABS.includes(route.parts[1]) ? '/advanced'
+    : route.parts[0] === 'notices' && route.parts[1] === 'changes' ? '/alerts' : '/' + (route.parts[0] || '');
   const changeTheme = (v) => { setTheme(v); storage('unagikuma.theme', v); applyTheme(v); };
   // On a wide screen the button folds the sidebar to icons; on a phone it
   // slides the sidebar in.
@@ -195,8 +196,9 @@ function Shell({ user, onLogout, onLang }) {
     case 'incidents': view = p[1] ? html`<${IncidentReport} id=${p[1]} />` : html`<${Problems} tab="all" />`; break;
     // Changes, status pages and the report used to live under Alerting;
     // their old addresses still open them.
-    case 'alerts': view = OLD_ALERT_TABS[p[1]] ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]]} />` : html`<${Alerts} tab=${p[1] === 'contacts' ? 'contacts' : 'channels'} />`; break; // policies went to the teams
-    case 'notices': view = html`<${Notices} tab=${p[1] || 'changes'} />`; break;
+    case 'alerts': view = OLD_ALERT_TABS[p[1]] ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]]} />` : html`<${Alerts} tab=${['contacts', 'changes'].includes(p[1]) ? p[1] : 'channels'} />`; break; // policies went to the teams
+    // Change notices moved to Alerts and notifications; the old address opens them there.
+    case 'notices': view = p[1] === 'changes' ? html`<${Alerts} tab="changes" />` : html`<${Notices} tab=${p[1] || 'pages'} />`; break;
     case 'config': view = html`<${ConfigView} tab=${p[1] || 'edit'} />`; break;
     // Nodes used to be a Settings tab; its old address opens Run mode.
     case 'settings': view = p[1] === 'nodes' ? html`<div class="page"><${Nodes} /></div>`

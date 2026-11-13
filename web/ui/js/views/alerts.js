@@ -4,6 +4,7 @@ import { html, useState, useEffect, useRef } from '../lib.js';
 import { t, has, currentLang } from '../i18n.js';
 import { get, post, del, put, ifMatch } from '../api.js';
 import { ContactsTab, IssueDot, NewAddresses, addressKey } from './contacts.js';
+import { ChangesTab } from './changes.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle } from '../ui.js';
 
 // kindLabel is a kind's name in the reader's language where it has one.
@@ -17,21 +18,41 @@ function fieldLabel(k) {
   return has(key) ? t(key) : k;
 }
 
-// Sections of the preset menu, in the order they are shown.
-const PRESET_GROUPS = ['chat', 'asia', 'incident', 'sms', 'whatsapp', 'push', 'email', 'automation', 'ru'];
+// Channel kinds by type, for the kind menu. Presets carry their type
+// (group); the built-in kinds are listed here.
+const TYPE_ORDER = ['chat', 'push', 'sms', 'voice', 'email', 'whatsapp', 'incident', 'automation', 'custom'];
+const NATIVE_TYPE = {
+  feishu: 'chat', dingtalk: 'chat', wecom: 'chat', telegram: 'chat', slack: 'chat', discord: 'chat', email: 'email',
+  'aliyun-sms': 'sms', 'tencent-sms': 'sms', 'twilio-sms': 'sms', 'custom-sms': 'sms',
+  'aliyun-voice': 'voice', 'tencent-voice': 'voice', 'twilio-voice': 'voice', 'custom-voice': 'voice',
+  webhook: 'custom', group: 'custom', log: 'custom',
+};
+const typeOf = (k) => NATIVE_TYPE[k.kind] || k.group || 'custom';
+const nameOf = (k) => k.kind.replace(/^webhook:/, '');
+// How widely used a kind is: the order of the default menu.
+const COMMON = ['feishu', 'dingtalk', 'wecom', 'email', 'webhook', 'telegram', 'slack', 'discord', 'teams', 'aliyun-sms', 'aliyun-voice',
+  'tencent-sms', 'tencent-voice', 'twilio-sms', 'twilio-voice', 'custom-sms', 'custom-voice', 'googlechat', 'mattermost', 'matrix', 'rocketchat',
+  'line', 'signal', 'webex', 'zulip', 'pagerduty', 'opsgenie', 'datadog', 'grafanaoncall', 'splunk', 'gitlab', 'github', 'ntfy', 'gotify', 'bark',
+  'pushover', 'pushbullet', 'apprise', 'homeassistant', 'serverchan', 'pushplus', 'wxpusher', 'onebot', 'kakaowork', 'chatwork', 'whatsapp', 'zapi',
+  'zenvia', 'zapier', 'n8n', 'ifttt', 'sendgrid', 'resend', 'brevo', 'vonage', 'plivo', 'messagebird', 'infobip', 'telnyx', 'clicksend', 'unifonic'];
+const LESS_COMMON = ['zohocliq', 'nextcloudtalk', 'clickup', 'threema', 'pumble', 'kook', 'pushdeer', 'flashduty', 'dooray', 'jandi', 'ilert',
+  'incidentio', 'squadcast', 'signl4', 'alerta', 'goalert', 'newrelic', 'gitea', 'waha', 'evolution', 'callmebot', 'whapi', 'sevenio', 'taqnyat',
+  'ooredoo', 'smsc', 'octopush', '46elks', 'freemobile', 'smseagle', 'smsgateway', 'vkteams', 'vk', 'bitrix24', 'gorush', 'group', 'log'];
+const rank = (k) => { const n = nameOf(k), i = COMMON.indexOf(n), j = LESS_COMMON.indexOf(n); return i >= 0 ? i : j >= 0 ? 1000 + j : 2000; };
+const labelOf = (k) => (k.preset ? k.label : kindLabel(k));
 
-// Sections of the built-in kinds. A kind not listed goes to the last one.
-const NATIVE_GROUPS = [
-  ['im', ['feishu', 'dingtalk', 'wecom', 'telegram', 'slack', 'discord']],
-  ['email', ['email']],
-  ['phone', ['aliyun-sms', 'aliyun-voice', 'tencent-sms', 'tencent-voice', 'twilio-sms', 'twilio-voice', 'custom-sms', 'custom-voice']],
-  ['other', ['webhook', 'group', 'log']],
-];
-function nativeGroups(kinds) {
-  const native = kinds.filter(k => !k.preset);
-  const listed = new Set(NATIVE_GROUPS.flatMap(g => g[1]));
-  return NATIVE_GROUPS.map(([g, names], i) => [g, native.filter(k => names.includes(k.kind) || (i === NATIVE_GROUPS.length - 1 && !listed.has(k.kind)))
-    .sort((a, b) => (names.indexOf(a.kind) + 1 || 99) - (names.indexOf(b.kind) + 1 || 99))]);
+// kindSections is the kind menu: sorted by how common a kind is (the
+// default), by name, or by type, and narrowed by a search. The kind in use
+// always stays in the menu.
+function kindSections(kinds, sort, query, current) {
+  const q = query.trim().toLowerCase();
+  const list = kinds.filter(k => k.kind === current || !q || (labelOf(k) + ' ' + nameOf(k) + ' ' + t('ui.ch.type.' + typeOf(k))).toLowerCase().includes(q));
+  const byName = (a, b) => labelOf(a).localeCompare(labelOf(b));
+  if (sort === 'name') return [['', [...list].sort(byName)]];
+  if (sort === 'type') return TYPE_ORDER.map(ty => [t('ui.ch.type.' + ty), list.filter(k => typeOf(k) === ty).sort((a, b) => rank(a) - rank(b) || byName(a, b))]).filter(([, l]) => l.length);
+  const sorted = [...list].sort((a, b) => rank(a) - rank(b) || byName(a, b));
+  return [[t('ui.ch.pop.common'), sorted.filter(k => rank(k) < 1000)], [t('ui.ch.pop.less'), sorted.filter(k => rank(k) >= 1000 && rank(k) < 2000)],
+    [t('ui.ch.pop.other'), sorted.filter(k => rank(k) >= 2000)]].filter(([, l]) => l.length);
 }
 
 // The names a message template can use, in the order offered.
@@ -174,6 +195,8 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
   const [err, setErr] = useState(null);
   const [test, setTest] = useState(null);
   const [unknown, setUnknown] = useState(null); // addresses to offer for the directory
+  const [sort, setSort] = useState('common');
+  const [query, setQuery] = useState('');
   const people = useFetch(() => get('/people').catch(() => ({ people: [] })), []);
   const periods = useFetch(() => get('/periods').catch(() => ({ items: [] })), []);
   const found = kinds.find(k => k.kind === kind);
@@ -235,9 +258,14 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
     <form class="form" onSubmit=${save}>
       <div class="two">
         <${Field} label=${t('ui.ch.kind')}>
+          ${!editing && html`<div class="kind-tools">
+            <input type="search" value=${query} placeholder=${t('ui.ch.kind_search')} aria-label=${t('ui.ch.kind_search')} onInput=${(e) => setQuery(e.target.value)} />
+            <div class="seg sm" role="group" aria-label=${t('ui.ch.sort')}>${['common', 'name', 'type'].map(v => html`<button type="button" aria-pressed=${String(sort === v)} onClick=${() => setSort(v)}>${t('ui.ch.sort.' + v)}</button>`)}</div>
+          </div>`}
           <select value=${kind} onChange=${(e) => { setKind(e.target.value); setTest(null); }} disabled=${editing}>
-            ${nativeGroups(kinds).map(([g, list]) => list.length > 0 && html`<optgroup label=${t('ui.ch.ngroup.' + g)}>${list.map(k => html`<option value=${k.kind}>${kindLabel(k)}</option>`)}</optgroup>`)}
-            ${PRESET_GROUPS.map(g => html`<optgroup label=${t('ui.ch.group.' + g)}>${kinds.filter(k => k.preset && k.group === g).sort((a, b) => a.label.localeCompare(b.label)).map(k => html`<option value=${k.kind}>${k.label}</option>`)}</optgroup>`)}
+            ${kindSections(kinds, sort, query, kind).map(([label, list]) => label
+              ? html`<optgroup label=${label}>${list.map(k => html`<option value=${k.kind}>${labelOf(k)}</option>`)}</optgroup>`
+              : list.map(k => html`<option value=${k.kind}>${labelOf(k)}</option>`))}
           </select><//>
         <${Field} label=${t('ui.name')} hint=${editing ? '' : t('ui.ch.name_hint')}><input type="text" class="ltr" value=${name} onInput=${(e) => setName(e.target.value)} required disabled=${editing} pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" placeholder=${t('ui.ch.name_ph')} /><//>
       </div>
@@ -361,8 +389,9 @@ export function Alerts({ tab }) {
     <div class="tabs">
       <a href="#/alerts/channels" class=${tab === 'channels' ? 'on' : ''}>${t('ui.ch.tab')}</a>
       <a href="#/alerts/contacts" class=${tab === 'contacts' ? 'on' : ''}>${t('ui.dir.tab')}</a>
+      <a href="#/alerts/changes" class=${tab === 'changes' ? 'on' : ''}>${t('ui.chg.tab')}</a>
     </div>
-    ${tab === 'contacts' ? html`<${ContactsTab} />` : html`<${ChannelsTab} />`}
+    ${tab === 'contacts' ? html`<${ContactsTab} />` : tab === 'changes' ? html`<${ChangesTab} />` : html`<${ChannelsTab} />`}
   </div>`;
 }
 
