@@ -329,7 +329,7 @@ function Regions() {
   const toggle = (n) => setForm({ ...form, nodes: form.nodes.includes(n) ? form.nodes.filter(x => x !== n) : [...form.nodes, n] });
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.region.intro')}</p>
-      ${nodeNames.length ? html`<button class="btn primary" onClick=${() => setForm({ name: '', nodes: [] })}>${t('ui.region.add')}</button>`
+      ${nodeNames.length > 1 ? html`<button class="btn primary" onClick=${() => setForm({ name: '', nodes: [] })}>${t('ui.region.add')}</button>`
         : html`<a class="small" href="#/nodes">${t('ui.region.no_nodes')}</a>`}</div>
     <div class="card"><div class="bd flush tbl-wrap"><table class="tbl">
       <thead><tr><th>${t('ui.name')}</th><th>${t('ui.region.nodes')}</th><th>${t('ui.team.monitors')}</th><th></th></tr></thead>

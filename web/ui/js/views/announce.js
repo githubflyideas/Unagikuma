@@ -35,7 +35,7 @@ function WeeklySettings() {
     try { await post('/reports/weekly/send'); toast(t('ui.report.sent')); } catch (e) { toastError(e); }
     setBusy(false);
   };
-  return html`<div class="card"><div class="hd"><h3>${t('ui.report.weekly')}</h3>
+  return html`<div class="card"><div class="hd"><h3>${t('ui.report.weekly')}</h3><div class="spacer"></div>
       <button class="btn sm" onClick=${send} disabled=${busy}>${t('ui.report.weekly_send')}</button></div>
     <div class="bd form">
       <div class="row" style=${{ gap: '16px', flexWrap: 'wrap' }}>
