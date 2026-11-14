@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.6.14 — 2026-11-14
+
+**Added**
+- SNMPv3 with authentication and encryption.
+- SNMP port checks by name: traffic, utilisation, state and speed.
+- SNMP temperature sensors, with Huawei, H3C and Cisco tables.
+- Value rules for any number a check reads: limits, sudden change, duration.
+- Value card on the monitor page.
+
 ## v2.6.13 — 2026-11-14
 
 **Added**

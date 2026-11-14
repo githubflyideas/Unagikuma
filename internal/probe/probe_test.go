@@ -102,6 +102,14 @@ func TestHTTP(t *testing.T) {
 	if r.Evidence.Peer == "" || r.Latency < 0 || !coarseClock && r.Latency == 0 {
 		t.Fatalf("peer/latency missing: %+v", r)
 	}
+	// The number at json-path is the value the rules judge.
+	r = run(t, Spec{Type: "HTTP", Target: srv.URL + "/ok", Opts: map[string]string{"json-path": "$.items[0].n", "warn": "100"}})
+	if r.Vote != VoteOK || r.Metrics["value"] != 7 {
+		t.Fatalf("json value: %+v", r)
+	}
+	if err := Validate(Spec{Type: "HTTP", Target: srv.URL, Opts: map[string]string{"warn": "100"}}); err == nil {
+		t.Fatal("warn= without json-path accepted")
+	}
 }
 
 // shortCertServer is a TLS server whose self-signed certificate expires

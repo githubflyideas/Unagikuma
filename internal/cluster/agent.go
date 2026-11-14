@@ -618,6 +618,7 @@ func (s *agentSink) Evidence(string, string, time.Time, probe.Result) {}
 func (s *agentSink) SaveIntent(*engine.Intent) error                  { return nil }
 func (s *agentSink) Delivery(engine.DeliveryRecord)                   {}
 func (s *agentSink) Counter(string, int)                              {}
+func (s *agentSink) Value(string, time.Time, float64)                 {}
 func (s *agentSink) Event(e engine.Event) {
 	s.log.Debug("local event", "type", e.Type, "message", e.Message)
 }

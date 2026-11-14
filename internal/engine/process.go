@@ -18,6 +18,9 @@ func (e *Engine) onResult(rr roundResult) {
 	if rt == nil || m == nil || m.DefHash != rr.defHash {
 		return // removed or redefined while the round ran
 	}
+	if !rr.push {
+		rr.res = e.applyValues(m, rr.res, rr.end)
+	}
 	nv := e.judgeLocal(rt, m.Scope, m.Probe, rr)
 	e.judge(m, rt, nv, rr.res, rr.end, rr.due, rr.push)
 }

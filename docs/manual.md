@@ -121,6 +121,26 @@ main     IN STATUSPAGE "Service status" select="group:public"
 - `unagikuma keywords` lists the UDP keywords and what each check proves.
 - Every day at 10:00 (`notify.daily-report-at`) a status report lists the hosts that are DOWN and UP and every service that is not OK; **Notices & status › Daily report** previews it and sends it on demand. Each team chosen there (the admin team by default, `notify.daily-report-teams`) gets a report on its own monitors through its channels; the admin team's covers every monitor. A person can be switched off in **Contacts**, a channel with `report=no`.
 
+### Values: limits and sudden changes
+
+Some checks read a number: the value at `json-path=` of an HTTP check, the OID an SNMP check reads, a network port's traffic (`port=`) or a temperature sensor (`sensor=`). The same rules judge any of them:
+
+```text
+sw1-g0-1   1m IN SNMP 10.0.0.2 port=Gi0/1 community=${secret:ro} value=util warn=70 crit=90 change=50% compare=24h min=5
+room-temp     IN SNMP 10.0.0.3 sensor="Inlet" version=3 user=mon auth=sha auth-pass=${secret:a} priv=aes priv-pass=${secret:p} warn=35 crit=40 for=5m
+api-queue     IN HTTP https://api.example.com/q json-path=$.data.depth warn=500 crit=1000
+stock         IN HTTP https://shop.example.com/s json-path=$.n crit=<10
+```
+
+- `warn=` makes the monitor degraded above the value, `crit=` fails it (`<10` means below 10). Units can be written: `80%`, `500Mbps`, `1.5GB`, `35`.
+- `change=50%` warns when the value moves more than that from its reference: the check before (`compare=previous`, the default) or the median of the values within `values.median-window` (10m) around the same time a day or a week earlier (`compare=24h`, `7d`). Until there is such a reference the monitor page says it is learning and nothing is judged. `min=` ignores changes while both values are below it; `direction=up` or `down` looks one way only; a value that falls to 0 from above `min=` warns too.
+- `for=5m` counts a breach only after it has lasted that long.
+- A port: `value=` is `util` (the busier direction as a share of the port speed, the default), `in` or `out` (bits per second). Counters are 64-bit where the device has them; a counter that goes back (a wrap or a restart) skips one round instead of alerting. The port fails while it is down, unless an administrator shut it; a port that renegotiates to a lower speed warns. Ports are found by name (`ifName`, then the description), once, and found again after the device renumbers them.
+- A sensor: ENTITY-SENSOR-MIB by default, or `profile=huawei`, `h3c` or `cisco` for those vendors' tables.
+- SNMPv3: `version=3 user=` with `auth=` (md5, sha, sha256, sha512) and `auth-pass=`, and for encryption `priv=` (des, aes) and `priv-pass=`. Keep the passwords in secrets; they never appear in evidence or logs.
+- Only GET (and GETNEXT, to find a port or sensor by name) is sent; nothing on the device is changed or walked in bulk.
+- The values behind `change=` are kept for `values.retain` (24h) and survive a restart.
+
 ### Script checks
 
 > Experimental.

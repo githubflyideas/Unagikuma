@@ -26,11 +26,12 @@ func newMemSink() *memSink {
 	return &memSink{incidents: map[int64]Incident{}, evidence: map[string]int{}}
 }
 
-func (s *memSink) SaveState(StateRecord)   {}
-func (s *memSink) DeleteState(string)      {}
-func (s *memSink) Verdict(VerdictRecord)   {}
-func (s *memSink) Delivery(DeliveryRecord) {}
-func (s *memSink) Counter(string, int)     {}
+func (s *memSink) SaveState(StateRecord)            {}
+func (s *memSink) DeleteState(string)               {}
+func (s *memSink) Verdict(VerdictRecord)            {}
+func (s *memSink) Delivery(DeliveryRecord)          {}
+func (s *memSink) Counter(string, int)              {}
+func (s *memSink) Value(string, time.Time, float64) {}
 func (s *memSink) SaveIntent(*Intent) error {
 	return nil
 }

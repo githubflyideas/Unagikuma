@@ -174,6 +174,10 @@ var coreMigrations = []string{
 	// list of them; kept a little over a week.
 	`CREATE TABLE saved_alerts (at INTEGER NOT NULL, name TEXT NOT NULL, monitor TEXT NOT NULL, n INTEGER NOT NULL);
  CREATE INDEX saved_alerts_at ON saved_alerts(at);`,
+	// The values monitors' rules judged (warn=, change= ...), for their
+	// references across restarts; kept as long as values.retain.
+	`CREATE TABLE value_samples (monitor TEXT NOT NULL, at INTEGER NOT NULL, v REAL NOT NULL);
+ CREATE INDEX value_samples_monitor_at ON value_samples(monitor, at);`,
 }
 
 var historyMigrations = []string{

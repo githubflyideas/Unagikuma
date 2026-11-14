@@ -67,36 +67,59 @@ func parseJSONPath(p string) ([]pathStep, error) {
 // checkJSON evaluates the json-path assertion. Without json-expect the
 // path just has to exist.
 func checkJSON(data []byte, path string, o opts) (string, bool) {
+	v, msg, ok := jsonAt(data, path)
+	if !ok {
+		return msg, false
+	}
+	return checkJSONValue(v, path, o)
+}
+
+// jsonNumber is the number at path, for value rules.
+func jsonNumber(data []byte, path string) (float64, bool) {
+	v, _, ok := jsonAt(data, path)
+	if !ok {
+		return 0, false
+	}
+	f, err := strconv.ParseFloat(jsonText(v), 64)
+	return f, err == nil
+}
+
+// jsonAt finds the value at path in a JSON document.
+func jsonAt(data []byte, path string) (any, string, bool) {
 	steps, err := parseJSONPath(path)
 	if err != nil {
-		return err.Error(), false
+		return nil, err.Error(), false
 	}
 	var v any
 	dec := json.NewDecoder(strings.NewReader(string(data)))
 	dec.UseNumber()
 	if err := dec.Decode(&v); err != nil {
-		return "response is not valid JSON", false
+		return nil, "response is not valid JSON", false
 	}
 	for _, st := range steps {
 		switch cur := v.(type) {
 		case map[string]any:
 			if st.isIdx {
-				return fmt.Sprintf("%s: expected an array", path), false
+				return nil, fmt.Sprintf("%s: expected an array", path), false
 			}
 			next, ok := cur[st.key]
 			if !ok {
-				return fmt.Sprintf("%s: key %q not found", path, st.key), false
+				return nil, fmt.Sprintf("%s: key %q not found", path, st.key), false
 			}
 			v = next
 		case []any:
 			if !st.isIdx || st.index >= len(cur) {
-				return fmt.Sprintf("%s: index out of range", path), false
+				return nil, fmt.Sprintf("%s: index out of range", path), false
 			}
 			v = cur[st.index]
 		default:
-			return fmt.Sprintf("%s: cannot descend into a %T", path, v), false
+			return nil, fmt.Sprintf("%s: cannot descend into a %T", path, v), false
 		}
 	}
+	return v, "", true
+}
+
+func checkJSONValue(v any, path string, o opts) (string, bool) {
 	got := jsonText(v)
 	if want, ok := o["json-expect"]; ok && got != want {
 		return fmt.Sprintf("%s is %q, expected %q", path, got, want), false

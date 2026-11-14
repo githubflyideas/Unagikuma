@@ -247,6 +247,11 @@ func (s *Store) Decision(d engine.Decision) { s.batch.add(item{decision: &d}) }
 // Counter adds to a daily value counter.
 func (s *Store) Counter(name string, n int) { s.batch.add(item{counter: name, n: n}) }
 
+// Value implements engine.Sink.
+func (s *Store) Value(name string, at time.Time, v float64) {
+	s.batch.add(item{value: &valueItem{name, at, v}})
+}
+
 // Saved counts an alert that was not sent (held back during a local
 // outage, cleared before it was confirmed, merged or capped) and lists it
 // with its monitor.
@@ -278,6 +283,13 @@ type item struct {
 	counter  string
 	n        int
 	monitor  string // with counter: also listed as a saved alert
+	value    *valueItem
+}
+
+type valueItem struct {
+	monitor string
+	at      time.Time
+	v       float64
 }
 
 // batcher accumulates history writes and commits them periodically.
@@ -690,6 +702,8 @@ func (b *batcher) flushCore(items []item) bool {
 			e := it.evidence
 			_, err = tx.Exec(`INSERT INTO evidence(monitor,node,at,result) VALUES(?,?,?,?)`, e.name, e.node, ms(e.at), mustJSON(e.r))
 			touched[[2]string{e.name, e.node}] = true
+		case it.value != nil:
+			_, err = tx.Exec(`INSERT INTO value_samples(monitor,at,v) VALUES(?,?,?)`, it.value.monitor, ms(it.value.at), it.value.v)
 		case it.counter != "":
 			_, err = tx.Exec(`INSERT INTO counters(day,name,n) VALUES(?,?,?) ON CONFLICT(day,name) DO UPDATE SET n=n+excluded.n`,
 				s.now().Format("2006-01-02"), it.counter, it.n)

@@ -35,6 +35,7 @@ const (
 	ReasonTLS               = "tls_error"            // fail
 	ReasonHTTPStatus        = "http_status"          // fail: unexpected status
 	ReasonAssertFailed      = "assert_failed"        // fail: reply received, assertion failed
+	ReasonValueBreach       = "value_breach"         // fail: the value read is beyond the monitor's critical rule
 	ReasonProtoError        = "proto_error"          // fail: malformed/unexpected reply
 	ReasonProtoReject       = "proto_reject"         // ok: protocol-level rejection proving liveness
 	ReasonAuthError         = "auth_error"           // fail: service alive but refuses this probe
@@ -80,7 +81,7 @@ func RemoteReachable(r Result) bool {
 	switch r.Reason {
 	case ReasonPortUnreachable, ReasonConnRefused, ReasonTLS, ReasonHTTPStatus,
 		ReasonAssertFailed, ReasonProtoError, ReasonProtoReject, ReasonAuthError,
-		ReasonRemoteRateLimited, ReasonDNSNXDomain, ReasonExpiring:
+		ReasonRemoteRateLimited, ReasonDNSNXDomain, ReasonExpiring, ReasonValueBreach:
 		return true
 	}
 	return false

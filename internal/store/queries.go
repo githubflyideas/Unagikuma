@@ -756,6 +756,9 @@ func (s *Store) Prune(r Retention) error {
 	if _, err := s.core.Exec(`DELETE FROM saved_alerts WHERE at<?`, ms(now.Add(-8*24*time.Hour))); err != nil && err3 == nil {
 		err3 = err
 	}
+	if _, err := s.core.Exec(`DELETE FROM value_samples WHERE at<?`, ms(now.Add(-max(s.ValueRetain, 24*time.Hour)))); err != nil && err3 == nil {
+		err3 = err
+	}
 	if _, err := s.core.Exec(`DELETE FROM evidence WHERE at<?`, ms(now.Add(-r.Raw))); err != nil && err3 == nil {
 		err3 = err
 	}
