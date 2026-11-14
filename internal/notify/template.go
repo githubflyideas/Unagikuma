@@ -81,7 +81,11 @@ func escapeForJSON(d map[string]any) {
 			b, _ := json.Marshal(x)
 			d[k] = string(b[1 : len(b)-1])
 		case map[string]any:
-			escapeForJSON(x) // Kuma's monitorJSON and heartbeatJSON
+			escapeForJSON(x)
+		case kumaObject: // Kuma's monitorJSON and heartbeatJSON
+			raw := x.String()
+			escapeForJSON(map[string]any(x))
+			x[kumaRaw] = raw
 		}
 	}
 }

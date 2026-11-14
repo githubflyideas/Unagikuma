@@ -47,8 +47,8 @@ func (e *Engine) LoadValues(v map[string][]valuerule.Sample) { e.preload = v }
 
 // applyValues judges the value in a successful local result.
 func (e *Engine) applyValues(m *MonitorSpec, res probe.Result, at time.Time) probe.Result {
-	if res.Vote != probe.VoteOK || len(res.Metrics) == 0 {
-		return res
+	if res.Vote != probe.VoteOK {
+		return res // a failed check has no value to judge
 	}
 	vs := e.valueTracker(m)
 	if vs.tr == nil {
@@ -62,6 +62,9 @@ func (e *Engine) applyValues(m *MonitorSpec, res probe.Result, at time.Time) pro
 		e.deps.Sink.Value(m.Name, at, out.Value)
 	}
 	res.Metrics = maps.Clone(res.Metrics)
+	if res.Metrics == nil {
+		res.Metrics = map[string]float64{}
+	}
 	if out.Sampled {
 		res.Metrics["value.current"] = out.Value
 	}
@@ -75,6 +78,9 @@ func (e *Engine) applyValues(m *MonitorSpec, res probe.Result, at time.Time) pro
 	case valuerule.Crit:
 		res.Vote, res.Reason, res.Detail = probe.VoteFail, probe.ReasonValueBreach, out.Detail
 	case valuerule.Warn:
+		res.Degraded, res.Detail = true, out.Detail
+	case valuerule.Missing:
+		// Rules that can never fire must not look like they are watching.
 		res.Degraded, res.Detail = true, out.Detail
 	default:
 		if out.Detail != "" {

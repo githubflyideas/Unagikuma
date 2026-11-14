@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"encoding/json"
 	"net"
 	"net/url"
 	"regexp"
@@ -130,9 +131,9 @@ func kumaData(m *Message, text string) map[string]any {
 	}
 	name := firstOf(m.Title, m.Monitor)
 	return map[string]any{
-		"monitorJSON": map[string]any{"id": m.Monitor, "name": name, "type": typ, "url": monitorURL, "hostname": host, "port": port,
+		"monitorJSON": kumaObject{"id": m.Monitor, "name": name, "type": typ, "url": monitorURL, "hostname": host, "port": port,
 			"description": m.Detail, "tags": m.Tags},
-		"heartbeatJSON": map[string]any{"status": status, "msg": detail, "time": at.UTC().Format("2006-01-02 15:04:05.000"),
+		"heartbeatJSON": kumaObject{"status": status, "msg": detail, "time": at.UTC().Format("2006-01-02 15:04:05.000"),
 			"localDateTime": at.Local().Format("2006-01-02 15:04:05"), "timezone": at.Local().Location().String(), "important": true},
 		"msg": text, "name": name, "status": word, "hostnameOrURL": address,
 		"NAME": name, "STATUS": word, "HOSTNAME_OR_URL": address,
@@ -148,4 +149,24 @@ func kumaHost(target string) (host, port string) {
 		return h, p
 	}
 	return target, ""
+}
+
+// kumaObject is monitorJSON or heartbeatJSON: its fields are read one by
+// one ({{ monitorJSON.name }}), and written whole ({{ monitorJSON }}) it
+// is JSON, as Kuma writes it, not Go's map[...] text.
+type kumaObject map[string]any
+
+// kumaRaw holds the object's JSON once its fields have been escaped for a
+// JSON body: written whole it must stay valid JSON, not doubly escaped.
+const kumaRaw = "\x00json"
+
+func (k kumaObject) String() string {
+	if raw, ok := k[kumaRaw].(string); ok {
+		return raw
+	}
+	b, err := json.Marshal(map[string]any(k))
+	if err != nil {
+		return "{}"
+	}
+	return string(b)
 }

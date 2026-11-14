@@ -38,6 +38,10 @@ func TestValueRules(t *testing.T) {
 	if r := read(42); r.Vote != probe.VoteFail || r.Reason != probe.ReasonValueBreach || r.Detail != "42, limit >40" {
 		t.Fatalf("42: %+v", r)
 	}
+	// Rules that get no value say so instead of never firing.
+	if r := e.applyValues(m, probe.Result{Vote: probe.VoteOK, Detail: "HTTP 200"}, time.Now()); !r.Degraded || r.Detail != "the check reported no value for these rules" {
+		t.Fatalf("no value: %+v", r)
+	}
 	// A failed check has no value to judge.
 	if r := e.applyValues(m, probe.Result{Vote: probe.VoteFail, Reason: probe.ReasonTimeout}, time.Now()); r.Reason != probe.ReasonTimeout {
 		t.Fatalf("failure: %+v", r)
