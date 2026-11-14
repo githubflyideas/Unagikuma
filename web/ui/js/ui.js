@@ -1,7 +1,7 @@
 // Shared components and hooks.
 import { html, useState, useEffect, useRef, useCallback, useLayoutEffect } from './lib.js';
 import { t, ago, fmtTime, fmtNum, detailText } from './i18n.js';
-import { onLive } from './live.js';
+import { onLive, onConnection } from './live.js';
 import { me } from './api.js';
 
 // The product's name, in titles and headers.
@@ -76,7 +76,13 @@ export function useLive(types, f, delay = 400) {
       timer = setTimeout(() => { timer = null; ref.current(); }, delay);
     };
     const offs = [...types, 'reset'].map(tp => onLive(tp, fire));
-    return () => { clearTimeout(timer); offs.forEach(o => o()); };
+    // Without the live stream the view refreshes on its own.
+    let poll = null;
+    offs.push(onConnection((up) => {
+      clearInterval(poll);
+      poll = up ? null : setInterval(fire, 15000);
+    }));
+    return () => { clearTimeout(timer); clearInterval(poll); offs.forEach(o => o()); };
   }, [types.join(','), delay]);
 }
 

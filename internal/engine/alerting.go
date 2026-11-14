@@ -85,7 +85,7 @@ func (e *Engine) escalate(now time.Time) {
 			continue
 		}
 		step := pol.Escalate[inc.State.Escalated]
-		if now.Sub(inc.State.OpenedAt) < step.After || e.maintenanceIncident(inc) {
+		if now.Sub(inc.State.OpenedAt) < step.After || e.maintenanceIncident(inc) || e.pausedIncident(inc) {
 			continue
 		}
 		inc.State.Escalated++

@@ -452,7 +452,7 @@ Open it signed in (**Status pages › Daily report › Summary for managers**), 
 
 ## Themes
 
-Pick a theme with the coloured dots under the product name: Country, Industrial, Calm, Sport or Passion, or follow the system (Calm by day, Industrial at night). The choice is kept per browser. Status colours mean the same in every theme.
+Pick a theme with the coloured dots under the product name: Perfume, Country, Industrial, Calm, Sport or Passion (Calm until one is picked). The choice is kept per browser. Status colours mean the same in every theme.
 
 ## Registration and quotas
 

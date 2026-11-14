@@ -30,9 +30,23 @@
   --shadow: none; color-scheme: dark;
   --bg-image: radial-gradient(1200px 600px at 75% -10%, rgba(94,234,212,.05), transparent 60%);
 }
-/* The five console themes. Status colours keep their meaning in every
+/* The six console themes. Status colours keep their meaning in every
    one; a theme's accent is never the colour of a failure. --side-* colour
    the sidebar where it is a surface of its own. */
+:root[data-theme="perfume"] {
+  /* Perfume: powder rose and pearl, a rose accent, serif headings. */
+  --bg: #fbf7f8; --side: #f1e4ea; --panel: #ffffff; --panel-2: #faf3f5; --border: #eddfe4; --border-strong: #d7bfc8;
+  --text: #3a2a33; --muted: #6f5a65; --faint: #75606b;
+  --accent: #a8566b; --accent-soft: #f6e2e8; --accent-text: #ffffff; --link: #8f4459;
+  --ok: #3d7a5a; --ok-soft: #dcefe4; --degraded: #c98a2c; --degraded-soft: #f7ead2;
+  --critical: #b8322f; --critical-soft: #f7dcdb; --unknown: #6f5aa8; --unknown-soft: #ebe6f4;
+  --pending: #7d6b75; --pending-soft: #efe5ea; --maint: #4a78a6; --maint-soft: #dde7f1;
+  --on-status: #ffffff; --on-degraded: #2a1c00;
+  --empty: #f0e6ea; --stripe: rgba(58, 42, 51, .025);
+  --shadow: 0 1px 3px rgba(120, 70, 90, .07), 0 6px 18px rgba(120, 70, 90, .05); --radius: 12px; --bg-image: none;
+  --side-text: #4a3442; --side-muted: #7a6270; --side-hover: rgba(168, 86, 107, .07); --side-on: #ffffff; --side-on-text: #8f4459; --side-mark: #a8566b;
+  color-scheme: light;
+}
 :root[data-theme="country"] {
   /* Country: linen, a timber sidebar, wheat for actions. */
   --bg: #f8f4ea; --side: #4a3426; --panel: #fffdf7; --panel-2: #f6efe0; --border: #e6dcc6; --border-strong: #cdbb98;
@@ -831,6 +845,7 @@ body.summarypage { background: var(--bg); }
 :root[data-theme="industrial"] .nav a { border-radius: 0; }
 :root[data-theme="calm"] .btn, :root[data-theme="calm"] .chip { border-radius: 999px; }
 :root[data-theme="calm"] .card > .bd:not(.flush) { padding: 18px 20px; }
+:root[data-theme="perfume"] .crumbs, :root[data-theme="perfume"] .card > .hd h2, :root[data-theme="perfume"] h1, :root[data-theme="perfume"] .brand { font-family: Georgia, "Times New Roman", "Songti SC", "SimSun", serif; letter-spacing: .01em; }
 :root[data-theme="sport"] .crumbs, :root[data-theme="sport"] .card > .hd h2, :root[data-theme="sport"] h1 { font-style: italic; font-weight: 800; letter-spacing: -.01em; }
 :root[data-theme="sport"] .btn.primary { text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
 :root[data-theme="passion"] .btn.primary { box-shadow: 0 4px 16px rgba(224, 36, 111, .35); }

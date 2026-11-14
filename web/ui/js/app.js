@@ -20,15 +20,14 @@ import { IncidentReport } from './views/incident.js';
 import { DrawerHost } from './views/drawer.js';
 import { PaletteHost, openPalette } from './views/palette.js';
 
-// Five themes, each its own mood, and "auto", which follows the device:
-// Calm by day, Industrial at night. Names stored by earlier versions map
-// to the nearest new theme.
-const TONES = ['country', 'industrial', 'calm', 'sport', 'passion'];
+// Six themes, each its own mood; Calm when none is chosen. Names stored
+// by earlier versions (and "auto", which there was) map to the nearest.
+const TONES = ['perfume', 'country', 'industrial', 'calm', 'sport', 'passion'];
 const OLD_TONES = { light: 'calm', paper: 'calm', dark: 'industrial', ink: 'industrial', mist: 'sport', slate: 'industrial',
-  graphite: 'industrial', sky: 'calm', violet: 'country', brand: 'auto' };
+  graphite: 'industrial', sky: 'calm', violet: 'country', brand: 'calm', auto: 'calm' };
 // Each dot shows its theme's own sidebar and accent colours.
 const SWATCH = {
-  auto: 'linear-gradient(135deg, #eef1ee 50%, #1f2428 50%)',
+  perfume: 'linear-gradient(135deg, #f1e4ea 50%, #a8566b 50%)',
   country: 'linear-gradient(135deg, #4a3426 50%, #e0a526 50%)',
   industrial: 'linear-gradient(135deg, #15181b 50%, #f28c28 50%)',
   calm: 'linear-gradient(135deg, #dfe5e0 50%, #3d7c78 50%)',
@@ -37,20 +36,15 @@ const SWATCH = {
 };
 function toneOf(v) {
   v = OLD_TONES[v] || v;
-  return v === 'auto' || TONES.includes(v) ? v : 'auto';
+  return TONES.includes(v) ? v : 'calm';
 }
-const darkQuery = matchMedia('(prefers-color-scheme: dark)');
-let themeChoice = '';
 function applyTheme(v) {
-  v = toneOf(v);
-  themeChoice = v;
-  document.documentElement.dataset.theme = v === 'auto' ? (darkQuery.matches ? 'industrial' : 'calm') : v;
+  document.documentElement.dataset.theme = toneOf(v);
 }
-darkQuery.addEventListener('change', () => { if (themeChoice === 'auto') applyTheme('auto'); });
 
 // The interface can be shown larger, as a whole: text, icons, charts and
 // tables keep their proportions.
-const ZOOMS = [100, 125, 150, 200];
+const ZOOMS = [100, 125];
 function zoomOf(v) { const n = Number(v); return ZOOMS.includes(n) ? n : 100; }
 // Scaling the page with CSS zoom leaves the layout's width breakpoints at
 // the window's real width; scale them too, so a larger interface switches
@@ -257,7 +251,7 @@ function Shell({ user, onLogout, onLang }) {
       <a class="brand" href="#/"><${Logo} /><div>${PRODUCT}
         <div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div></div></a>
       <div class="themes" role="group" aria-label=${t('ui.theme')}>
-        ${['auto', ...TONES].map((v) => html`<button type="button" aria-pressed=${String(theme === v)}
+        ${TONES.map((v) => html`<button type="button" aria-pressed=${String(theme === v)}
           title=${t('ui.theme.' + v)} aria-label=${t('ui.theme.' + v)}
           style=${{ background: SWATCH[v] || 'var(--accent)' }} onClick=${() => changeTheme(v)}></button>`)}
       </div>
@@ -316,8 +310,8 @@ function Verdict({ ov }) {
 }
 
 // RunMode names how this installation runs and opens the run mode page.
-// The dot is green while live updates arrive; when they stop the label says
-// it is reconnecting instead.
+// The dot is green while live updates arrive and grey while they are
+// paused; the pages refresh on their own meanwhile, so the label stays.
 function RunMode({ ov, live }) {
   const layout = (ov && ov.layout) || 'single';
   const paths = (ov && ov.paths) || [];
@@ -325,7 +319,7 @@ function RunMode({ ov, live }) {
     ? t('ui.top.mode.cluster', { online: paths.filter(p => p.online).length, n: paths.length })
     : t('ui.top.mode.' + (layout === 'replica' ? 'replica' : 'single'));
   return html`<a class=${'live' + (live ? ' on' : '')} href="#/nodes" title=${live ? t('ui.live.on') : t('ui.live.off')}>
-    <i></i><span class="hide-sm">${live ? label : t('ui.live.off')}</span></a>`;
+    <i></i><span class="hide-sm">${label}</span></a>`;
 }
 
 // Search filters the monitor list, with the list's own query syntax
