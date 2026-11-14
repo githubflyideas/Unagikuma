@@ -18,7 +18,9 @@ function routeText(hops) {
   return h.length ? h.map(x => x.addr || '*').join(' → ') + (h.length < hops.length ? ' → …' : '') : '—';
 }
 
-function General() {
+// General is one of three tabs (part): the installation itself, the
+// internet gateway, or the external heartbeat; each saves its own fields.
+function General({ part = 'general' }) {
   const s = useFetch(() => get('/settings'), []);
   const tun = useFetch(() => get('/tunables'), []);
   const [f, setF] = useState(null);
@@ -78,16 +80,16 @@ function General() {
     try { setHb(await post('/settings/heartbeat/test')); } catch (e) { setHb({ err: e }); }
   };
   return html`<form class="card" onSubmit=${save}><div class="bd form">
-    <div class="two">
+    ${part === 'general' && html`<div class="two">
       <${Field} label=${t('ui.set.instance')} hint=${t('ui.set.instance_hint')}><input type="text" value=${f.instance_name} onInput=${set('instance_name')} /><//>
       <${Field} label=${t('ui.set.base_url')} hint=${t('ui.set.base_url_hint')}><input type="url" class="ltr" value=${f.base_url} onInput=${set('base_url')} placeholder="https://monitor.example.com" /><//>
     </div>
     <${Field} label=${t('ui.set.message_lang')} hint=${t('ui.set.message_lang_hint')}>
-      <select value=${f.message_lang || 'en'} onChange=${set('message_lang')}>${langList().map(l => html`<option value=${l.code}>${l.name}</option>`)}</select><//>
-    ${exitTun && html`<${Field} label=${t('ui.set.exit')} hint=${t('ui.set.exit_hint', { addr: exitTun.default })}>
+      <select value=${f.message_lang || 'en'} onChange=${set('message_lang')}>${langList().map(l => html`<option value=${l.code}>${l.name}</option>`)}</select><//>`}
+    ${part === 'gateway' && exitTun && html`<${Field} label=${t('ui.set.exit')} hint=${t('ui.set.exit_hint', { addr: exitTun.default })}>
       <div class="row nowrap"><input type="text" class="ltr" value=${exit ?? ''} onInput=${(e) => setExit(e.target.value)} placeholder=${t('ui.set.exit_off')} style=${{ maxWidth: '320px' }} />
       </div><//>`}
-    ${exitTun && html`<div class="subopts">
+    ${part === 'gateway' && exitTun && html`<div class="subopts">
       <div class="row nowrap">
         <select value=${cc} onChange=${(e) => { setCc(e.target.value); if (e.target.value) suggest({ mode: 'city', city: e.target.value }); }} aria-label=${t('ui.set.exit_by_city')} style=${{ maxWidth: '360px' }}>
           <option value="">${t('ui.set.exit_by_city')}</option>
@@ -106,13 +108,13 @@ function General() {
       </tr>`)}</tbody></table>
     </div></div>`}
     </div>`}
-    ${dnsTun && html`<${Field} label=${t('ui.set.dns')} hint=${t('ui.set.dns_hint', { list: systemDNS.join(', ') || t('ui.set.dns_unknown') })}>
+    ${part === 'general' && dnsTun && html`<${Field} label=${t('ui.set.dns')} hint=${t('ui.set.dns_hint', { list: systemDNS.join(', ') || t('ui.set.dns_unknown') })}>
       <input type="text" class="ltr" value=${dns ?? ''} onInput=${(e) => setDns(e.target.value)} placeholder=${t('ui.set.dns_system')} style=${{ maxWidth: '420px' }} /><//>`}
-    <${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
+    ${part === 'heartbeat' && html`<${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
       <div class="row nowrap"><input type="text" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
         <button type="button" class="btn" onClick=${testHb} disabled=${!s.data.heartbeat_url}>${t('ui.set.heartbeat_test')}</button></div><//>
     <${HeartbeatForm} f=${f} setF=${setF} />
-    ${hb && !hb.busy && html`<div class=${'banner ' + (hb.err || hb.LastError ? 'error' : 'ok')}>${hb.err ? errText(hb.err) : hb.LastError || t('ui.set.heartbeat_ok')}</div>`}
+    ${hb && !hb.busy && html`<div class=${'banner ' + (hb.err || hb.LastError ? 'error' : 'ok')}>${hb.err ? errText(hb.err) : hb.LastError || t('ui.set.heartbeat_ok')}</div>`}`}
     <div class="row"><div class="spacer"></div><button class="btn primary">${t('ui.save')}</button></div>
   </div></form>`;
 }
@@ -477,7 +479,6 @@ function System() {
         ${Object.entries(d.storage.rows || {}).map(([k, v]) => html`<dt class="mono">${k}</dt><dd>${v}</dd>`)}
       </dl>
     <//>
-    <${BackupCard} />
   </div>`;
 }
 
@@ -735,7 +736,7 @@ function Audit() {
 
 // Everyday settings, and the advanced ones that most installations set
 // once or never: they have their own place in the sidebar.
-const TABS = ['general', 'audit', 'scripts', 'system', 'registration'];
+const TABS = ['general', 'gateway', 'heartbeat', 'backup', 'audit', 'scripts', 'system', 'registration'];
 export const ADVANCED_TABS = ['teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
 export function Settings({ tab, user, advanced }) {
@@ -759,6 +760,9 @@ export function Settings({ tab, user, advanced }) {
     case 'secrets': body = html`<${Secrets} />`; break;
     case 'keywords': body = html`<${Keywords} />`; break;
     case 'system': body = html`<${System} />`; break;
+    case 'gateway': body = html`<${General} part="gateway" />`; break;
+    case 'heartbeat': body = html`<${General} part="heartbeat" />`; break;
+    case 'backup': body = html`<${BackupCard} />`; break;
     default: body = html`<${General} />`;
   }
   return html`<div class="page">

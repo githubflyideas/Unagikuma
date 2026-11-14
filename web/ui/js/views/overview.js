@@ -187,7 +187,7 @@ function FaultPath({ paths, rows }) {
     ${exNode && html`<g>
       <line class=${'fp-line ' + (exSt === 'warn' ? 'warn' : 'unk')} x1=${xEx} y1=${yWan + 30} x2=${xEx} y2=${yEx - 7} />
       <circle cx=${xEx} cy=${yEx} r="6" fill="var(--panel)" stroke=${COLOR[exSt] || 'var(--faint)'} stroke-width="2" />
-      <a href="#/settings/general"><title>${t('ui.ov.exit_change')}</title>
+      <a href="#/settings/gateway"><title>${t('ui.ov.exit_change')}</title>
         <text class="fp-sub fp-link" x=${xEx + 14} y=${yEx + 4}><tspan style=${{ fill: 'var(--text)' }}>${t('ui.ov.col_exit')}</tspan> ${exNode.exit.addr} ✎</text></a>
       <text class="fp-sub" x=${xEx + 14} y=${yEx + 19} style=${{ fill: exSt === 'warn' ? 'var(--degraded)' : 'var(--muted)' }}>${exitText(exNode, exSt)}</text>
     </g>`}
