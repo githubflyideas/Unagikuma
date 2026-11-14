@@ -114,12 +114,19 @@ func (s *Server) channelSave(w http.ResponseWriter, r *http.Request) (any, error
 		Kind    string            `json:"kind"`
 		Opts    map[string]string `json:"opts"`
 		Message string            `json:"message"`
+		// From renames the channel: its old name, which teams, policies,
+		// groups, status pages and people follow.
+		From string `json:"from"`
 	}
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
 	if !config.ValidName(req.Name) {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "invalid name")
+	}
+	rename := req.From != "" && req.From != req.Name
+	if rename && s.app.EffectiveConfig().FindChannel(req.From) == nil {
+		return nil, notFound("channel")
 	}
 	if req.Opts == nil {
 		req.Opts = map[string]string{}
@@ -130,6 +137,9 @@ func (s *Server) channelSave(w http.ResponseWriter, r *http.Request) (any, error
 		req.Opts["preset"] = p
 	}
 	existing := s.app.EffectiveConfig().FindChannel(req.Name)
+	if rename {
+		existing = s.app.EffectiveConfig().FindChannel(req.From)
+	}
 	keys := make([]string, 0, len(req.Opts))
 	for k := range req.Opts {
 		keys = append(keys, k)
@@ -168,9 +178,26 @@ func (s *Server) channelSave(w http.ResponseWriter, r *http.Request) (any, error
 		}
 	}
 	spec := config.RecordSpec{Name: req.Name, Type: "CHANNEL", Target: kind, Opts: opts}
-	st, err := s.editConfig(r, req.Message, ifMatch(r, spec.Name, func(f *config.File) error { return f.UpsertRecord(spec) }))
+	checked := spec.Name
+	if rename {
+		checked = req.From
+	}
+	st, err := s.editConfig(r, req.Message, ifMatch(r, checked, func(f *config.File) error {
+		if rename {
+			if err := f.RenameChannel(req.From, req.Name); err != nil {
+				return err
+			}
+		}
+		return f.UpsertRecord(spec)
+	}))
 	if err != nil {
 		return nil, s.configError(err)
+	}
+	if rename {
+		if err := s.app.Store().RenameChannel(req.From, req.Name); err != nil {
+			s.log.Warn("could not follow a renamed channel in people and changes", "from", req.From, "to", req.Name, "err", err)
+		}
+		s.app.DirectoryChanged()
 	}
 	return s.savedRecord(st, spec.Name), nil
 }

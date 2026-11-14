@@ -2,9 +2,9 @@
 // status report: what is told to people, apart from the alerts themselves.
 import { html, useState } from '../lib.js';
 import { t } from '../i18n.js';
-import { get, post, put, me } from '../api.js';
+import { get, post, put, me, ifMatch } from '../api.js';
 import { NoticesTab } from './notices.js';
-import { useFetch, Loading, ErrorBox, toast, toastError, useDocTitle, Copy } from '../ui.js';
+import { useFetch, Loading, ErrorBox, toast, toastError, useDocTitle, Copy, Field } from '../ui.js';
 
 // viaText names where a report goes: a team's channels or the system ones
 // (a policy name only for a file written before teams had channels).
@@ -12,6 +12,45 @@ function viaText(policy) {
   if (!policy || policy === 'system' || policy === 'default') return t('ui.report.via_system');
   if (policy.startsWith('team:')) return t('ui.report.via_team', { team: policy.slice(5) });
   return policy;
+}
+
+// ReportSettings sets when the report goes out, to which teams, and
+// through which of a team's channels; a person can still switch it off for
+// themselves in the user list.
+function ReportSettings({ r, onChange }) {
+  const tun = useFetch(() => get('/tunables'), []);
+  const tms = useFetch(() => get('/teams'), []);
+  const chs = useFetch(() => get('/channels'), []);
+  if (!tun.data || !tms.data || !chs.data) return null;
+  const val = (k) => (tun.data.find(x => x.key === k) || {}).value || '';
+  const setTun = async (set) => {
+    try { await put('/tunables', { set, unset: [] }); tun.reload(); onChange(); } catch (e) { toastError(e); }
+  };
+  const teams = r.teams || [];
+  const receives = teams.filter(x => x.receives).map(x => x.name);
+  const setReceives = (name, on) => setTun({ 'notify.daily-report-teams': teams.filter(x => (x.name === name ? on : x.receives)).map(x => x.name).join(',') });
+  const team = (tms.data.items || []).find(x => x.name === r.team);
+  const chans = ((team && team.channels) || []).map(n => chs.data.find(c => c.name === n)).filter(Boolean);
+  const takes = (c) => /-(sms|voice)$/.test(c.kind) ? c.opts.report === 'yes' : c.opts.report !== 'no';
+  const setTakes = async (c, on) => {
+    const opts = { ...c.opts };
+    if (/-(sms|voice)$/.test(c.kind)) { if (on) opts.report = 'yes'; else delete opts.report; } else if (on) delete opts.report; else opts.report = 'no';
+    try {
+      await post('/channels', { name: c.name, kind: c.opts.preset ? 'webhook:' + c.opts.preset : c.kind, opts }, ifMatch(c.etag));
+      chs.reload(); onChange();
+    } catch (e) { toastError(e); }
+  };
+  return html`<div class="card"><div class="hd"><h3>${t('ui.report.settings')}</h3></div><div class="bd form">
+    <div class="row" style=${{ gap: '16px', flexWrap: 'wrap' }}>
+      <label class="switch"><input type="checkbox" checked=${val('notify.daily-report') !== 'off'} onChange=${(e) => setTun({ 'notify.daily-report': e.target.checked ? 'on' : 'off' })} /> ${t('ui.report.enabled')}</label>
+      <label class="small">${t('ui.report.at')} <input type="time" value=${val('notify.daily-report-at')} onChange=${(e) => e.target.value && setTun({ 'notify.daily-report-at': e.target.value })} style=${{ width: 'auto' }} /></label>
+    </div>
+    <${Field} label=${t('ui.report.teams')}>
+      <div class="row" style=${{ gap: '14px', flexWrap: 'wrap' }}>${teams.map(x => html`<label class="switch"><input type="checkbox" checked=${receives.includes(x.name)} onChange=${(e) => setReceives(x.name, e.target.checked)} /> ${x.title}</label>`)}</div><//>
+    <${Field} label=${t('ui.report.channels', { team: (teams.find(x => x.name === r.team) || {}).title || r.team })} hint=${t('ui.report.channels_hint')}>
+      ${chans.length ? html`<div class="row" style=${{ gap: '14px', flexWrap: 'wrap' }}>${chans.map(c => html`<label class="switch"><input type="checkbox" checked=${takes(c)} onChange=${(e) => setTakes(c, e.target.checked)} /> <span class="ltr">${c.name}</span></label>`)}</div>`
+        : html`<span class="small muted">${t('ui.report.channels_none')}</span>`}<//>
+  </div></div>`;
 }
 
 // ReportTab previews each team's daily status report. Admins choose which
@@ -47,6 +86,7 @@ function ReportTab() {
       ${me.role === 'admin' && mine && html`<label class="switch"><input type="checkbox" checked=${mine.receives} onChange=${(e) => setReceives(mine.name, e.target.checked)} /> ${t('ui.report.team_receives')}</label>`}
       <span class="small muted spacer">${receives.length ? t('ui.report.receiving', { teams: teams.filter(x => x.receives).map(x => x.title).join(', ') }) : t('ui.report.receiving_none')}</span>
     </div>`}
+    ${me.role === 'admin' && html`<${ReportSettings} r=${r} onChange=${rep.reload} />`}
     <p class="small muted" style=${{ margin: 0 }}>${t('ui.report.opt_out_hint')}</p>
     <div class="card"><div class="hd"><h3 class=${r.ok ? '' : 'crit-text'}>${r.title}</h3></div>
       <div class="bd"><pre class="report">${r.body}</pre></div></div>

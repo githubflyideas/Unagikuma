@@ -528,3 +528,45 @@ func (s *Store) UnlinkUser(username string) error {
 	_, err := s.core.Exec(`UPDATE people SET username='' WHERE username=?`, username)
 	return err
 }
+
+// RenameChannel follows a channel's new name where people and announced
+// changes name it.
+func (s *Store) RenameChannel(oldName, newName string) error {
+	swap := func(list string) string {
+		parts := strings.Split(list, ",")
+		for i, p := range parts {
+			if p == oldName {
+				parts[i] = newName
+			}
+		}
+		return strings.Join(parts, ",")
+	}
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	for _, q := range []struct{ table, col string }{{"people", "notify"}, {"changes", "channels"}} {
+		rows, err := s.core.Query(`SELECT id,`+q.col+` FROM `+q.table+` WHERE ',' || `+q.col+` || ',' LIKE ?`, "%,"+oldName+",%")
+		if err != nil {
+			return err
+		}
+		type upd struct {
+			id int64
+			v  string
+		}
+		var ups []upd
+		for rows.Next() {
+			var u upd
+			if err := rows.Scan(&u.id, &u.v); err != nil {
+				rows.Close()
+				return err
+			}
+			ups = append(ups, upd{u.id, swap(u.v)})
+		}
+		rows.Close()
+		for _, u := range ups {
+			if _, err := s.core.Exec(`UPDATE `+q.table+` SET `+q.col+`=? WHERE id=?`, u.v, u.id); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

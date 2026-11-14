@@ -226,7 +226,6 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
   // E-mail goes to an SMTP server or through this machine's sendmail
   // command; each way shows only its own fields.
   const viaSendmail = kind === 'email' && opts.via === 'sendmail';
-  const smsOrVoice = /-(sms|voice)$/.test(kind);
   const shown = (f) => kind !== 'email' || (viaSendmail ? !SMTP_ONLY.includes(f.key) : f.key !== 'program');
   // Any channel may be limited to a time period ("!name" = outside it).
   const info = { ...found, fields: [...((found && found.fields) || []).filter(shown), { key: 'period', type: 'text', placeholder: 'office-hours' }] };
@@ -252,7 +251,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
     setBusy(true);
     setErr(null);
     try {
-      await post('/channels', { name, kind, opts: values() }, ifMatch(initial && initial.etag));
+      await post('/channels', { name, kind, opts: values(), from: editing ? initial.name : '' }, ifMatch(initial && initial.etag));
       if (then) await then();
       toast(t('ui.saved'));
       onSaved();
@@ -279,7 +278,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
       const k = kind.startsWith('webhook:') ? 'webhook' : kind;
       const o = values();
       if (kind.startsWith('webhook:')) o.preset = kind.slice(8);
-      setTest({ res: await post('/channels/test', editing && Object.values(o).includes('***') ? { name } : { name: name || 'test', kind: k, opts: o }) });
+      setTest({ res: await post('/channels/test', editing && Object.values(o).includes('***') ? { name: initial.name } : { name: name || 'test', kind: k, opts: o }) });
     } catch (e2) { setTest({ err: e2 }); }
   };
   return html`<${Modal} title=${editing ? t('ui.ch.edit', { name }) : t('ui.ch.add')} onClose=${onClose}>
@@ -295,7 +294,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
               ? html`<optgroup label=${label}>${list.map(k => html`<option value=${k.kind}>${labelOf(k)}</option>`)}</optgroup>`
               : list.map(k => html`<option value=${k.kind}>${labelOf(k)}</option>`))}
           </select><//>
-        <${Field} label=${t('ui.name')} hint=${editing ? '' : t('ui.ch.name_hint')}><input type="text" class="ltr" value=${name} onInput=${(e) => setName(e.target.value)} required disabled=${editing} pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" placeholder=${t('ui.ch.name_ph')} /><//>
+        <${Field} label=${t('ui.name')} hint=${editing ? (name !== initial.name ? t('ui.ch.rename_hint') : '') : t('ui.ch.name_hint')}><input type="text" class="ltr" value=${name} onInput=${(e) => setName(e.target.value)} required pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" placeholder=${t('ui.ch.name_ph')} /><//>
       </div>
       ${info.fields.map(f => {
         const v = opts[f.key] !== undefined ? opts[f.key] : (editing ? '' : f.default || '');
@@ -330,7 +329,6 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
       ${kind !== 'group' && html`<${RequestPanel} kind=${kind} opts=${values()} docs=${found && found.docs} />`}
       <label class="switch"><input type="checkbox" checked=${opts.system === 'yes'} onChange=${(e) => set('system', e.target.checked ? 'yes' : '')} /> ${t('ui.ch.system')}</label>
       <p class="small muted" style=${{ margin: 0 }}>${t('ui.ch.system_hint')}</p>
-      <label class="switch"><input type="checkbox" checked=${smsOrVoice ? opts.report === 'yes' : opts.report !== 'no'} onChange=${(e) => set('report', smsOrVoice ? (e.target.checked ? 'yes' : '') : (e.target.checked ? '' : 'no'))} /> ${t('ui.ch.takes_report')}</label>
       ${err && html`<div class="banner error">${errText(err)}</div>`}
       ${test && !test.busy && html`<div class=${'banner ' + (test.err || !test.res.ok ? 'error' : (test.res.warning ? 'warning' : 'ok'))}>
         ${test.err ? errText(test.err) : test.res.ok
