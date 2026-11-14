@@ -8,6 +8,7 @@ import (
 	"net/netip"
 	"os"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -97,6 +98,65 @@ func isMetadata(a netip.Addr) bool {
 // lookupNetIP resolves names; tests replace it so they need no network.
 var lookupNetIP = net.DefaultResolver.LookupNetIP
 
+// dnsServers, when set, are the DNS servers checks ask instead of this
+// host's own (probe.dns-servers).
+var (
+	dnsMu      sync.RWMutex
+	dnsServers []string
+	dnsLookup  func(context.Context, string, string) ([]netip.Addr, error)
+)
+
+// SetDNSServers makes checks resolve names with these servers (host or
+// host:port, tried in turn); none means this host's own settings.
+func SetDNSServers(servers []string) {
+	dnsMu.Lock()
+	defer dnsMu.Unlock()
+	dnsServers, dnsLookup = nil, nil
+	for _, s := range servers {
+		if s = strings.TrimSpace(s); s == "" {
+			continue
+		}
+		if _, _, err := net.SplitHostPort(s); err != nil {
+			s = net.JoinHostPort(strings.Trim(s, "[]"), "53")
+		}
+		dnsServers = append(dnsServers, s)
+	}
+	if len(dnsServers) == 0 {
+		return
+	}
+	list := append([]string(nil), dnsServers...)
+	r := &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+		var d net.Dialer
+		var last error
+		for _, s := range list {
+			c, err := d.DialContext(ctx, network, s)
+			if err == nil {
+				return c, nil
+			}
+			last = err
+		}
+		return nil, last
+	}}
+	dnsLookup = r.LookupNetIP
+}
+
+// DNSServers are the servers set with SetDNSServers.
+func DNSServers() []string {
+	dnsMu.RLock()
+	defer dnsMu.RUnlock()
+	return append([]string(nil), dnsServers...)
+}
+
+func lookup(ctx context.Context, network, host string) ([]netip.Addr, error) {
+	dnsMu.RLock()
+	f := dnsLookup
+	dnsMu.RUnlock()
+	if f == nil {
+		f = lookupNetIP
+	}
+	return f(ctx, network, host)
+}
+
 func resolve(ctx context.Context, host string, o opts) (netip.Addr, error) {
 	host = strings.Trim(host, "[]")
 	family := o.str("family", "")
@@ -117,7 +177,7 @@ func resolve(ctx context.Context, host string, o opts) (netip.Addr, error) {
 	if family != "" {
 		network = "ip" + family
 	}
-	addrs, err := lookupNetIP(ctx, network, host)
+	addrs, err := lookup(ctx, network, host)
 	if err != nil {
 		return netip.Addr{}, err
 	}
@@ -142,7 +202,7 @@ func resolveDial(ctx context.Context, host string, o opts) ([]netip.Addr, error)
 	if _, lit := netip.ParseAddr(host); lit == nil || o.str("family", "") != "" {
 		return out, nil
 	}
-	addrs, err := lookupNetIP(ctx, "ip", host)
+	addrs, err := lookup(ctx, "ip", host)
 	if err != nil {
 		return out, nil
 	}

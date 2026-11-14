@@ -107,3 +107,7 @@ func containerCgroup(s string) bool {
 	}
 	return false
 }
+
+// SystemDNS lists the DNS servers this host is set to use, as the system
+// reports them; empty when it cannot tell.
+func SystemDNS() []string { return systemDNS() }

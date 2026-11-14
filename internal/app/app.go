@@ -398,6 +398,7 @@ func (a *App) applyLocked(cfg *config.Config) {
 	}
 	a.store.SetTunables(runtimeCfg.Tunables)
 	a.loadDirectory(runtimeCfg.Tunables)
+	probe.SetDNSServers(strings.Split(runtimeCfg.Tunables.Raw("probe.dns-servers"), ","))
 	lec, local := a.localEngineConfig()
 	defs := make([]store.MonitorDef, 0, len(cfg.Monitors))
 	for _, m := range cfg.Monitors {

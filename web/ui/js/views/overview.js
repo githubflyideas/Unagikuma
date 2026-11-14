@@ -32,7 +32,7 @@ function NodesCard({ nodes }) {
   <//>`;
 }
 
-export function HealthCard({ health }) {
+export function HealthCard({ health, dns }) {
   const h = health;
   const up = h.uplink;
   const gw = h.gateway;
@@ -47,11 +47,12 @@ export function HealthCard({ health }) {
         </div></div>
       <div class="hitem"><${Dot} status=${gw.addr ? (gw.ok ? 'ok' : gwBad(gw) ? 'critical' : 'pending') : 'pending'} />
         <div><b>${t('ui.health.gateway')}</b>
-          <span class="ltr">${gw.addr || '–'}</span>
+          <span class="ltr">${gw.addr || t('ui.health.gw_none')}</span>
           ${gw.addr && gw.ok ? html` · <span class="ltr">${msText(gw.rtt_ms)}</span>` : gw.note ? ' · ' + t('ui.health.gw_note.' + gw.note) : ''}
         </div></div>
       <div class="hitem"><${Dot} status=${h.dns_down ? 'critical' : 'ok'} />
-        <div><b>${t('ui.health.dns')}</b><span>${h.dns_down ? t('ui.health.dns_down') : t('ui.health.dns_ok')}</span></div></div>
+        <div><b>${t('ui.health.dns')}</b><span>${h.dns_down ? t('ui.health.dns_down') : t('ui.health.dns_ok')}</span>
+          ${dns && dns.servers && dns.servers.length > 0 && html`<span class="small"> · <span class="ltr">${dns.servers.join(', ')}</span> (${t(dns.custom ? 'ui.health.dns_custom' : 'ui.health.dns_system')})</span>`}</div></div>
       <div class="hitem"><${Dot} status=${hbStatus} />
         <div><b>${t('ui.health.heartbeat')}</b>
           <span>${!hb.configured ? t('ui.health.hb_off') : hb.last_error ? hb.last_error : html`${t('ui.health.hb_ok')} <${Ago} at=${hb.last_ok} />`}</span>
@@ -429,7 +430,7 @@ export function Overview() {
         <//>
         <${Card} title=${t('ui.ov.saved_title')}><${Saved} week=${d.value_week || {}} /><//>
         ${cluster && html`<${NodesCard} nodes=${d.nodes} serial=${d.serial} />`}
-        <${HealthCard} health=${d.health} />
+        <${HealthCard} health=${d.health} dns=${d.dns} />
         <${Card} title=${t('ui.ov.channels')} flush><${Channels} channels=${d.channels} alerting=${d.alerting_configured} /><//>
         ${d.pending_notifications > 0 && html`<div class="banner info">${tn('ui.ov.pending_notifications', d.pending_notifications)}</div>`}
       </div>

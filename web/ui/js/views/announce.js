@@ -47,7 +47,7 @@ function ReportSettings({ r, onChange }) {
     </div>
     <${Field} label=${t('ui.report.teams')}>
       <div class="row" style=${{ gap: '14px', flexWrap: 'wrap' }}>${teams.map(x => html`<label class="switch"><input type="checkbox" checked=${receives.includes(x.name)} onChange=${(e) => setReceives(x.name, e.target.checked)} /> ${x.title}</label>`)}</div><//>
-    <${Field} label=${t('ui.report.channels', { team: (teams.find(x => x.name === r.team) || {}).title || r.team })} hint=${t('ui.report.channels_hint')}>
+    <${Field} label=${t('ui.report.channels', { team: (teams.find(x => x.name === r.team) || {}).title || r.team })} hint=${chans.length ? t('ui.report.channels_hint') : ''}>
       ${chans.length ? html`<div class="row" style=${{ gap: '14px', flexWrap: 'wrap' }}>${chans.map(c => html`<label class="switch"><input type="checkbox" checked=${takes(c)} onChange=${(e) => setTakes(c, e.target.checked)} /> <span class="ltr">${c.name}</span></label>`)}</div>`
         : html`<span class="small muted">${t('ui.report.channels_none')}</span>`}<//>
   </div></div>`;

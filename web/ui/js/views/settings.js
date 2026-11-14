@@ -8,6 +8,7 @@ import { IssueDot } from './contacts.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, regionTitle, msText } from '../ui.js';
 
 const EXIT_KEY = 'localnet.exit-target';
+const DNS_KEY = 'probe.dns-servers';
 
 // routeText is the traced route, without the run of silent hops at its
 // end (routers that do not answer, or the trace stopping short).
@@ -27,6 +28,12 @@ function General() {
   useEffect(() => { if (s.data) setF({ ...s.data }); }, [s.data]);
   const exitTun = tun.data && tun.data.find(x => x.key === EXIT_KEY);
   useEffect(() => { if (exitTun) setExit(exitTun.value); }, [tun.data]);
+  // The DNS servers checks ask: this host's own unless some are set.
+  const dnsTun = tun.data && tun.data.find(x => x.key === DNS_KEY);
+  const [dns, setDns] = useState(null);
+  useEffect(() => { if (dnsTun) setDns(dnsTun.value); }, [tun.data]);
+  const ov = useFetch(() => get('/overview').catch(() => null), []);
+  const systemDNS = (ov.data && ov.data.dns && !ov.data.dns.custom && ov.data.dns.servers) || [];
   if (!f) return s.error ? html`<${ErrorBox} error=${s.error} />` : html`<${Loading} />`;
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async (e) => {
@@ -34,6 +41,10 @@ function General() {
     try {
       // The internet gateway is a tunable; it is written only when changed,
       // and going back to the default removes the override.
+      if (dnsTun && dns !== null && dns.trim() !== dnsTun.value) {
+        const v = dns.trim();
+        await put('/tunables', v ? { set: { [DNS_KEY]: v }, unset: [] } : { set: {}, unset: [DNS_KEY] });
+      }
       if (exitTun && exit !== null && exit.trim() !== exitTun.value) {
         const v = exit.trim();
         await put('/tunables', v === exitTun.default ? { set: {}, unset: [EXIT_KEY] } : { set: { [EXIT_KEY]: v }, unset: [] });
@@ -95,6 +106,8 @@ function General() {
       </tr>`)}</tbody></table>
     </div></div>`}
     </div>`}
+    ${dnsTun && html`<${Field} label=${t('ui.set.dns')} hint=${t('ui.set.dns_hint', { list: systemDNS.join(', ') || t('ui.set.dns_unknown') })}>
+      <input type="text" class="ltr" value=${dns ?? ''} onInput=${(e) => setDns(e.target.value)} placeholder=${t('ui.set.dns_system')} style=${{ maxWidth: '420px' }} /><//>`}
     <${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
       <div class="row nowrap"><input type="text" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
         <button type="button" class="btn" onClick=${testHb} disabled=${!s.data.heartbeat_url}>${t('ui.set.heartbeat_test')}</button></div><//>
