@@ -245,7 +245,7 @@ export function MonitorDetail({ name }) {
           ${row.detail && html`<div class="small">${detailText(row.detail)}</div>`}
           ${status === 'unreachable' && html`<div class="small">${t('ui.mon.unreachable_hint', { parent: (row.parents || []).join(', ') })}</div>`}
           ${row.state_type === 'soft' && html`<div class="small">${t('ui.mon.soft_hint', { attempt: row.attempt, max: row.max_attempts })}</div>`}
-          ${row.incident && html`<div class="small">${tn('ui.inc.notified', row.incident.notify_count)}${row.incident.notify_max ? ' / ' + row.incident.notify_max : ''}${row.incident.acked ? ' · ' + t('ui.inc.acked_by', { who: row.incident.acked_by }) : ''}</div>`}
+          ${row.incident && html`<div class="small">${tn('ui.inc.notified', row.incident.notify_count)}${row.incident.notify_max ? ' / ' + row.incident.notify_max : ''}${row.incident.acked ? ' · ' + t('ui.inc.acked_by', { who: row.incident.acked_by }) : ''}${row.status === 'paused' ? ' · ' + t('ui.inc.paused_quiet') : ''}</div>`}
         </div>
       </div>`}
     </div></div>
