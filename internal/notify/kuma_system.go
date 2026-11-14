@@ -14,7 +14,7 @@ import (
 // expects, but the template's text fields carry the message's own text.
 
 // kumaMark stands for a Kuma value while the template is examined.
-const kumaMark = "⁣kuma⁣"
+const kumaMark = "\u2063kuma\u2063"
 
 // systemKumaBody renders a Kuma-style body template for a message about no
 // monitor. ok is false when the template's result is not JSON whose text
