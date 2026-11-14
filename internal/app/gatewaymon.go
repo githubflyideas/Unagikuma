@@ -12,7 +12,7 @@ import (
 // The two gateways are where most outages of a single machine start: the
 // router in front of it (the LAN gateway, found from the routing table) and
 // the address on the internet chosen as the internet gateway. Each gets a
-// ping monitor of its own, added once. A monitor the user deletes stays
+// ping monitor of its own, added once the user has monitors of their own. A monitor the user deletes stays
 // deleted; one whose gateway moves follows it.
 
 // gatewayMonitor is one of the monitors added for a gateway.
@@ -41,6 +41,23 @@ var gatewayMonitors = []gatewayMonitor{
 	}},
 }
 
+// hasOwnMonitors reports whether the configuration has a monitor other
+// than the gateway ones.
+func hasOwnMonitors(c *config.Config) bool {
+	for _, m := range c.Monitors {
+		own := true
+		for _, g := range gatewayMonitors {
+			if m.Name == g.name {
+				own = false
+			}
+		}
+		if own {
+			return true
+		}
+	}
+	return false
+}
+
 // runGatewayMonitors checks the gateways now and every minute after.
 func (a *App) runGatewayMonitors(ctx context.Context) {
 	if !a.opts.GatewayMonitors {
@@ -53,6 +70,10 @@ func (a *App) runGatewayMonitors(ctx context.Context) {
 func (a *App) ensureGatewayMonitors() {
 	if a.editable() != nil {
 		return // a node of a cluster runs its master's configuration
+	}
+	cur := a.Config()
+	if !cur.Config.Tunables.Bool("localnet.gateway-monitors") || !hasOwnMonitors(cur.Config) {
+		return // a new installation starts with the first-run guide, not with these
 	}
 	for _, g := range gatewayMonitors {
 		addr := g.addr(a)

@@ -121,7 +121,7 @@ export function LatencyChart({ name, range }) {
           { stroke: css('--muted'), grid: { stroke: css('--border') }, ticks: { stroke: css('--border') }, values: (u, v) => v.map(x => fmtNum(x) + ' ms'), size: 64 },
         ],
         series: [
-          { value: (u, v) => v == null ? '–' : fmtTime(new Date(v * 1000)) },
+          { label: t('ui.chart.time'), value: (u, v) => v == null ? '–' : fmtTime(new Date(v * 1000)) },
           { label: t('ui.chart.avg'), stroke: accent, width: 1.5, fill: accent + '22', points: { show: pts.length < 80 }, value: (u, v) => v == null ? '–' : msText(v) },
           ...(long ? [{ label: t('ui.chart.max'), stroke: css('--degraded'), width: 1, dash: [4, 4], value: (u, v) => v == null ? '–' : msText(v) }] : []),
         ],
