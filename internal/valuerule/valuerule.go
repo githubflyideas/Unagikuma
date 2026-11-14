@@ -24,6 +24,7 @@ const (
 	OK       Level = iota
 	Learning       // no reference yet: nothing is judged
 	Skip           // no value this round (first counter sample, wrap)
+	Missing        // the check reported no value at all: the rules cannot work
 	Warn
 	Crit
 )
@@ -246,6 +247,9 @@ type Outcome struct {
 func (t *Tracker) Observe(now time.Time, m map[string]float64) Outcome {
 	v, ok, note := t.value(now, m)
 	if !ok {
+		if note == noValue {
+			return Outcome{Level: Missing, Detail: "the check reported no value for these rules"}
+		}
 		return Outcome{Level: Skip, Detail: note}
 	}
 	out := t.judge(now, v)
@@ -285,6 +289,9 @@ func (t *Tracker) value(now time.Time, m map[string]float64) (float64, bool, str
 	}
 	switch t.Rules.Value {
 	case "in", "out", "util":
+		if _, ok := m["if.in_octets"]; !ok {
+			return 0, false, noValue // not a port check
+		}
 		in, ok1 := rate("if.in_octets")
 		out, ok2 := rate("if.out_octets")
 		if !ok1 || !ok2 {
@@ -303,8 +310,14 @@ func (t *Tracker) value(now time.Time, m map[string]float64) (float64, bool, str
 		return math.Max(in, out) / t.speed * 100, true, note
 	}
 	v, ok := m["value"]
+	if !ok {
+		return 0, false, noValue
+	}
 	return v, ok, note
 }
+
+// noValue marks a round whose metrics hold nothing the rules can judge.
+const noValue = "\x00no value"
 
 func (t *Tracker) judge(now time.Time, v float64) Outcome {
 	r := t.Rules

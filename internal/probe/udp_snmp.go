@@ -307,7 +307,7 @@ func runSNMP(ctx context.Context, p udpPlan, o opts) Result {
 	res.Evidence.Decoded = dec
 	res.Metrics = map[string]float64{"latency_ms": ms(lat)}
 	if isNum {
-		res.Metrics["snmp.value"] = num
+		res.Metrics["snmp.value"], res.Metrics["value"] = num, num
 	}
 	res.Vote, res.Reason, res.Detail = VoteOK, ReasonOK, oidStr+" = "+text
 	switch exp, expNum := o.str("expect", ""), o.str("expect-num", ""); {

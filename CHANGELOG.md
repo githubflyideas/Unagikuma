@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.6.15 — 2026-11-14
+
+**Fixed**
+- Value rules on an SNMP `oid=` check never fired.
+- Value rules that get no value now show the monitor as degraded.
+- `{{monitorJSON}}` and `{{heartbeatJSON}}` in Kuma templates print JSON.
+- Contrast of the status page banner, status colours and sidebar text.
+
 ## v2.6.14 — 2026-11-14
 
 **Added**

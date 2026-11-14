@@ -665,7 +665,7 @@ func TestUDPSNMP(t *testing.T) {
 	addr := snmpAgent(t, "s3cret")
 	r := run(t, udpSpec(addr, "snmp", map[string]string{"community": "s3cret"}))
 	want(t, r, VoteOK, ReasonOK)
-	if r.Metrics["snmp.value"] != 256 {
+	if r.Metrics["snmp.value"] != 256 || r.Metrics["value"] != 256 {
 		t.Fatalf("value %v", r.Metrics)
 	}
 	if strings.Contains(string(r.Evidence.Request), "s3cret") || strings.Contains(string(r.Evidence.Response), "s3cret") {

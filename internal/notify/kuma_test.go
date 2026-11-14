@@ -116,3 +116,34 @@ func TestKumaBodyReport(t *testing.T) {
 		t.Fatalf("body %s", got)
 	}
 }
+
+// {{ monitorJSON }} and {{ heartbeatJSON }} written whole are JSON, also
+// next to fields escaped for a JSON string.
+func TestKumaObjectsAsJSON(t *testing.T) {
+	cap := &capture{}
+	srv := cap.server(t)
+	o := map[string]string{"url": srv.URL, "content-type": "json", "body": `{"monitor": {{monitorJSON}}, "beat": {{heartbeatJSON}}, "name": "{{monitorJSON.name}}"}`}
+	m := problem()
+	m.Title = `web "front"`
+	if a := (&Sender{}).Send(context.Background(), Channel{Name: "w", Kind: "webhook", Opts: o}, m); !a.OK {
+		t.Fatalf("%+v", a)
+	}
+	_, got := cap.last()
+	var v struct {
+		Monitor map[string]any `json:"monitor"`
+		Beat    map[string]any `json:"beat"`
+		Name    string         `json:"name"`
+	}
+	if err := json.Unmarshal(got, &v); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, got)
+	}
+	if v.Monitor["name"] != m.Title || v.Name != m.Title || v.Beat["status"] != float64(0) || strings.Contains(string(got), "map[") {
+		t.Fatalf("body %s", got)
+	}
+	// In a text body too.
+	o2 := map[string]string{"url": srv.URL, "content-type": "text", "body": `{{monitorJSON}}`}
+	(&Sender{}).Send(context.Background(), Channel{Name: "w", Kind: "webhook", Opts: o2}, m)
+	if _, got = cap.last(); !json.Valid(got) {
+		t.Fatalf("text body %s", got)
+	}
+}
