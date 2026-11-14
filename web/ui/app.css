@@ -559,9 +559,10 @@ body:has(.shell) { background-color: color-mix(in srgb, var(--bg) 92%, var(--tex
 .seg { border-radius: 10px; padding: 3px; gap: 2px; background: var(--panel-2); border: 1px solid var(--border); }
 .seg button { border: 0; border-radius: 7px; background: none; color: var(--muted); padding: 4px 12px; font-weight: 600; }
 .seg button.on { background: color-mix(in srgb, var(--text) 10%, transparent); color: var(--text); }
-.tabs { gap: 4px; border-bottom: 0; padding: 3px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); width: fit-content; max-width: 100%; }
-.tabs a, .tabs button { border: 0; border-radius: 7px; margin: 0; padding: 5px 13px; }
-.tabs a.on, .tabs button.on { background: color-mix(in srgb, var(--text) 10%, transparent); }
+/* Page tabs are underlined; a view switch (.seg) is a button group, so the two never look alike. */
+.tabs { gap: 6px; border-bottom: 1px solid var(--border); }
+.tabs a, .tabs button { border-radius: 0; padding: 8px 4px; margin: 0 0 -1px; margin-inline-end: 10px; border-bottom: 2px solid transparent; }
+.tabs a.on, .tabs button.on { background: none; color: var(--text); border-bottom-color: var(--accent); }
 .chip { border-radius: 999px; }
 .chip.on { background: color-mix(in srgb, var(--link) 14%, transparent); border-color: color-mix(in srgb, var(--link) 45%, transparent); }
 .banner { border-radius: 12px; }
@@ -891,3 +892,7 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 .side .foot .lang-zoom { gap: 6px; }
 .side .foot .lang-zoom select:first-child { flex: 1; min-width: 0; }
 .side .foot select.zoom { width: auto; flex: none; }
+/* Sortable column headings. */
+.tbl th .th-sort { all: unset; cursor: pointer; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; white-space: nowrap; }
+.tbl th .th-sort:hover, .tbl th .th-sort.on { color: var(--text); }
+.tbl th .th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }

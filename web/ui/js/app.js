@@ -339,7 +339,7 @@ function Search({ route }) {
   return html`<div class="search" role="search"><span aria-hidden="true">⌕</span>
     <input type="search" class="spacer" placeholder=${t('ui.mon.search')} aria-label=${t('ui.mon.search')} value=${v}
       onInput=${(e) => { setV(e.target.value); show(e.target.value, sort); }} />
-    <select class="sort" value=${sort} onChange=${(e) => show(v, e.target.value)} aria-label=${t('ui.mon.sort')}>
+    <select class="sort" value=${sort.replace(/^-/, '')} onChange=${(e) => show(v, e.target.value)} aria-label=${t('ui.mon.sort')}>
       ${MON_SORTS.map(k => html`<option value=${k}>${t('ui.mon.sort.' + k)}</option>`)}
     </select>
     <button type="button" class="kbd" onClick=${openPalette} title=${t('ui.top.search')}><kbd>Ctrl K</kbd></button></div>`;
