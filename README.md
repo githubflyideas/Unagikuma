@@ -17,6 +17,7 @@ Friendly, self-hosted monitoring: know the moment your websites and servers go d
 - **Ready in about 30 seconds.** Download one file, run it, open your browser.
 - **One file, nothing else to install.** Works on Linux, macOS, Windows and FreeBSD.
 - **Checks what matters.** Websites, servers, ports, ping, DNS, SSL certificates and domain expiry.
+- **Watches numbers too.** Switch port traffic and temperatures over SNMP (v3 included) and any value in a JSON reply, with limits and sudden-change alerts against the same time yesterday.
 - **Alerts where you already are.** Email, SMS and calls; Feishu, DingTalk, WeCom, Telegram, Slack, Discord, Teams, LINE, Mattermost, Google Chat; PagerDuty, Opsgenie, Datadog; ntfy, Gotify, Bark, Pushover, Pushbullet, ServerChan, Apprise; and any webhook. Each can have its own message template.
 - **Status pages** to keep your users in the loop.
 - **Easy to switch.** Bring your monitors over from Uptime Kuma, Nagios, Checkmate or Gatus, in the web page or on the command line.
