@@ -242,7 +242,9 @@ func (s *Store) SavePerson(p Person) (int64, error) {
 			n++
 		}
 	}
-	if n == 0 {
+	// A login's own entry may wait for its addresses; anyone else is in
+	// the list only to be reached.
+	if n == 0 && p.Username == "" {
 		return 0, ErrNoAddress
 	}
 	notify := strings.Join(p.Notify, ",")
@@ -439,5 +441,75 @@ func (s *Store) ClearBounces(kind, address string) error {
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
 	_, err := s.core.Exec(`DELETE FROM bounces WHERE kind=? AND value=?`, kind, normalizeContact(kind, address))
+	return err
+}
+
+// LinkUsers gives every login without one an entry of its own in the
+// list of people, so that each login is a person the system can reach
+// once an address is added. The handle is the login name, made valid and
+// unique. It returns how many entries it added.
+func (s *Store) LinkUsers() (int, error) {
+	users, err := s.Users()
+	if err != nil {
+		return 0, err
+	}
+	people, err := s.People()
+	if err != nil {
+		return 0, err
+	}
+	linked, taken := map[string]bool{}, map[string]bool{}
+	for _, p := range people {
+		linked[p.Username] = true
+		taken[p.Handle] = true
+	}
+	added := 0
+	for _, u := range users {
+		if linked[u.Username] {
+			continue
+		}
+		base := handleOf(u.Username)
+		h := base
+		for i := 2; taken[h]; i++ {
+			h = fmt.Sprintf("%s-%d", base, i)
+		}
+		s.wmu.Lock()
+		now := ms(s.now())
+		_, err := s.core.Exec(`INSERT INTO people(handle,name,note,username,created_at,updated_at,notify) VALUES(?,?,?,?,?,?,?)`, h, u.Username, "", u.Username, now, now, "")
+		s.wmu.Unlock()
+		if err != nil {
+			return added, err
+		}
+		taken[h] = true
+		added++
+	}
+	return added, nil
+}
+
+// handleOf turns a login name into a valid @handle.
+func handleOf(name string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '.', r == '_', r == '-':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+	h := strings.TrimLeft(b.String(), "._-")
+	if len(h) > 50 {
+		h = h[:50]
+	}
+	if h == "" {
+		h = "user"
+	}
+	return h
+}
+
+// UnlinkUser keeps a deleted login's person, now without the login.
+func (s *Store) UnlinkUser(username string) error {
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	_, err := s.core.Exec(`UPDATE people SET username='' WHERE username=?`, username)
 	return err
 }

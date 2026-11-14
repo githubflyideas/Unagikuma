@@ -171,7 +171,7 @@ function Shell({ user, onLogout, onLang }) {
   const contactIssues = ov.data ? ov.data.contact_issues || 0 : 0;
   const setup = setupIssues(ov.data);
   const first = route.parts[0] === 'settings' && ADVANCED_TABS.includes(route.parts[1]) ? '/advanced'
-    : route.parts[0] === 'notices' && route.parts[1] === 'changes' ? '/alerts' : '/' + (route.parts[0] || '');
+    : route.parts[0] === 'alerts' && route.parts[1] === 'changes' ? '/notices' : '/' + (route.parts[0] || '');
   const changeTheme = (v) => { setTheme(v); storage('unagikuma.theme', v); applyTheme(v); };
   // On a wide screen the button folds the sidebar to icons; on a phone it
   // slides the sidebar in.
@@ -197,9 +197,9 @@ function Shell({ user, onLogout, onLang }) {
     case 'incidents': view = p[1] ? html`<${IncidentReport} id=${p[1]} />` : html`<${Problems} tab="all" />`; break;
     // Changes, status pages and the report used to live under Alerting;
     // their old addresses still open them.
-    case 'alerts': view = OLD_ALERT_TABS[p[1]] ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]]} />` : html`<${Alerts} tab=${['contacts', 'changes'].includes(p[1]) ? p[1] : 'channels'} />`; break; // policies went to the teams
+    case 'alerts': view = OLD_ALERT_TABS[p[1]] || p[1] === 'changes' ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]] || 'pages'} />` : html`<${Alerts} tab=${['contacts', 'periods'].includes(p[1]) ? p[1] : 'channels'} />`; break; // policies went to the teams
     // Change notices moved to Alerts and notifications; the old address opens them there.
-    case 'notices': view = p[1] === 'changes' ? html`<${Alerts} tab="changes" />` : html`<${Notices} tab=${p[1] || 'pages'} />`; break;
+    case 'notices': view = html`<${Notices} tab=${p[1] === 'changes' ? 'pages' : p[1] || 'pages'} />`; break;
     case 'config': view = html`<${ConfigView} tab=${p[1] || 'edit'} />`; break;
     // Nodes used to be a Settings tab; its old address opens Run mode.
     case 'settings': view = p[1] === 'nodes' ? html`<div class="page"><${Nodes} /></div>`

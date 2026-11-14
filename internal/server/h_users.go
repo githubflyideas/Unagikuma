@@ -155,6 +155,9 @@ func (s *Server) userCreate(w http.ResponseWriter, r *http.Request) (any, error)
 		_ = s.app.Store().DeleteUser(id)
 		return nil, err
 	}
+	if _, err := s.app.Store().LinkUsers(); err == nil {
+		s.app.DirectoryChanged()
+	}
 	s.log.Info("user created", "user", q.Username, "role", q.Role, "by", authOf(r).user)
 	auditOf(r).note("role", q.Role).note("areas", q.cleanAreas()).note("teams", teams).target = q.Username
 	return map[string]any{"id": id}, nil
@@ -217,6 +220,11 @@ func (s *Server) userDelete(w http.ResponseWriter, r *http.Request) (any, error)
 		return nil, userError(err)
 	}
 	auditOf(r).note("role", before.Role).note("areas", before.Areas).target = before.Username
+	// The person stays, without the login: their addresses and history
+	// remain for notifications.
+	if err := s.app.Store().UnlinkUser(before.Username); err == nil {
+		s.app.DirectoryChanged()
+	}
 	// Take them off their teams; a failure here (a replica) leaves a
 	// member name the teams page lists as unknown.
 	cfg := s.app.EffectiveConfig()

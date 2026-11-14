@@ -144,14 +144,7 @@ func (s *Store) CreateUserRole(username, password, role string, areas []string) 
 	if _, err := s.UserID(username); err == nil {
 		return 0, ErrUserExists
 	}
-	s.wmu.Lock()
-	defer s.wmu.Unlock()
-	res, err := s.core.Exec(`INSERT INTO users(username,password,created_at,role,areas) VALUES(?,?,?,?,?)`,
-		username, HashPassword(password), ms(s.now()), role, strings.Join(areas, "\n"))
-	if err != nil {
-		return 0, err
-	}
-	return res.LastInsertId()
+	return s.insertUser(username, HashPassword(password), role, areas)
 }
 
 // CreateUserHash adds an account whose password hash comes from another
@@ -166,14 +159,25 @@ func (s *Store) CreateUserHash(username, hash, role string, areas []string) (int
 	if _, err := s.UserID(username); err == nil {
 		return 0, ErrUserExists
 	}
+	return s.insertUser(username, hash, role, areas)
+}
+
+// insertUser adds the account and gives it its entry in the list of
+// people (see LinkUsers).
+func (s *Store) insertUser(username, hash, role string, areas []string) (int64, error) {
 	s.wmu.Lock()
-	defer s.wmu.Unlock()
 	res, err := s.core.Exec(`INSERT INTO users(username,password,created_at,role,areas) VALUES(?,?,?,?,?)`,
 		username, hash, ms(s.now()), role, strings.Join(areas, "\n"))
+	s.wmu.Unlock()
 	if err != nil {
 		return 0, err
 	}
-	return res.LastInsertId()
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	_, _ = s.LinkUsers() // the account works without it; the next start adds it
+	return id, nil
 }
 
 // Users lists the accounts.

@@ -132,6 +132,12 @@ func New(o Options) (*App, error) {
 		}
 	}
 	a.recordVersion()
+	// Every login is a person in the list; earlier versions kept them apart.
+	if n, err := a.store.LinkUsers(); err != nil {
+		o.Log.Warn("could not add logins to the list of people", "err", err)
+	} else if n > 0 {
+		o.Log.Info("logins added to the list of people", "n", n)
+	}
 	a.heartbeat = &engine.Heartbeat{
 		Client:    &http.Client{Transport: &http.Transport{Proxy: http.ProxyFromEnvironment}},
 		URL:       a.heartbeatURL,

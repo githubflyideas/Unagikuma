@@ -176,7 +176,9 @@ function NoticeEditor({ ev, tpl, def, custom, open, onToggle, onChange }) {
   </div></div>`;
 }
 
-export function ChangesTab() {
+// ChangesTab lists announced changes. Under the status pages, whose top
+// row already has the button to announce one, it leaves its own out.
+export function ChangesTab({ embedded }) {
   const [filter, setFilter] = useState({ q: '', state: '', from: '', to: '' });
   const list = useFetch(() => get('/changes' + qs(filter)), [filter.q, filter.state, filter.from, filter.to]);
   const [edit, setEdit] = useState(null);
@@ -187,7 +189,7 @@ export function ChangesTab() {
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.chg.intro')}</p>
       <button class="btn" onClick=${() => setTpl(true)}>${t('ui.chg.templates')}</button>
-      <button class="btn primary" onClick=${() => setEdit({})}>${t('ui.chg.add')}</button></div>
+      ${!embedded && html`<button class="btn primary" onClick=${() => setEdit({})}>${t('ui.chg.add')}</button>`}</div>
     <div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }}>
       <input type="search" value=${filter.q} onInput=${set('q')} placeholder=${t('ui.chg.search')} style=${{ flex: '1 1 220px', width: 'auto', minWidth: '180px' }} />
       <select value=${filter.state} onChange=${set('state')} style=${{ width: 'auto' }}>

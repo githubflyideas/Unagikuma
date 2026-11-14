@@ -4,7 +4,7 @@ import { html, useState, useEffect, useRef } from '../lib.js';
 import { t, has, currentLang } from '../i18n.js';
 import { get, post, del, put, ifMatch, me } from '../api.js';
 import { ContactsTab, IssueDot, NewAddresses, addressKey } from './contacts.js';
-import { ChangesTab } from './changes.js';
+import { PeriodsTab } from './periods.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle } from '../ui.js';
 
 // kindLabel is a kind's name in the reader's language where it has one.
@@ -143,7 +143,7 @@ function PeriodField({ label, value, onChange, periods }) {
   const name = value.replace(/^!/, '');
   const names = periods.map(p => p.name);
   const known = !name || names.includes(name);
-  return html`<${Field} label=${label} hint=${periods.length ? t('ui.ch.period_hint2') : html`${t('ui.ch.period_none')} <a href="#/config">${t('ui.nav.config')}</a>`}>
+  return html`<${Field} label=${label} hint=${periods.length ? t('ui.ch.period_hint2') : html`${t('ui.ch.period_none')} <a href="#/alerts/periods">${t('ui.per.add')}</a>`}>
     <div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }}>
       <select value=${name} onChange=${(e) => onChange(e.target.value ? (outside ? '!' : '') + e.target.value : '')} style=${{ flex: '1 1 200px' }}>
         <option value="">${t('ui.ch.period_always')}</option>
@@ -468,9 +468,9 @@ export function Alerts({ tab }) {
     <div class="tabs">
       <a href="#/alerts/channels" class=${tab === 'channels' ? 'on' : ''}>${t('ui.ch.tab')}</a>
       <a href="#/alerts/contacts" class=${tab === 'contacts' ? 'on' : ''}>${t('ui.dir.tab')}</a>
-      <a href="#/alerts/changes" class=${tab === 'changes' ? 'on' : ''}>${t('ui.chg.tab')}</a>
+      <a href="#/alerts/periods" class=${tab === 'periods' ? 'on' : ''}>${t('ui.per.tab')}</a>
     </div>
-    ${tab === 'contacts' ? html`<${ContactsTab} />` : tab === 'changes' ? html`<${ChangesTab} />` : html`<${ChannelsTab} />`}
+    ${tab === 'contacts' ? html`<${ContactsTab} />` : tab === 'periods' ? html`<${PeriodsTab} />` : html`<${ChannelsTab} />`}
   </div>`;
 }
 

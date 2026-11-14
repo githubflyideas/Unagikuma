@@ -22,6 +22,7 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/keywords"
 	"github.com/githubflyideas/unagikuma/internal/notify"
 	"github.com/githubflyideas/unagikuma/internal/probe"
+	"github.com/githubflyideas/unagikuma/internal/schedule"
 	"github.com/githubflyideas/unagikuma/internal/store"
 	"github.com/githubflyideas/unagikuma/internal/tunables"
 )
@@ -200,6 +201,49 @@ func (s *Server) periods(w http.ResponseWriter, r *http.Request) (any, error) {
 		}
 	}
 	return map[string]any{"items": out}, nil
+}
+
+// periodSave creates or changes a time period (a PERIOD record): weekly
+// rules such as "mon-fri 09:00-18:00; sat 10:00-12:00".
+func (s *Server) periodSave(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req struct {
+		Name string `json:"name"`
+		Rule string `json:"rule"`
+	}
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	req.Rule = strings.TrimSpace(req.Rule)
+	if !config.ValidName(req.Name) {
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "invalid name")
+	}
+	if _, err := schedule.ParsePeriod(req.Rule); err != nil {
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
+	}
+	spec := config.RecordSpec{Name: req.Name, Type: "PERIOD", Target: req.Rule}
+	st, err := s.editConfig(r, "", func(f *config.File) error { return f.UpsertRecord(spec) })
+	if err != nil {
+		return nil, s.configError(err)
+	}
+	return s.savedRecord(st, spec.Name), nil
+}
+
+// periodDelete removes a time period; one a channel still uses is refused
+// by the configuration check.
+func (s *Server) periodDelete(w http.ResponseWriter, r *http.Request) (any, error) {
+	name := r.PathValue("name")
+	found := false
+	for _, p := range s.app.EffectiveConfig().Periods {
+		found = found || p.Name == name
+	}
+	if !found {
+		return nil, notFound("period")
+	}
+	st, err := s.editConfig(r, "delete period "+name, func(f *config.File) error { return f.DeleteRecord(name) })
+	if err != nil {
+		return nil, s.configError(err)
+	}
+	return s.saved(st), nil
 }
 
 // channelRequestPreview shows the request a channel form would send for
