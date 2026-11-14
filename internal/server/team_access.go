@@ -207,6 +207,7 @@ func teamOfNewRecord(ai *authInfo, spec *config.RecordSpec) error {
 var teamRoutes = map[string]bool{
 	// Their own session and preferences.
 	"GET /api/v1/session":          true,
+	"GET /api/v1/saved-alerts":     true,
 	"DELETE /api/v1/session":       true,
 	"PUT /api/v1/session/password": true,
 	"GET /api/v1/preferences":      true,

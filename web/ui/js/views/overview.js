@@ -1,9 +1,9 @@
 // Overview: where a failure is on the way to the targets, every monitor at
 // a glance, what needs attention and what was held back.
 import { html, useState } from '../lib.js';
-import { t, tn, dur, fmtNum } from '../i18n.js';
+import { t, tn, dur, fmtNum, fmtTime } from '../i18n.js';
 import { get, post, me } from '../api.js';
-import { useFetch, useLive, Card, Loading, ErrorBox, Dot, Ago, Empty, Pill, Seg, msText, reasonText, quorumText, pct, openMonitor, enc, toast, toastError, useDocTitle, gwBad } from '../ui.js';
+import { useFetch, useLive, Card, Loading, ErrorBox, Dot, Ago, Empty, Pill, Seg, msText, reasonText, quorumText, pct, openMonitor, enc, toast, toastError, useDocTitle, gwBad, Modal } from '../ui.js';
 import { ObservationCell, observationSummary } from '../observations.js';
 import { IncidentList } from './problems.js';
 
@@ -387,13 +387,31 @@ function Onboarding({ d, reload }) {
 
 const SAVED = [['outage_saved', 'ui.value.outage_saved'], ['soft_filtered', 'ui.value.soft_filtered'], ['outage_merged', 'ui.value.outage_merged'], ['cap_saved', 'ui.value.cap_saved']];
 
+// Saved shows the alerts not sent in the last seven days: the total, a
+// bar per day, and a row per reason that opens the list of those alerts.
 function Saved({ week }) {
-  const parts = SAVED.map(([k, label]) => [t(label), week[k] || 0]);
-  const total = parts.reduce((a, p) => a + p[1], 0);
+  const d = useFetch(() => get('/saved-alerts').catch(() => null), []);
+  const [open, setOpen] = useState(null);
+  const parts = SAVED.map(([k, label]) => [k, t(label), week[k] || 0]);
+  const total = parts.reduce((a, p) => a + p[2], 0);
   if (!total) return html`<p class="muted small" style=${{ margin: 0 }}>${t('ui.value.none')}</p>`;
-  const mx = Math.max(...parts.map(p => p[1]));
+  const mx = Math.max(...parts.map(p => p[2]));
+  const days = (d.data && d.data.days) || [];
+  const dayTotal = (x) => Object.values(x.counts).reduce((a, n) => a + n, 0);
+  const dmx = Math.max(1, ...days.map(dayTotal));
+  const items = ((d.data && d.data.items) || []).filter(x => x.name === open);
   return html`<div class="bignum"><strong>${fmtNum(total)}</strong><span class="muted">${t('ui.ov.saved_unit')}</span></div>
-    <div class="sbars">${parts.map(([l, n]) => html`<div class="sbar"><span>${l}</span><b class="mono">${fmtNum(n)}</b><div class="track"><i style=${{ width: (n / mx * 100) + '%' }}></i></div></div>`)}</div>`;
+    <p class="small" style=${{ margin: '0 0 10px' }}>${t('ui.value.summary', { n: fmtNum(total) })}</p>
+    ${days.length > 0 && html`<div class="dbars" role="img" aria-label=${t('ui.value.by_day')}>${days.map(x => html`<div class="dbar" title=${x.day + ': ' + dayTotal(x)}>
+      <i style=${{ height: (dayTotal(x) / dmx * 100) + '%' }}></i><span>${x.day.slice(5).replace('-', '/')}</span></div>`)}</div>`}
+    <div class="sbars">${parts.map(([k, l, n]) => html`<button type="button" class="sbar" disabled=${!n} onClick=${() => setOpen(k)} title=${n ? t('ui.value.show') : ''}>
+      <span>${l}</span><b class="mono">${fmtNum(n)}</b><div class="track"><i style=${{ width: (n / mx * 100) + '%' }}></i></div></button>`)}</div>
+    ${open && html`<${Modal} title=${t('ui.value.' + open)} onClose=${() => setOpen(null)}>
+      ${!items.length ? html`<p class="muted small">${t('ui.value.list_none')}</p>` : html`<table class="tbl small">
+        <thead><tr><th>${t('ui.time')}</th><th>${t('ui.value.monitor')}</th></tr></thead>
+        <tbody>${items.map(x => html`<tr><td class="nowrap">${fmtTime(x.at)}</td><td><a href=${'#/monitors/' + enc(x.monitor)}>${x.monitor}</a>${x.n > 1 ? ' ×' + x.n : ''}</td></tr>`)}</tbody></table>`}
+      <p class="small muted">${t('ui.value.hint.' + open)}</p>
+    <//>`}`;
 }
 
 export function Overview() {

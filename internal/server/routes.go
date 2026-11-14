@@ -105,6 +105,7 @@ func (s *Server) routes() {
 	s.handle("PUT /api/v1/tunables", "admin", s.tunablesPut)
 	s.handle("GET /api/v1/keywords", "read", s.keywordsList)
 	s.handle("GET /api/v1/monitor-options", "read", s.monitorOptions)
+	s.handle("GET /api/v1/saved-alerts", "read", s.savedAlerts)
 	s.handle("GET /api/v1/system", "read", s.system)
 	s.handle("GET /api/v1/settings", "read", s.settingsGet)
 	s.handle("GET /api/v1/settings/exit-countries", "admin", s.exitCities)
