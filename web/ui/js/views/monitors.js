@@ -45,7 +45,12 @@ export function Monitors({ query }) {
   const multiTeam = !!(teams.data && teams.data.items.length > 1);
   const [view, setView] = useState(savedView());
   const changeView = (v) => { setView(v); try { localStorage.setItem('unagikuma.monview', v); } catch { /* unavailable */ } };
-  const list = useFetch(() => get('/monitors?sort=' + sort), [sort]);
+  // "-latency" is the latency order reversed.
+  const sortKey = sort.replace(/^-/, ''), sortDesc = sort.startsWith('-');
+  const list = useFetch(() => get('/monitors?sort=' + sortKey + (sortDesc ? '&order=desc' : '')), [sort]);
+  const sortBy = (k) => replaceRoute(monitorsPath(q, sortKey === k && !sortDesc ? '-' + k : k));
+  const Th = ({ k, cls, children }) => html`<th class=${cls || ''} aria-sort=${sortKey === k ? (sortDesc ? 'descending' : 'ascending') : 'none'}>
+    <button type="button" class=${'th-sort' + (sortKey === k ? ' on' : '')} onClick=${() => sortBy(k)}>${children}<span aria-hidden="true">${sortKey === k ? (sortDesc ? ' ▴' : ' ▾') : ''}</span></button></th>`;
   const beats = useFetch(() => get('/monitors/heartbeats?range=24h&cells=36'), []);
   useLive(['heartbeat'], beats.reload, 5000);
   useLive(['reset'], list.reload, 500);
@@ -105,7 +110,6 @@ export function Monitors({ query }) {
     setQ(next);
     replaceRoute(monitorsPath(next, sort));
   };
-  const attemptValues = useMemo(() => [...new Set(((list.data && list.data.items) || []).map(r => r.max_attempts))].sort((x, y) => x - y), [list.data]);
   const tagKeys = useMemo(() => [...new Set(((list.data && list.data.items) || []).flatMap(r => r.tags.map(tg => tg.k)))].sort(), [list.data]);
   const [moving, setMoving] = useState(null);
   const move = async (e) => {
@@ -192,9 +196,6 @@ export function Monitors({ query }) {
       ${regions.data && regions.data.items.length > 1 && html`<select value=${termOf('region')} onChange=${(e) => setTerm('region', e.target.value)} aria-label=${t('ui.region.field')}>
         <option value="">${t('ui.mon.all_regions')}</option>
         ${regions.data.items.map(rg => html`<option value=${rg.name}>${regionTitle(rg.name)}</option>`)}</select>`}
-      ${attemptValues.length > 1 && html`<select value=${termOf('attempts')} onChange=${(e) => setTerm('attempts', e.target.value)} aria-label=${t('ui.mon.attempts_filter')}>
-        <option value="">${t('ui.mon.all_attempts')}</option>
-        ${attemptValues.map(n => html`<option value=${String(n)}>${tn('ui.mon.attempts_n', n)}</option>`)}</select>`}
       ${tagKeys.length > 0 && html`<select value=${termOf('tag')} onChange=${(e) => setTerm('tag', e.target.value)} aria-label=${t('ui.tags')}>
         <option value="">${t('ui.mon.all_tags')}</option>
         ${tagKeys.map(k => html`<option value=${k.toLowerCase()}>${k}</option>`)}</select>`}
@@ -218,8 +219,8 @@ export function Monitors({ query }) {
         html`<table class="tbl">
           <thead><tr>
             <th class="sel"><input type="checkbox" checked=${allPicked} onChange=${toggleAll} aria-label=${t('ui.mon.select_all')} title=${t('ui.mon.select_all')} /></th>
-            <th>${t('ui.status')}</th><th>${t('ui.monitor')}</th><th class="hide-sm">${t('ui.mon.last24h')}</th>
-            <th class="right hide-sm">${t('ui.latency')}</th><th class="right">${t('ui.uptime24h')}</th><th class="hide-sm">${t('ui.mon.changed')}</th><th></th>
+            <${Th} k="status">${t('ui.status')}<//><${Th} k="name">${t('ui.monitor')}<//><th class="hide-sm">${t('ui.mon.last24h')}</th>
+            <${Th} k="latency" cls="right hide-sm">${t('ui.latency')}<//><${Th} k="uptime" cls="right">${t('ui.uptime24h')}<//><${Th} k="last_change" cls="hide-sm">${t('ui.mon.changed')}<//><th></th>
           </tr></thead>
           <tbody>${rows.map(r => html`<tr key=${r.name} class=${'click ' + r.status + (sel.has(r.name) ? ' picked' : '')} onClick=${() => go('/monitors/' + enc(r.name))}>
             <td class="sel" onClick=${(e) => e.stopPropagation()}><input type="checkbox" checked=${sel.has(r.name)} onChange=${() => toggle(r.name)} aria-label=${r.title} /></td>

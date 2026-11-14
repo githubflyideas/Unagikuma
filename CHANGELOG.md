@@ -1,5 +1,26 @@
 # Changelog
 
+## v2.6.13 — 2026-11-14
+
+**Added**
+- Perfume theme.
+- Weekly report.
+- Daily report up to four times a day.
+- Monitor list sorted by clicking a column.
+
+**Changed**
+- Settings: internet gateway, external heartbeat and backup have their own tabs.
+- Interface size: 100% or 125%.
+- Page tabs and view switches look different.
+- Live-update status no longer replaces the run mode label.
+- Adding a region needs two or more nodes.
+
+**Removed**
+- The auto theme and the failures filter menu.
+
+**Fixed**
+- Paused monitors kept sending repeat and escalation alerts.
+
 ## v2.6.12 — 2026-11-14
 
 **Added**

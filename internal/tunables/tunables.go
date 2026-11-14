@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,7 +28,11 @@ const (
 	Duration  Kind = "duration"
 	Bool      Kind = "bool"
 	TimeOfDay Kind = "time-of-day" // "HH:MM" local time
-	Rate      Kind = "rate"        // "N/s", "N/m", "N/h"
+	// TimesOfDay is one to four "HH:MM" local times, comma-separated.
+	TimesOfDay Kind = "times-of-day"
+	// WeekTime is a day of the week and a local time: "mon 09:00".
+	WeekTime  Kind = "week-time"
+	Rate      Kind = "rate" // "N/s", "N/m", "N/h"
 	String    Kind = "string"
 	Address   Kind = "address"   // an IP address, or "" for none
 	Addresses Kind = "addresses" // comma-separated IP addresses, or "" for none
@@ -72,7 +77,9 @@ var defs = []Def{
 	{Key: "notify.daily-reminder", Kind: Bool, Default: "on", Desc: "daily reminder of still-open incidents", DescZH: "每日提醒仍未解决的故障"},
 	{Key: "notify.daily-reminder-at", Kind: TimeOfDay, Default: "10:00", Desc: "local time of the daily open-incident reminder", DescZH: "每日未解决故障提醒的时间"},
 	{Key: "notify.daily-report", Kind: Bool, Default: "on", Desc: "daily status report: hosts down and up, services not OK", DescZH: "每日状态日报：哪些主机宕机、哪些正常，哪些服务异常"},
-	{Key: "notify.daily-report-at", Kind: TimeOfDay, Default: "10:00", Desc: "local time of the daily status report", DescZH: "每日状态日报的发送时间"},
+	{Key: "notify.daily-report-at", Kind: TimesOfDay, Default: "10:00", Desc: "local times of the daily status report, one to four, comma-separated (09:00,17:00)", DescZH: "每日状态日报的发送时间，1 到 4 个，逗号分隔（09:00,17:00）"},
+	{Key: "notify.weekly-report", Kind: Bool, Default: "off", Desc: "weekly report of the last seven days: availability, problems and downtime, the least available monitors, alerts held back", DescZH: "每周报告（最近 7 天）：可用率、故障次数与时长、可用率最低的监控、拦下的无效告警"},
+	{Key: "notify.weekly-report-at", Kind: WeekTime, Default: "mon 09:00", Desc: "day and local time of the weekly report (mon 09:00)", DescZH: "每周报告的发送日和时间（mon 09:00）"},
 	{Key: "notify.daily-report-teams", Kind: String, Default: "admin", Desc: "teams receiving the daily report, each on its own monitors (comma-separated)", DescZH: "接收日报的团队（逗号分隔），每个团队收到自己监控的日报"},
 	{Key: "notify.daily-report-policy", Kind: String, Default: "", Desc: "policy the daily report is sent through (empty = system policy)", DescZH: "日报使用的通知策略（留空 = 系统策略）"},
 	{Key: "notify.daily-report-max-items", Kind: Int, Default: "30", Min: "5", Max: "500", Desc: "entries listed per report section before the rest is counted", DescZH: "日报每节最多列出的条目数，其余只计数"},
@@ -280,6 +287,15 @@ func (s Set) Bool(key string) bool              { b, _ := parseBool(s.raw(key));
 // TimeOfDay returns hour and minute.
 func (s Set) TimeOfDay(key string) (int, int) { h, m, _ := parseTOD(s.raw(key)); return h, m }
 
+// TimesOfDay returns each time as minutes after midnight, in order.
+func (s Set) TimesOfDay(key string) []int { t, _ := ParseTimesOfDay(s.raw(key)); return t }
+
+// WeekTime returns the weekday and the minutes after midnight.
+func (s Set) WeekTime(key string) (time.Weekday, int) {
+	d, m, _ := ParseWeekTime(s.raw(key))
+	return d, m
+}
+
 // Rate returns events per second.
 func (s Set) Rate(key string) float64 { r, _ := ParseRate(s.raw(key)); return r }
 
@@ -308,6 +324,12 @@ func (d *Def) check(v string) error {
 		return err
 	case TimeOfDay:
 		_, _, err := parseTOD(v)
+		return err
+	case TimesOfDay:
+		_, err := ParseTimesOfDay(v)
+		return err
+	case WeekTime:
+		_, _, err := ParseWeekTime(v)
 		return err
 	case Rate:
 		_, err := ParseRate(v)
@@ -418,4 +440,41 @@ func parseTOD(s string) (int, int, error) {
 		return 0, 0, fmt.Errorf("want HH:MM, got %q", s)
 	}
 	return hh, mm, nil
+}
+
+// ParseTimesOfDay reads one to four comma-separated "HH:MM" times into
+// minutes after midnight, sorted, without repeats.
+func ParseTimesOfDay(v string) ([]int, error) {
+	var out []int
+	for _, p := range strings.Split(v, ",") {
+		h, m, err := parseTOD(strings.TrimSpace(p))
+		if err != nil {
+			return nil, err
+		}
+		if t := h*60 + m; !slices.Contains(out, t) {
+			out = append(out, t)
+		}
+	}
+	if len(out) > 4 {
+		return nil, fmt.Errorf("at most four times, got %d", len(out))
+	}
+	slices.Sort(out)
+	return out, nil
+}
+
+var weekdays = map[string]time.Weekday{"sun": time.Sunday, "mon": time.Monday, "tue": time.Tuesday, "wed": time.Wednesday,
+	"thu": time.Thursday, "fri": time.Friday, "sat": time.Saturday}
+
+// ParseWeekTime reads "mon 09:00" into a weekday and minutes after midnight.
+func ParseWeekTime(v string) (time.Weekday, int, error) {
+	d, t, ok := strings.Cut(strings.TrimSpace(v), " ")
+	wd, known := weekdays[strings.ToLower(d)]
+	if !ok || !known {
+		return 0, 0, fmt.Errorf("want a day and a time such as mon 09:00, got %q", v)
+	}
+	h, m, err := parseTOD(strings.TrimSpace(t))
+	if err != nil {
+		return 0, 0, err
+	}
+	return wd, h*60 + m, nil
 }

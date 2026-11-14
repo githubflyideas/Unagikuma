@@ -164,6 +164,12 @@ func (e *Engine) advanceIncidents(now time.Time) {
 		if inc.State.Open() && e.maintenanceIncident(inc) {
 			continue
 		}
+		// A paused monitor is not checked, so nothing new is known about
+		// its problem: telling people again would repeat old news. Resumed,
+		// its next check closes the problem or carries it on.
+		if inc.State.Open() && e.pausedIncident(inc) {
+			continue
+		}
 		pol := e.policy(inc.Policy)
 		before := inc.State
 		notices, events := Advance(&inc.State, now, e.effectivePolicy(inc, pol))
@@ -453,4 +459,13 @@ func (e *Engine) supersedeLow(name string, inc *Incident, now time.Time) {
 	e.retireIncident(inc)
 	delete(e.lowByMon, name)
 	e.event(Event{Type: EventIncident, Severity: "info", Monitor: name, Message: "degraded incident closed: the monitor failed", Data: map[string]any{"msg": "degraded_superseded", "incident_id": inc.ID}})
+}
+
+// pausedIncident reports whether inc is about a monitor that is paused.
+func (e *Engine) pausedIncident(inc *Incident) bool {
+	if inc.Kind == IncidentSystem {
+		return false // about this installation, not a monitor
+	}
+	m := e.monitors[inc.Monitor]
+	return m != nil && m.Paused
 }

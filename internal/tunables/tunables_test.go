@@ -84,3 +84,26 @@ func TestRejectsNonsense(t *testing.T) {
 		}
 	}
 }
+
+// Report times: one to four a day, and a weekly day and time.
+func TestReportTimes(t *testing.T) {
+	if got, err := ParseTimesOfDay("17:00, 09:30,17:00"); err != nil || len(got) != 2 || got[0] != 9*60+30 || got[1] != 17*60 {
+		t.Fatalf("times %v %v", got, err)
+	}
+	for _, bad := range []string{"", "25:00", "9", "01:00,02:00,03:00,04:00,05:00"} {
+		if _, err := ParseTimesOfDay(bad); err == nil {
+			t.Errorf("accepted %q", bad)
+		}
+	}
+	if d, m, err := ParseWeekTime("Fri 18:15"); err != nil || d != time.Friday || m != 18*60+15 {
+		t.Fatalf("week time %v %v %v", d, m, err)
+	}
+	for _, bad := range []string{"mon", "monday 09:00", "mon 9", "09:00"} {
+		if _, _, err := ParseWeekTime(bad); err == nil {
+			t.Errorf("accepted %q", bad)
+		}
+	}
+	if _, err := New(map[string]string{"notify.daily-report-at": "08:00,20:00", "notify.weekly-report-at": "sun 20:00"}); err != nil {
+		t.Fatal(err)
+	}
+}

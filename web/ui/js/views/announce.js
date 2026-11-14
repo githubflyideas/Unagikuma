@@ -1,7 +1,7 @@
 // Notices and status: announced changes, the status pages and the daily
 // status report: what is told to people, apart from the alerts themselves.
 import { html, useState } from '../lib.js';
-import { t } from '../i18n.js';
+import { t, tn } from '../i18n.js';
 import { get, post, put, me, ifMatch } from '../api.js';
 import { NoticesTab } from './notices.js';
 import { useFetch, Loading, ErrorBox, toast, toastError, useDocTitle, Copy, Field } from '../ui.js';
@@ -12,6 +12,41 @@ function viaText(policy) {
   if (!policy || policy === 'system' || policy === 'default') return t('ui.report.via_system');
   if (policy.startsWith('team:')) return t('ui.report.via_team', { team: policy.slice(5) });
   return policy;
+}
+
+// Report times offered when more reports a day are chosen.
+const SPREAD = { 1: ['10:00'], 2: ['09:00', '17:00'], 3: ['08:00', '13:00', '18:00'], 4: ['08:00', '12:00', '16:00', '20:00'] };
+const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+// WeeklySettings switches the weekly report on, sets its day and time, and
+// previews it.
+function WeeklySettings() {
+  const tun = useFetch(() => get('/tunables'), []);
+  const wk = useFetch(() => get('/reports/weekly'), []);
+  const [busy, setBusy] = useState(false);
+  if (!tun.data || !wk.data) return null;
+  const val = (k) => (tun.data.find(x => x.key === k) || {}).value || '';
+  const setTun = async (set) => {
+    try { await put('/tunables', { set, unset: [] }); tun.reload(); wk.reload(); } catch (e) { toastError(e); }
+  };
+  const [day, at] = (val('notify.weekly-report-at') || 'mon 09:00').split(' ');
+  const send = async () => {
+    setBusy(true);
+    try { await post('/reports/weekly/send'); toast(t('ui.report.sent')); } catch (e) { toastError(e); }
+    setBusy(false);
+  };
+  return html`<div class="card"><div class="hd"><h3>${t('ui.report.weekly')}</h3><div class="spacer"></div>
+      <button class="btn sm" onClick=${send} disabled=${busy}>${t('ui.report.weekly_send')}</button></div>
+    <div class="bd form">
+      <div class="row" style=${{ gap: '16px', flexWrap: 'wrap' }}>
+        <label class="switch"><input type="checkbox" checked=${val('notify.weekly-report') === 'on'} onChange=${(e) => setTun({ 'notify.weekly-report': e.target.checked ? 'on' : 'off' })} /> ${t('ui.report.weekly_enabled')}</label>
+        <select value=${day} onChange=${(e) => setTun({ 'notify.weekly-report-at': e.target.value + ' ' + at })} aria-label=${t('ui.report.weekly_day')} style=${{ width: 'auto' }}>
+          ${WEEKDAYS.map(d => html`<option value=${d}>${t('ui.per.day.' + d)}</option>`)}</select>
+        <input type="time" value=${at} onChange=${(e) => e.target.value && setTun({ 'notify.weekly-report-at': day + ' ' + e.target.value })} aria-label=${t('ui.report.at')} style=${{ width: 'auto' }} />
+      </div>
+      <p class="small muted" style=${{ margin: 0 }}>${t('ui.report.weekly_hint')}</p>
+      ${wk.data.title && html`<div class="card"><div class="hd"><h3>${wk.data.title}</h3></div><div class="bd"><pre class="report">${wk.data.body}</pre></div></div>`}
+    </div></div>`;
 }
 
 // ReportSettings sets when the report goes out, to which teams, and
@@ -26,6 +61,10 @@ function ReportSettings({ r, onChange }) {
   const setTun = async (set) => {
     try { await put('/tunables', { set, unset: [] }); tun.reload(); onChange(); } catch (e) { toastError(e); }
   };
+  // One to four report times a day; a new count spreads them over the day.
+  const times = (val('notify.daily-report-at') || '10:00').split(',').map(x => x.trim()).filter(Boolean);
+  const setTimes = (list) => setTun({ 'notify.daily-report-at': [...new Set(list)].sort().join(',') });
+  const spread = (n) => n <= times.length ? times.slice(0, n) : [...times, ...SPREAD[n].filter(x => !times.includes(x))].slice(0, n);
   const teams = r.teams || [];
   const receives = teams.filter(x => x.receives).map(x => x.name);
   const setReceives = (name, on) => setTun({ 'notify.daily-report-teams': teams.filter(x => (x.name === name ? on : x.receives)).map(x => x.name).join(',') });
@@ -43,7 +82,10 @@ function ReportSettings({ r, onChange }) {
   return html`<div class="card"><div class="hd"><h3>${t('ui.report.settings')}</h3></div><div class="bd form">
     <div class="row" style=${{ gap: '16px', flexWrap: 'wrap' }}>
       <label class="switch"><input type="checkbox" checked=${val('notify.daily-report') !== 'off'} onChange=${(e) => setTun({ 'notify.daily-report': e.target.checked ? 'on' : 'off' })} /> ${t('ui.report.enabled')}</label>
-      <label class="small">${t('ui.report.at')} <input type="time" value=${val('notify.daily-report-at')} onChange=${(e) => e.target.value && setTun({ 'notify.daily-report-at': e.target.value })} style=${{ width: 'auto' }} /></label>
+      <label class="small">${t('ui.report.times')} <select value=${String(times.length)} onChange=${(e) => setTimes(spread(Number(e.target.value)))} style=${{ width: 'auto' }}>
+        ${[1, 2, 3, 4].map(n => html`<option value=${String(n)}>${tn('ui.report.times_n', n)}</option>`)}</select></label>
+      ${times.map((tm, i) => html`<input type="time" value=${tm} aria-label=${t('ui.report.at')} style=${{ width: 'auto' }}
+        onChange=${(e) => e.target.value && setTimes(times.map((x, j) => j === i ? e.target.value : x))} />`)}
     </div>
     <${Field} label=${t('ui.report.teams')}>
       <div class="row" style=${{ gap: '14px', flexWrap: 'wrap' }}>${teams.map(x => html`<label class="switch"><input type="checkbox" checked=${receives.includes(x.name)} onChange=${(e) => setReceives(x.name, e.target.checked)} /> ${x.title}</label>`)}</div><//>
@@ -76,7 +118,7 @@ function ReportTab() {
   const mine = teams.find(x => x.name === r.team);
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${r.enabled
-      ? t('ui.report.intro', { at: r.at, via: viaText(r.policy) })
+      ? t('ui.report.intro', { at: r.at.split(',').join(', '), via: viaText(r.policy) })
       : html`<span class="warn-text">${t('ui.report.off', { where: t('ui.nav.advanced') + ' › ' + t('ui.set.tab.tunables') })}</span>`}</p>
       <button class="btn" onClick=${rep.reload}>${t('ui.report.refresh')}</button>
       <button class="btn primary" onClick=${send} disabled=${busy || !(mine && mine.receives)}>${t('ui.report.send')}</button></div>
@@ -90,6 +132,7 @@ function ReportTab() {
     <p class="small muted" style=${{ margin: 0 }}>${t('ui.report.opt_out_hint')}</p>
     <div class="card"><div class="hd"><h3 class=${r.ok ? '' : 'crit-text'}>${r.title}</h3></div>
       <div class="bd"><pre class="report">${r.body}</pre></div></div>
+    ${me.role === 'admin' && html`<${WeeklySettings} />`}
     <${LinkCard} page="summary" k="sum" share=${false} />
   </div>`;
 }

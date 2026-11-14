@@ -14,7 +14,19 @@ function emit(type, data) {
   }
 }
 
+// A dropped stream usually comes back within seconds (a laptop waking, a
+// proxy recycling the connection): it counts as lost only after a while.
+const LOST_AFTER = 15000;
+let lostTimer = null;
 function setConnected(v) {
+  clearTimeout(lostTimer);
+  if (!v && connected) {
+    lostTimer = setTimeout(() => report(false), LOST_AFTER);
+    return;
+  }
+  report(v);
+}
+function report(v) {
   connected = v;
   for (const f of stateListeners) f(v);
 }

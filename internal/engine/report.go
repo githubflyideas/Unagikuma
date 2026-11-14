@@ -19,13 +19,18 @@ type Report struct {
 	OK     bool // every host up and every service OK
 }
 
-// scheduleReport computes the next daily status report.
+// scheduleReport computes the next daily status report: the soonest of
+// the day's report times.
 func (e *Engine) scheduleReport(now time.Time) {
-	h, mi := e.cfg.Tunables.TimeOfDay("notify.daily-report-at")
-	e.nextReport = NextDaily(now, h, mi, e.cfg.Location)
+	e.nextReport = time.Time{}
+	for _, t := range e.cfg.Tunables.TimesOfDay("notify.daily-report-at") {
+		if next := NextDaily(now, t/60, t%60, e.cfg.Location); e.nextReport.IsZero() || next.Before(e.nextReport) {
+			e.nextReport = next
+		}
+	}
 }
 
-// dailyReport sends the status report once a day at the configured time,
+// dailyReport sends the status report at each of the configured times,
 // also when everything is fine: silence is not proof the system works.
 func (e *Engine) dailyReport(now time.Time) {
 	if e.nextReport.IsZero() || now.Before(e.nextReport) {
@@ -67,6 +72,36 @@ func (e *Engine) ReportTeams() []string {
 		}
 	})
 	return out
+}
+
+// ReportTarget is a team receiving the reports and the policy they go
+// through.
+type ReportTarget struct{ Team, Policy string }
+
+// ReportTargets lists who receives the reports: each report team, or the
+// admin team on every monitor.
+func (e *Engine) ReportTargets() []ReportTarget {
+	var out []ReportTarget
+	e.do(func() {
+		if len(e.cfg.ReportTeams) == 0 {
+			out = []ReportTarget{{Policy: e.reportPolicy()}}
+			return
+		}
+		for _, t := range e.cfg.ReportTeams {
+			team := t.Name
+			if team == "admin" {
+				team = ""
+			}
+			out = append(out, ReportTarget{Team: team, Policy: t.Policy})
+		}
+	})
+	return out
+}
+
+// SendReport sends a report made elsewhere (the weekly report) the way the
+// daily one goes.
+func (e *Engine) SendReport(r Report) {
+	e.do(func() { e.sendReport(r, e.now()) })
 }
 
 func (e *Engine) sendReport(r Report, now time.Time) {
