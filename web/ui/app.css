@@ -865,3 +865,10 @@ body.summarypage { background: var(--bg); }
 button.sbar { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: start; width: 100%; cursor: pointer; }
 button.sbar:disabled { cursor: default; }
 button.sbar:not(:disabled):hover span { text-decoration: underline; }
+
+/* A text field with common values to pick from beside it. */
+.combo { display: flex; flex: 1; min-width: 0; }
+.combo input { flex: 1; min-width: 0; border-start-end-radius: 0; border-end-end-radius: 0; }
+.combo select { width: 2.6em; flex: none; padding-inline: 0; text-align: center; text-align-last: center; border-inline-start: 0; border-start-start-radius: 0; border-end-start-radius: 0; background-image: none; cursor: pointer; }
+.chart-note { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; }
+.fail-key { display: inline-block; width: 6px; height: 12px; background: color-mix(in srgb, var(--critical) 45%, transparent); border-inline: 1px solid var(--critical); }

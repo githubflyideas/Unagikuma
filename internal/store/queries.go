@@ -538,6 +538,44 @@ func (s *Store) Latency(monitor string, from, to time.Time, sites ...string) ([]
 	return out, nil
 }
 
+// Failures returns when the monitor failed over [from, to): each failed
+// round while they are kept, the start of each 5-minute or hourly bucket
+// with a failure beyond. A failed round has no latency, so a latency chart
+// shows these instead.
+func (s *Store) Failures(monitor string, from, to time.Time, sites ...string) ([]time.Time, error) {
+	out := []time.Time{}
+	mid := s.MonitorID(monitor)
+	if mid == 0 {
+		return out, nil
+	}
+	site := selectedSite(sites)
+	if site != "" || !from.Before(s.now().Add(-s.retention().Raw)) {
+		rows, err := s.hist.Query(`SELECT at FROM rounds WHERE site=? AND mid=? AND at>=? AND at<? AND st=? ORDER BY at`, site, mid, ms(from), ms(to), statusCodes["critical"])
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var at int64
+			if err := rows.Scan(&at); err != nil {
+				return nil, err
+			}
+			out = append(out, fromMS(at))
+		}
+		return out, rows.Err()
+	}
+	rows, _, err := s.buckets(mid, from, to)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		if r.down > 0 {
+			out = append(out, r.t)
+		}
+	}
+	return out, nil
+}
+
 // EvidenceRow is one stored probe exchange.
 type EvidenceRow struct {
 	Site        string       `json:"site,omitempty"`

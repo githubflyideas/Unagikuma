@@ -89,7 +89,28 @@ export function LatencyChart({ name, range }) {
       const mx = pts.map(p => p.max);
       const long = pts.length > 0 && pts.some(p => p.max !== p.avg);
       const accent = css('--accent') || '#1f7a4d';
+      // A failed check has no latency: a red band marks when it happened.
+      const fails = (data.data.fails || []).map(f => new Date(f).getTime() / 1000);
+      const failColor = css('--critical') || '#c0392b';
+      const drawFails = (u) => {
+        if (!fails.length) return;
+        const { ctx, bbox } = u;
+        ctx.save();
+        ctx.fillStyle = failColor + '55';
+        ctx.strokeStyle = failColor;
+        for (const f of fails) {
+          const x = Math.round(u.valToPos(f, 'x', true));
+          if (x < bbox.left || x > bbox.left + bbox.width) continue;
+          ctx.fillRect(x - 3 * devicePixelRatio, bbox.top, 6 * devicePixelRatio, bbox.height);
+          ctx.beginPath();
+          ctx.moveTo(x, bbox.top);
+          ctx.lineTo(x, bbox.top + bbox.height);
+          ctx.stroke();
+        }
+        ctx.restore();
+      };
       const opts = {
+        hooks: { drawClear: [drawFails] },
         width: box.current.clientWidth || 600,
         height: 220,
         legend: { show: true },
@@ -119,7 +140,9 @@ export function LatencyChart({ name, range }) {
   }, [data.data, currentLang(), fallback]);
   if (data.data && !(data.data.points || []).length) return html`<${Empty}>${t('ui.chart.empty')}<//>`;
   if (fallback && data.data) return html`<${SimpleChart} points=${data.data.points} />`;
-  return html`<div class="chart" ref=${box}>${!data.data && html`<${Loading} />`}</div>`;
+  const nFails = data.data ? (data.data.fails || []).length : 0;
+  return html`<div class="chart" ref=${box}>${!data.data && html`<${Loading} />`}</div>
+    ${nFails > 0 && html`<p class="small muted chart-note"><span class="fail-key"></span>${tn('ui.chart.fails', nFails)}</p>`}`;
 }
 
 function PushBox({ name }) {
