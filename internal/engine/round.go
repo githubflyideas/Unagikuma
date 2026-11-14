@@ -133,6 +133,8 @@ func (e *Engine) dispatchDue(ctx context.Context, wg *sync.WaitGroup) {
 		}
 		gateTimeout := e.cfg.Tunables.Duration("localnet.gate-timeout")
 		gateTTL := e.cfg.Tunables.Duration("localnet.gate-cache")
+		// Read before the goroutine: a reload replaces e.cfg on the loop.
+		grace := e.cfg.Tunables.Duration("engine.round-grace")
 		defHash, secretErr := m.DefHash, m.SecretError
 		wg.Add(1)
 		go func() {
@@ -143,7 +145,7 @@ func (e *Engine) dispatchDue(ctx context.Context, wg *sync.WaitGroup) {
 			if secretErr != "" {
 				res = probe.Result{Vote: probe.VoteAbstain, Reason: probe.ReasonSecretUnavailable, Detail: secretErr}
 			} else {
-				rctx, cancel := context.WithTimeout(ctx, spec.Timeout+e.cfg.Tunables.Duration("engine.round-grace"))
+				rctx, cancel := context.WithTimeout(ctx, spec.Timeout+grace)
 				res = e.runProbe(rctx, spec)
 				cancel()
 			}
