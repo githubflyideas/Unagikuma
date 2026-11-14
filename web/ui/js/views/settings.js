@@ -5,6 +5,7 @@ import { get, post, put, del, setCSRF, getCSRF, me } from '../api.js';
 import { Nodes } from './nodes.js';
 import { ChannelList, DELIVERY_KEYS } from './alerts.js';
 import { IssueDot } from './contacts.js';
+import { Branding, MyStyle } from './branding.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, regionTitle, msText } from '../ui.js';
 
 const EXIT_KEY = 'localnet.exit-target';
@@ -536,6 +537,8 @@ export function Account({ user, embedded }) {
   };
   return html`<form class=${embedded ? '' : 'card'} onSubmit=${save} style=${embedded ? null : { maxWidth: '480px' }}><div class=${embedded ? 'form' : 'bd form'}>
     <p class="muted">${t('ui.acc.signed_in', { user })}</p>
+    <${MyStyle} />
+    <hr style=${{ margin: '2px 0' }} />
     <${Field} label=${t('ui.acc.old')}><input type="password" value=${f.old} onInput=${(e) => setF({ ...f, old: e.target.value })} required autocomplete="current-password" /><//>
     <${Field} label=${t('ui.acc.new')}><input type="password" value=${f.new} onInput=${(e) => setF({ ...f, new: e.target.value })} required autocomplete="new-password" /><//>
     <${Field} label=${t('ui.setup.confirm')}><input type="password" value=${f.confirm} onInput=${(e) => setF({ ...f, confirm: e.target.value })} required autocomplete="new-password" /><//>
@@ -736,7 +739,7 @@ function Audit() {
 
 // Everyday settings, and the advanced ones that most installations set
 // once or never: they have their own place in the sidebar.
-const TABS = ['general', 'gateway', 'heartbeat', 'backup', 'audit', 'scripts', 'system', 'registration'];
+const TABS = ['general', 'branding', 'gateway', 'heartbeat', 'backup', 'audit', 'scripts', 'system', 'registration'];
 export const ADVANCED_TABS = ['teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
 export function Settings({ tab, user, advanced }) {
@@ -754,6 +757,7 @@ export function Settings({ tab, user, advanced }) {
     case 'regions': body = html`<${Regions} />`; break;
     case 'audit': body = html`<${Audit} />`; break;
     case 'registration': body = html`<${Registration} />`; break;
+    case 'branding': body = html`<${Branding} />`; break;
     case 'scripts': body = html`<${CheckScripts} />`; break;
     case 'tunables': body = html`<${Tunables} />`; break;
     case 'tokens': body = html`<${Tokens} />`; break;

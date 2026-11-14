@@ -4,8 +4,10 @@ import { t, ago, fmtTime, fmtNum, detailText } from './i18n.js';
 import { onLive, onConnection } from './live.js';
 import { me } from './api.js';
 
-// The product's name, in titles and headers.
-export const PRODUCT = 'Unagikuma';
+// The product's name, in titles and headers: the installation's own when
+// it has one (see styles.js).
+export let PRODUCT = 'Unagikuma';
+export function setProduct(name) { if (name) PRODUCT = name; }
 
 // ---- routing (hash based, so the server needs no fallback routes) ----
 

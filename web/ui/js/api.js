@@ -30,7 +30,10 @@ export class ApiError extends Error {
 export async function api(method, path, body, headers) {
   // Errors come back in the console's language, not the browser's.
   const opt = { method, headers: { 'Accept-Language': currentLang(), ...(headers || {}) }, credentials: 'same-origin' };
-  if (body !== undefined) {
+  if (body instanceof Blob) {
+    // A file goes as it is (an uploaded image).
+    opt.body = body;
+  } else if (body !== undefined) {
     opt.headers['Content-Type'] = 'application/json';
     opt.body = JSON.stringify(body);
   }

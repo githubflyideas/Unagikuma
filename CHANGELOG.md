@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.6.16 — 2026-11-14
+
+**Added**
+- Page styles: Classic or Modern, chosen per account, with a default for everyone.
+- Branding for registered installations: product name, logo and browser icon.
+
+**Fixed**
+- Contrast of warning text and pending labels.
+
 ## v2.6.15 — 2026-11-14
 
 **Fixed**

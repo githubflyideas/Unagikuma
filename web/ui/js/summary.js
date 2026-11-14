@@ -5,7 +5,12 @@
 import { html, render, useState, useEffect } from './lib.js';
 import { t, setLang, detectLang, loadLanguages, fmtNum, fmtTime, dur, ago, currentLang } from './i18n.js';
 
-const PRODUCT = 'Unagikuma';
+// The installation's own name when it has one.
+let PRODUCT = 'Unagikuma';
+try {
+  const b = await (await fetch('/api/v1/brand')).json();
+  if (b && b.name) PRODUCT = b.name;
+} catch { /* keep the product's */ }
 
 const token = (() => {
   const m = /(?:^|[#&])token=([^&]+)/.exec(location.hash);

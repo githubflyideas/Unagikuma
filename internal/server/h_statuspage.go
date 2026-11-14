@@ -378,7 +378,8 @@ func (s *Server) domainOnly(next http.Handler) http.Handler {
 			r2.URL.Path = "/status/-/feed.atom"
 			next.ServeHTTP(w, r2)
 		case strings.HasPrefix(p, "/api/v1/status/-"), strings.HasPrefix(p, "/js/"), strings.HasPrefix(p, "/vendor/"),
-			p == "/app.css", p == "/favicon.png", p == "/logo.png", strings.HasPrefix(p, "/badge/"):
+			p == "/app.css", p == "/favicon.png", p == "/logo.png", strings.HasPrefix(p, "/badge/"), strings.HasPrefix(p, "/styles/"),
+			p == "/api/v1/brand":
 			next.ServeHTTP(w, r)
 		default:
 			writeError(w, notFound("page"))

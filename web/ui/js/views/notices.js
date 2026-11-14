@@ -129,7 +129,7 @@ function NewPage({ onDone }) {
 
 // SupportFooter sets the text at the foot of every status page in place of
 // "Powered by Unagikuma": a registered installation only.
-function SupportFooter() {
+export function SupportFooter() {
   const d = useFetch(() => get('/status-support'), []);
   const [text, setText] = useState(null);
   if (!d.data) return null;
@@ -169,6 +169,5 @@ export function NoticesTab() {
     ${adding && html`<${Modal} title=${t('ui.notice.new_page')} onClose=${() => setAdding(false)}><${PageForm} onDone=${() => { setAdding(false); pages.reload(); }} /><//>`}
     ${pages.data.map(p => html`<${PageNotices} key=${p.name + ':' + round} page=${p} onChanged=${pages.reload} />`)}
     <div class="card"><div class="hd"><h2>${t('ui.chg.tab')}</h2></div><div class="bd"><${ChangesTab} key=${round} embedded /></div></div>
-    ${me.role === 'admin' && html`<${SupportFooter} />`}
   </div>`;
 }

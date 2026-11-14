@@ -232,9 +232,9 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .nowrap { white-space: nowrap; }
 .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .err-text { color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
-.ok-text { color: var(--ok); }
-.warn-text { color: var(--degraded); }
-.crit-text { color: var(--critical); }
+.ok-text { color: color-mix(in srgb, var(--ok) 70%, var(--text)); }
+.warn-text { color: color-mix(in srgb, var(--degraded) 45%, var(--text)); }
+.crit-text { color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
 pre.report { margin: 0; white-space: pre-wrap; word-break: break-word; font: 13px/1.55 var(--mono); }
 
 /* ---- tiles ---- */
@@ -262,9 +262,9 @@ pre.report { margin: 0; white-space: pre-wrap; word-break: break-word; font: 13p
 .dot.critical.pulse { animation: pulse 1.6s infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, .5); } 70% { box-shadow: 0 0 0 7px rgba(220, 38, 38, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
 .tag { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 12.5px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
-.tag.warn { color: var(--degraded); border-color: var(--degraded); }
-.tag.weak { color: var(--unknown); border-color: var(--unknown); }
-.tag.err { color: var(--critical); border-color: var(--critical); }
+.tag.warn { color: color-mix(in srgb, var(--degraded) 55%, var(--text)); border-color: var(--degraded); }
+.tag.weak { color: color-mix(in srgb, var(--unknown) 70%, var(--text)); border-color: var(--unknown); }
+.tag.err { color: color-mix(in srgb, var(--critical) 75%, var(--text)); border-color: var(--critical); }
 
 /* ---- heartbeat bar ---- */
 .beats { display: flex; gap: 2px; align-items: stretch; height: 22px; min-width: 120px; }
@@ -636,6 +636,8 @@ tr.risk-high td:first-child { box-shadow: inset 3px 0 0 var(--degraded); }
 .pill.unknown { background: color-mix(in srgb, var(--unknown) 85%, var(--text)); color: var(--on-status); }
 .pill.maintenance { background: color-mix(in srgb, var(--maint) 85%, var(--text)); color: var(--on-status); }
 .pill.soft { background: transparent; }
+/* Pending is a tint, not a block: its label is shaded toward the text. */
+.pill.pending { color: color-mix(in srgb, var(--pending) 55%, var(--text)); }
 .pill.soft.ok { color: color-mix(in srgb, var(--ok) 70%, var(--text)); }
 .pill.soft.degraded { color: color-mix(in srgb, var(--degraded) 55%, var(--text)); }
 .pill.soft.critical { color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
@@ -901,3 +903,7 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 /* A monitor named in a problem's text is a link: underlined, not told
    apart by colour alone. */
 .inc .body a.name { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+/* Settings › Styles and branding: the stored logo and icon. */
+.brand-img img { height: 40px; max-width: 160px; object-fit: contain; border: 1px solid var(--border); border-radius: 8px; padding: 4px; background: var(--panel-2); }
+.brand-img .brand-none { min-width: 6em; }
