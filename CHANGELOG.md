@@ -1,5 +1,30 @@
 # Changelog
 
+## v2.6.11 — 2026-11-14
+
+**Added**
+- Five new themes: Country, Industrial, Calm, Sport, Passion.
+- Suppressed alerts can be opened per day and per reason.
+- Time periods are made from days and hours.
+- Daily report: send time, teams and channels.
+- Channel headers field; channels can be renamed.
+- Health card shows the DNS servers in use; custom DNS servers.
+
+**Changed**
+- Users and contacts merged under Alerts › Users.
+- Expiry is a tab on the monitors page; quick add is the main button.
+- Account settings open from the user name in the sidebar.
+- Monitor options match each monitor type.
+- Change notices moved to status pages.
+
+**Removed**
+- Theme packs and the Appearance tab.
+
+**Fixed**
+- Gateway shown on Windows.
+- Uptime Kuma channel headers imported.
+- Channel edits keep options not shown in the form.
+
 ## v2.6.10 — 2026-11-13
 
 **Added**
