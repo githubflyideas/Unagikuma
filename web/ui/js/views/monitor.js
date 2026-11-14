@@ -321,7 +321,7 @@ export function MonitorDetail({ name }) {
             <dt>${t('ui.mon.last_check')}</dt><dd><${Ago} at=${row.last_check} /></dd>
             <dt>${t('ui.mon.next_check')}</dt><dd><${Ago} at=${row.next_check} /></dd>
             <dt>${t('ui.mon.changed')}</dt><dd><${Ago} at=${row.last_change} /></dd>
-            ${Object.entries(row.metrics || {}).filter(([k]) => !k.startsWith('value.')).map(([k, v]) => html`<dt class="ltr">${k}</dt><dd>${fmtNum(Math.round(v * 100) / 100)}</dd>`)}
+            ${Object.entries(row.metrics || {}).filter(([k]) => !(row.value && (k === 'value' || k.startsWith('value.')))).map(([k, v]) => html`<dt class="ltr">${k}</dt><dd>${fmtNum(Math.round(v * 100) / 100)}</dd>`)}
           </dl>
         <//>
         ${row.type === 'PUSH' && html`<${PushBox} name=${name} />`}
