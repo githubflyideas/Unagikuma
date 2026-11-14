@@ -203,6 +203,7 @@ function Shell({ user, onLogout, onLang }) {
     case 'config': view = html`<${ConfigView} tab=${p[1] || 'edit'} />`; break;
     // Nodes used to be a Settings tab; its old address opens Run mode.
     case 'settings': view = p[1] === 'nodes' ? html`<div class="page"><${Nodes} /></div>`
+      : p[1] === 'users' ? html`<${Alerts} tab="contacts" />` // logins are in the user list now
       : ADVANCED_TABS.includes(p[1]) ? html`<${Settings} advanced tab=${p[1]} user=${user} />` // old addresses of the advanced tabs
       : html`<${Settings} tab=${p[1] || 'general'} user=${user} />`; break;
     case 'advanced': view = html`<${Settings} advanced tab=${p[1] || ADVANCED_TABS[0]} user=${user} />`; break;

@@ -5,6 +5,7 @@ import { html, useState } from '../lib.js';
 import { t, tn } from '../i18n.js';
 import { get, post, put, del, me } from '../api.js';
 import { useFetch, useLive, Loading, ErrorBox, Empty, Ago, Field, Modal, toast, toastError, errText, confirmDialog } from '../ui.js';
+import { LoginForm } from './users.js';
 
 const ADDRESS_KEYS = { email: 'to' };
 const STATUSES = ['active', 'leave', 'transferred', 'left'];
@@ -74,8 +75,6 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
   const toggle = (name) => { setPicked(true); setF({ ...f, notify: notify.includes(name) ? notify.filter(n => n !== name) : [...notify, name] }); };
   const [err, setErr] = useState(null);
   // Logins that can be linked, so a person who leaves loses theirs too.
-  const users = useFetch(() => (me.role === 'admin' ? get('/users') : Promise.resolve(null)), []);
-  const logins = users.data ? (users.data.items || users.data).map(u => u.username).filter(Boolean) : [];
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async (e) => {
     e.preventDefault();
@@ -116,13 +115,7 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
             <div class="col">${channels.map(c => html`<label class="switch">
               <input type="checkbox" checked=${notify.includes(c.name)} disabled=${!has[c.contact] && !notify.includes(c.name)} onChange=${() => toggle(c.name)} />
               <b class="ltr">${c.name}</b> <span class="small muted">${t('ui.dir.via.' + viaOf(c))}</span></label>`)}</div><//>`}
-          <div class="two">
-            <${Field} label=${t('ui.dir.note')} hint=${t('ui.dir.note_hint')}><input type="text" value=${f.note} onInput=${set('note')} /><//>
-            <${Field} label=${t('ui.dir.username')} hint=${t('ui.dir.username_hint')}>
-              <select value=${f.username} onChange=${set('username')}>
-                <option value="">${t('ui.dir.no_login')}</option>
-                ${[...new Set([...logins, ...(f.username ? [f.username] : [])])].map(u => html`<option value=${u}>${u}</option>`)}</select><//>
-          </div>
+          <${Field} label=${t('ui.dir.note')} hint=${t('ui.dir.note_hint')}><input type="text" value=${f.note} onInput=${set('note')} /><//>
           <${Field} label=${t('ui.dir.handle')} hint=${t('ui.dir.handle_hint')}><input type="text" class="ltr" value=${f.handle} onInput=${set('handle')} placeholder=${handleFrom(f.name, f.emails, f.phones)} pattern="[a-z0-9][a-z0-9._\\-]{0,62}" /><//>
         </div>
       </details>
@@ -137,7 +130,28 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
 export function ContactsTab() {
   const d = useFetch(() => get('/people'), []);
   const tun = useFetch(() => get('/tunables'), []);
+  // Logins belong to people here: each row shows its login, if any.
+  const admin = me.role === 'admin';
+  const users = useFetch(() => admin ? get('/users') : Promise.resolve({ items: [] }), []);
   const [edit, setEdit] = useState(null);
+  const [login, setLogin] = useState(null); // { initial, person }
+  const [choose, setChoose] = useState(false);
+  const userOf = (p) => p.username && ((users.data && users.data.items) || []).find(u => u.username === p.username);
+  const openLogin = (p) => {
+    const u = userOf(p);
+    setLogin(u ? { initial: { id: u.id, username: u.username, password: '', role: u.role, areas: u.areas.join(', '), teams: u.teams || [] }, person: p }
+      : { initial: { username: p.handle }, person: p });
+  };
+  const loginSaved = async (username) => {
+    const fresh = login && !login.initial.id && !login.person;
+    setLogin(null);
+    users.reload();
+    d.reload();
+    // A new login goes on to its person's addresses.
+    if (fresh && username) {
+      try { const p = (await get('/people')).people.find(x => x.username === username); if (p) setEdit(p); } catch { /* the list shows it */ }
+    }
+  };
   useLive(['directory'], d.reload, 500);
   if (!d.data) return d.error ? html`<${ErrorBox} error=${d.error} retry=${d.reload} />` : html`<${Loading} />`;
   const { people, bounces, unknown, threshold } = d.data;
@@ -174,19 +188,25 @@ export function ContactsTab() {
   };
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.dir.intro')}</p>
-      <button class="btn primary" onClick=${() => setEdit({})}>${t('ui.dir.add')}</button></div>
+      <button class="btn primary" onClick=${() => admin ? setChoose(true) : setEdit({})}>${t('ui.dir.add')}</button></div>
+    ${choose && html`<${Modal} title=${t('ui.dir.add')} onClose=${() => setChoose(false)}>
+      <div class="col" style=${{ gap: '10px' }}>
+        <button class="btn primary choice" onClick=${() => { setChoose(false); setLogin({ initial: {} }); }}><b>${t('ui.dir.add_login')}</b><span class="small">${t('ui.dir.add_login_hint')}</span></button>
+        <button class="btn choice" onClick=${() => { setChoose(false); setEdit({}); }}><b>${t('ui.dir.add_contact')}</b><span class="small">${t('ui.dir.add_contact_hint')}</span></button>
+      </div><//>`}
+    ${login && html`<${LoginForm} initial=${{ ...login.initial, person: login.person && login.person.id }} onClose=${() => setLogin(null)}
+      onSaved=${loginSaved} onDeleted=${loginSaved} />`}
     ${nUnknown > 0 && html`<div class="banner warning row">
       <span class="rdot"></span><span class="spacer">${tn('ui.dir.unknown_banner', nUnknown)}
         <span class="small muted ltr"> ${[...(unknown.email || []), ...(unknown.phone || [])].slice(0, 6).join(', ')}${nUnknown > 6 ? ' …' : ''}</span></span>
       <button class="btn sm primary" onClick=${importAll}>${t('ui.dir.import')}</button></div>`}
     <div class="card"><div class="bd flush tbl-wrap">
       ${!people.length ? html`<${Empty} title=${t('ui.dir.none')}>${t('ui.dir.none_hint')}<//>` : html`<table class="tbl">
-        <thead><tr><th>${t('ui.dir.name')}</th><th>${t('ui.dir.emails')}</th><th>${t('ui.dir.phones')}</th><th>${t('ui.dir.notify')}</th><th>${t('ui.dir.channels')}</th><th>${t('ui.dir.status')}</th><th>${t('ui.report.tab')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('ui.dir.name')}</th><th>${t('ui.dir.emails')}</th><th>${t('ui.dir.phones')}</th><th>${t('ui.dir.notify')}</th><th>${t('ui.dir.channels')}</th><th>${t('ui.dir.status')}</th><th>${t('ui.report.tab')}</th>${admin && html`<th>${t('ui.dir.login')}</th>`}<th></th></tr></thead>
         <tbody>${people.map(p => html`<tr class=${p.status !== 'active' ? 'muted' : ''}>
           <td><span class="name">${p.name}</span> <span class="small muted ltr">@${p.handle}</span>
             ${p.note && html`<div class="sub small">${p.note}</div>`}
-            ${p.username && html`<div class="sub small">${t('ui.dir.login_is', { user: p.username })}</div>`}
-            ${p.username && html`<div class="sub small ltr">${t('ui.dir.login')}: ${p.username}</div>`}</td>
+</td>
           <td class="small ltr">${p.emails.join(', ')}</td>
           <td class="small ltr">${p.phones.join(', ')}</td>
           <td class="small">${p.reach && p.reach !== 'left' && p.reach !== 'inactive' ? html`<span class="rdot" title=${t('ui.dir.reach.' + p.reach)}></span> <span class="err-text">${t('ui.dir.reach.' + p.reach)}</span>` : html`<span class="ltr">${(p.notify || []).join(', ')}</span>`}</td>
@@ -195,7 +215,9 @@ export function ContactsTab() {
             ${STATUSES.map(st => html`<option value=${st}>${t('ui.dir.status.' + st)}</option>`)}</select></td>
           <td><label class="switch" title=${t('ui.report.person_hint')}><input type="checkbox" checked=${!p.no_report} onChange=${(e) => setReport(p, e.target.checked)}
             aria-label=${t('ui.report.receives_person', { name: p.name })} /></label></td>
+          ${admin && html`<td class="small">${userOf(p) ? html`<span class="ltr">${p.username}</span> <span class="tag">${t('ui.user.role.' + userOf(p).role)}</span>` : html`<span class="faint">–</span>`}</td>`}
           <td class="right nowrap">
+            ${admin && html`<button class="btn sm" onClick=${() => openLogin(p)}>${userOf(p) ? t('ui.dir.login_edit') : t('ui.dir.login_give')}</button> `}
             <button class="btn sm" onClick=${() => setEdit(p)}>${t('ui.edit')}</button>
             <button class="btn sm danger" onClick=${() => remove(p)}>${t('ui.delete')}</button>
           </td>

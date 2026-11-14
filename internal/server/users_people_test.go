@@ -48,4 +48,17 @@ func TestLoginsArePeople(t *testing.T) {
 	if p := find("li.lei"); p == nil || p.Username != "" {
 		t.Fatalf("after the login went: %+v", p)
 	}
+	// A login for someone already in the list goes to them, not to a new
+	// entry.
+	var pr struct{ ID int64 }
+	if c := e.do("POST", "/api/v1/people", map[string]any{"handle": "wang", "name": "Wang Wu", "emails": []string{"wang@example.com"}}, &pr); c != 200 {
+		t.Fatalf("person: %d", c)
+	}
+	n := len(list())
+	if c := e.do("POST", "/api/v1/users", map[string]any{"username": "wangwu", "password": "secret-123", "role": "viewer", "person": pr.ID}, nil); c != 200 {
+		t.Fatalf("login for a person: %d", c)
+	}
+	if p := find("wang"); p == nil || p.Username != "wangwu" || len(list()) != n {
+		t.Fatalf("linked: %+v (%d people, was %d)", p, len(list()), n)
+	}
 }

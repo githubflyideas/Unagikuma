@@ -18,6 +18,9 @@ type userReq struct {
 	Areas    []string `json:"areas"`
 	// Teams the user is a member of; nil leaves them as they are.
 	Teams *[]string `json:"teams"`
+	// Person, when creating, is the person in the user list who gets this
+	// login; without it a new person is listed for the login.
+	Person int64 `json:"person"`
 }
 
 // checkTeams validates the teams of a user request: with teams besides
@@ -147,8 +150,19 @@ func (s *Server) userCreate(w http.ResponseWriter, r *http.Request) (any, error)
 	if err != nil {
 		return nil, err
 	}
+	if q.Person != 0 {
+		if _, err := s.app.Store().UserID(q.Username); err == nil {
+			return nil, userError(store.ErrUserExists)
+		}
+		if err := s.app.Store().SetPersonLogin(q.Person, q.Username); err != nil {
+			return nil, notFound("person")
+		}
+	}
 	id, err := s.app.Store().CreateUserRole(q.Username, q.Password, q.Role, q.cleanAreas())
 	if err != nil {
+		if q.Person != 0 {
+			_ = s.app.Store().SetPersonLogin(q.Person, "")
+		}
 		return nil, userError(err)
 	}
 	if err := s.putInTeams(r, q.Username, teams); err != nil {

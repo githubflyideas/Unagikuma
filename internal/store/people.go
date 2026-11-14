@@ -506,6 +506,21 @@ func handleOf(name string) string {
 	return h
 }
 
+// SetPersonLogin makes a person the one a login belongs to ("" takes the
+// login away from them).
+func (s *Store) SetPersonLogin(id int64, username string) error {
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	res, err := s.core.Exec(`UPDATE people SET username=? WHERE id=?`, username, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // UnlinkUser keeps a deleted login's person, now without the login.
 func (s *Store) UnlinkUser(username string) error {
 	s.wmu.Lock()

@@ -856,3 +856,4 @@ body.summarypage { background: var(--bg); }
 [dir="rtl"] .subopts { border-radius: var(--radius) 0 0 var(--radius); }
 .period-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .period-row input[type=time] { width: auto; }
+.tbl td select { min-width: 6.5em; width: auto; }
