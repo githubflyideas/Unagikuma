@@ -53,6 +53,9 @@ type Options struct {
 	Location *time.Location
 	Log      *slog.Logger
 	Version  string
+	// GatewayMonitors adds a ping monitor for the LAN gateway and the
+	// internet gateway (the program sets it; tests leave it off).
+	GatewayMonitors bool
 	// Now and Probe are for tests.
 	Now   func() time.Time
 	Probe func(context.Context, probe.Spec) probe.Result
@@ -522,6 +525,7 @@ func (a *App) Run(ctx context.Context) error {
 	run(func() { a.runAgentMode(ctx) })
 	run(func() { a.runReplica(ctx) })
 	run(func() { a.runSiteObservations(ctx) })
+	run(func() { a.runGatewayMonitors(ctx) })
 	run(func() { a.every(ctx, 2*time.Second, a.cfg.check) })
 	run(func() { a.every(ctx, 30*time.Second, func() { _ = a.store.Beat() }) })
 	run(func() { a.every(ctx, 15*time.Second, a.watchStorage) })

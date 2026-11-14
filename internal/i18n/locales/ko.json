@@ -1915,6 +1915,8 @@
 "ui.team.mode.fallback": "순서대로, 처음 성공하면 중지",
 "ui.team.mode.all": "모두에게",
 "sys.left_out_title": "{channel}에서 제외된 수신자",
+"sys.auto_lan_gateway": "내부망 게이트웨이",
+"sys.auto_internet_gateway": "인터넷 게이트웨이",
 "sys.left_out_body": "보내지 않음: {recipients}. 이메일과 SMS는 활성 연락처에만 보냅니다. 알림과 공지 › 연락처를 확인하세요.",
 "ui.dir.status": "상태",
 "ui.dir.status.active": "재직",

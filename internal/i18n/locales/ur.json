@@ -1924,6 +1924,8 @@
 "ui.team.mode.fallback": "ترتیب سے، پہلی کامیابی پر رکیں",
 "ui.team.mode.all": "سب کو",
 "sys.left_out_title": "{channel} سے وصول کنندگان چھوڑ دیے گئے",
+"sys.auto_lan_gateway": "LAN گیٹ وے",
+"sys.auto_internet_gateway": "انٹرنیٹ گیٹ وے",
 "sys.left_out_body": "ان کو نہیں بھیجا گیا: {recipients}۔ ای میل اور SMS صرف فعال رابطوں کو جاتے ہیں؛ الرٹس اور اطلاعات › رابطے دیکھیں۔",
 "ui.dir.status": "حیثیت",
 "ui.dir.status.active": "فعال",

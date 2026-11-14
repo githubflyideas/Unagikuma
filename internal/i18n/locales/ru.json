@@ -1942,6 +1942,8 @@
 "ui.team.mode.fallback": "По порядку, до первого успеха",
 "ui.team.mode.all": "Во все",
 "sys.left_out_title": "Получатели пропущены в {channel}",
+"sys.auto_lan_gateway": "Шлюз локальной сети",
+"sys.auto_internet_gateway": "Интернет-шлюз",
 "sys.left_out_body": "Не отправлено: {recipients}. Почта и SMS идут только активным контактам; см. Оповещения и уведомления › Контакты.",
 "ui.dir.status": "Статус",
 "ui.dir.status.active": "Активен",

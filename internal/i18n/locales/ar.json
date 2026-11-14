@@ -1960,6 +1960,8 @@
 "ui.team.mode.fallback": "بالترتيب، والتوقف عند أول نجاح",
 "ui.team.mode.all": "إلى الجميع",
 "sys.left_out_title": "مستلمون مستبعدون من {channel}",
+"sys.auto_lan_gateway": "بوابة الشبكة المحلية",
+"sys.auto_internet_gateway": "بوابة الإنترنت",
 "sys.left_out_body": "لم يُرسل إلى: {recipients}. يُرسل البريد والرسائل القصيرة إلى جهات الاتصال النشطة فقط؛ راجع التنبيهات والإشعارات › جهات الاتصال.",
 "ui.dir.status": "الحالة",
 "ui.dir.status.active": "نشط",

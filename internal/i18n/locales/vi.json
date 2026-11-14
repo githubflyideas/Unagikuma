@@ -1915,6 +1915,8 @@
 "ui.team.mode.fallback": "Lần lượt, dừng khi gửi được",
 "ui.team.mode.all": "Gửi tất cả",
 "sys.left_out_title": "Người nhận bị bỏ qua ở {channel}",
+"sys.auto_lan_gateway": "Cổng mạng nội bộ",
+"sys.auto_internet_gateway": "Cổng Internet",
 "sys.left_out_body": "Không gửi tới: {recipients}. Email và SMS chỉ gửi cho liên hệ đang hoạt động; xem Cảnh báo & thông báo › Danh bạ.",
 "ui.dir.status": "Trạng thái",
 "ui.dir.status.active": "Đang làm",

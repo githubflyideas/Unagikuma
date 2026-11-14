@@ -1924,6 +1924,8 @@
 "ui.team.mode.fallback": "En orden, hasta el primero que funcione",
 "ui.team.mode.all": "A todos",
 "sys.left_out_title": "Destinatarios omitidos en {channel}",
+"sys.auto_lan_gateway": "Puerta de enlace LAN",
+"sys.auto_internet_gateway": "Puerta de enlace a Internet",
 "sys.left_out_body": "No se envió a: {recipients}. El correo y los SMS solo van a contactos activos; vea Alertas y avisos › Contactos.",
 "ui.dir.status": "Estado",
 "ui.dir.status.active": "Activo",

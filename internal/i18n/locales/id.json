@@ -1915,6 +1915,8 @@
 "ui.team.mode.fallback": "Berurutan, berhenti di yang pertama berhasil",
 "ui.team.mode.all": "Ke semua",
 "sys.left_out_title": "Penerima dilewati di {channel}",
+"sys.auto_lan_gateway": "Gateway LAN",
+"sys.auto_internet_gateway": "Gateway internet",
 "sys.left_out_body": "Tidak dikirim ke: {recipients}. Email dan SMS hanya ke kontak aktif; lihat Peringatan & notifikasi › Kontak.",
 "ui.dir.status": "Status",
 "ui.dir.status.active": "Aktif",

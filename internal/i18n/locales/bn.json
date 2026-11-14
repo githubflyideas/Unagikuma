@@ -1924,6 +1924,8 @@
 "ui.team.mode.fallback": "ক্রমানুসারে, প্রথম সফলতায় থামা",
 "ui.team.mode.all": "সবগুলোতে",
 "sys.left_out_title": "{channel} থেকে প্রাপক বাদ পড়েছে",
+"sys.auto_lan_gateway": "LAN গেটওয়ে",
+"sys.auto_internet_gateway": "ইন্টারনেট গেটওয়ে",
 "sys.left_out_body": "পাঠানো হয়নি: {recipients}। ইমেল ও SMS শুধু সক্রিয় পরিচিতিদের কাছে যায়; সতর্কতা ও বিজ্ঞপ্তি › যোগাযোগ দেখুন।",
 "ui.dir.status": "অবস্থা",
 "ui.dir.status.active": "সক্রিয়",

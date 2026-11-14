@@ -1924,6 +1924,8 @@
 "ui.team.mode.fallback": "क्रम से, पहली सफलता पर रुकें",
 "ui.team.mode.all": "सभी को",
 "sys.left_out_title": "{channel} से प्राप्तकर्ता छोड़े गए",
+"sys.auto_lan_gateway": "LAN गेटवे",
+"sys.auto_internet_gateway": "इंटरनेट गेटवे",
 "sys.left_out_body": "इन्हें नहीं भेजा गया: {recipients}। ईमेल और SMS केवल सक्रिय संपर्कों को जाते हैं; अलर्ट और सूचनाएँ › संपर्क देखें।",
 "ui.dir.status": "स्थिति",
 "ui.dir.status.active": "सक्रिय",

@@ -1915,6 +1915,8 @@
 "ui.team.mode.fallback": "按顺序，首个成功即停止",
 "ui.team.mode.all": "全部发送",
 "sys.left_out_title": "{channel} 有收件人被跳过",
+"sys.auto_lan_gateway": "内网网关",
+"sys.auto_internet_gateway": "外网网关",
 "sys.left_out_body": "未发送给：{recipients}。邮件和短信只发给通讯录中在职的联系人；请查看 告警与通知 › 联系人。",
 "ui.dir.status": "状态",
 "ui.dir.status.active": "在职",
