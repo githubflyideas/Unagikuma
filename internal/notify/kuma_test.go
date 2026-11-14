@@ -88,3 +88,31 @@ func TestWebhookExamples(t *testing.T) {
 		}
 	}
 }
+
+// The daily report through a Kuma body keeps the request's shape but says
+// what the report says: no empty monitor, no DOWN.
+func TestKumaBodyReport(t *testing.T) {
+	body := `{"touser": "xxx", "msgtype": "markdown", "markdown": {"title": "{% if heartbeatJSON.status == 1 %}up{% else %}down{% endif %}", "content": "监控:{{ monitorJSON.name }}\n状态:{% if heartbeatJSON.status == 1 %}UP{% else %}DOWN{% endif %}\n信息:{{ heartbeatJSON.msg }}"}}`
+	cap := &capture{}
+	srv := cap.server(t)
+	o := map[string]string{"url": srv.URL, "content-type": "json", "body": body}
+	m := &Message{Kind: "REPORT", Title: "每日状态：3 台主机全部 UP", Body: "正常主机（3）：a, b, c", Lang: "zh"}
+	if a := (&Sender{}).Send(context.Background(), Channel{Name: "w", Kind: "webhook", Opts: o}, m); !a.OK {
+		t.Fatalf("%+v", a)
+	}
+	_, got := cap.last()
+	var v struct {
+		Touser   string `json:"touser"`
+		Markdown struct {
+			Title   string `json:"title"`
+			Content string `json:"content"`
+		} `json:"markdown"`
+	}
+	if err := json.Unmarshal(got, &v); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, got)
+	}
+	if v.Touser != "xxx" || !strings.Contains(v.Markdown.Title, m.Title) || !strings.HasPrefix(v.Markdown.Content, v.Markdown.Title) ||
+		!strings.Contains(v.Markdown.Content, "a, b, c") || strings.Contains(string(got), "DOWN") || strings.Contains(string(got), "监控:") {
+		t.Fatalf("body %s", got)
+	}
+}
