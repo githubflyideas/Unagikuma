@@ -1,6 +1,9 @@
 package server
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestHosts(t *testing.T) {
 	e := newEnv(t, `@ IN SOA unagikuma. admin.localhost. ( 2026102301 1s 500ms 300ms 2 )
@@ -82,5 +85,19 @@ func TestDailyReportAPI(t *testing.T) {
 	}
 	if code := e.do("POST", "/api/v1/reports/daily/send", map[string]any{}, &rep); code != 200 {
 		t.Fatalf("send: %d", code)
+	}
+	// The weekly report: seven days of availability, sent on demand.
+	var wk struct {
+		Enabled     bool
+		At          string
+		Title, Body string
+		Sent        int
+	}
+	if code := e.do("GET", "/api/v1/reports/weekly", nil, &wk); code != 200 || wk.Enabled || wk.At != "mon 09:00" ||
+		!strings.Contains(wk.Title, "Weekly report") || !strings.Contains(wk.Body, "Average availability") {
+		t.Fatalf("weekly: %d %+v", code, wk)
+	}
+	if code := e.do("POST", "/api/v1/reports/weekly/send", map[string]any{}, &wk); code != 200 || wk.Sent != 1 {
+		t.Fatalf("weekly send: %d %+v", code, wk)
 	}
 }

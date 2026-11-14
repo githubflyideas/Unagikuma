@@ -208,3 +208,24 @@ func (s *Server) expiry(w http.ResponseWriter, r *http.Request) (any, error) {
 	sort.Slice(out, func(i, j int) bool { return out[i].Days < out[j].Days })
 	return map[string]any{"items": out}, nil
 }
+
+// weeklyReport previews the weekly report (the first team's) as it would
+// be sent now.
+func (s *Server) weeklyReport(w http.ResponseWriter, r *http.Request) (any, error) {
+	ts := s.app.Config().Config.Tunables
+	out := map[string]any{"enabled": ts.Bool("notify.weekly-report"), "at": ts.Raw("notify.weekly-report-at"), "title": "", "body": ""}
+	if rs := s.app.WeeklyReports(s.now()); len(rs) > 0 {
+		out["title"], out["body"] = rs[0].Title, rs[0].Body
+	}
+	return out, nil
+}
+
+// sendWeeklyReport sends the weekly report now, to every team receiving
+// reports.
+func (s *Server) sendWeeklyReport(w http.ResponseWriter, r *http.Request) (any, error) {
+	rs := s.app.WeeklyReports(s.now())
+	for _, rep := range rs {
+		s.app.Engine().SendReport(rep)
+	}
+	return map[string]any{"sent": len(rs)}, nil
+}

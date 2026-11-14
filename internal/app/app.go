@@ -526,6 +526,7 @@ func (a *App) Run(ctx context.Context) error {
 	run(func() { a.runReplica(ctx) })
 	run(func() { a.runSiteObservations(ctx) })
 	run(func() { a.runGatewayMonitors(ctx) })
+	run(func() { a.runWeeklyReport(ctx) })
 	run(func() { a.every(ctx, 2*time.Second, a.cfg.check) })
 	run(func() { a.every(ctx, 30*time.Second, func() { _ = a.store.Beat() }) })
 	run(func() { a.every(ctx, 15*time.Second, a.watchStorage) })

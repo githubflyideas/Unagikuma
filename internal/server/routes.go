@@ -121,6 +121,8 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/expiry", "read", s.expiry)
 	s.handle("GET /api/v1/reports/daily", "read", s.dailyReport)
 	s.handle("POST /api/v1/reports/daily/send", "write", global(s.sendDailyReport))
+	s.handle("GET /api/v1/reports/weekly", "read", global(s.weeklyReport))
+	s.handle("POST /api/v1/reports/weekly/send", "write", global(s.sendWeeklyReport))
 	s.handle("POST /api/v1/import/{source}", "admin", s.kumaImport)
 	s.handle("GET /api/v1/status-pages", "read", s.statusPages)
 	s.handle("GET /api/v1/status-support", "admin", s.supportGet)
