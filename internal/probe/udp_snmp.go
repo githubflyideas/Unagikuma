@@ -207,9 +207,15 @@ func printable(b []byte) bool {
 
 func validateSNMP(o opts) error {
 	switch o.str("version", "2c") {
-	case "1", "2c", "3-discovery":
+	case "1", "2c", "3", "3-discovery":
 	default:
-		return errors.New("version must be 1, 2c or 3-discovery")
+		return errors.New("version must be 1, 2c, 3 or 3-discovery")
+	}
+	if err := validateSNMPValues(o); err != nil {
+		return err
+	}
+	if err := validateValueRules(o, snmpUnit(o)); err != nil {
+		return err
 	}
 	if oid := o.str("oid", ""); oid != "" {
 		if _, err := encodeOID(oid); err != nil {
@@ -229,6 +235,9 @@ const sysUpTime = "1.3.6.1.2.1.1.3.0"
 func runSNMP(ctx context.Context, p udpPlan, o opts) Result {
 	if o.str("version", "2c") == "3-discovery" {
 		return runSNMPv3Discovery(ctx, p, o)
+	}
+	if usesSNMPClient(o) {
+		return runSNMPValues(ctx, p, o)
 	}
 	retr, _ := o.intOpt("retransmit", 1, 0, 5)
 	community := o.str("community", "public")

@@ -28,6 +28,8 @@ var httpOpts = map[string]bool{
 	"json-path": true, "json-expect": true, "json-expect-num": true, "no-follow": true, "insecure": true,
 	"host": true, "basic": true, "bearer": true, "proxy": true, "cert-days": true, "cert-critical-days": true,
 	"user-agent": true,
+	// Value rules, for the number at json-path.
+	"warn": true, "crit": true, "change": true, "compare": true, "min": true, "for": true, "direction": true,
 }
 
 func validateHTTP(target string, o opts) error {
@@ -60,6 +62,14 @@ func validateHTTP(target string, o opts) error {
 	if o.has("json-path") {
 		if _, err := parseJSONPath(o.str("json-path", "")); err != nil {
 			return err
+		}
+	}
+	if err := validateValueRules(o, ""); err != nil {
+		return err
+	}
+	for _, k := range []string{"warn", "crit", "change"} {
+		if o.has(k) && !o.has("json-path") {
+			return fmt.Errorf("%s= judges the number at json-path=, which is not set", k)
 		}
 	}
 	if b := o.str("basic", ""); b != "" && !strings.Contains(b, ":") {
@@ -220,6 +230,13 @@ func httpAssertions(r Result, o opts, status int, data []byte) Result {
 	if p := o.str("json-path", ""); p != "" {
 		if msg, good := checkJSON(data, p, o); !good {
 			return failKeep(r, ReasonAssertFailed, "%s", msg)
+		}
+		// A number there is the value the monitor's rules judge.
+		if f, ok := jsonNumber(data, p); ok {
+			if r.Metrics == nil {
+				r.Metrics = map[string]float64{}
+			}
+			r.Metrics["value"] = f
 		}
 	}
 	return r
