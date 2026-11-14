@@ -53,6 +53,7 @@ type rowJSON struct {
 	Incident    *incidentBrief     `json:"incident"`
 	Disabled    bool               `json:"disabled"`
 	Metrics     map[string]float64 `json:"metrics,omitempty"`
+	Value       *engine.ValueView  `json:"value,omitempty"`
 	// Area is the $SCOPE section; Nodes the nodes that check it (empty =
 	// all).
 	Area    string   `json:"area,omitempty"`
@@ -139,6 +140,7 @@ func (s *Server) rowBase(r engine.MonitorRow, cfg *config.Config, incs map[int64
 		Tags: []tagJSON{}, Status: r.Status, StateType: "soft", Flags: []string{}, Reason: r.Reason, Detail: r.Detail,
 		Unknown: r.UnknownReason, Attempt: r.Attempt, MaxAttempts: r.Attempts, LatencyMS: r.LatencyMS,
 		LastCheck: tp(r.LastCheck), LastChange: tp(r.LastChange), NextCheck: tp(r.NextCheck), Disabled: r.Paused, Metrics: r.Metrics,
+		Value: r.Value,
 	}
 	if r.Hard {
 		out.StateType = "hard"

@@ -24,15 +24,18 @@ import (
 
 // Store is the persistence layer. Safe for concurrent use.
 type Store struct {
-	dir   string
-	core  *sql.DB
-	hist  *sql.DB
-	log   *slog.Logger
-	now   func() time.Time
-	wmu   sync.Mutex // serialises core writes
-	batch *batcher
-	tool  bool
-	ids   monitorIDs
+	// ValueRetain is how long value samples are kept (values.retain);
+	// zero keeps a day.
+	ValueRetain time.Duration
+	dir         string
+	core        *sql.DB
+	hist        *sql.DB
+	log         *slog.Logger
+	now         func() time.Time
+	wmu         sync.Mutex // serialises core writes
+	batch       *batcher
+	tool        bool
+	ids         monitorIDs
 
 	agg5mSince time.Time
 	ret        atomic.Pointer[Retention]

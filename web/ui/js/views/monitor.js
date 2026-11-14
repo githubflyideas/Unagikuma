@@ -145,6 +145,33 @@ export function LatencyChart({ name, range }) {
     ${nFails > 0 && html`<p class="small muted chart-note"><span class="fail-key"></span>${tn('ui.chart.fails', nFails)}</p>`}`;
 }
 
+// fmtValue writes a value with its unit in a readable size (9.2 Gbps).
+function fmtValue(v, unit) {
+  const n = (x) => fmtNum(Math.round(x * 100) / 100);
+  if (unit === 'bps') {
+    for (const [u, f] of [['Tbps', 1e12], ['Gbps', 1e9], ['Mbps', 1e6], ['Kbps', 1e3]]) if (Math.abs(v) >= f) return n(v / f) + ' ' + u;
+    return n(v) + ' bps';
+  }
+  if (unit === '%') return n(v) + '%';
+  return unit ? n(v) + ' ' + unit : n(v);
+}
+
+// ValueCard shows the value the monitor's rules judge: now, against its
+// reference, and the limits.
+function ValueCard({ v }) {
+  return html`<${Card} title=${t('ui.val.title')}>
+    <div class="val-now">${v.sampled ? fmtValue(v.current, v.unit) : '–'}</div>
+    <dl class="kv">
+      ${v.has_ref && html`<dt>${t('ui.val.ref', { when: v.compare && v.compare !== 'previous' ? v.compare : t('ui.val.previous') })}</dt><dd>${fmtValue(v.ref, v.unit)}</dd>`}
+      ${v.learning_s > 0 && html`<dt>${t('ui.val.learning')}</dt><dd>${t('ui.val.learning_left', { left: dur(Math.round(v.learning_s)) })}</dd>`}
+      ${v.warn && html`<dt>${t('ui.val.warn')}</dt><dd class="ltr">${v.warn}</dd>`}
+      ${v.crit && html`<dt>${t('ui.val.crit')}</dt><dd class="ltr">${v.crit}</dd>`}
+      ${v.change && html`<dt>${t('ui.val.change')}</dt><dd class="ltr">${v.change}</dd>`}
+    </dl>
+    ${v.detail && html`<p class="small muted ltr" style=${{ margin: '6px 0 0' }}>${v.detail}</p>`}
+  <//>`;
+}
+
 function PushBox({ name }) {
   const p = useFetch(() => get(`/monitors/${enc(name)}/push`), [name]);
   if (!p.data) return null;
@@ -281,6 +308,7 @@ export function MonitorDetail({ name }) {
         <${Card} title=${t('ui.mon.timeline')} flush>${tl.data ? html`<${EventRows} items=${tl.data.items} hideMonitor />` : html`<${Loading} />`}<//>
       </div>
       <div class="col" style=${{ gap: '16px' }}>
+        ${row.value && html`<${ValueCard} v=${row.value} />`}
         <${Card} title=${t('ui.mon.settings')}>
           <dl class="kv">
             <dt>${t('ui.interval')}</dt><dd>${dur(row.interval_s)}</dd>
@@ -293,7 +321,7 @@ export function MonitorDetail({ name }) {
             <dt>${t('ui.mon.last_check')}</dt><dd><${Ago} at=${row.last_check} /></dd>
             <dt>${t('ui.mon.next_check')}</dt><dd><${Ago} at=${row.next_check} /></dd>
             <dt>${t('ui.mon.changed')}</dt><dd><${Ago} at=${row.last_change} /></dd>
-            ${Object.entries(row.metrics || {}).map(([k, v]) => html`<dt class="ltr">${k}</dt><dd>${fmtNum(Math.round(v * 100) / 100)}</dd>`)}
+            ${Object.entries(row.metrics || {}).filter(([k]) => !k.startsWith('value.')).map(([k, v]) => html`<dt class="ltr">${k}</dt><dd>${fmtNum(Math.round(v * 100) / 100)}</dd>`)}
           </dl>
         <//>
         ${row.type === 'PUSH' && html`<${PushBox} name=${name} />`}

@@ -315,6 +315,11 @@ func (a *App) restoreEngine() error {
 	incidents, _ := st.OpenIncidents()
 	intents, _ := st.PendingIntents()
 	a.engine.Restore(states, incidents, intents)
+	retain := a.cfg.current().Config.Tunables.Duration("values.retain")
+	st.ValueRetain = retain
+	if v, err := st.ValueSamples(a.now().Add(-retain)); err == nil {
+		a.engine.LoadValues(v)
+	}
 	a.applyConfig(a.cfg.current().Config)
 	a.importContactsOnce()
 	// A returning old master must learn of a higher term before it acts as

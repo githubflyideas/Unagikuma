@@ -31,6 +31,9 @@ type Sink interface {
 	Event(Event)
 	// Counter adds n to a named daily value counter.
 	Counter(name string, n int)
+	// Value keeps one value a monitor's rules judged, so a restart does not
+	// lose the reference of change= compare=.
+	Value(name string, at time.Time, v float64)
 }
 
 // StateRecord is a monitor's persisted runtime state.

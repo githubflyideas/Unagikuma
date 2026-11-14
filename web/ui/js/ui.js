@@ -330,6 +330,11 @@ export const PRESETS = {
   attempts: ['1', '2', '3', '4', '5', '6', '10'],
 };
 PRESETS.retry = PRESETS.interval;
+Object.assign(PRESETS, {
+  version: ['1', '2c', '3'], auth: ['md5', 'sha', 'sha256', 'sha512'], priv: ['des', 'aes'], profile: ['entity', 'huawei', 'h3c', 'cisco'],
+  value: ['util', 'in', 'out'], change: ['25%', '50%', '100%', '200%'], compare: ['previous', '24h', '7d'], for: ['1m', '3m', '5m', '10m', '30m'],
+  direction: ['up', 'down', 'both'],
+});
 PRESETS['recover-attempts'] = PRESETS.attempts;
 
 // Combo is a text field with a list of common values beside it: pick one,

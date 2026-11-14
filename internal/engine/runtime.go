@@ -17,6 +17,7 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/ratelimit"
 	"github.com/githubflyideas/unagikuma/internal/schedule"
 	"github.com/githubflyideas/unagikuma/internal/tunables"
+	"github.com/githubflyideas/unagikuma/internal/valuerule"
 )
 
 // MonitorSpec is the engine's view of one monitor, built from the
@@ -275,6 +276,11 @@ type Engine struct {
 	ifCacheAt        time.Time
 	lastInterruption Interruption
 	stopped          chan struct{}
+	// values: what each monitor's value rules keep between rounds.
+	values map[string]*valueState
+	// preload: values kept before a restart, until the monitor's tracker
+	// takes them.
+	preload map[string][]valuerule.Sample
 }
 
 // monRuntime is the live state of one monitor.

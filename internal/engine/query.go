@@ -56,6 +56,23 @@ type MonitorRow struct {
 	Parents     []string
 	Unreachable bool
 	Maintenance string // the open window covering this monitor
+	// Value: what the monitor's value rules last found (nil without rules).
+	Value *ValueView
+}
+
+// ValueView is the value a monitor's rules judge, for display.
+type ValueView struct {
+	Current      float64 `json:"current"`
+	Ref          float64 `json:"ref"`
+	HasRef       bool    `json:"has_ref"`
+	Unit         string  `json:"unit"`
+	LearningLeft float64 `json:"learning_s,omitempty"` // seconds until change= has a reference
+	Detail       string  `json:"detail"`
+	Warn         string  `json:"warn,omitempty"`
+	Crit         string  `json:"crit,omitempty"`
+	Change       string  `json:"change,omitempty"`
+	Compare      string  `json:"compare,omitempty"`
+	Sampled      bool    `json:"sampled"`
 }
 
 func (e *Engine) row(name string, now time.Time) (MonitorRow, bool) {
@@ -73,6 +90,12 @@ func (e *Engine) row(name string, now time.Time) (MonitorRow, bool) {
 	}
 	if m.Push {
 		r.Type = "PUSH"
+	}
+	if vs := e.values[name]; vs != nil && vs.tr != nil && vs.defHash == m.DefHash {
+		o := m.Probe.Opts
+		r.Value = &ValueView{Current: vs.last.Value, Ref: vs.last.Ref, HasRef: vs.last.HasRef, Unit: vs.tr.Rules.Unit,
+			LearningLeft: vs.last.LearningLeft.Seconds(), Detail: vs.last.Detail, Sampled: vs.last.Sampled,
+			Warn: o["warn"], Crit: o["crit"], Change: o["change"], Compare: o["compare"]}
 	}
 	if e.inMaint(name) {
 		r.Maintenance = e.maintOf[name]

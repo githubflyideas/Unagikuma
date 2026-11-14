@@ -115,6 +115,11 @@ func (e *Engine) apply(cfg Config) {
 			e.deps.Sink.DeleteState(name)
 		}
 	}
+	for name := range e.values {
+		if _, ok := e.monitors[name]; !ok {
+			delete(e.values, name)
+		}
+	}
 	if !first {
 		e.event(Event{Type: EventConfig, Severity: "info", Message: fmt.Sprintf("configuration %d applied", cfg.Serial), Data: map[string]any{"msg": "config_applied", "serial": cfg.Serial, "monitors": len(cfg.Monitors)}})
 	}
