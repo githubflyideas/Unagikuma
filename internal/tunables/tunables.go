@@ -108,6 +108,7 @@ var defs = []Def{
 	{Key: "localnet.anchor-enable", Kind: Duration, Default: "2m", Min: "10s", Max: "1h", Desc: "a gateway that never answered within this time is not used as an anchor", DescZH: "启动后此时长内从未应答的路由器不作锚点"},
 	{Key: "engine.handler-timeout", Kind: Duration, Default: "30s", Min: "1s", Max: "10m", Desc: "how long an event handler may run before it is killed", DescZH: "事件处理脚本最长运行时间，超时即终止"},
 	{Key: "localnet.references", Kind: Addresses, Default: "223.5.5.5,1.1.1.1,8.8.8.8", Desc: "internet reference points, in different networks, asked on TCP 443 whenever an internet target fails: if any answers this host's network works and the failure is the target's; if none does, together with the targets they show this host's own uplink is down (empty = off)", DescZH: "互联网参照点（不同网络中的地址）：有外网目标失败时连它们的 TCP 443；任何一个能连上就说明本机网络正常、是目标自己的故障；全部连不上时，和失败的目标一起证明本机外网断了（留空 = 关闭）"},
+	{Key: "localnet.gateway-monitors", Kind: Bool, Default: "on", Desc: "add a ping monitor for the LAN gateway and one for localnet.exit-target, once the configuration has monitors of its own; a deleted one is not added again", DescZH: "已有自己的监控项后，自动为内网网关和外网网关（localnet.exit-target）各添加一个 ping 监控；删掉的不会再加回来"},
 	{Key: "localnet.exit-target", Kind: Address, Default: "8.8.8.8", Desc: "internet address pinged, once an internet target fails, to show on the path view whether this host gets out to the internet; display only, it never holds alerts (empty = off)", DescZH: "外网网关探测地址：有外网目标失败时才 ping，在路径图上显示本机能否出外网；只用于显示，不参与告警抑制（留空 = 关闭）"},
 
 	// ---- single machine: suspend / stall / abnormal exit ----

@@ -181,7 +181,7 @@ func (s *server) monitors() []string {
 	return out
 }
 
-const soa = "@ IN SOA %s. admin.localhost. ( 2026102801 2s 1s 1s 1 )\n$SET engine.first-round-delay=0s cluster.standby-sync=30s cluster.standby-retry=5s\n"
+const soa = "@ IN SOA %s. admin.localhost. ( 2026102801 2s 1s 1s 1 )\n$SET engine.first-round-delay=0s cluster.standby-sync=30s cluster.standby-retry=5s localnet.gateway-monitors=off\n"
 
 // The standby takes over shared configuration but retains its own users.
 // The former master rejoins under its original site name and keeps checking.

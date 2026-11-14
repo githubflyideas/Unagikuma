@@ -524,7 +524,11 @@ func (s *Server) monitorLatency(w http.ResponseWriter, r *http.Request) (any, er
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"points": pts, "metric": "latency_ms"}, nil
+	fails, err := s.app.Store().Failures(s.monitorParam(r), s.now().Add(-d), s.now(), s.historySite(r))
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"points": pts, "fails": fails, "metric": "latency_ms"}, nil
 }
 
 func (s *Server) monitorTimeline(w http.ResponseWriter, r *http.Request) (any, error) {

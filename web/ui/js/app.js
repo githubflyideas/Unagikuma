@@ -48,6 +48,42 @@ function applyTheme(v) {
 }
 darkQuery.addEventListener('change', () => { if (themeChoice === 'auto') applyTheme('auto'); });
 
+// The interface can be shown larger, as a whole: text, icons, charts and
+// tables keep their proportions.
+const ZOOMS = [100, 125, 150, 200];
+function zoomOf(v) { const n = Number(v); return ZOOMS.includes(n) ? n : 100; }
+// Scaling the page with CSS zoom leaves the layout's width breakpoints at
+// the window's real width; scale them too, so a larger interface switches
+// to the narrower layouts the way the browser's own zoom does.
+const mediaText = new WeakMap();
+function scaleBreakpoints(f) {
+  for (const sheet of document.styleSheets) {
+    let rules;
+    try { rules = sheet.cssRules; } catch { continue; } // another origin
+    for (const r of rules) {
+      if (!(r instanceof CSSMediaRule)) continue;
+      if (!mediaText.has(r)) mediaText.set(r, r.media.mediaText);
+      const orig = mediaText.get(r);
+      if (!/width/.test(orig)) continue;
+      r.media.mediaText = orig.replace(/(\d+(?:\.\d+)?)px/g, (_, n) => Math.round(Number(n) * f) + 'px');
+    }
+  }
+}
+function zoomFactor() { return zoomOf(storage('unagikuma.zoom')) / 100; }
+function applyZoom(v) {
+  const z = zoomOf(v);
+  document.documentElement.style.zoom = z === 100 ? '' : String(z / 100);
+  scaleBreakpoints(z / 100);
+}
+
+function ZoomSelect() {
+  const [z, setZ] = useState(zoomOf(storage('unagikuma.zoom')));
+  const change = (v) => { setZ(zoomOf(v)); storage('unagikuma.zoom', String(v)); applyZoom(v); };
+  return html`<select class="zoom" aria-label=${t('ui.zoom')} title=${t('ui.zoom')} value=${String(z)} onChange=${(e) => change(e.target.value)}>
+    ${ZOOMS.map(n => html`<option value=${String(n)}>${n}%</option>`)}
+  </select>`;
+}
+
 function storage(k, v) {
   try {
     if (v === undefined) return localStorage.getItem(k);
@@ -176,7 +212,7 @@ function Shell({ user, onLogout, onLang }) {
   // On a wide screen the button folds the sidebar to icons; on a phone it
   // slides the sidebar in.
   const toggleSide = () => {
-    if (matchMedia('(max-width: 860px)').matches) return setOpen(!open);
+    if (matchMedia(`(max-width: ${Math.round(860 * zoomFactor())}px)`).matches) return setOpen(!open);
     storage('unagikuma.side', mini ? 'full' : 'mini');
     setMini(!mini);
   };
@@ -235,7 +271,7 @@ function Shell({ user, onLogout, onLang }) {
         </a>`)}
       </nav>
       <div class="foot">
-        <${LangSelect} onChange=${onLang} />
+        <div class="row nowrap lang-zoom"><${LangSelect} onChange=${onLang} /><${ZoomSelect} /></div>
         <div class="row"><button type="button" class="linkish ellipsis" title=${t('ui.acc.open')} onClick=${() => setAcct(true)}>${user}</button><div class="spacer"></div><button class="btn sm ghost" onClick=${onLogout}>${t('ui.logout')}</button></div>
         ${ov.data && ov.data.instance && html`<div class="host ellipsis" title=${ov.data.instance}>${ov.data.instance}</div>`}
       </div>
@@ -385,6 +421,7 @@ function Root() {
 
 (async () => {
   applyTheme(storage('unagikuma.theme'));
+  applyZoom(storage('unagikuma.zoom'));
   await loadLanguages();
   // The browser's own message for a value of the wrong form is in its
   // language and says nothing useful; say what the field takes instead.

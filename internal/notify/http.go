@@ -224,7 +224,20 @@ func (s *Sender) buildWebhook(ctx context.Context, o map[string]string, m *Messa
 		ct = "json"
 	}
 	var body []byte
-	if tpl := o["body"]; tpl != "" {
+	tpl := o["body"]
+	if tpl != "" && isKumaTemplate(tpl) && !monitorKinds[m.Kind] && m.Kind != "TEST" {
+		if ct == "json" {
+			if out, ok := systemKumaBody(tpl, m, o); ok {
+				body, tpl = []byte(out), ""
+			}
+		} else if ct == "text" {
+			title, text := textOf(o, m)
+			body, tpl = []byte(strings.TrimRight(title+"\n"+text, "\n")), ""
+		}
+	}
+	if body != nil {
+		// a message about no monitor, through a Kuma template: done above
+	} else if tpl != "" {
 		out, err := renderTemplate(tpl, templateData(m, o, ct == "json"))
 		if err != nil {
 			return nil, nil, err

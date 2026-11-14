@@ -64,7 +64,7 @@ func TestCommandsOnARealInstallation(t *testing.T) {
 	dir := t.TempDir()
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("hello")) }))
 	defer target.Close()
-	conf := fmt.Sprintf("$FILE revision=2026111101\n$SET engine.first-round-delay=0s\nweb 10s IN HTTP %s/\ndown 10s IN TCP 127.0.0.1:1 attempts=1\n", target.URL)
+	conf := fmt.Sprintf("$FILE revision=2026111101\n$SET engine.first-round-delay=0s localnet.gateway-monitors=off\nweb 10s IN HTTP %s/\ndown 10s IN TCP 127.0.0.1:1 attempts=1\n", target.URL)
 	cfg := filepath.Join(dir, "monitors.conf")
 	if err := os.WriteFile(cfg, []byte(conf), 0o600); err != nil {
 		t.Fatal(err)

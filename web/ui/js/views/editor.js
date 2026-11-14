@@ -2,7 +2,7 @@
 import { html, useState, useEffect } from '../lib.js';
 import { t, has, detailText } from '../i18n.js';
 import { get, post, put, ifMatch, newKey, me } from '../api.js';
-import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, teamTitle, regionTitle, writableTeams, Copy } from '../ui.js';
+import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, teamTitle, regionTitle, writableTeams, Copy, Combo, PRESETS } from '../ui.js';
 
 // Check types, grouped for the type menu.
 const TYPE_GROUPS = [
@@ -220,7 +220,7 @@ export function MonitorEditor({ name }) {
             <input type="text" class="ltr" value=${optVal('expect')} onInput=${setOwn('expect')} disabled=${!optVal('query')} placeholder="203.0.113.10" /><//>
         </div>`}
         <div class="two">
-          <${Field} label=${t('ui.interval')} hint=${t('ui.mon.interval_hint')}><input type="text" class="ltr" value=${f.interval} onInput=${set('interval')} placeholder="1m" /><//>
+          <${Field} label=${t('ui.interval')} hint=${t('ui.mon.interval_hint')}><${Combo} value=${f.interval} onValue=${(v) => setF({ ...f, interval: v })} options=${PRESETS.interval} placeholder="1m" /><//>
           <${Field} label=${t('ui.mon.notify')} hint=${f.mute ? t('ui.mon.mute_hint') : f.sys ? t('ui.mon.system_channel_hint') : t('ui.mon.notify_hint')}>
             <div class="col" style=${{ gap: '6px' }}>
               <label class="switch"><input type="checkbox" checked=${f.mute} onChange=${(e) => setF({ ...f, mute: e.target.checked, sys: e.target.checked ? false : f.sys })} /> ${t('ui.mon.mute')}</label>
@@ -262,7 +262,8 @@ export function MonitorEditor({ name }) {
                     <option value="__custom">${t('ui.mon.opt_custom')}</option>
                   </select>
                   ${custom && html`<input type="text" class="ltr" value=${o.k} onInput=${(e) => setOpt(i, 'k', e.target.value)} placeholder=${t('ui.key')} style=${{ maxWidth: '180px' }} />`}
-                  <input type="text" class="ltr" value=${o.v} onInput=${(e) => setOpt(i, 'v', e.target.value)} placeholder=${OPT_EXAMPLE[o.k] ? t('ui.mon.opt_example', { v: OPT_EXAMPLE[o.k] }) : t('ui.value')} />
+                  ${PRESETS[o.k] ? html`<${Combo} value=${o.v} onValue=${(v) => setOpt(i, 'v', v)} options=${PRESETS[o.k]} label=${t('ui.value')} placeholder=${OPT_EXAMPLE[o.k] ? t('ui.mon.opt_example', { v: OPT_EXAMPLE[o.k] }) : t('ui.value')} />`
+                    : html`<input type="text" class="ltr" value=${o.v} onInput=${(e) => setOpt(i, 'v', e.target.value)} placeholder=${OPT_EXAMPLE[o.k] ? t('ui.mon.opt_example', { v: OPT_EXAMPLE[o.k] }) : t('ui.value')} />`}
                   <button type="button" class="btn sm ghost" onClick=${() => setF({ ...f, opts: f.opts.filter((_, j) => j !== i) })} aria-label=${t('ui.remove')}>✕</button>
                 </div>
                 ${o.k && has('ui.opt.' + o.k) && html`<div class="small muted">${t('ui.opt.' + o.k).split(' — ').slice(1).join(' — ')}</div>`}

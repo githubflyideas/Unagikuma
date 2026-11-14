@@ -1,5 +1,20 @@
 # Changelog
 
+## v2.6.12 — 2026-11-14
+
+**Added**
+- Interface size: 100%, 125%, 150%, 200%.
+- Ping monitors for the LAN and internet gateways.
+- Failed checks marked on the latency chart.
+- Monitor list filter by failures before an alert (`attempts:1`).
+- Common values to pick for interval, timeout and failures.
+
+**Changed**
+- Larger small text; path view fonts made consistent.
+
+**Fixed**
+- Daily report through an Uptime Kuma webhook template showed an empty monitor that was DOWN.
+
 ## v2.6.11 — 2026-11-14
 
 **Added**

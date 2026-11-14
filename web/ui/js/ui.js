@@ -315,3 +315,25 @@ export function writableTeams(data) {
   const items = (data && data.items) || [];
   return me.teams ? items.filter(tm => me.teams[tm.name] === 'operator') : items;
 }
+
+// Common values offered for a duration or count field; any other value can
+// still be typed.
+export const PRESETS = {
+  interval: ['1s', '2s', '3s', '5s', '10s', '20s', '30s', '45s', '1m', '2m', '5m', '10m', '20m'],
+  timeout: ['1s', '2s', '3s', '4s', '5s', '10s', '20s', '30s', '45s', '1m', '2m', '3m', '4m', '5m'],
+  attempts: ['1', '2', '3', '4', '5', '6', '10'],
+};
+PRESETS.retry = PRESETS.interval;
+PRESETS['recover-attempts'] = PRESETS.attempts;
+
+// Combo is a text field with a list of common values beside it: pick one,
+// or type your own.
+export function Combo({ value, onValue, options, placeholder, label }) {
+  return html`<div class="combo">
+    <input type="text" class="ltr" value=${value} onInput=${(e) => onValue(e.target.value)} placeholder=${placeholder} aria-label=${label} />
+    <select value="" onChange=${(e) => { if (e.target.value) onValue(e.target.value); e.target.value = ''; }} aria-label=${t('ui.pick_value')} title=${t('ui.pick_value')}>
+      <option value="">▾</option>
+      ${options.map(o => html`<option value=${o}>${o}</option>`)}
+    </select>
+  </div>`;
+}

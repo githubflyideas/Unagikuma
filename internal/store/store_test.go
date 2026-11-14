@@ -179,6 +179,13 @@ func TestHistoryUptimeCells(t *testing.T) {
 	if len(lat) != 80 || lat[0].Avg != 20 {
 		t.Fatalf("latency %d %+v", len(lat), lat[:1])
 	}
+	// 30 hard and 10 soft critical rounds failed; the latency chart marks them.
+	if fails, err := s.Failures("web", t0, at); err != nil || len(fails) != 40 || !fails[0].Equal(t0.Add(time.Hour)) {
+		t.Fatalf("failures %d %v", len(fails), err)
+	}
+	if fails, _ := s.Failures("web", t0.Add(-3*24*time.Hour), at); len(fails) == 0 {
+		t.Fatal("no failures from the aggregates")
+	}
 	hourly, _ := s.Latency("web", t0.Add(-3*24*time.Hour), at)
 	if len(hourly) == 0 || hourly[0].Avg != 20 {
 		t.Fatalf("hourly latency %+v", hourly)

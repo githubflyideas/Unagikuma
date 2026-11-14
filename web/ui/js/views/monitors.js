@@ -22,6 +22,14 @@ function splitStatus(q) {
 
 // MonitorTabs switches between the monitor list and the certificate and
 // domain expiry dates the checks found.
+// cmpNum matches a number against "3", "<3", ">=2" and the like.
+function cmpNum(n, v) {
+  const m = /^(<=|>=|<|>|=)?(\d+)$/.exec(v);
+  if (!m) return false;
+  const x = Number(m[2]);
+  return { '<': n < x, '<=': n <= x, '>': n > x, '>=': n >= x }[m[1]] ?? n === x;
+}
+
 export function MonitorTabs({ tab }) {
   return html`<div class="tabs"><a href="#/monitors" class=${tab === 'list' ? 'on' : ''}>${t('ui.mon.tab_list')}</a><a href="#/expiry" class=${tab === 'expiry' ? 'on' : ''}>${t('ui.exp.title')}</a></div>`;
 }
@@ -82,6 +90,7 @@ export function Monitors({ query }) {
           case 'team': hit = (r.team || '').toLowerCase() === v; break;
           case 'region': hit = (r.region || '').toLowerCase() === v; break;
           case 'flag': hit = r.flags.includes(v); break;
+          case 'attempts': hit = cmpNum(r.max_attempts, v); break;
           default: hit = [r.name, r.title, r.target, r.group, r.keyword].join(' ').toLowerCase().includes(term);
         }
         return hit !== neg;
@@ -96,6 +105,7 @@ export function Monitors({ query }) {
     setQ(next);
     replaceRoute(monitorsPath(next, sort));
   };
+  const attemptValues = useMemo(() => [...new Set(((list.data && list.data.items) || []).map(r => r.max_attempts))].sort((x, y) => x - y), [list.data]);
   const tagKeys = useMemo(() => [...new Set(((list.data && list.data.items) || []).flatMap(r => r.tags.map(tg => tg.k)))].sort(), [list.data]);
   const [moving, setMoving] = useState(null);
   const move = async (e) => {
@@ -182,6 +192,9 @@ export function Monitors({ query }) {
       ${regions.data && regions.data.items.length > 1 && html`<select value=${termOf('region')} onChange=${(e) => setTerm('region', e.target.value)} aria-label=${t('ui.region.field')}>
         <option value="">${t('ui.mon.all_regions')}</option>
         ${regions.data.items.map(rg => html`<option value=${rg.name}>${regionTitle(rg.name)}</option>`)}</select>`}
+      ${attemptValues.length > 1 && html`<select value=${termOf('attempts')} onChange=${(e) => setTerm('attempts', e.target.value)} aria-label=${t('ui.mon.attempts_filter')}>
+        <option value="">${t('ui.mon.all_attempts')}</option>
+        ${attemptValues.map(n => html`<option value=${String(n)}>${tn('ui.mon.attempts_n', n)}</option>`)}</select>`}
       ${tagKeys.length > 0 && html`<select value=${termOf('tag')} onChange=${(e) => setTerm('tag', e.target.value)} aria-label=${t('ui.tags')}>
         <option value="">${t('ui.mon.all_tags')}</option>
         ${tagKeys.map(k => html`<option value=${k.toLowerCase()}>${k}</option>`)}</select>`}
