@@ -49,6 +49,7 @@ type Def struct {
 
 var defs = []Def{
 	// ---- notifications ----
+	{Key: "probe.dns-servers", Kind: Addresses, Default: "", Desc: "DNS servers the checks ask, comma-separated (empty = this host's own settings)", DescZH: "检查使用的 DNS 服务器，多个用逗号分隔（留空 = 使用本机设置）"},
 	{Key: "probe.cert-warn-days", Kind: Int, Default: "62", Min: "0", Max: "3650", Desc: "TLS certificates expiring within this many days mark HTTPS and TLS checks DEGRADED unless the monitor sets cert-days (0 = off)", DescZH: "证书在多少天内到期时，HTTPS/TLS 检查显示为性能下降（监控项可用 cert-days 覆盖；0 关闭）"},
 	{Key: "probe.cert-critical-days", Kind: Int, Default: "7", Min: "0", Max: "3650", Desc: "TLS certificates expiring within this many days fail HTTPS and TLS checks unless the monitor sets cert-critical-days (0 = off); expired ones always fail", DescZH: "证书在多少天内到期时，HTTPS/TLS 检查判为故障（监控项可用 cert-critical-days 覆盖；0 关闭）；已过期的证书一律判为故障"},
 	{Key: "notify.max", Kind: Int, Default: "3", Min: "0", Max: "1000", Desc: "problem notifications per incident before going quiet (0 = unlimited)", DescZH: "每个故障最多发送几条问题通知后封顶（0 = 不限）", Override: "POLICY max="},

@@ -1,9 +1,9 @@
 // Overview: where a failure is on the way to the targets, every monitor at
 // a glance, what needs attention and what was held back.
 import { html, useState } from '../lib.js';
-import { t, tn, dur, fmtNum } from '../i18n.js';
+import { t, tn, dur, fmtNum, fmtTime } from '../i18n.js';
 import { get, post, me } from '../api.js';
-import { useFetch, useLive, Card, Loading, ErrorBox, Dot, Ago, Empty, Pill, Seg, msText, reasonText, quorumText, pct, openMonitor, enc, toast, toastError, useDocTitle, gwBad } from '../ui.js';
+import { useFetch, useLive, Card, Loading, ErrorBox, Dot, Ago, Empty, Pill, Seg, msText, reasonText, quorumText, pct, openMonitor, enc, toast, toastError, useDocTitle, gwBad, Modal } from '../ui.js';
 import { ObservationCell, observationSummary } from '../observations.js';
 import { IncidentList } from './problems.js';
 
@@ -32,7 +32,7 @@ function NodesCard({ nodes }) {
   <//>`;
 }
 
-export function HealthCard({ health }) {
+export function HealthCard({ health, dns }) {
   const h = health;
   const up = h.uplink;
   const gw = h.gateway;
@@ -47,11 +47,12 @@ export function HealthCard({ health }) {
         </div></div>
       <div class="hitem"><${Dot} status=${gw.addr ? (gw.ok ? 'ok' : gwBad(gw) ? 'critical' : 'pending') : 'pending'} />
         <div><b>${t('ui.health.gateway')}</b>
-          <span class="ltr">${gw.addr || '–'}</span>
+          <span class="ltr">${gw.addr || t('ui.health.gw_none')}</span>
           ${gw.addr && gw.ok ? html` · <span class="ltr">${msText(gw.rtt_ms)}</span>` : gw.note ? ' · ' + t('ui.health.gw_note.' + gw.note) : ''}
         </div></div>
       <div class="hitem"><${Dot} status=${h.dns_down ? 'critical' : 'ok'} />
-        <div><b>${t('ui.health.dns')}</b><span>${h.dns_down ? t('ui.health.dns_down') : t('ui.health.dns_ok')}</span></div></div>
+        <div><b>${t('ui.health.dns')}</b><span>${h.dns_down ? t('ui.health.dns_down') : t('ui.health.dns_ok')}</span>
+          ${dns && dns.servers && dns.servers.length > 0 && html`<span class="small"> · <span class="ltr">${dns.servers.join(', ')}</span> (${t(dns.custom ? 'ui.health.dns_custom' : 'ui.health.dns_system')})</span>`}</div></div>
       <div class="hitem"><${Dot} status=${hbStatus} />
         <div><b>${t('ui.health.heartbeat')}</b>
           <span>${!hb.configured ? t('ui.health.hb_off') : hb.last_error ? hb.last_error : html`${t('ui.health.hb_ok')} <${Ago} at=${hb.last_ok} />`}</span>
@@ -386,13 +387,31 @@ function Onboarding({ d, reload }) {
 
 const SAVED = [['outage_saved', 'ui.value.outage_saved'], ['soft_filtered', 'ui.value.soft_filtered'], ['outage_merged', 'ui.value.outage_merged'], ['cap_saved', 'ui.value.cap_saved']];
 
+// Saved shows the alerts not sent in the last seven days: the total, a
+// bar per day, and a row per reason that opens the list of those alerts.
 function Saved({ week }) {
-  const parts = SAVED.map(([k, label]) => [t(label), week[k] || 0]);
-  const total = parts.reduce((a, p) => a + p[1], 0);
+  const d = useFetch(() => get('/saved-alerts').catch(() => null), []);
+  const [open, setOpen] = useState(null);
+  const parts = SAVED.map(([k, label]) => [k, t(label), week[k] || 0]);
+  const total = parts.reduce((a, p) => a + p[2], 0);
   if (!total) return html`<p class="muted small" style=${{ margin: 0 }}>${t('ui.value.none')}</p>`;
-  const mx = Math.max(...parts.map(p => p[1]));
+  const mx = Math.max(...parts.map(p => p[2]));
+  const days = (d.data && d.data.days) || [];
+  const dayTotal = (x) => Object.values(x.counts).reduce((a, n) => a + n, 0);
+  const dmx = Math.max(1, ...days.map(dayTotal));
+  const items = ((d.data && d.data.items) || []).filter(x => x.name === open);
   return html`<div class="bignum"><strong>${fmtNum(total)}</strong><span class="muted">${t('ui.ov.saved_unit')}</span></div>
-    <div class="sbars">${parts.map(([l, n]) => html`<div class="sbar"><span>${l}</span><b class="mono">${fmtNum(n)}</b><div class="track"><i style=${{ width: (n / mx * 100) + '%' }}></i></div></div>`)}</div>`;
+    <p class="small" style=${{ margin: '0 0 10px' }}>${t('ui.value.summary', { n: fmtNum(total) })}</p>
+    ${days.length > 0 && html`<div class="dbars" role="img" aria-label=${t('ui.value.by_day')}>${days.map(x => html`<div class="dbar" title=${x.day + ': ' + dayTotal(x)}>
+      <i style=${{ height: (dayTotal(x) / dmx * 100) + '%' }}></i><span>${x.day.slice(5).replace('-', '/')}</span></div>`)}</div>`}
+    <div class="sbars">${parts.map(([k, l, n]) => html`<button type="button" class="sbar" disabled=${!n} onClick=${() => setOpen(k)} title=${n ? t('ui.value.show') : ''}>
+      <span>${l}</span><b class="mono">${fmtNum(n)}</b><div class="track"><i style=${{ width: (n / mx * 100) + '%' }}></i></div></button>`)}</div>
+    ${open && html`<${Modal} title=${t('ui.value.' + open)} onClose=${() => setOpen(null)}>
+      ${!items.length ? html`<p class="muted small">${t('ui.value.list_none')}</p>` : html`<table class="tbl small">
+        <thead><tr><th>${t('ui.time')}</th><th>${t('ui.value.monitor')}</th></tr></thead>
+        <tbody>${items.map(x => html`<tr><td class="nowrap">${fmtTime(x.at)}</td><td><a href=${'#/monitors/' + enc(x.monitor)}>${x.monitor}</a>${x.n > 1 ? ' ×' + x.n : ''}</td></tr>`)}</tbody></table>`}
+      <p class="small muted">${t('ui.value.hint.' + open)}</p>
+    <//>`}`;
 }
 
 export function Overview() {
@@ -418,7 +437,7 @@ export function Overview() {
           ${cluster && html`<${Seg} value=${view} onChange=${setView} options=${[['hive', t('ui.ov.view_hive')], ['matrix', t('ui.ov.view_matrix')]]} />`}`}>
           ${!mons.data ? html`<${Loading} />` : view === 'matrix' && cluster ? html`<${Matrix} rows=${rows} nodes=${d.paths || []} />` : html`<${Hive} rows=${rows} />`}
         <//>
-        ${d.expiring.length > 0 && html`<${Card} title=${t('ui.ov.expiring')} flush actions=${html`<a class="btn sm" href="#/problems/expiry">${t('ui.exp.all')}</a>`}>
+        ${d.expiring.length > 0 && html`<${Card} title=${t('ui.ov.expiring')} flush actions=${html`<a class="btn sm" href="#/expiry">${t('ui.exp.all')}</a>`}>
           <table class="tbl"><tbody>${d.expiring.map(x => html`<tr class="click" onClick=${() => { location.hash = '#/monitors/' + enc(x.monitor); }}>
             <td class="name">${x.title} <span class="tag">${t('ui.exp.kind.' + x.what)}</span></td><td class="right"><span class=${x.days < 7 ? 'err-text' : 'warn-text'}>${tn('ui.ov.days_left', Math.floor(x.days))}</span></td></tr>`)}</tbody></table>
         <//>`}
@@ -429,7 +448,7 @@ export function Overview() {
         <//>
         <${Card} title=${t('ui.ov.saved_title')}><${Saved} week=${d.value_week || {}} /><//>
         ${cluster && html`<${NodesCard} nodes=${d.nodes} serial=${d.serial} />`}
-        <${HealthCard} health=${d.health} />
+        <${HealthCard} health=${d.health} dns=${d.dns} />
         <${Card} title=${t('ui.ov.channels')} flush><${Channels} channels=${d.channels} alerting=${d.alerting_configured} /><//>
         ${d.pending_notifications > 0 && html`<div class="banner info">${tn('ui.ov.pending_notifications', d.pending_notifications)}</div>`}
       </div>

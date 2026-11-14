@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,37 +33,18 @@ var idFiles = []string{"installation", "license.json"}
 
 var keyFiles = []string{"unagikuma.key", "cluster-ca.crt", "cluster-ca.key", "cluster.crt", "cluster.key", "site-identity/cluster-ca.crt", "site-identity/cluster-ca.key", "site-identity/cluster.crt", "site-identity/cluster.key"}
 
-// Theme packs (Settings › Appearance) are kept under themes/: a folder per
-// pack with theme.json and its images, and the name of the one in use.
+// Backups made before 2.6.11 may carry theme packs under themes/; the
+// console no longer has them, so a restore reads past those entries.
 var themeEntry = regexp.MustCompile(`^themes/(active|[a-z0-9][a-z0-9-]{0,39}/(theme\.json|logo|favicon))$`)
 
 const maxThemeFile = 1 << 20
 
-// themeFiles lists the theme pack files of a data directory.
 // configEntry is the configuration file's name in an archive;
 // legacyConfigEntry the one archives before 2.6 used.
 const (
 	configEntry       = "monitors.conf"
 	legacyConfigEntry = "monitors.bind"
 )
-
-func themeFiles(dataDir string) []string {
-	var out []string
-	_ = filepath.WalkDir(filepath.Join(dataDir, "themes"), func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return nil
-		}
-		rel, err := filepath.Rel(dataDir, p)
-		if err != nil {
-			return nil
-		}
-		if name := filepath.ToSlash(rel); themeEntry.MatchString(name) {
-			out = append(out, name)
-		}
-		return nil
-	})
-	return out
-}
 
 // DB writes a consistent copy of a database ("core" or "history").
 type DB func(ctx context.Context, which string, w io.Writer) error
@@ -166,11 +146,6 @@ func Write(ctx context.Context, w io.Writer, db DB, o Options) (Manifest, error)
 			continue
 		}
 		if err := add(k, 0o644, file(p)); err != nil {
-			return m, err
-		}
-	}
-	for _, k := range themeFiles(o.DataDir) {
-		if err := add(k, 0o644, file(filepath.Join(o.DataDir, filepath.FromSlash(k)))); err != nil {
 			return m, err
 		}
 	}
@@ -311,6 +286,10 @@ func (u *unpacker) entry(h *tar.Header, tr *tar.Reader) error {
 	theme := themeEntry.MatchString(h.Name)
 	if (!u.allowed[h.Name] && !theme) || h.Typeflag != tar.TypeReg || (theme && h.Size > maxThemeFile) {
 		return fmt.Errorf("unexpected entry %q in backup", h.Name)
+	}
+	if theme {
+		_, err := io.Copy(io.Discard, tr)
+		return err
 	}
 	if h.Name == "manifest.json" {
 		if err := json.NewDecoder(io.LimitReader(tr, 1<<20)).Decode(u.m); err != nil {

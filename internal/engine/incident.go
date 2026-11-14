@@ -207,7 +207,7 @@ func (e *Engine) incidentEvent(inc *Incident, ev string) {
 	case "":
 		return
 	case IncidentCapped:
-		e.deps.Sink.Counter(CounterCapSaved, 1)
+		e.saved(CounterCapSaved, inc.Monitor, 1)
 	}
 	e.event(Event{Type: EventIncident, Severity: "info", Monitor: inc.Monitor, Message: "incident " + strings.ReplaceAll(ev, "_", " "),
 		Data: map[string]any{"msg": "incident_" + ev, "incident_id": inc.ID, "event": ev, "count": inc.State.NotifyCount}})

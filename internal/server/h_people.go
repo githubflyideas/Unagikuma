@@ -202,6 +202,16 @@ func (s *Server) personDelete(w http.ResponseWriter, r *http.Request) (any, erro
 	if err != nil {
 		return nil, err
 	}
+	// A login's own entry goes with the login, not before it.
+	if people, err := s.app.Store().People(); err == nil {
+		for _, p := range people {
+			if p.ID == id && p.Username != "" {
+				if _, err := s.app.Store().UserID(p.Username); err == nil {
+					return nil, Errorf(http.StatusConflict, CodeConflict, "%s signs in as %s: delete the login first", p.Name, p.Username)
+				}
+			}
+		}
+	}
 	if err := s.app.Store().DeletePerson(id); err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, notFound("person")

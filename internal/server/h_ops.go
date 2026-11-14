@@ -11,6 +11,8 @@ import (
 
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/engine"
+	"github.com/githubflyideas/unagikuma/internal/netscope"
+	"github.com/githubflyideas/unagikuma/internal/probe"
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
 
@@ -182,7 +184,7 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) (any, error) {
 		"instance": s.app.Instance(), "serial": ov.Serial, "layout": layout, "counts": counts, "unhandled": ov.Unhandled,
 		"degraded": ov.Degraded, "value_week": week, "health": health, "channels": chans, "expiring": expiring,
 		"open_system": ov.OpenSystem, "pending_notifications": ov.PendingIntents, "banner": s.app.Banner(),
-		"alerting_configured": alerting, "nodes": nodes, "paths": paths, "tactical": s.tactical(r), "script_problems": s.scriptCount(),
+		"alerting_configured": alerting, "dns": dnsInUse(), "nodes": nodes, "paths": paths, "tactical": s.tactical(r), "script_problems": s.scriptCount(),
 		"superseded": s.app.SupersededBy(), "term": s.app.Term(), "contact_issues": len(s.app.ChannelIssues()),
 		"people": len(s.app.Directory().People()), "status_pages": len(cfg.StatusPages), "storage": s.app.Store().WriteHealth(),
 	}, nil
@@ -477,4 +479,13 @@ func (s *Server) historySite(r *http.Request) string {
 }
 func (s *Server) historySites(w http.ResponseWriter, r *http.Request) (any, error) {
 	return s.app.Store().HistorySites()
+}
+
+// dnsInUse names the DNS servers the checks ask: the ones set with
+// probe.dns-servers, or this host's own.
+func dnsInUse() map[string]any {
+	if set := probe.DNSServers(); len(set) > 0 {
+		return map[string]any{"servers": set, "custom": true}
+	}
+	return map[string]any{"servers": netscope.SystemDNS(), "custom": false}
 }

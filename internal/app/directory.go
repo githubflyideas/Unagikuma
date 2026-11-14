@@ -47,9 +47,6 @@ func (a *App) send(ctx context.Context, ch notify.Channel, m *notify.Message) no
 	if m.Site == "" {
 		m.Site = a.site()
 	}
-	if m.Brand == "" {
-		m.Brand = a.brandName()
-	}
 	a.noteLeftOut(ch, m)
 	at := a.sender.Send(ctx, ch, m)
 	a.noteGateway(ch, at)

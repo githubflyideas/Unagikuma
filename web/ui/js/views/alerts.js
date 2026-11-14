@@ -4,7 +4,7 @@ import { html, useState, useEffect, useRef } from '../lib.js';
 import { t, has, currentLang } from '../i18n.js';
 import { get, post, del, put, ifMatch, me } from '../api.js';
 import { ContactsTab, IssueDot, NewAddresses, addressKey } from './contacts.js';
-import { ChangesTab } from './changes.js';
+import { PeriodsTab } from './periods.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle } from '../ui.js';
 
 // kindLabel is a kind's name in the reader's language where it has one.
@@ -143,7 +143,7 @@ function PeriodField({ label, value, onChange, periods }) {
   const name = value.replace(/^!/, '');
   const names = periods.map(p => p.name);
   const known = !name || names.includes(name);
-  return html`<${Field} label=${label} hint=${periods.length ? t('ui.ch.period_hint2') : html`${t('ui.ch.period_none')} <a href="#/config">${t('ui.nav.config')}</a>`}>
+  return html`<${Field} label=${label} hint=${periods.length ? t('ui.ch.period_hint2') : html`${t('ui.ch.period_none')} <a href="#/alerts/periods">${t('ui.per.add')}</a>`}>
     <div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }}>
       <select value=${name} onChange=${(e) => onChange(e.target.value ? (outside ? '!' : '') + e.target.value : '')} style=${{ flex: '1 1 200px' }}>
         <option value="">${t('ui.ch.period_always')}</option>
@@ -183,6 +183,29 @@ function RequestPanel({ kind, opts, docs }) {
   </details>`;
 }
 
+// Kinds that send to an address the user wrote take extra request headers.
+const takesHeaders = (kind) => kind === 'webhook' || kind.startsWith('webhook:') || kind === 'custom-sms' || kind === 'custom-voice';
+
+// HeadersField edits the header.<name> options, one "Name: value" a line.
+// A credential header comes back masked (***) and stays as saved unless
+// it is typed again.
+function HeadersField({ opts, setOpts }) {
+  const fromOpts = () => Object.entries(opts).filter(([k]) => k.startsWith('header.')).map(([k, v]) => k.slice(7) + ': ' + v).join('\n');
+  const [text, setText] = useState(fromOpts);
+  const change = (s) => {
+    setText(s);
+    const next = Object.fromEntries(Object.entries(opts).filter(([k]) => !k.startsWith('header.')));
+    for (const line of s.split('\n')) {
+      const i = line.indexOf(':');
+      const k = line.slice(0, i).trim().toLowerCase();
+      if (i > 0 && /^[a-z0-9-]+$/.test(k)) next['header.' + k] = line.slice(i + 1).trim();
+    }
+    setOpts(next);
+  };
+  return html`<${Field} label=${t('ui.ch.headers')} hint=${t('ui.ch.headers_hint')}>
+    <textarea class="ltr mono" rows="3" value=${text} placeholder="Content-Type: application/json" onInput=${(e) => change(e.target.value)}></textarea><//>`;
+}
+
 // The e-mail options that only an SMTP server uses.
 const SMTP_ONLY = ['host', 'port', 'username', 'password', 'tls'];
 
@@ -203,20 +226,24 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
   // E-mail goes to an SMTP server or through this machine's sendmail
   // command; each way shows only its own fields.
   const viaSendmail = kind === 'email' && opts.via === 'sendmail';
-  const smsOrVoice = /-(sms|voice)$/.test(kind);
   const shown = (f) => kind !== 'email' || (viaSendmail ? !SMTP_ONLY.includes(f.key) : f.key !== 'program');
   // Any channel may be limited to a time period ("!name" = outside it).
   const info = { ...found, fields: [...((found && found.fields) || []).filter(shown), { key: 'period', type: 'text', placeholder: 'office-hours' }] };
   const required = (f) => f.required || (kind === 'email' && !viaSendmail && (f.key === 'host' || f.key === 'from'));
   const set = (k, v) => setOpts({ ...opts, [k]: v });
   const values = () => {
+    // Options this form does not show (retries=, rate=, an option written
+    // in the file) are kept as they are; only what the form edits changes.
     const o = {};
+    if (editing) for (const [k, v] of Object.entries(initial.opts)) if (v !== '' && !k.startsWith('header.')) o[k] = v;
     for (const f of info.fields) {
       const v = opts[f.key] !== undefined ? opts[f.key] : '';
-      if (v !== '') o[f.key] = v;
+      if (v !== '') o[f.key] = v; else delete o[f.key];
     }
+    delete o.system; delete o.report;
     if (opts.system === 'yes') o.system = 'yes';
-    if (opts.report === 'no') o.report = 'no';
+    if (opts.report === 'no' || opts.report === 'yes') o.report = opts.report;
+    for (const [k, v] of Object.entries(opts)) if (k.startsWith('header.') && v !== '') o[k] = v;
     return o;
   };
   // store saves the channel; then (optional) runs once it exists.
@@ -224,7 +251,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
     setBusy(true);
     setErr(null);
     try {
-      await post('/channels', { name, kind, opts: values() }, ifMatch(initial && initial.etag));
+      await post('/channels', { name, kind, opts: values(), from: editing ? initial.name : '' }, ifMatch(initial && initial.etag));
       if (then) await then();
       toast(t('ui.saved'));
       onSaved();
@@ -251,7 +278,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
       const k = kind.startsWith('webhook:') ? 'webhook' : kind;
       const o = values();
       if (kind.startsWith('webhook:')) o.preset = kind.slice(8);
-      setTest({ res: await post('/channels/test', editing && Object.values(o).includes('***') ? { name } : { name: name || 'test', kind: k, opts: o }) });
+      setTest({ res: await post('/channels/test', editing && Object.values(o).includes('***') ? { name: initial.name } : { name: name || 'test', kind: k, opts: o }) });
     } catch (e2) { setTest({ err: e2 }); }
   };
   return html`<${Modal} title=${editing ? t('ui.ch.edit', { name }) : t('ui.ch.add')} onClose=${onClose}>
@@ -267,7 +294,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
               ? html`<optgroup label=${label}>${list.map(k => html`<option value=${k.kind}>${labelOf(k)}</option>`)}</optgroup>`
               : list.map(k => html`<option value=${k.kind}>${labelOf(k)}</option>`))}
           </select><//>
-        <${Field} label=${t('ui.name')} hint=${editing ? '' : t('ui.ch.name_hint')}><input type="text" class="ltr" value=${name} onInput=${(e) => setName(e.target.value)} required disabled=${editing} pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" placeholder=${t('ui.ch.name_ph')} /><//>
+        <${Field} label=${t('ui.name')} hint=${editing ? (name !== initial.name ? t('ui.ch.rename_hint') : '') : t('ui.ch.name_hint')}><input type="text" class="ltr" value=${name} onInput=${(e) => setName(e.target.value)} required pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" placeholder=${t('ui.ch.name_ph')} /><//>
       </div>
       ${info.fields.map(f => {
         const v = opts[f.key] !== undefined ? opts[f.key] : (editing ? '' : f.default || '');
@@ -298,10 +325,10 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
           <input type=${f.type === 'secret' ? 'password' : f.type === 'number' ? 'number' : 'text'} class="ltr" value=${v} required=${required(f) && !editing}
             placeholder=${f.type === 'secret' && editing ? '***' : f.placeholder || ''} autocomplete="off" onInput=${(e) => set(f.key, e.target.value)} /><//>`;
       })}
+      ${takesHeaders(kind) && html`<${HeadersField} opts=${opts} setOpts=${setOpts} />`}
       ${kind !== 'group' && html`<${RequestPanel} kind=${kind} opts=${values()} docs=${found && found.docs} />`}
       <label class="switch"><input type="checkbox" checked=${opts.system === 'yes'} onChange=${(e) => set('system', e.target.checked ? 'yes' : '')} /> ${t('ui.ch.system')}</label>
       <p class="small muted" style=${{ margin: 0 }}>${t('ui.ch.system_hint')}</p>
-      <label class="switch"><input type="checkbox" checked=${smsOrVoice ? opts.report === 'yes' : opts.report !== 'no'} onChange=${(e) => set('report', smsOrVoice ? (e.target.checked ? 'yes' : '') : (e.target.checked ? '' : 'no'))} /> ${t('ui.ch.takes_report')}</label>
       ${err && html`<div class="banner error">${errText(err)}</div>`}
       ${test && !test.busy && html`<div class=${'banner ' + (test.err || !test.res.ok ? 'error' : (test.res.warning ? 'warning' : 'ok'))}>
         ${test.err ? errText(test.err) : test.res.ok
@@ -439,9 +466,9 @@ export function Alerts({ tab }) {
     <div class="tabs">
       <a href="#/alerts/channels" class=${tab === 'channels' ? 'on' : ''}>${t('ui.ch.tab')}</a>
       <a href="#/alerts/contacts" class=${tab === 'contacts' ? 'on' : ''}>${t('ui.dir.tab')}</a>
-      <a href="#/alerts/changes" class=${tab === 'changes' ? 'on' : ''}>${t('ui.chg.tab')}</a>
+      <a href="#/alerts/periods" class=${tab === 'periods' ? 'on' : ''}>${t('ui.per.tab')}</a>
     </div>
-    ${tab === 'contacts' ? html`<${ContactsTab} />` : tab === 'changes' ? html`<${ChangesTab} />` : html`<${ChannelsTab} />`}
+    ${tab === 'contacts' ? html`<${ContactsTab} />` : tab === 'periods' ? html`<${PeriodsTab} />` : html`<${ChannelsTab} />`}
   </div>`;
 }
 

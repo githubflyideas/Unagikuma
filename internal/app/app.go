@@ -19,7 +19,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/githubflyideas/unagikuma/internal/branding"
 	"github.com/githubflyideas/unagikuma/internal/cluster"
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/directory"
@@ -66,7 +65,6 @@ type App struct {
 	store     *store.Store
 	secrets   *store.Secrets
 	license   *license.Checker
-	themes    *branding.Store
 	engine    *engine.Engine
 	sender    *notify.Sender
 	cfg       *configManager
@@ -134,6 +132,12 @@ func New(o Options) (*App, error) {
 		}
 	}
 	a.recordVersion()
+	// Every login is a person in the list; earlier versions kept them apart.
+	if n, err := a.store.LinkUsers(); err != nil {
+		o.Log.Warn("could not add logins to the list of people", "err", err)
+	} else if n > 0 {
+		o.Log.Info("logins added to the list of people", "n", n)
+	}
 	a.heartbeat = &engine.Heartbeat{
 		Client:    &http.Client{Transport: &http.Transport{Proxy: http.ProxyFromEnvironment}},
 		URL:       a.heartbeatURL,
@@ -193,7 +197,6 @@ func (a *App) openStore() error {
 	if o.LicenseRing != nil {
 		ring = *o.LicenseRing
 	}
-	a.themes = branding.NewStore(o.DataDir)
 	if a.license, err = license.OpenWith(o.DataDir, ring); err != nil {
 		return err
 	}
@@ -395,6 +398,7 @@ func (a *App) applyLocked(cfg *config.Config) {
 	}
 	a.store.SetTunables(runtimeCfg.Tunables)
 	a.loadDirectory(runtimeCfg.Tunables)
+	probe.SetDNSServers(strings.Split(runtimeCfg.Tunables.Raw("probe.dns-servers"), ","))
 	lec, local := a.localEngineConfig()
 	defs := make([]store.MonitorDef, 0, len(cfg.Monitors))
 	for _, m := range cfg.Monitors {

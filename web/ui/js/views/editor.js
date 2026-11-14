@@ -40,25 +40,6 @@ const PLACEHOLDER = {
   REDIS: '10.0.0.20:6379', POSTGRES: 'db.example.lan:5432', MYSQL: 'db.example.lan:3306', GRPC: 'api.example.lan:50051', DOCKER: 'nginx', DOMAIN: 'example.com',
 };
 
-const COMMON = ['timeout', 'retry', 'attempts', 'recover-attempts', 'degraded', 'scope', 'authorized', 'family', 'on-filtered', 'parent', 'cert-days', 'cert-critical-days', 'handler'];
-const TYPE_OPTS = {
-  HTTP: ['method', 'expect', 'keyword', 'keyword-regex', 'absent', 'json-path', 'json-expect', 'json-expect-num', 'body', 'host', 'basic', 'bearer', 'proxy', 'no-follow', 'insecure', 'user-agent', 'header.Authorization'],
-  TCP: ['send', 'send-hex', 'expect', 'expect-hex', 'expect-regex', 'tls', 'servername', 'insecure'],
-  PING: ['count', 'loss', 'rtt', 'size'],
-  UDP: ['send', 'send-hex', 'expect', 'expect-hex', 'query', 'qtype', 'rcode', 'recurse', 'community', 'version', 'oid', 'expect-program', 'accept-from'],
-  DNS: ['query', 'qtype', 'expect', 'expect-all', 'rcode', 'recurse'],
-  REDIS: ['password', 'user', 'role', 'tls', 'insecure'],
-  POSTGRES: ['user', 'password', 'database', 'ssl', 'insecure'],
-  MYSQL: ['user', 'password', 'database', 'ssl', 'insecure'],
-  GRPC: ['service', 'tls', 'servername', 'insecure'],
-  DOCKER: ['socket'],
-  DOMAIN: ['days', 'critical-days', 'rdap', 'whois'],
-  NTP: ['expect'],
-  SNMP: ['community', 'version', 'oid', 'expect', 'expect-num'],
-  SYSLOG: [],
-  EXEC: ['args', 'address'],
-  PUSH: ['period', 'grace'],
-};
 // An example value of each option, shown in the value box; what the
 // option does is in the language catalogue (ui.opt.<key>).
 const OPT_EXAMPLE = {
@@ -68,11 +49,13 @@ const OPT_EXAMPLE = {
   'json-expect': 'up', 'json-expect-num': '< 500', body: '{"ping":1}', host: 'www.example.com', basic: 'user:${secret:web_pw}',
   bearer: '${secret:api_token}', proxy: 'http://10.0.0.8:3128', 'no-follow': 'yes', insecure: 'yes', 'user-agent': 'unagikuma',
   'header.Authorization': 'Bearer ${secret:api_token}', send: 'PING\\r\\n', 'send-hex': '0a0b0c', 'expect-hex': '0d0e', 'expect-regex': '^\\+OK',
-  tls: 'yes', servername: 'mail.example.com', count: '3', loss: '20', rtt: '150ms', size: '64', query: 'www.example.com', qtype: 'AAAA',
+  tls: 'yes', servername: 'mail.example.com', count: '3', loss: '20%', rtt: '150ms', size: '64', query: 'www.example.com', qtype: 'AAAA',
   rcode: 'NOERROR', recurse: 'no', community: '${secret:snmp_ro}', version: '2c', oid: '1.3.6.1.2.1.1.3.0', 'expect-program': '100003',
   'accept-from': 'any', 'expect-all': '10.0.0.1,10.0.0.2', password: '${secret:db_pw}', user: 'monitor', role: 'master', database: 'app',
   ssl: 'yes', service: 'grpc.health.v1.Health', socket: '/var/run/docker.sock', days: '30', 'critical-days': '7', rdap: 'https://rdap.example.net/',
   whois: 'whois.example.net', 'expect-num': '> 0', args: '-w 20% -c 10%', address: '10.0.0.21', period: '24h', grace: '2h',
+  aa: 'yes', 'allow-metadata': 'yes', 'expect-len': '48', fallback: 'off', 'host-check': 'off', 'max-offset': '500ms', 'max-stratum': '4',
+  'min-answers': '2', retransmit: '2', 'src-port': '1024', template: 'snmp',
 };
 
 // Options shown as their own form fields rather than in the table
@@ -107,6 +90,7 @@ export function MonitorEditor({ name }) {
   const teams = useFetch(() => get('/teams'), []);
   const regions = useFetch(() => get('/regions'), []);
   const mons = useFetch(() => get('/monitors'), []);
+  const optList = useFetch(() => get('/monitor-options'), []);
   const [f, setF] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -194,16 +178,17 @@ export function MonitorEditor({ name }) {
     } catch (e2) { setErr(e2); }
     setBusy(false);
   };
-  const suggestions = [...(TYPE_OPTS[f.type] || []), ...COMMON];
+  // The options this type takes, as the server's checks accept them.
+  const suggestions = (optList.data && optList.data[f.type]) || [];
   const diags = err && err.body && err.body.diagnostics;
   return html`<div class="page">
     <div class="row"><a href=${editing ? '#/monitors/' + enc(name) : '#/monitors'} class="muted">← ${t('ui.back')}</a></div>
     <form class="card" onSubmit=${save}>
       <div class="hd"><h2>${editing ? t('ui.mon.edit_title', { name }) : t('ui.mon.add')}</h2></div>
       <div class="bd form">
-        <${Field} label=${t('ui.type')} hint=${t('ui.mon.type_hint.' + f.type)}>
+        <${Field} label=${t('ui.type')} hint=${editing && f.type === 'PUSH' ? t('ui.mon.push_type_locked') : t('ui.mon.type_hint.' + f.type)}>
           <select value=${f.type} onChange=${(e) => setF({ ...f, type: e.target.value, port: '' })} disabled=${editing && f.type === 'PUSH'}>
-            ${TYPE_GROUPS.map(([g, list]) => html`<optgroup label=${t('ui.mon.tgroup.' + g)}>${list.map(x => html`<option value=${x}>${x} — ${t('ui.mon.tname.' + x)}</option>`)}</optgroup>`)}
+            ${TYPE_GROUPS.map(([, list], i) => html`${i > 0 && html`<hr />`}${list.map(x => html`<option value=${x}>${x} — ${t('ui.mon.tname.' + x)}</option>`)}`)}
           </select><//>
         <div class="two">
           <${Field} label=${t('ui.name')} hint=${t('ui.mon.name_hint')}><input type="text" class="ltr" value=${f.name} onInput=${set('name')} required pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" /><//>

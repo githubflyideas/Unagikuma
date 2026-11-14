@@ -242,7 +242,9 @@ func (s *Store) SavePerson(p Person) (int64, error) {
 			n++
 		}
 	}
-	if n == 0 {
+	// A login's own entry may wait for its addresses; anyone else is in
+	// the list only to be reached.
+	if n == 0 && p.Username == "" {
 		return 0, ErrNoAddress
 	}
 	notify := strings.Join(p.Notify, ",")
@@ -440,4 +442,131 @@ func (s *Store) ClearBounces(kind, address string) error {
 	defer s.wmu.Unlock()
 	_, err := s.core.Exec(`DELETE FROM bounces WHERE kind=? AND value=?`, kind, normalizeContact(kind, address))
 	return err
+}
+
+// LinkUsers gives every login without one an entry of its own in the
+// list of people, so that each login is a person the system can reach
+// once an address is added. The handle is the login name, made valid and
+// unique. It returns how many entries it added.
+func (s *Store) LinkUsers() (int, error) {
+	users, err := s.Users()
+	if err != nil {
+		return 0, err
+	}
+	people, err := s.People()
+	if err != nil {
+		return 0, err
+	}
+	linked, taken := map[string]bool{}, map[string]bool{}
+	for _, p := range people {
+		linked[p.Username] = true
+		taken[p.Handle] = true
+	}
+	added := 0
+	for _, u := range users {
+		if linked[u.Username] {
+			continue
+		}
+		base := handleOf(u.Username)
+		h := base
+		for i := 2; taken[h]; i++ {
+			h = fmt.Sprintf("%s-%d", base, i)
+		}
+		s.wmu.Lock()
+		now := ms(s.now())
+		_, err := s.core.Exec(`INSERT INTO people(handle,name,note,username,created_at,updated_at,notify) VALUES(?,?,?,?,?,?,?)`, h, u.Username, "", u.Username, now, now, "")
+		s.wmu.Unlock()
+		if err != nil {
+			return added, err
+		}
+		taken[h] = true
+		added++
+	}
+	return added, nil
+}
+
+// handleOf turns a login name into a valid @handle.
+func handleOf(name string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '.', r == '_', r == '-':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+	h := strings.TrimLeft(b.String(), "._-")
+	if len(h) > 50 {
+		h = h[:50]
+	}
+	if h == "" {
+		h = "user"
+	}
+	return h
+}
+
+// SetPersonLogin makes a person the one a login belongs to ("" takes the
+// login away from them).
+func (s *Store) SetPersonLogin(id int64, username string) error {
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	res, err := s.core.Exec(`UPDATE people SET username=? WHERE id=?`, username, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// UnlinkUser keeps a deleted login's person, now without the login.
+func (s *Store) UnlinkUser(username string) error {
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	_, err := s.core.Exec(`UPDATE people SET username='' WHERE username=?`, username)
+	return err
+}
+
+// RenameChannel follows a channel's new name where people and announced
+// changes name it.
+func (s *Store) RenameChannel(oldName, newName string) error {
+	swap := func(list string) string {
+		parts := strings.Split(list, ",")
+		for i, p := range parts {
+			if p == oldName {
+				parts[i] = newName
+			}
+		}
+		return strings.Join(parts, ",")
+	}
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	for _, q := range []struct{ table, col string }{{"people", "notify"}, {"changes", "channels"}} {
+		rows, err := s.core.Query(`SELECT id,`+q.col+` FROM `+q.table+` WHERE ',' || `+q.col+` || ',' LIKE ?`, "%,"+oldName+",%")
+		if err != nil {
+			return err
+		}
+		type upd struct {
+			id int64
+			v  string
+		}
+		var ups []upd
+		for rows.Next() {
+			var u upd
+			if err := rows.Scan(&u.id, &u.v); err != nil {
+				rows.Close()
+				return err
+			}
+			ups = append(ups, upd{u.id, swap(u.v)})
+		}
+		rows.Close()
+		for _, u := range ups {
+			if _, err := s.core.Exec(`UPDATE `+q.table+` SET `+q.col+`=? WHERE id=?`, u.v, u.id); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

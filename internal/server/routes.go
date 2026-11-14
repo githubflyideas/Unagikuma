@@ -69,6 +69,8 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/channels/preview", "admin", s.channelPreview)
 	s.handle("POST /api/v1/channels/request-preview", "admin", s.channelRequestPreview)
 	s.handle("GET /api/v1/periods", "read", s.periods)
+	s.handle("POST /api/v1/periods", "admin", global(s.periodSave))
+	s.handle("DELETE /api/v1/periods/{name}", "admin", global(s.periodDelete))
 	s.handle("GET /api/v1/changes", "read", s.changes)
 	s.handle("POST /api/v1/changes", "write", s.changeCreate)
 	s.handle("PUT /api/v1/changes/{id}", "write", s.changeUpdate)
@@ -102,6 +104,8 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/tunables", "read", s.tunablesGet)
 	s.handle("PUT /api/v1/tunables", "admin", s.tunablesPut)
 	s.handle("GET /api/v1/keywords", "read", s.keywordsList)
+	s.handle("GET /api/v1/monitor-options", "read", s.monitorOptions)
+	s.handle("GET /api/v1/saved-alerts", "read", s.savedAlerts)
 	s.handle("GET /api/v1/system", "read", s.system)
 	s.handle("GET /api/v1/settings", "read", s.settingsGet)
 	s.handle("GET /api/v1/settings/exit-countries", "admin", s.exitCities)
@@ -153,13 +157,6 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/audit/export", "admin", requireFeature(s, license.FeatAudit, s.auditExport))
 	s.handle("GET /api/v1/audit/verify", "admin", requireFeature(s, license.FeatAudit, s.auditVerify))
 	s.handle("GET /api/v1/license", "read", s.licenseGet)
-	s.handle("GET /api/v1/brand", "", s.brandGet)
-	s.handle("GET /api/v1/themes", "admin", s.themesList)
-	s.handle("POST /api/v1/themes", "admin", s.themesUpload)
-	s.handle("PUT /api/v1/themes/active", "admin", s.themesActivate)
-	s.handle("DELETE /api/v1/themes/{id}", "admin", s.themesDelete)
-	s.handle("GET /api/v1/themes/{id}/export", "admin", s.themesExport)
-	s.handle("GET /api/v1/themes/{id}/image/{which}", "admin", s.themesImage)
 	s.handle("PUT /api/v1/license", "admin", s.licensePut)
 	s.handle("DELETE /api/v1/license", "admin", s.licenseDelete)
 	s.handle("POST /api/v1/users", "admin", s.userCreate)
@@ -236,9 +233,6 @@ func (s *Server) routes() {
 				r2.URL.Path = "/status.html"
 				w.Header().Set("Cache-Control", "no-cache")
 				files.ServeHTTP(w, r2)
-				return
-			}
-			if (p == "logo.png" && s.brandImage(w, r, "logo")) || (p == "favicon.png" && s.brandImage(w, r, "favicon")) {
 				return
 			}
 			if p == "wall" || p == "wall/" || p == "summary" || p == "summary/" {

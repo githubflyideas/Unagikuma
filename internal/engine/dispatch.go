@@ -429,12 +429,12 @@ func (e *Engine) coalesce(now time.Time) {
 			continue
 		}
 		for _, in := range q {
+			e.saved(CounterOutageMerged, in.Message.Monitor, 1)
 			in.State, in.UpdatedAt = IntentMerged, now
 			_ = e.deps.Sink.SaveIntent(in)
 			delete(e.intents, in.ID)
 			e.decideIntent(in, LedMerged, "storm control: merged into a summary")
 		}
-		e.deps.Sink.Counter(CounterOutageMerged, len(q))
 		// Services first and urgent; network causes said as such, to the
 		// network team when the policy names one (network=).
 		service, network := e.classify(q)

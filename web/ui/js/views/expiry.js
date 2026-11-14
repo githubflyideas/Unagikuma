@@ -3,9 +3,10 @@
 import { html } from '../lib.js';
 import { t, tn, currentLang } from '../i18n.js';
 import { get } from '../api.js';
+import { MonitorTabs } from './monitors.js';
 import { useFetch, useLive, Loading, ErrorBox, Empty, Dot, enc, useDocTitle } from '../ui.js';
 
-export function Expiry({ embedded }) {
+export function Expiry() {
   useDocTitle(t('ui.exp.title'));
   const d = useFetch(() => get('/expiry'), []);
   useLive(['state'], d.reload, 5000);
@@ -15,9 +16,8 @@ export function Expiry({ embedded }) {
   // registrations inside 30 days (the defaults of their checks).
   const cls = (days, what) => days < 7 ? 'err-text' : days < (what === 'cert' ? 62 : 30) ? 'warn-text' : '';
   const day = (days) => new Date(Date.now() + days * 864e5).toLocaleDateString(currentLang(), { year: 'numeric', month: 'short', day: 'numeric' });
-  return html`<div class=${embedded ? '' : 'page'}>
-    ${!embedded && html`<div class="row"><a href="#/monitors" class="muted">← ${t('ui.nav.monitors')}</a></div>
-    <h1>${t('ui.exp.title')}</h1>`}
+  return html`<div class="page list">
+    <${MonitorTabs} tab="expiry" />
     <p class="muted small">${t('ui.exp.intro')}</p>
     <div class="card"><div class="bd flush tbl-wrap">
       ${!items.length ? html`<${Empty} title=${t('ui.exp.none')}>${t('ui.exp.none_hint')}<//>` : html`<table class="tbl">

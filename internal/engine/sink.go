@@ -196,3 +196,15 @@ func IncidentKey(node, epoch string, id int64) string {
 	}
 	return fmt.Sprintf("%s:%s:%d", node, epoch, id)
 }
+
+// saved counts an alert that was not sent and, where the sink keeps a list
+// of them, lists it with its monitor.
+func (e *Engine) saved(name, monitor string, n int) {
+	if s, ok := e.deps.Sink.(interface {
+		Saved(name, monitor string, n int)
+	}); ok && monitor != "" {
+		s.Saved(name, monitor, n)
+		return
+	}
+	e.deps.Sink.Counter(name, n)
+}

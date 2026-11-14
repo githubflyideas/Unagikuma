@@ -57,7 +57,7 @@ func (e *Engine) judgeLocal(rt *monRuntime, scope netscope.Scope, spec probe.Spe
 			vote, reason = probe.VoteAbstain, InterruptSuspend
 		case rr.gateLocal:
 			vote, reason, excluded = probe.VoteAbstain, probe.ReasonLocalNetwork, true
-			e.deps.Sink.Counter(CounterOutageSaved, 1)
+			e.saved(CounterOutageSaved, rr.name, 1)
 		default:
 			if ex, why := e.localnet.Affects(scope, famOr(rt.Family), rt.OnLink, rt.ByName); ex {
 				vote, reason, excluded = probe.VoteAbstain, why, true
@@ -207,7 +207,7 @@ func ms(d time.Duration) float64 { return float64(d) / float64(time.Millisecond)
 // events and value counters.
 func (e *Engine) onTransition(m *MonitorSpec, rt *monRuntime, t Transition, v Verdict, now time.Time) {
 	if t.SoftCleared {
-		e.deps.Sink.Counter(CounterSoftFiltered, 1)
+		e.saved(CounterSoftFiltered, m.Name, 1)
 	}
 	if t.Changed() && m.Handler != "" {
 		e.runHandler(m, t, rt)

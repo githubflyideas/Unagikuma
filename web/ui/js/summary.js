@@ -4,7 +4,8 @@
 // Opened signed in, or as /summary#token=uka_… with a read-only token.
 import { html, render, useState, useEffect } from './lib.js';
 import { t, setLang, detectLang, loadLanguages, fmtNum, fmtTime, dur, ago, currentLang } from './i18n.js';
-import { loadBrand, brand, brandColors, product, logoURL } from './brand.js';
+
+const PRODUCT = 'Unagikuma';
 
 const token = (() => {
   const m = /(?:^|[#&])token=([^&]+)/.exec(location.hash);
@@ -66,15 +67,15 @@ function Summary() {
     const id = setInterval(load, 60000);
     return () => { live = false; clearInterval(id); };
   }, [range]);
-  useEffect(() => { document.title = product() + ' · ' + t('ui.sum.title'); }, []);
+  useEffect(() => { document.title = PRODUCT + ' · ' + t('ui.sum.title'); }, []);
   if (err && err.status === 401 && !d) return html`<div class="sum-msg"><h1>${t('ui.sum.need_link')}</h1><p>${t('ui.sum.need_link_hint')}</p></div>`;
   if (!d) return html`<div class="sum-msg">${err ? t('ui.wall.offline') : ''}</div>`;
   const n = d.now, bad = n.problems.length;
   const running = n.total - (n.counts.paused || 0);
   return html`<div class="sum">
     <header class="sum-head">
-      <img src=${logoURL()} alt="" />
-      <div><b>${product()}</b><h1>${t('ui.sum.title')}</h1></div>
+      <img src="/logo.png" alt="" />
+      <div><b>${PRODUCT}</b><h1>${t('ui.sum.title')}</h1></div>
       <span class="spacer"></span>
       <div class="seg" role="tablist">${['7d', '30d', '90d'].map(k => html`<button role="tab" aria-selected=${range === k} class=${range === k ? 'on' : ''} onClick=${() => setRange(k)}>${t('ui.sum.range.' + k)}</button>`)}</div>
       <button class="btn print" onClick=${() => print()}>${t('ui.sum.print')}</button>
@@ -121,12 +122,7 @@ function Summary() {
 }
 
 (async () => {
-  await loadBrand();
-  const b = brand();
-  if (b.id) {
-    document.documentElement.dataset.theme = b.base === 'dark' ? 'graphite' : 'mist';
-    brandColors(true);
-  }
+  document.documentElement.dataset.theme = 'calm';
   await loadLanguages();
   await setLang(detectLang(), false);
   render(html`<${Summary} />`, document.getElementById('app'));

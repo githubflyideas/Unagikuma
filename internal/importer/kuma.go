@@ -1202,8 +1202,13 @@ func (ch *kumaChannel) webhook() bool {
 	default:
 		ch.it.attention("The message body differs from Uptime Kuma's.", "Check that the receiving side understands it (Alerts & notifications › Channels › Test).")
 	}
-	var hs map[string]any
-	if h := ch.str("webhookAdditionalHeaders"); h == "" || json.Unmarshal([]byte(h), &hs) != nil {
+	// Kuma keeps the headers as a JSON text; some exports carry the object
+	// itself.
+	hs, _ := ch.c["webhookAdditionalHeaders"].(map[string]any)
+	if h := ch.str("webhookAdditionalHeaders"); hs == nil && (h == "" || json.Unmarshal([]byte(h), &hs) != nil) {
+		if h != "" {
+			ch.it.attention("Its extra headers could not be read: they are not a JSON object.", "Add them under Alerts & notifications › Channels › Headers.")
+		}
 		return true
 	}
 	keys := make([]string, 0, len(hs))

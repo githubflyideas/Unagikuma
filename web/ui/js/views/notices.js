@@ -3,7 +3,7 @@
 import { html, useState } from '../lib.js';
 import { t, fmtTime } from '../i18n.js';
 import { get, post, del, put, me } from '../api.js';
-import { ChangeForm } from './changes.js';
+import { ChangeForm, ChangesTab } from './changes.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog } from '../ui.js';
 
 const SEVERITIES = ['info', 'minor', 'major', 'maintenance'];
@@ -157,6 +157,7 @@ export function NoticesTab() {
   if (!pages.data.length) return html`<div class="col" style=${{ gap: '12px' }}>
     <${Empty} title=${t('ui.notice.no_pages')}>${t('ui.notice.no_pages_hint')}<//>
     <${NewPage} onDone=${pages.reload} />
+    <div class="card"><div class="hd"><h2>${t('ui.chg.tab')}</h2></div><div class="bd"><${ChangesTab} /></div></div>
   </div>`;
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.notice.intro')}</p>
@@ -167,6 +168,7 @@ export function NoticesTab() {
     ${change && html`<${ChangeForm} initial=${{ status_page: pages.data[0].name }} onClose=${() => setChange(false)} onSaved=${() => { setChange(false); setRound(round + 1); }} />`}
     ${adding && html`<${Modal} title=${t('ui.notice.new_page')} onClose=${() => setAdding(false)}><${PageForm} onDone=${() => { setAdding(false); pages.reload(); }} /><//>`}
     ${pages.data.map(p => html`<${PageNotices} key=${p.name + ':' + round} page=${p} onChanged=${pages.reload} />`)}
+    <div class="card"><div class="hd"><h2>${t('ui.chg.tab')}</h2></div><div class="bd"><${ChangesTab} key=${round} embedded /></div></div>
     ${me.role === 'admin' && html`<${SupportFooter} />`}
   </div>`;
 }

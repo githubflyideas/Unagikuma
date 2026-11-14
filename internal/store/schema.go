@@ -170,6 +170,10 @@ var coreMigrations = []string{
 	`ALTER TABLE people ADD COLUMN no_report INTEGER NOT NULL DEFAULT 0;`,
 	// Rejoin codes name the NODE they may reclaim after a master handover.
 	`ALTER TABLE join_codes ADD COLUMN rejoin TEXT NOT NULL DEFAULT '';`,
+	// Each alert that was held back, merged or capped, for the overview's
+	// list of them; kept a little over a week.
+	`CREATE TABLE saved_alerts (at INTEGER NOT NULL, name TEXT NOT NULL, monitor TEXT NOT NULL, n INTEGER NOT NULL);
+ CREATE INDEX saved_alerts_at ON saved_alerts(at);`,
 }
 
 var historyMigrations = []string{

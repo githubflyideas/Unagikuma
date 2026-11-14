@@ -825,3 +825,63 @@ func (f *File) SetOpts(name string, set map[string]string) error {
 	}
 	return f.UpsertRecord(RecordSpec{Name: r.Name, Type: r.Type, Target: r.Target, Interval: r.Interval, Opts: opts})
 }
+
+// RenameChannel renames a CHANNEL record and every place the file names
+// it: policies (chain=, network=, escalate=), teams (channels=), groups
+// (members=) and status pages (subscribe=).
+func (f *File) RenameChannel(oldName, newName string) error {
+	if _, r := f.findRecord(oldName); r == nil || r.Type != "CHANNEL" {
+		return fmt.Errorf("channel %q not found", oldName)
+	}
+	if err := f.RenameRecord(oldName, newName); err != nil {
+		return err
+	}
+	swap := func(list, sep string) (string, bool) {
+		parts := strings.Split(list, sep)
+		changed := false
+		for i, p := range parts {
+			if strings.TrimSpace(p) == oldName {
+				parts[i], changed = strings.Replace(p, oldName, newName, 1), true
+			}
+		}
+		return strings.Join(parts, sep), changed
+	}
+	for _, r := range f.Records() {
+		opts := make([]Opt, len(r.Opts))
+		copy(opts, r.Opts)
+		changed := false
+		for i, o := range opts {
+			var v string
+			var ok bool
+			switch {
+			case r.Type == "POLICY" && (o.Key == "chain" || o.Key == "network"),
+				r.Type == "TEAM" && o.Key == "channels",
+				r.Type == "CHANNEL" && o.Key == "members":
+				v, ok = swap(o.Value, ",")
+			case r.Type == "POLICY" && o.Key == "escalate":
+				steps := strings.Split(o.Value, ",")
+				for j, st := range steps {
+					after, chans, found := strings.Cut(st, ":")
+					if !found {
+						continue
+					}
+					if nv, c := swap(chans, "+"); c {
+						steps[j], ok = after+":"+nv, true
+					}
+				}
+				v = strings.Join(steps, ",")
+			case r.Type == "STATUSPAGE" && o.Key == "subscribe" && strings.TrimSpace(o.Value) == oldName:
+				v, ok = newName, true
+			}
+			if ok {
+				opts[i].Value, changed = v, true
+			}
+		}
+		if changed {
+			if err := f.UpsertRecord(RecordSpec{Name: r.Name, Type: r.Type, Target: r.Target, Interval: r.Interval, Opts: opts}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

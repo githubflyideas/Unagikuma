@@ -715,6 +715,9 @@ func (s *Store) Prune(r Retention) error {
 		err3 = err
 	}
 	_, err6 := s.core.Exec(`DELETE FROM intents WHERE state!='pending' AND updated_at<?`, cut)
+	if _, err := s.core.Exec(`DELETE FROM saved_alerts WHERE at<?`, ms(now.Add(-8*24*time.Hour))); err != nil && err3 == nil {
+		err3 = err
+	}
 	if _, err := s.core.Exec(`DELETE FROM evidence WHERE at<?`, ms(now.Add(-r.Raw))); err != nil && err3 == nil {
 		err3 = err
 	}
@@ -818,6 +821,56 @@ func (s *Store) HistorySites() ([]string, error) {
 			return nil, err
 		}
 		out = append(out, site)
+	}
+	return out, rows.Err()
+}
+
+// SavedAlert is one alert that was not sent, and why (its counter name).
+type SavedAlert struct {
+	At      time.Time `json:"at"`
+	Name    string    `json:"name"`
+	Monitor string    `json:"monitor"`
+	N       int       `json:"n"`
+}
+
+// SavedAlerts lists the alerts not sent since a time, newest first.
+func (s *Store) SavedAlerts(since time.Time, limit int) ([]SavedAlert, error) {
+	rows, err := s.core.Query(`SELECT at,name,monitor,n FROM saved_alerts WHERE at>=? ORDER BY at DESC LIMIT ?`, ms(since), limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []SavedAlert{}
+	for rows.Next() {
+		var a SavedAlert
+		var at int64
+		if err := rows.Scan(&at, &a.Name, &a.Monitor, &a.N); err != nil {
+			return nil, err
+		}
+		a.At = time.UnixMilli(at)
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// DailyCounters sums the value counters per day since a day.
+func (s *Store) DailyCounters(since time.Time) (map[string]map[string]int, error) {
+	rows, err := s.core.Query(`SELECT day,name,SUM(n) FROM counters WHERE day>=? GROUP BY day,name`, since.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]map[string]int{}
+	for rows.Next() {
+		var day, name string
+		var n int
+		if err := rows.Scan(&day, &name, &n); err != nil {
+			return nil, err
+		}
+		if out[day] == nil {
+			out[day] = map[string]int{}
+		}
+		out[day][name] = n
 	}
 	return out, rows.Err()
 }

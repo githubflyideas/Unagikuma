@@ -247,6 +247,13 @@ func (s *Store) Decision(d engine.Decision) { s.batch.add(item{decision: &d}) }
 // Counter adds to a daily value counter.
 func (s *Store) Counter(name string, n int) { s.batch.add(item{counter: name, n: n}) }
 
+// Saved counts an alert that was not sent (held back during a local
+// outage, cleared before it was confirmed, merged or capped) and lists it
+// with its monitor.
+func (s *Store) Saved(name, monitor string, n int) {
+	s.batch.add(item{counter: name, n: n, monitor: monitor})
+}
+
 // Flush writes pending batched items now.
 func (s *Store) Flush() { s.batch.flushNow() }
 
@@ -270,6 +277,7 @@ type item struct {
 	decision *engine.Decision
 	counter  string
 	n        int
+	monitor  string // with counter: also listed as a saved alert
 }
 
 // batcher accumulates history writes and commits them periodically.
@@ -685,6 +693,9 @@ func (b *batcher) flushCore(items []item) bool {
 		case it.counter != "":
 			_, err = tx.Exec(`INSERT INTO counters(day,name,n) VALUES(?,?,?) ON CONFLICT(day,name) DO UPDATE SET n=n+excluded.n`,
 				s.now().Format("2006-01-02"), it.counter, it.n)
+			if err == nil && it.monitor != "" {
+				_, err = tx.Exec(`INSERT INTO saved_alerts(at,name,monitor,n) VALUES(?,?,?,?)`, ms(s.now()), it.counter, it.monitor, it.n)
+			}
 		default:
 			continue
 		}

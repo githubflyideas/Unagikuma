@@ -3,12 +3,12 @@ import { html, useState, useEffect, useMemo } from '../lib.js';
 import { t, tn, dur, fmtTime, currentLang, langList } from '../i18n.js';
 import { get, post, put, del, setCSRF, getCSRF, me } from '../api.js';
 import { Nodes } from './nodes.js';
-import { Appearance } from './appearance.js';
 import { ChannelList, DELIVERY_KEYS } from './alerts.js';
 import { IssueDot } from './contacts.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, regionTitle, msText } from '../ui.js';
 
 const EXIT_KEY = 'localnet.exit-target';
+const DNS_KEY = 'probe.dns-servers';
 
 // routeText is the traced route, without the run of silent hops at its
 // end (routers that do not answer, or the trace stopping short).
@@ -28,6 +28,12 @@ function General() {
   useEffect(() => { if (s.data) setF({ ...s.data }); }, [s.data]);
   const exitTun = tun.data && tun.data.find(x => x.key === EXIT_KEY);
   useEffect(() => { if (exitTun) setExit(exitTun.value); }, [tun.data]);
+  // The DNS servers checks ask: this host's own unless some are set.
+  const dnsTun = tun.data && tun.data.find(x => x.key === DNS_KEY);
+  const [dns, setDns] = useState(null);
+  useEffect(() => { if (dnsTun) setDns(dnsTun.value); }, [tun.data]);
+  const ov = useFetch(() => get('/overview').catch(() => null), []);
+  const systemDNS = (ov.data && ov.data.dns && !ov.data.dns.custom && ov.data.dns.servers) || [];
   if (!f) return s.error ? html`<${ErrorBox} error=${s.error} />` : html`<${Loading} />`;
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async (e) => {
@@ -35,6 +41,10 @@ function General() {
     try {
       // The internet gateway is a tunable; it is written only when changed,
       // and going back to the default removes the override.
+      if (dnsTun && dns !== null && dns.trim() !== dnsTun.value) {
+        const v = dns.trim();
+        await put('/tunables', v ? { set: { [DNS_KEY]: v }, unset: [] } : { set: {}, unset: [DNS_KEY] });
+      }
       if (exitTun && exit !== null && exit.trim() !== exitTun.value) {
         const v = exit.trim();
         await put('/tunables', v === exitTun.default ? { set: {}, unset: [EXIT_KEY] } : { set: { [EXIT_KEY]: v }, unset: [] });
@@ -53,6 +63,16 @@ function General() {
     setSug({ busy: true });
     try { setSug(await post('/settings/exit-suggest', body)); } catch (e) { setSug({ err: e }); }
   };
+  // Picking a measured address saves it at once: the form's own save
+  // button is far below and easy to miss.
+  const useExit = async (addr) => {
+    setExit(addr);
+    try {
+      await put('/tunables', addr === exitTun.default ? { set: {}, unset: [EXIT_KEY] } : { set: { [EXIT_KEY]: addr }, unset: [] });
+      tun.reload();
+      toast(t('ui.set.exit_saved', { addr }));
+    } catch (e) { toastError(e); }
+  };
   const testHb = async () => {
     setHb({ busy: true });
     try { setHb(await post('/settings/heartbeat/test')); } catch (e) { setHb({ err: e }); }
@@ -66,12 +86,13 @@ function General() {
       <select value=${f.message_lang || 'en'} onChange=${set('message_lang')}>${langList().map(l => html`<option value=${l.code}>${l.name}</option>`)}</select><//>
     ${exitTun && html`<${Field} label=${t('ui.set.exit')} hint=${t('ui.set.exit_hint', { addr: exitTun.default })}>
       <div class="row nowrap"><input type="text" class="ltr" value=${exit ?? ''} onInput=${(e) => setExit(e.target.value)} placeholder=${t('ui.set.exit_off')} style=${{ maxWidth: '320px' }} />
-      </div>
-      <div class="row nowrap" style=${{ marginTop: '8px' }}>
+      </div><//>`}
+    ${exitTun && html`<div class="subopts">
+      <div class="row nowrap">
         <select value=${cc} onChange=${(e) => { setCc(e.target.value); if (e.target.value) suggest({ mode: 'city', city: e.target.value }); }} aria-label=${t('ui.set.exit_by_city')} style=${{ maxWidth: '360px' }}>
           <option value="">${t('ui.set.exit_by_city')}</option>
           ${(cities.data || []).map(c => html`<option value=${c.id}>${t('ui.city.' + c.id)} — ${c.label}${c.anycast ? ' (' + t('ui.set.exit_anycast_tag') + ')' : ''}</option>`)}</select>
-        <button type="button" class="btn" onClick=${() => { setCc(''); suggest({ mode: 'auto' }); }} disabled=${sug && sug.busy}>${sug && sug.busy ? t('ui.set.exit_measuring') : t('ui.set.exit_suggest')}</button></div><//>`}
+        <button type="button" class="btn" onClick=${() => { setCc(''); suggest({ mode: 'auto' }); }} disabled=${sug && sug.busy}>${sug && sug.busy ? t('ui.set.exit_measuring') : t('ui.set.exit_suggest')}</button></div>
     ${sug && sug.err && html`<div class="banner error">${errText(sug.err)}</div>`}
     ${sug && sug.candidates && html`<div class="card"><div class="bd col" style=${{ gap: '8px' }}>
       <p class="small muted" style=${{ margin: 0 }}>${t('ui.set.exit_result')}${sug.public_addr ? ' · ' + t('ui.set.exit_public', { addr: sug.public_addr }) : ''}</p>
@@ -81,9 +102,12 @@ function General() {
         <td class="ltr mono">${c.addr}</td><td>${c.source === 'route' ? t('ui.set.exit_hop', { label: c.label }) : c.label}</td>
         <td class="right nowrap">${c.ok ? msText(c.rtt_ms) + (c.loss > 0 ? ' · ' + Math.round(c.loss * 100) + '%' : '') + (c.via && c.via !== 'icmp' ? ' · ' + c.via : '') : t('ui.ov.exit_down')}</td>
         <td class="right nowrap">${sug.suggested.includes(c.addr) && html`<span class="tag">${t('ui.set.exit_recommended')}</span>`}
-          ${c.ok && html` <button type="button" class=${'btn sm' + (sug.suggested[0] === c.addr ? ' primary' : '')} onClick=${() => setExit(c.addr)}>${t('ui.set.exit_use')}</button>`}</td>
+          ${c.ok && html` <button type="button" class=${'btn sm' + (sug.suggested[0] === c.addr ? ' primary' : '')} onClick=${() => useExit(c.addr)}>${t('ui.set.exit_use')}</button>`}</td>
       </tr>`)}</tbody></table>
     </div></div>`}
+    </div>`}
+    ${dnsTun && html`<${Field} label=${t('ui.set.dns')} hint=${t('ui.set.dns_hint', { list: systemDNS.join(', ') || t('ui.set.dns_unknown') })}>
+      <input type="text" class="ltr" value=${dns ?? ''} onInput=${(e) => setDns(e.target.value)} placeholder=${t('ui.set.dns_system')} style=${{ maxWidth: '420px' }} /><//>`}
     <${Field} label=${t('ui.set.heartbeat')} hint=${t('ui.set.heartbeat_hint')}>
       <div class="row nowrap"><input type="text" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
         <button type="button" class="btn" onClick=${testHb} disabled=${!s.data.heartbeat_url}>${t('ui.set.heartbeat_test')}</button></div><//>
@@ -116,7 +140,7 @@ function HeartbeatForm({ f, setF }) {
     }, 300);
     return () => clearTimeout(id);
   }, [JSON.stringify(f)]);
-  return html`<div class="col" style=${{ gap: '10px' }}>
+  return html`<div class="subopts col" style=${{ gap: '10px' }}>
     <div class="two">
       <${Field} label=${t('ui.hb.method')}><select value=${push ? 'PUSH' : 'GET'} onChange=${set('heartbeat_method')}>
         <option value="GET">GET</option><option value="PUSH">PUSH (POST)</option></select><//>
@@ -202,75 +226,6 @@ function Tunables() {
 
 const SCOPES = ['read', 'ack', 'write', 'admin'];
 
-const ROLES = ['admin', 'operator', 'viewer'];
-
-// Users: accounts, their role, their teams and, for operators, the
-// sections they may change.
-function Users() {
-  const list = useFetch(() => get('/users'), []);
-  const teams = useFetch(() => get('/teams'), []);
-  // The contact each login is linked to (set in the contact's form).
-  const dir = useFetch(() => get('/people').catch(() => ({ people: [] })), []);
-  const contactOf = (u) => ((dir.data && dir.data.people) || []).find(p => p.username === u.username);
-  const [form, setForm] = useState(null);
-  if (!list.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
-  const teamItems = (teams.data && teams.data.items) || [];
-  const multi = teamItems.length > 1;
-  const titleOf = (name) => teamTitle(teamItems.find(tm => tm.name === name) || { name, title: name });
-  const save = async (e) => {
-    e.preventDefault();
-    if (multi && !form.teams.length) { toastError(new Error(t('ui.user.teams_required'))); return; }
-    const body = { role: form.role, areas: form.areas.split(/[\s,]+/).filter(Boolean) };
-    if (multi) body.teams = form.teams;
-    if (form.password) body.password = form.password;
-    try {
-      if (form.id) await put('/users/' + form.id, body);
-      else await post('/users', { ...body, username: form.username.trim() });
-      toast(t('ui.saved'));
-      setForm(null);
-      list.reload();
-      teams.reload();
-    } catch (e2) { toastError(e2); }
-  };
-  const remove = async (u) => {
-    if (!await confirmDialog(t('ui.user.delete_confirm', { name: u.username }), { danger: true, ok: t('ui.delete') })) return;
-    try { await del('/users/' + u.id); list.reload(); } catch (e) { toastError(e); }
-  };
-  const toggleTeam = (name) => setForm({ ...form, teams: form.teams.includes(name) ? form.teams.filter(x => x !== name) : [...form.teams, name] });
-  return html`<div class="col" style=${{ gap: '12px' }}>
-    <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.user.intro')}</p>
-      <button class="btn primary" onClick=${() => setForm({ username: '', password: '', role: 'operator', areas: '', teams: [] })}>${t('ui.user.add')}</button></div>
-    <div class="card"><div class="bd flush tbl-wrap"><table class="tbl">
-      <thead><tr><th>${t('ui.name')}</th><th>${t('ui.user.role')}</th>${multi && html`<th>${t('ui.user.teams')}</th>`}<th>${t('ui.user.areas')}</th><th>${t('ui.user.contact')}</th><th>${t('ui.tok.created_at')}</th><th></th></tr></thead>
-      <tbody>${list.data.items.map(u => html`<tr>
-        <td class="name">${u.username}</td>
-        <td><span class="tag">${t('ui.user.role.' + u.role)}</span></td>
-        ${multi && html`<td class="small">${(u.teams || []).map(titleOf).join(', ')}</td>`}
-        <td class="small mono">${u.areas.length ? u.areas.join(', ') : html`<span class="faint">${t('ui.user.all')}</span>`}</td>
-        <td class="small">${contactOf(u) ? html`<a href="#/alerts/contacts">${contactOf(u).name}</a>` : html`<span class="faint" title=${t('ui.user.contact_none_hint')}>–</span>`}</td>
-        <td class="small">${fmtTime(u.created_at)}</td>
-        <td class="right nowrap"><button class="btn sm" onClick=${() => setForm({ id: u.id, username: u.username, password: '', role: u.role, areas: u.areas.join(', '), teams: u.teams || [] })}>${t('ui.edit')}</button>
-          ${' '}<button class="btn sm danger" onClick=${() => remove(u)}>${t('ui.delete')}</button></td>
-      </tr>`)}</tbody></table></div></div>
-    ${form && html`<${Modal} title=${form.id ? form.username : t('ui.user.add')} onClose=${() => setForm(null)}>
-      <form class="form" onSubmit=${save}>
-        ${!form.id && html`<${Field} label=${t('ui.name')}><input type="text" required value=${form.username} onInput=${(e) => setForm({ ...form, username: e.target.value })} /><//>`}
-        <${Field} label=${t('ui.user.password')} hint=${form.id ? t('ui.user.password_keep') : ''}>
-          <input type="password" autocomplete="new-password" minlength="8" required=${!form.id} value=${form.password} onInput=${(e) => setForm({ ...form, password: e.target.value })} /><//>
-        <${Field} label=${t('ui.user.role')}>
-          <div class="col">${ROLES.map(r => html`<label class="switch"><input type="radio" name="role" checked=${form.role === r} onChange=${() => setForm({ ...form, role: r })} />
-            <b>${t('ui.user.role.' + r)}</b> <span class="small muted">${t('ui.user.role.' + r + '_hint')}</span></label>`)}</div><//>
-        ${multi ? html`<${Field} label=${t('ui.user.teams')} hint=${t('ui.user.teams_hint')}>
-          <div class="col">${teamItems.map(tm => html`<label class="switch"><input type="checkbox" checked=${form.teams.includes(tm.name)} onChange=${() => toggleTeam(tm.name)} /> ${teamTitle(tm)}</label>`)}</div><//>`
-          : html`<p class="small muted">${t('ui.user.admin_team_only')}</p>`}
-        ${form.role === 'operator' && html`<${Field} label=${t('ui.user.areas')} hint=${t('ui.user.areas_hint')}>
-          <input type="text" class="ltr mono" value=${form.areas} onInput=${(e) => setForm({ ...form, areas: e.target.value })} placeholder="region:north, bj" /><//>`}
-        <div class="row"><div class="spacer"></div><button class="btn primary">${t('ui.save')}</button></div>
-      </form>
-    <//>`}
-  </div>`;
-}
-
 // Teams: who works on which monitors (team= on a monitor). They are TEAM
 // records in monitors.conf; the built-in admin team owns the rest.
 function Teams() {
@@ -320,7 +275,7 @@ function Teams() {
         <tbody>${list.data.items.map(tm => html`<tr>
           <td><div class="name">${teamTitle(tm)}</div><div class="sub mono ltr">${tm.name}${tm.builtin ? ' · ' + t('ui.team.builtin') : ''}</div>
             ${tm.unknown && tm.unknown.length > 0 && html`<div class="small warn-text" title=${t('ui.team.unknown_hint')}>${t('ui.team.unknown', { names: tm.unknown.join(', ') })}</div>`}
-            ${tm.unreachable && tm.unreachable.length > 0 && html`<div class="small err-text"><span class="rdot"></span> ${t('ui.team.unreachable', { names: tm.unreachable.join(', ') })}</div>`}</td>
+            ${tm.unreachable && tm.unreachable.length > 0 && html`<div class="small err-text"><span class="rdot"></span> ${t('ui.team.unreachable', { names: tm.unreachable.join(', ') })} <a href="#/alerts/contacts">${t('ui.team.unreachable_fix')}</a></div>`}</td>
           <td class="small">${tm.builtin && !tm.members.length ? html`<span class="faint">${t('ui.team.admin_members')}</span>` : people(tm.members)}</td>
           <td class="small ltr">${tm.channels.length ? tm.channels.join(tm.mode === 'all' ? ' + ' : ' → ') : html`<span class="warn-text">${t('ui.team.no_channels')}</span>`}
             ${tm.issue_channels && html` <${IssueDot} issues=${tm.issue_channels} text=${t('ui.dir.policy_dot', { channels: tm.issue_channels.join(', ') })} />`}</td>
@@ -336,7 +291,7 @@ function Teams() {
         <${Field} label=${t('ui.team.members_label')} hint=${t('ui.team.members_hint')}>
           <div class="col">${userNames.map(n => html`<div class="row" style=${{ gap: '8px' }}><label class="switch"><input type="checkbox" checked=${form.members.includes(n)} onChange=${() => toggle(n)} /> ${n}</label>
             ${roleOf(n) && html`<span class="tag" title=${t('ui.user.role.' + roleOf(n) + '_hint')}>${t('ui.user.role.' + roleOf(n))}</span>`}</div>`)}
-          ${userNames.length <= 1 && html`<div class="small muted">${t('ui.team.add_users_hint')} <a href="#/settings/users">${t('ui.nav.settings')} › ${t('ui.set.tab.users')}</a></div>`}</div><//>
+          ${userNames.length <= 1 && html`<div class="small muted">${t('ui.team.add_users_hint')} <a href="#/alerts/contacts">${t('ui.nav.alerts')} › ${t('ui.dir.tab')}</a></div>`}</div><//>
         <${Field} label=${t('ui.team.channels')} hint=${t('ui.team.channels_hint')}>
           <${ChannelList} value=${form.channels} channels=${chans.data || []} onChange=${(channels) => setForm({ ...form, channels })} /><//>
         ${form.channels.length > 1 && html`<${Field} label=${t('ui.team.mode')}><select value=${form.mode} onChange=${(e) => setForm({ ...form, mode: e.target.value })}>
@@ -560,7 +515,9 @@ function BackupCard() {
   <//>`;
 }
 
-function Account({ user }) {
+// Account changes the signed-in person's password. It opens from their
+// name at the bottom of the sidebar.
+export function Account({ user, embedded }) {
   const [f, setF] = useState({ old: '', new: '', confirm: '' });
   const [err, setErr] = useState('');
   const save = async (e) => {
@@ -575,7 +532,7 @@ function Account({ user }) {
       setErr('');
     } catch (e2) { setErr(errText(e2)); }
   };
-  return html`<form class="card" onSubmit=${save} style=${{ maxWidth: '480px' }}><div class="bd form">
+  return html`<form class=${embedded ? '' : 'card'} onSubmit=${save} style=${embedded ? null : { maxWidth: '480px' }}><div class=${embedded ? 'form' : 'bd form'}>
     <p class="muted">${t('ui.acc.signed_in', { user })}</p>
     <${Field} label=${t('ui.acc.old')}><input type="password" value=${f.old} onInput=${(e) => setF({ ...f, old: e.target.value })} required autocomplete="current-password" /><//>
     <${Field} label=${t('ui.acc.new')}><input type="password" value=${f.new} onInput=${(e) => setF({ ...f, new: e.target.value })} required autocomplete="new-password" /><//>
@@ -777,21 +734,20 @@ function Audit() {
 
 // Everyday settings, and the advanced ones that most installations set
 // once or never: they have their own place in the sidebar.
-const TABS = ['general', 'users', 'audit', 'scripts', 'system', 'registration', 'account'];
-export const ADVANCED_TABS = ['appearance', 'teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
+const TABS = ['general', 'audit', 'scripts', 'system', 'registration'];
+export const ADVANCED_TABS = ['teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
 export function Settings({ tab, user, advanced }) {
   useDocTitle(t(advanced ? 'ui.nav.advanced' : 'ui.nav.settings'));
-  // Operators and viewers have their own account here: the password.
-  if (me.role !== 'admin') advanced = false;
+  // Operators and viewers have no settings; an old link still shows the
+  // password form, which now opens from their name in the sidebar.
+  if (me.role !== 'admin' || tab === 'account') return html`<div class="page"><${Account} user=${user} /></div>`;
   const base = advanced ? '#/advanced/' : '#/settings/';
-  const tabs = me.role !== 'admin' ? ['account'] : advanced ? ADVANCED_TABS : TABS;
+  const tabs = advanced ? ADVANCED_TABS : TABS;
   if (!tabs.includes(tab)) tab = tabs[0];
   let body;
   switch (tab) {
-    case 'appearance': body = html`<${Appearance} />`; break;
     case 'nodes': body = html`<${Nodes} embedded />`; break;
-    case 'users': body = html`<${Users} />`; break;
     case 'teams': body = html`<${Teams} />`; break;
     case 'regions': body = html`<${Regions} />`; break;
     case 'audit': body = html`<${Audit} />`; break;
@@ -802,7 +758,6 @@ export function Settings({ tab, user, advanced }) {
     case 'secrets': body = html`<${Secrets} />`; break;
     case 'keywords': body = html`<${Keywords} />`; break;
     case 'system': body = html`<${System} />`; break;
-    case 'account': body = html`<${Account} user=${user} />`; break;
     default: body = html`<${General} />`;
   }
   return html`<div class="page">
