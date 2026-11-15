@@ -176,7 +176,9 @@ func snmpValue(e berElem) (text string, num float64, isNum bool, missing bool) {
 		return strconv.FormatUint(v, 10), float64(v), true, false
 	case 0x43: // TimeTicks
 		v := berUint(e.body)
-		return (time.Duration(v) * 10 * time.Millisecond).String(), float64(v), true, false
+		// Shown as a duration, so it is a number of seconds too: what is
+		// read is what expect-num= and the value rules compare.
+		return (time.Duration(v) * 10 * time.Millisecond).String(), float64(v) / 100, true, false
 	case berOctets:
 		if printable(e.body) {
 			return string(e.body), 0, false, false
@@ -302,25 +304,11 @@ func runSNMP(ctx context.Context, p udpPlan, o opts) Result {
 		res.Vote, res.Reason, res.Detail = VoteFail, ReasonProtoError, "malformed varbind"
 		return res
 	}
-	text, num, isNum, missing := snmpValue(pair[1])
+	text, _, _, _ := snmpValue(pair[1])
 	dec = append(dec, Field{decodeOID(pair[0].body), text})
 	res.Evidence.Decoded = dec
 	res.Metrics = map[string]float64{"latency_ms": ms(lat)}
-	if isNum {
-		res.Metrics["snmp.value"], res.Metrics["value"] = num, num
-	}
-	res.Vote, res.Reason, res.Detail = VoteOK, ReasonOK, oidStr+" = "+text
-	switch exp, expNum := o.str("expect", ""), o.str("expect-num", ""); {
-	case missing:
-		res.Vote, res.Reason = VoteFail, ReasonAssertFailed
-	case exp != "" && !strings.Contains(text, exp):
-		res.Vote, res.Reason, res.Detail = VoteFail, ReasonAssertFailed, fmt.Sprintf("%s = %q does not contain %q", oidStr, text, exp)
-	case expNum != "":
-		ne, _ := parseNumExpect(expNum)
-		if !isNum || !ne.match(num) {
-			res.Vote, res.Reason, res.Detail = VoteFail, ReasonAssertFailed, fmt.Sprintf("%s = %s, expected %s", oidStr, text, ne)
-		}
-	}
+	snmpJudge(&res, oidStr, pair[1], o)
 	return res
 }
 

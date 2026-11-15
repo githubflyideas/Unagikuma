@@ -309,7 +309,7 @@ func dnsContent(res *Result, m dnsMsg, name string, qtype uint16, o opts) {
 	case len(m.Answers) < minAns:
 		res.Detail = fmt.Sprintf("%d answers, expected at least %d", len(m.Answers), minAns)
 	default:
-		if problem := answersProblem(texts, o.str("expect", ""), o.str("expect-all", "")); problem != "" {
+		if problem := answersProblem(texts, o.str("expect", ""), o.str("expect-all", ""), exactAnswers(typeName(qtype))); problem != "" {
 			res.Detail = problem
 			return
 		}
@@ -318,18 +318,46 @@ func dnsContent(res *Result, m dnsMsg, name string, qtype uint16, o opts) {
 	}
 }
 
-// answersProblem says what is wrong with the answers: none contains exp,
-// or (expect-all) they are not exactly the set all, so an added or
-// replaced record (a hijack, a stale entry) fails.
-func answersProblem(texts []string, exp, all string) string {
+// exactAnswers says whether expect= names the whole answer for a record
+// type: an address or a name is the same or it is another one (10.0.0.1 is
+// not 10.0.0.10), while an MX, SRV or TXT answer has parts and a text, and
+// expect= may name one of them.
+func exactAnswers(qtype string) bool {
+	switch qtype {
+	case "A", "AAAA", "CNAME", "NS", "PTR":
+		return true
+	}
+	return false
+}
+
+// sameName compares two answers as DNS does: ignoring case and the dot at
+// the end, and an IPv6 address by its value and not its spelling.
+func sameName(a, b string) bool {
+	a, b = strings.TrimSuffix(strings.TrimSpace(a), "."), strings.TrimSuffix(strings.TrimSpace(b), ".")
+	if x, err := netip.ParseAddr(a); err == nil {
+		if y, err := netip.ParseAddr(b); err == nil {
+			return x == y
+		}
+	}
+	return strings.EqualFold(a, b)
+}
+
+// answersProblem says what is wrong with the answers: none matches exp
+// (exactly for an address or a name, else by containing it), or (expect-all)
+// they are not exactly the set all, so an added or missing record shows.
+func answersProblem(texts []string, exp, all string, exact bool) string {
 	matched := exp == ""
 	for _, t := range texts {
-		if exp != "" && strings.Contains(t, exp) {
+		if exp != "" && ((exact && sameName(t, exp)) || (!exact && strings.Contains(t, exp))) {
 			matched = true
 		}
 	}
 	if !matched {
-		return fmt.Sprintf("no answer contains %q (got %s)", exp, strings.Join(texts, ", "))
+		how := "contains"
+		if exact {
+			how = "is"
+		}
+		return fmt.Sprintf("no answer %s %q (got %s)", how, exp, strings.Join(texts, ", "))
 	}
 	if all == "" {
 		return ""

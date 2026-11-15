@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.6.19 — 2026-11-15
+
+**Fixed**
+- SNMP `expect=` on a number matched part of it (10 matched 100); it is now exact, and `expect-num=` compares.
+- DNS `expect=` on an address or name matched part of it; it is now the same address or name.
+- Value rules on a counter OID compared its ever-growing total; they now judge its rate.
+- A limit whose unit does not measure the value (500Mbps on a percentage) is refused; so is crit lying nearer than warn.
+- SNMP uptime is read as seconds, as shown.
+
+**Added**
+- `>=` and `<=` limits.
+- Value types: what each option may judge, in docs/value-types.md.
+
 ## v2.6.18 — 2026-11-15
 
 **Added**

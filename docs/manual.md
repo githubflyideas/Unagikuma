@@ -125,6 +125,8 @@ main     IN STATUSPAGE "Service status" select="group:public"
 
 Some checks read a number: the value at `json-path=` of an HTTP check, the OID an SNMP check reads, a network port's traffic (`port=`) or a temperature sensor (`sensor=`). The same rules judge any of them:
 
+A limit's unit has to measure the value: `value=util` takes `70` or `70%`, `value=in` takes `500Mbps`, a temperature takes `35` or `35°C`; `500Mbps` as a limit on a percentage is refused. On one side `crit` lies further out than `warn`, and `>=` / `<=` include the limit itself. An OID that is a counter (Counter32, Counter64) is judged by its rate per second, not its ever-growing total. `expect=` on an SNMP number must be that number exactly; use `expect-num=` to compare. On a DNS A, AAAA, CNAME, NS or PTR answer `expect=` must be the same address or name; on MX or TXT it may be part of the answer. Every option's type and what it may be judged by is in [value-types](value-types.md).
+
 ```text
 sw1-g0-1   1m IN SNMP 10.0.0.2 port=Gi0/1 community=${secret:ro} value=util warn=70 crit=90 change=50% compare=24h min=5
 room-temp     IN SNMP 10.0.0.3 sensor="Inlet" version=3 user=mon auth=sha auth-pass=${secret:a} priv=aes priv-pass=${secret:p} warn=35 crit=40 for=5m

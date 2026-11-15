@@ -279,3 +279,42 @@ func TestSNMPv3(t *testing.T) {
 		}
 	}
 }
+
+// A number is not text: expect= must be that number exactly, a text still
+// matches by containing it, and a counter is flagged for its rate.
+func TestSNMPJudge(t *testing.T) {
+	gauge := func(v byte) berElem { return berElem{tag: 0x42, body: []byte{v}} }
+	run := func(e berElem, o opts) Result {
+		r := Result{Metrics: map[string]float64{}}
+		snmpJudge(&r, "1.2.3", e, o)
+		return r
+	}
+	for _, c := range []struct {
+		e    berElem
+		o    opts
+		vote Vote
+	}{
+		{gauge(100), opts{"expect": "100"}, VoteOK},
+		{gauge(100), opts{"expect": "10"}, VoteFail}, // contained, but not that number
+		{gauge(100), opts{"expect": "1"}, VoteFail},
+		{gauge(100), opts{"expect": "up"}, VoteFail}, // a number is not compared with a word
+		{gauge(100), opts{"expect-num": ">=100"}, VoteOK},
+		{gauge(100), opts{"expect-num": "<100"}, VoteFail},
+		{berElem{tag: berOctets, body: []byte("link up")}, opts{"expect": "up"}, VoteOK},
+		{berElem{tag: berOctets, body: []byte("link up")}, opts{"expect-num": ">1"}, VoteFail}, // a text has no number
+	} {
+		if r := run(c.e, c.o); r.Vote != c.vote {
+			t.Errorf("%v %v: %v %s", c.e, c.o, r.Vote, r.Detail)
+		}
+	}
+	if r := run(berElem{tag: 0x46, body: []byte{0x05}}, nil); r.Metrics["value.counter"] != 1 {
+		t.Error("Counter64 not flagged as a counter")
+	}
+	if r := run(gauge(5), nil); r.Metrics["value.counter"] != 0 {
+		t.Error("a gauge flagged as a counter")
+	}
+	// Uptime is the seconds it is shown as.
+	if r := run(berElem{tag: 0x43, body: []byte{0x27, 0x10}}, opts{"expect-num": "=100"}); r.Vote != VoteOK { // 10000 ticks
+		t.Errorf("uptime 100 s: %s", r.Detail)
+	}
+}
