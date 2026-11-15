@@ -13,6 +13,7 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 )
@@ -130,7 +131,7 @@ func mysqlCheck(ctx context.Context, conn net.Conn, host string, o opts, r Resul
 	if db != "" {
 		want |= myConnectWithDB
 	}
-	l := &myLogin{m: m, pass: o.str("password", ""), plugin: gr.plugin, salt: gr.salt, version: gr.version}
+	l := &myLogin{m: m, pass: o.str("password", ""), plugin: gr.plugin, salt: gr.salt, version: gr.version, o: o}
 	if o.on("ssl") {
 		if gr.caps&mySSL == 0 {
 			return failKeep(r, ReasonAssertFailed, "the server does not offer SSL")
@@ -221,6 +222,7 @@ type myLogin struct {
 	plugin, version string
 	salt            []byte
 	secure          bool // the connection is TLS
+	o               opts
 }
 
 // reply handles one packet of the login; done says the check is over.
@@ -251,8 +253,11 @@ func (l *myLogin) reply(p []byte, r Result) (Result, bool) {
 	return failKeep(r, ReasonProtoError, "unexpected reply 0x%02x", p[0]), true
 }
 
-// ping sends COM_PING once logged in.
+// ping sends COM_PING once logged in (or runs the monitor's query).
 func (l *myLogin) ping(r Result) Result {
+	if l.o.has("query") {
+		return l.query(r)
+	}
 	m := l.m
 	m.seq = 0
 	if err := m.write([]byte{0x0e}); err != nil { // COM_PING
@@ -270,6 +275,119 @@ func (l *myLogin) ping(r Result) Result {
 	_ = m.write([]byte{0x01}) // COM_QUIT
 	r.Detail = "MySQL " + l.version + ": login and ping ok"
 	return r
+}
+
+// myResult is what a statement answered.
+type myResult struct {
+	first string // the first column of the first row
+	null  bool
+	rows  int  // 1 when there is a first row (the rest is not read)
+	ok    bool // an OK packet: no result set
+	err   string
+}
+
+// exec sends COM_QUERY and reads the answer: an error, an OK, or a result
+// set of which only the first row is read.
+func (l *myLogin) exec(sql string) (myResult, error) {
+	var res myResult
+	m := l.m
+	m.seq = 0
+	if err := m.write(append([]byte{0x03}, sql...)); err != nil {
+		return res, err
+	}
+	p, err := m.read()
+	if err != nil {
+		return res, err
+	}
+	if len(p) == 0 {
+		return res, errors.New("empty reply")
+	}
+	switch p[0] {
+	case 0x00:
+		res.ok = true
+		return res, nil
+	case 0xff:
+		code, msg := myError(p)
+		res.err = fmt.Sprintf("%s (%d)", msg, code)
+		return res, nil
+	}
+	cols, _, ok := myLenEnc(p)
+	if !ok || cols == 0 || cols > 4096 {
+		return res, errors.New("malformed result set")
+	}
+	for i := uint64(0); i < cols; i++ { // column definitions
+		if _, err := m.read(); err != nil {
+			return res, err
+		}
+	}
+	p, err = m.read() // EOF after the definitions
+	if err != nil {
+		return res, err
+	}
+	if len(p) == 0 || p[0] != 0xfe {
+		return res, errors.New("malformed result set")
+	}
+	p, err = m.read() // the first row, or the closing EOF
+	if err != nil {
+		return res, err
+	}
+	switch {
+	case len(p) > 0 && p[0] == 0xff:
+		code, msg := myError(p)
+		res.err = fmt.Sprintf("%s (%d)", msg, code)
+	case len(p) > 0 && p[0] == 0xfe && len(p) < 9: // no rows
+	default:
+		res.rows = 1
+		if len(p) > 0 && p[0] == 0xfb {
+			res.null = true
+		} else if n, rest, ok := myLenEnc(p); ok && uint64(len(rest)) >= n {
+			res.first = string(rest[:n])
+		} else {
+			return res, errors.New("malformed row")
+		}
+	}
+	return res, nil
+}
+
+// myLenEnc reads a length-encoded integer.
+func myLenEnc(b []byte) (uint64, []byte, bool) {
+	if len(b) == 0 {
+		return 0, nil, false
+	}
+	switch c := b[0]; {
+	case c < 0xfb:
+		return uint64(c), b[1:], true
+	case c == 0xfc && len(b) >= 3:
+		return uint64(binary.LittleEndian.Uint16(b[1:])), b[3:], true
+	case c == 0xfd && len(b) >= 4:
+		return uint64(b[1]) | uint64(b[2])<<8 | uint64(b[3])<<16, b[4:], true
+	case c == 0xfe && len(b) >= 9:
+		return binary.LittleEndian.Uint64(b[1:]), b[9:], true
+	}
+	return 0, nil, false
+}
+
+// query runs the monitor's SELECT in a read-only session and judges the
+// number it returns.
+func (l *myLogin) query(r Result) Result {
+	quit := func() { l.m.seq = 0; _ = l.m.write([]byte{0x01}) }
+	defer quit()
+	res, err := l.exec("SET SESSION TRANSACTION READ ONLY")
+	if err != nil {
+		return protoFail(r, "query", err)
+	}
+	if !res.ok {
+		return failKeep(r, ReasonAssertFailed, "the session cannot be made read-only, so the query is not run: %s", res.err)
+	}
+	res, err = l.exec(statement(l.o.str("query", "")))
+	if err != nil {
+		return protoFail(r, "query", err)
+	}
+	if res.err != "" {
+		return failKeep(r, ReasonAssertFailed, "the query failed: %s", res.err)
+	}
+	r.Detail = "MySQL " + l.version
+	return queryNumber(r, l.o, res.first, res.null, res.rows)
 }
 
 // moreAuth answers caching_sha2_password's extra round.

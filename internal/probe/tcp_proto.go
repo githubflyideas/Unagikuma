@@ -23,7 +23,7 @@ var protoNames = map[string]bool{"redis": true, "postgres": true, "mysql": true,
 // protoOpts are the options each protocol accepts on top of the TCP ones.
 var protoOpts = map[string]bool{"proto": true, "user": true, "password": true, "database": true, "service": true, "role": true, "ssl": true,
 	// A number read from the service (Redis INFO) and the rules judging it.
-	"field": true, "warn": true, "crit": true, "change": true, "compare": true, "min": true, "for": true, "direction": true}
+	"field": true, "query": true, "warn": true, "crit": true, "change": true, "compare": true, "min": true, "for": true, "direction": true}
 
 func validateProto(o opts) error {
 	p := strings.ToLower(o.str("proto", ""))
@@ -209,21 +209,38 @@ func redisCheck(conn net.Conn, o opts, r Result) Result {
 // validateRedisInfo checks field= and the value rules, which read a number
 // from Redis INFO.
 func validateRedisInfo(o opts, proto string) error {
-	rules := []string{"field", "warn", "crit", "change", "compare", "min", "for", "direction"}
-	if proto != "redis" {
-		for _, k := range rules {
-			if o.has(k) {
-				return fmt.Errorf("%s applies to proto=redis", k)
-			}
-		}
-		return nil
+	rules := []string{"warn", "crit", "change", "compare", "min", "for", "direction"}
+	sql := proto == "postgres" || proto == "mysql"
+	if o.has("query") && !sql {
+		return errors.New("query applies to proto=postgres and proto=mysql")
 	}
-	for _, k := range rules[1:] {
-		if o.has(k) && !o.has("field") {
+	if o.has("field") && proto != "redis" {
+		return errors.New("field applies to proto=redis")
+	}
+	judged := (proto == "redis" && o.has("field")) || (sql && o.has("query"))
+	for _, k := range rules {
+		if !o.has(k) {
+			continue
+		}
+		switch {
+		case proto != "redis" && !sql:
+			return fmt.Errorf("%s applies to proto=redis, proto=postgres and proto=mysql", k)
+		case !judged && proto == "redis":
 			return fmt.Errorf("%s= judges a number of Redis INFO: set field=", k)
+		case !judged:
+			return fmt.Errorf("%s= judges the number a query returns: set query=", k)
 		}
 	}
-	if !o.has("field") {
+	if sql && o.has("query") {
+		if !o.has("user") {
+			return errors.New("query needs user= (the check logs in to run it)")
+		}
+		if err := validateQuery(o.str("query", "")); err != nil {
+			return err
+		}
+		return validateValueRules(o, "")
+	}
+	if proto != "redis" || !o.has("field") {
 		return nil
 	}
 	f, ok := redisField(o)

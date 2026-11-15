@@ -68,7 +68,7 @@ function joinHostPort(host, port) {
 
 const DNS_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'PTR', 'SRV', 'CAA'];
 // Options with their own form fields, per type.
-const OWN_FIELDS = { DNS: ['query', 'qtype', 'expect'], APP: ['app', 'field'], REDIS: ['field'] };
+const OWN_FIELDS = { DNS: ['query', 'qtype', 'expect'], APP: ['app', 'field'], REDIS: ['field'], POSTGRES: ['query'], MYSQL: ['query'] };
 
 const PLACEHOLDER = {
   HTTP: 'https://example.com/health', APP: '10.0.0.5 or http://10.0.0.5:8404', TCP: 'db.example.lan:5432', PING: '192.168.1.1', UDP: '10.0.0.1:ntp',
@@ -254,6 +254,8 @@ export function MonitorEditor({ name }) {
           <div class="small muted">${t('ui.mon.share_hint')}</div>
         </div></div>`}
         ${same && same.same.length === 0 && same.host > 0 && html`<div class="small muted">${t('ui.mon.same_host', { n: same.host })}</div>`}
+        ${(f.type === 'POSTGRES' || f.type === 'MYSQL') && html`<${Field} label=${t('ui.mon.sql_query')} hint=${t('ui.mon.sql_query_hint')}>
+          <input type="text" class="ltr" value=${optVal('query')} onInput=${setOwn('query')} placeholder="SELECT count(*) FROM orders" /><//>`}
         ${f.type === 'REDIS' && html`<${RedisField} profiles=${apps.data || []} optVal=${optVal} setMany=${setOwnMany} />`}
         ${f.type === 'APP' && html`<${AppFields} profiles=${apps.data || []} optVal=${optVal} setMany=${setOwnMany} />`}
         ${f.type === 'DNS' && html`<div class="col" style=${{ gap: '10px' }}>

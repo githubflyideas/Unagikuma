@@ -602,3 +602,17 @@ func TestRedisInfoField(t *testing.T) {
 		t.Fatalf("%+v", m)
 	}
 }
+
+// A query is written in quotes and reaches the probe spec whole.
+func TestSQLQueryOption(t *testing.T) {
+	src := "@ IN SOA t. admin.localhost. ( 2026102801 1h 1h 1h 1 )\n" +
+		`orders IN POSTGRES db1 user=monitor database=shop query="SELECT count(*) FROM orders WHERE created_at > now() - interval '5 minutes'" crit=<1` + "\n"
+	_, cfg, diags := load(t, src)
+	if HasErrors(diags) {
+		t.Fatalf("%v", diags)
+	}
+	m := cfg.FindMonitor("orders")
+	if m == nil || m.Opts["query"] != "SELECT count(*) FROM orders WHERE created_at > now() - interval '5 minutes'" || m.Opts["crit"] != "<1" {
+		t.Fatalf("%+v", m)
+	}
+}

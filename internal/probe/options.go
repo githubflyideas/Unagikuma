@@ -40,7 +40,7 @@ func OptionsFor(typ string) []string {
 		add("service")
 		add(tlsOpts...)
 	case "POSTGRES", "MYSQL":
-		add("user", "password", "database", "ssl")
+		add("user", "password", "database", "ssl", "query", "warn", "crit", "change", "compare", "min", "for", "direction")
 	case "PING":
 		addMap(pingOpts)
 		delete(set, "interval") // the spacing of echoes, not the monitor's interval; rarely wanted
