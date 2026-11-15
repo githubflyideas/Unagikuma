@@ -180,7 +180,7 @@ lb    30s IN APP 10.0.0.7:8404 app=haproxy select=proxy=www field=sessions warn=
 | `php-fpm` | `/status` | text | `pm.status_path` in the pool |
 | `haproxy` | `/metrics` (port 8404) | metrics | the built-in Prometheus exporter |
 
-Open the page only to the monitoring host. `select=label=value` narrows a metrics page to one proxy, topic or the like. The profiles are data files (`internal/appprofile/profiles/`), checked so far against each application's documented format only; the monitor form says when a profile has been run on a live instance. To add an application, see [value-types](value-types.md) for the types a field may have.
+Open the page only to the monitoring host. `select=label=value` narrows a metrics page to one proxy, topic or the like. The profiles are data files (`internal/appprofile/profiles/`). Each says the version of the application it was last run against (shown in the monitor form); `scripts/live/start.sh` starts those applications and `go test -tags live ./internal/probe` runs every profile against them. To add an application, see [value-types](value-types.md) for the types a field may have.
 ## Alerting
 
 Notifications go through **channels** (where a message is sent). Each team has an ordered list of them (see [Teams](#teams)); channels are records in `monitors.conf` with forms under **Alerting**, and a team's list is set under **Advanced › Teams**.

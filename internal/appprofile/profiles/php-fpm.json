@@ -2,7 +2,7 @@
   "id": "php-fpm", "title": "PHP-FPM", "reader": "text", "path": "/status", "port": 80,
   "docs": "https://www.php.net/manual/en/install.fpm.configuration.php#pm.status-path",
   "needs": "Set pm.status_path in the pool and route that path to PHP-FPM; allow only the monitoring host.",
-  "verified": "docs",
+  "verified": "PHP-FPM 8.3.6",
   "primary": "active",
   "summary": ["active", "idle", "queue", "max_children"],
   "fields": [

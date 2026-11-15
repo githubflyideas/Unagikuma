@@ -14,7 +14,7 @@ func appServer(t *testing.T) *httptest.Server {
 		case "/nginx_status":
 			fmt.Fprint(w, "Active connections: 291 \nserver accepts handled requests\n 16630948 16630940 31070465 \nReading: 6 Writing: 179 Waiting: 106 \n")
 		case "/metrics":
-			fmt.Fprint(w, "# TYPE haproxy_backend_up gauge\nhaproxy_backend_up{proxy=\"a\"} 1\nhaproxy_backend_up{proxy=\"b\"} 0\nhaproxy_frontend_current_sessions{proxy=\"a\"} 5\n"+
+			fmt.Fprint(w, "haproxy_backend_status{proxy=\"a\",state=\"UP\"} 1\nhaproxy_backend_status{proxy=\"a\",state=\"DOWN\"} 0\nhaproxy_backend_status{proxy=\"b\",state=\"UP\"} 0\nhaproxy_server_status{proxy=\"a\",server=\"s\",state=\"DOWN\"} 2\nhaproxy_frontend_current_sessions{proxy=\"a\"} 5\n"+
 				"haproxy_backend_current_queue{proxy=\"a\"} 0\nhaproxy_backend_active_servers{proxy=\"a\"} 2\nhaproxy_frontend_http_requests_total{proxy=\"a\"} 10\n"+
 				"haproxy_frontend_http_responses_total{proxy=\"a\",code=\"5xx\"} 1\nhaproxy_backend_connection_errors_total{proxy=\"a\"} 0\n")
 		case "/other":
@@ -54,11 +54,11 @@ func TestAppCheck(t *testing.T) {
 	// A status error page is an HTTP failure, as for any HTTP check.
 	want(t, run(t, spec("/missing", map[string]string{"app": "nginx"})), VoteFail, ReasonHTTPStatus)
 	// A metrics page, narrowed to one series.
-	r = run(t, spec("/metrics", map[string]string{"app": "haproxy", "field": "backend_up", "crit": "<1"}))
-	if r.Vote != VoteOK || r.Metrics["value"] != 0 {
+	r = run(t, spec("/metrics", map[string]string{"app": "haproxy", "field": "servers_down", "crit": "1"}))
+	if r.Vote != VoteOK || r.Metrics["value"] != 2 {
 		t.Fatalf("haproxy %+v", r)
 	}
-	r = run(t, spec("/metrics", map[string]string{"app": "haproxy", "select": "proxy=a", "field": "backend_up"}))
+	r = run(t, spec("/metrics", map[string]string{"app": "haproxy", "select": "proxy=a", "field": "backends_up"}))
 	if r.Metrics["value"] != 1 {
 		t.Fatalf("select %v", r.Metrics)
 	}

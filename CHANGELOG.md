@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.6.21 — 2026-11-15
+
+**Fixed**
+- The HAProxy profile read a metric HAProxy does not have (`haproxy_backend_up`) and failed on every real HAProxy; it now reads backend and server status as HAProxy names it, and a frontend in TCP mode (no HTTP counters) reads too.
+- The Nginx, Apache, Lighttpd, PHP-FPM and HAProxy profiles were run on the real applications; each says the version.
+
 ## v2.6.20 — 2026-11-15
 
 **Added**
