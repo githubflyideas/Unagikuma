@@ -8,25 +8,28 @@ import (
 
 func TestValidateQuery(t *testing.T) {
 	for q, ok := range map[string]bool{
-		"SELECT count(*) FROM orders":            true,
-		"select 1":                               true,
-		"  SELECT 1;  ":                          true,
-		"SELECT COUNT(*) FROM t WHERE a = 'x y'": true,
-		"":                                       false,
-		"SELECT":                                 false,
-		"INSERT INTO t VALUES (1)":               false,
-		"UPDATE t SET a = 1":                     false,
-		"DELETE FROM t":                          false,
-		"DROP TABLE t":                           false,
-		"SHOW STATUS":                            false, // no number to take from it
-		"WITH x AS (SELECT 1) SELECT * FROM x":   false,
-		"SELECT 1; DROP TABLE t":                 false, // a second statement
-		"SELECT 1; SELECT 2":                     false,
-		"SELECT * INTO OUTFILE '/tmp/x' FROM t":  false,
-		"SELECT * INTO newtable FROM t":          false,
-		"SELECT 1 /* x */; DELETE FROM t":        false,
-		strings.Repeat("SELECT 1 ", 300):         false, // longer than the limit
-		"SELECT\x001":                            false,
+		"SELECT count(*) FROM orders":               true,
+		"select 1":                                  true,
+		"  SELECT 1;  ":                             true,
+		"SELECT COUNT(*) FROM t WHERE a = 'x y'":    true,
+		"":                                          false,
+		"SELECT":                                    false,
+		"INSERT INTO t VALUES (1)":                  false,
+		"UPDATE t SET a = 1":                        false,
+		"DELETE FROM t":                             false,
+		"DROP TABLE t":                              false,
+		"SHOW STATUS":                               false, // no number to take from it
+		"WITH x AS (SELECT 1) SELECT * FROM x":      false,
+		"SELECT 1; DROP TABLE t":                    false, // a second statement
+		"SELECT 1; SELECT 2":                        false,
+		"SELECT * INTO OUTFILE '/tmp/x' FROM t":     false,
+		"SELECT * INTO newtable FROM t":             false,
+		"SELECT count(*) FROM t FOR UPDATE":         false,
+		"SELECT count(*) FROM t LOCK IN SHARE MODE": false,
+		"SELECT count(*) FROM t for  no key update": false,
+		"SELECT 1 /* x */; DELETE FROM t":           false,
+		strings.Repeat("SELECT 1 ", 300):            false, // longer than the limit
+		"SELECT\x001":                               false,
 	} {
 		if err := validateQuery(q); (err == nil) != ok {
 			t.Errorf("%q: ok=%v err=%v", q, ok, err)

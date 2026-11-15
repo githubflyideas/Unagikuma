@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.6.24 — 2026-11-15
+
+**Fixed**
+- A `query=` that asks for a locking read (`FOR UPDATE`, `FOR SHARE`, `LOCK IN SHARE MODE`) is refused when the file is checked: MySQL allows it in a read-only session and it takes row locks.
+- The manual listed the Redis and SQL sections twice.
+
 ## v2.6.23 — 2026-11-15
 
 **Added**

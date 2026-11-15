@@ -20,6 +20,10 @@ const maxQueryLen = 2000
 
 var intoWord = regexp.MustCompile(`(?i)\binto\b`)
 
+// A locking read takes row locks even inside a read-only session (MySQL
+// allows it), so a check must not ask for one.
+var lockingRead = regexp.MustCompile(`(?i)\bfor\s+(update|share|no\s+key\s+update|key\s+share)\b|\block\s+in\s+share\s+mode\b`)
+
 // validateQuery checks the statement without running it.
 func validateQuery(q string) error {
 	q = strings.TrimSpace(q)
@@ -42,6 +46,9 @@ func validateQuery(q string) error {
 	}
 	if intoWord.MatchString(body) {
 		return errors.New("query must not use INTO")
+	}
+	if lockingRead.MatchString(body) {
+		return errors.New("query must not lock rows (FOR UPDATE, FOR SHARE, LOCK IN SHARE MODE)")
 	}
 	return nil
 }
