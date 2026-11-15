@@ -200,6 +200,19 @@ orders IN POSTGRES db1 user=monitor password=${secret:pg} database=shop query="S
 conn   IN MYSQL    db2 user=monitor password=${secret:my} query="SELECT COUNT(*) FROM information_schema.processlist" warn=150
 ```
 
+A REDIS monitor reads Redis the same way: `field=` names a number of `INFO` (connected clients, memory used, keys evicted, and so on, listed in the monitor form) and the limits judge it, with a counter such as commands processed judged by its rate:
+
+```
+cache IN REDIS 10.0.0.20 password=${secret:redis} field=used_memory warn=1GB crit=2GB
+```
+
+A POSTGRES or MYSQL monitor can judge a number a query returns: `query=` is one `SELECT` whose first column of the first row is the number, and `warn=`, `crit=` and the other rules judge it. The check logs in with `user=` to run it. It never changes anything: the statement must be a single `SELECT` (no `;` inside it, no `INTO`, so a literal containing either is refused too), the session is made read-only before it runs (a startup parameter in PostgreSQL, `SET SESSION TRANSACTION READ ONLY` in MySQL), and the account should be one that can only read.
+
+```
+orders IN POSTGRES db1 user=monitor password=${secret:pg} database=shop query="SELECT count(*) FROM orders WHERE created_at > now() - interval '5 minutes'" crit=<1
+conn   IN MYSQL    db2 user=monitor password=${secret:my} query="SELECT COUNT(*) FROM information_schema.processlist" warn=150
+```
+
 Open the page only to the monitoring host. `select=label=value` narrows a metrics page to one proxy, topic or the like. The profiles are data files (`internal/appprofile/profiles/`). Each says the version of the application it was last run against (shown in the monitor form); `scripts/live/start.sh` starts those applications and `go test -tags live ./internal/probe` runs every profile against them. To add an application, see [value-types](value-types.md) for the types a field may have.
 ## Alerting
 
