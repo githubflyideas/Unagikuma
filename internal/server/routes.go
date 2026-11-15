@@ -126,6 +126,10 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/import/{source}", "admin", s.kumaImport)
 	s.handle("GET /api/v1/status-pages", "read", s.statusPages)
 	s.handle("GET /api/v1/status-support", "admin", s.supportGet)
+	s.handle("GET /api/v1/branding", "admin", s.brandGet)
+	s.handle("PUT /api/v1/branding", "admin", s.brandPut)
+	s.handle("PUT /api/v1/branding/{image}", "admin", s.brandImagePut)
+	s.handle("DELETE /api/v1/branding/{image}", "admin", s.brandImageDelete)
 	s.handle("PUT /api/v1/status-support", "admin", requireFeature(s, license.FeatBranding, s.supportPut))
 	s.handle("POST /api/v1/status-pages", "write", global(s.statusPageCreate))
 	s.handle("PUT /api/v1/status-pages/{name}", "write", global(s.statusPageUpdate))
@@ -174,6 +178,8 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/backup", "admin", s.backup)
 	s.handle("GET /api/v1/languages", "", s.languages)
 	s.mux.HandleFunc("GET /api/v1/i18n/{lang}", s.catalog)
+	s.mux.HandleFunc("GET /api/v1/brand", s.brandPublic)
+	s.mux.HandleFunc("GET /api/v1/branding/{image}/preview", s.brandImagePreview)
 
 	// Live stream.
 	s.mux.Handle("GET /api/v1/stream", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -246,6 +252,9 @@ func (s *Server) routes() {
 				w.Header().Set("Cache-Control", "no-cache")
 				w.Header().Set("Referrer-Policy", "no-referrer")
 				files.ServeHTTP(w, r2)
+				return
+			}
+			if s.serveBranded(w, r, p) {
 				return
 			}
 			if p == "" || p == "index.html" {

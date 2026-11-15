@@ -41,7 +41,13 @@ func (s *Server) serveStatusHTML(w http.ResponseWriter, r *http.Request, name st
 	body := s.pageCache.get(sp.Name, s.now(), func() []byte { return s.statusPageBody(sp) })
 	lang := i18n.Normalize(firstLang(r.Header.Get("Accept-Language")))
 	page := string(shell)
-	page = strings.Replace(page, `<html lang="en">`, `<html lang="`+lang+`"`+dirAttr(lang)+`>`, 1)
+	style := ""
+	if st := s.defaultStyle(); st != styleClassic {
+		// The public pages follow the installation's default style.
+		style = ` data-style="` + st + `"`
+		page = strings.Replace(page, `<link rel="stylesheet" href="/app.css">`, `<link rel="stylesheet" href="/app.css">`+"\n"+`<link rel="stylesheet" href="/styles/`+st+`.css">`, 1)
+	}
+	page = strings.Replace(page, `<html lang="en">`, `<html lang="`+lang+`"`+dirAttr(lang)+style+`>`, 1)
 	page = strings.Replace(page, "<title>Status</title>", "<title>"+html.EscapeString(sp.Title)+"</title>", 1)
 	// JSON in a non-executed script element; "</" cannot end it early.
 	data := `<script type="application/json" id="page-data">` + strings.ReplaceAll(string(body), "</", `<\/`) + `</script>`

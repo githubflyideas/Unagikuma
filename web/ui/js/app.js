@@ -19,6 +19,7 @@ import { Nodes } from './views/nodes.js';
 import { IncidentReport } from './views/incident.js';
 import { DrawerHost } from './views/drawer.js';
 import { PaletteHost, openPalette } from './views/palette.js';
+import { loadBrand, loadMyStyle, applyCachedStyle, onStyleLoaded, signedOut } from './styles.js';
 
 // Six themes, each its own mood; Calm when none is chosen. Names stored
 // by earlier versions (and "auto", which there was) map to the nearest.
@@ -64,6 +65,7 @@ function scaleBreakpoints(f) {
   }
 }
 function zoomFactor() { return zoomOf(storage('unagikuma.zoom')) / 100; }
+onStyleLoaded(() => scaleBreakpoints(zoomFactor()));
 function applyZoom(v) {
   const z = zoomOf(v);
   document.documentElement.style.zoom = z === 100 ? '' : String(z / 100);
@@ -370,6 +372,7 @@ function Root() {
       const s = await get('/session');
       setCSRF(s.csrf);
       setMe(s);
+      await loadMyStyle();
       startLive();
       setSt({ phase: 'in', user: s.user });
     } catch (e) {
@@ -392,6 +395,7 @@ function Root() {
   const signedIn = async (r) => {
     setCSRF(r.csrf);
     try { setMe(await get('/session')); } catch { setMe(null); }
+    await loadMyStyle();
     startLive();
     setSt({ phase: 'in', user: r.user });
     location.hash = '#/';
@@ -400,6 +404,7 @@ function Root() {
     try { await del('/session'); } catch { /* ignore */ }
     stopLive();
     setCSRF('');
+    signedOut();
     setSt({ phase: 'login' });
   };
   let body;
@@ -416,7 +421,8 @@ function Root() {
 (async () => {
   applyTheme(storage('unagikuma.theme'));
   applyZoom(storage('unagikuma.zoom'));
-  await loadLanguages();
+  applyCachedStyle();
+  await Promise.all([loadLanguages(), loadBrand()]);
   // The browser's own message for a value of the wrong form is in its
   // language and says nothing useful; say what the field takes instead.
   document.addEventListener('invalid', (e) => {

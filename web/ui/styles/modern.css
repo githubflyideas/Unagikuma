@@ -1,0 +1,117 @@
+/* Modern style: cards on a calm page, a clear type scale and generous
+   spacing. Only the layout changes here; the colours stay the theme's, so
+   it works with every theme, light or dark. Status labels are soft badges
+   with a dot instead of solid blocks; their text is mixed toward the text
+   colour so it keeps 4.5:1 on its tint. */
+:root[data-style="modern"] {
+  --m-radius: 12px; --m-radius-sm: 8px;
+  --m-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 1px 3px rgba(15, 23, 42, .06);
+}
+:root[data-style="modern"] body { font-size: 14px; line-height: 1.5; }
+:root[data-style="modern"] h1 { font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+:root[data-style="modern"] h3 { font-size: 12px; letter-spacing: .05em; }
+
+/* Shell: a wider sidebar with the name beside a small logo. */
+:root[data-style="modern"] .shell { grid-template-columns: 240px 1fr; }
+:root[data-style="modern"] .shell.mini { grid-template-columns: 68px 1fr; }
+:root[data-style="modern"] .side { padding: 18px 12px; gap: 2px; }
+:root[data-style="modern"] .brand { flex-direction: row; align-items: center; text-align: start; gap: 10px; padding: 2px 8px 14px; font-size: 16px; letter-spacing: -.01em; }
+:root[data-style="modern"] .brand img { width: 34px; height: 34px; border-radius: var(--m-radius-sm); }
+:root[data-style="modern"] .brand .edition { font-size: 12px; margin-top: 0; }
+:root[data-style="modern"] .themes { justify-content: flex-start; padding: 0 8px 12px; }
+:root[data-style="modern"] .themes button { width: 20px; height: 20px; }
+:root[data-style="modern"] .nav { display: flex; flex-direction: column; gap: 2px; }
+:root[data-style="modern"] .side .nav a { padding: 8px 10px; border-radius: var(--m-radius-sm); box-shadow: none; }
+:root[data-style="modern"] .side .nav a.on { font-weight: 600; }
+:root[data-style="modern"] .nav .ico { opacity: .7; }
+:root[data-style="modern"] .side .foot { padding: 12px 8px 0; border-top: 1px solid color-mix(in srgb, var(--side-text, var(--text)) 14%, transparent); }
+:root[data-style="modern"] .top { padding: 12px 24px; gap: 14px; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(8px); }
+:root[data-style="modern"] .search { padding: 7px 12px; border-radius: var(--m-radius-sm); background: var(--panel); border-color: var(--border); }
+:root[data-style="modern"] .page { padding: 24px 24px 48px; gap: 24px; }
+:root[data-style="modern"] .grid { gap: 20px; }
+
+/* Cards. */
+:root[data-style="modern"] .card { border-radius: var(--m-radius); border-color: var(--border); box-shadow: var(--shadow, var(--m-shadow)); }
+:root[data-style="modern"] .card > .hd { padding: 16px 20px; gap: 12px; }
+:root[data-style="modern"] .card > .hd h2, :root[data-style="modern"] .card > .hd h3 { font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: -.005em; color: var(--text); }
+:root[data-style="modern"] .card > .bd { padding: 20px; }
+:root[data-style="modern"] .card > .bd.flush { padding: 0; }
+:root[data-style="modern"] .modal { border-radius: 16px; }
+:root[data-style="modern"] .modal .hd { padding: 16px 20px; }
+:root[data-style="modern"] .modal .bd { padding: 20px; }
+:root[data-style="modern"] .banner { border-radius: var(--m-radius); padding: 12px 16px; border-width: 1px; border-color: color-mix(in srgb, currentColor 12%, transparent); }
+:root[data-style="modern"] .banner.error { box-shadow: inset 3px 0 0 var(--critical); }
+:root[data-style="modern"] .banner.warning { box-shadow: inset 3px 0 0 var(--degraded); }
+:root[data-style="modern"] .banner.info { box-shadow: inset 3px 0 0 var(--maint); }
+:root[data-style="modern"] .banner.ok { box-shadow: inset 3px 0 0 var(--ok); }
+[dir="rtl"]:root[data-style="modern"] .banner { box-shadow: none; }
+
+/* Number tiles read as small stat cards. */
+:root[data-style="modern"] .tiles { gap: 16px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+:root[data-style="modern"] .tile { border-radius: var(--m-radius); padding: 16px 18px; gap: 4px; border: 1px solid var(--border); transition: transform .15s, box-shadow .15s; }
+:root[data-style="modern"] .tile:is(.ok, .critical, .degraded, .unknown, .pending, .paused, .maintenance) { border-top-width: 3px; }
+:root[data-style="modern"] .tile b { font-size: 28px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+:root[data-style="modern"] .tile.ok { border-top-color: var(--ok); } :root[data-style="modern"] .tile.critical { border-top-color: var(--critical); }
+:root[data-style="modern"] .tile.degraded { border-top-color: var(--degraded); } :root[data-style="modern"] .tile.unknown { border-top-color: var(--unknown); }
+:root[data-style="modern"] .tile.pending, :root[data-style="modern"] .tile.paused { border-top-color: var(--pending); } :root[data-style="modern"] .tile.maintenance { border-top-color: var(--maint); }
+:root[data-style="modern"] a.tile:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15, 23, 42, .08); border-color: var(--border); }
+
+/* Status: soft badges with a dot. */
+:root[data-style="modern"] .pill { border-radius: 999px; padding: 1px 9px 1px 8px; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 600;
+  background: var(--pending-soft); color: color-mix(in srgb, var(--pending) 60%, var(--text)); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent); }
+:root[data-style="modern"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="modern"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 70%, var(--text)); }
+:root[data-style="modern"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 55%, var(--text)); }
+:root[data-style="modern"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 70%, var(--text)); }
+:root[data-style="modern"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 70%, var(--text)); }
+:root[data-style="modern"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 70%, var(--text)); }
+:root[data-style="modern"] .pill.unreachable { background: var(--pending-soft); color: var(--muted); }
+:root[data-style="modern"] .pill.soft { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
+:root[data-style="modern"] .tag { border-radius: 6px; padding: 0 7px; }
+:root[data-style="modern"] .beats { gap: 2px; }
+:root[data-style="modern"] .beats i { border-radius: 2px; }
+
+/* Tables: quiet headings, room in the rows, no stripes. */
+:root[data-style="modern"] .tbl th { font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 600; padding: 10px 16px; background: var(--panel-2); border-bottom: 1px solid var(--border); }
+:root[data-style="modern"] .tbl td { padding: 12px 16px; }
+:root[data-style="modern"] .tbl.dense td { padding: 8px 12px; }
+:root[data-style="modern"] .tbl.dense th { padding: 8px 12px; }
+:root[data-style="modern"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="modern"] .tbl tr.critical td { background: color-mix(in srgb, var(--critical) 5%, transparent); }
+:root[data-style="modern"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--text) 4%, transparent); }
+
+/* Controls. */
+:root[data-style="modern"] .btn { padding: 7px 14px; border-radius: var(--m-radius-sm); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, .05); }
+:root[data-style="modern"] .btn.ghost { box-shadow: none; }
+:root[data-style="modern"] .btn.sm { padding: 4px 10px; }
+:root[data-style="modern"] input[type=text], :root[data-style="modern"] input[type=password], :root[data-style="modern"] input[type=number],
+:root[data-style="modern"] input[type=url], :root[data-style="modern"] input[type=email], :root[data-style="modern"] input[type=date],
+:root[data-style="modern"] input[type=datetime-local], :root[data-style="modern"] select, :root[data-style="modern"] textarea {
+  padding: 8px 12px; border-radius: var(--m-radius-sm); }
+:root[data-style="modern"] .search input, :root[data-style="modern"] .search select { padding: 0; }
+:root[data-style="modern"] input:focus, :root[data-style="modern"] select:focus, :root[data-style="modern"] textarea:focus {
+  outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent); outline-offset: 0; border-color: var(--accent); }
+:root[data-style="modern"] .form { gap: 18px; }
+:root[data-style="modern"] .field > label { font-size: 13px; }
+:root[data-style="modern"] .seg { padding: 3px; gap: 2px; border-radius: var(--m-radius-sm); }
+:root[data-style="modern"] .seg button { border-radius: 6px; padding: 5px 12px; }
+:root[data-style="modern"] .seg button.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(15, 23, 42, .1); }
+:root[data-style="modern"] .chip { padding: 4px 12px; }
+:root[data-style="modern"] .tabs { gap: 20px; }
+:root[data-style="modern"] .tabs a, :root[data-style="modern"] .tabs button { padding: 10px 0; margin-inline-end: 0; }
+:root[data-style="modern"] .empty { padding: 40px 20px; }
+
+/* Public status page. */
+:root[data-style="modern"] .pub .overall { border-radius: var(--m-radius); }
+
+@media (max-width: 860px) {
+  :root[data-style="modern"] .shell, :root[data-style="modern"] .shell.mini { grid-template-columns: 1fr; }
+  :root[data-style="modern"] .page { padding: 16px 16px 40px; gap: 16px; }
+  :root[data-style="modern"] .top { padding: 10px 16px; }
+  :root[data-style="modern"] .card > .hd { padding: 14px 16px; }
+  :root[data-style="modern"] .card > .bd { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-style="modern"] .tile { transition: none; }
+  :root[data-style="modern"] a.tile:hover { transform: none; }
+}
