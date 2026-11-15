@@ -1,0 +1,65 @@
+/* Starship: a bridge console. Near-black hull, amber and teal readouts,
+   panels with a cut corner, monospaced capitals for titles and a faint
+   grid behind everything. It brings its own colours, so the theme choice
+   is set aside while it is in use. */
+:root[data-style="starship"] {
+  --bg: #06080d; --side: #0a0e17; --panel: #0d1320; --panel-2: #111a2b; --border: #1d2a40; --border-strong: #2c3f5e;
+  --text: #e4ecf7; --muted: #9aabc4; --faint: #8899b3;
+  --accent: #ffb547; --accent-soft: #3a2a10; --accent-text: #1a1102; --link: #ffc978;
+  --ok: #3fe0c5; --ok-soft: #0d2e2c; --degraded: #ffd166; --degraded-soft: #3a3014;
+  --critical: #ff5470; --critical-soft: #3f1420; --unknown: #a78bfa; --unknown-soft: #251f42;
+  --pending: #9aabc4; --pending-soft: #182235; --maint: #6cb6ff; --maint-soft: #132a47;
+  --on-status: #06080d; --on-degraded: #1a1302;
+  --empty: #1a2438; --stripe: rgba(108, 182, 255, .025);
+  --shadow: 0 0 0 1px rgba(255, 181, 71, .04), 0 10px 30px rgba(0, 0, 0, .5); --radius: 2px;
+  --bg-image: linear-gradient(rgba(108, 182, 255, .035) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(108, 182, 255, .035) 1px, transparent 1px) 0 0 / 32px 32px,
+    radial-gradient(1000px 600px at 90% -20%, rgba(255, 181, 71, .08), transparent 60%);
+  --side-text: #c9d5e8; --side-muted: #8fa1bd; --side-hover: rgba(255, 181, 71, .07); --side-on: #1c1608; --side-on-text: #ffc978; --side-mark: #ffb547;
+  --s-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --s-cut: 14px;
+  color-scheme: dark;
+}
+:root[data-style="starship"] .themes { display: none; }
+:root[data-style="starship"] h1, :root[data-style="starship"] .crumbs, :root[data-style="starship"] .brand, :root[data-style="starship"] .tile b, :root[data-style="starship"] .verdict { font-family: var(--s-mono); }
+:root[data-style="starship"] h1 { font-size: 21px; letter-spacing: .04em; }
+:root[data-style="starship"] .crumbs { text-transform: uppercase; letter-spacing: .1em; }
+:root[data-style="starship"] .brand { letter-spacing: .1em; font-size: 15px; }
+:root[data-style="starship"] .side { border-inline-end: 1px solid var(--border-strong); }
+:root[data-style="starship"] .side .nav a { border-radius: 0; text-transform: uppercase; letter-spacing: .08em; font-size: 12.5px; font-family: var(--s-mono); }
+:root[data-style="starship"] .side .nav a.on { box-shadow: inset 4px 0 0 var(--side-mark); }
+:root[data-style="starship"] .top { background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--border-strong);
+  box-shadow: 0 1px 0 rgba(255, 181, 71, .12); }
+:root[data-style="starship"] .page { gap: 20px; padding: 22px 26px 48px; }
+
+/* Panels: the top-end corner is cut away; a short amber bar marks the title. */
+/* (A covering corner, not a clip, so menus inside a panel can still spill out.) */
+:root[data-style="starship"] .card { border-radius: 0; border-color: var(--border-strong); position: relative; }
+:root[data-style="starship"] .card::after { content: ""; position: absolute; top: -1px; inset-inline-end: -1px; width: var(--s-cut); height: var(--s-cut); pointer-events: none;
+  background: linear-gradient(45deg, transparent calc(50% - 1px), var(--border-strong) calc(50% - 1px) calc(50% + .5px), var(--bg) calc(50% + .5px)); }
+[dir="rtl"]:root[data-style="starship"] .card::after { background: linear-gradient(-45deg, transparent calc(50% - 1px), var(--border-strong) calc(50% - 1px) calc(50% + .5px), var(--bg) calc(50% + .5px)); }
+:root[data-style="starship"] .card > .hd { border-bottom: 1px solid var(--border-strong); background: linear-gradient(90deg, rgba(255, 181, 71, .08), transparent 50%); }
+:root[data-style="starship"] .card > .hd h2, :root[data-style="starship"] .card > .hd h3 { font-family: var(--s-mono); font-size: 12.5px; text-transform: uppercase; letter-spacing: .14em; color: var(--link); font-weight: 600;
+  padding-inline-start: 12px; position: relative; }
+:root[data-style="starship"] .card > .hd h2::before, :root[data-style="starship"] .card > .hd h3::before { content: ""; position: absolute; inset-inline-start: 0; top: 2px; bottom: 2px; width: 4px; background: var(--accent); }
+:root[data-style="starship"] .modal { border-radius: 0; border: 1px solid var(--border-strong); }
+:root[data-style="starship"] .tile { border-radius: 0; border-color: var(--border-strong); }
+:root[data-style="starship"] .banner { border-radius: 0; }
+
+/* Controls: square keys with lettered labels. */
+:root[data-style="starship"] .btn { border-radius: 0; text-transform: uppercase; letter-spacing: .08em; font-size: 12.5px; font-family: var(--s-mono); background: var(--panel-2); border-color: var(--border-strong); }
+:root[data-style="starship"] .btn:hover { border-color: var(--accent); background: var(--panel-2); }
+:root[data-style="starship"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="starship"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="starship"] input[type=text], :root[data-style="starship"] input[type=password], :root[data-style="starship"] input[type=number],
+:root[data-style="starship"] input[type=url], :root[data-style="starship"] input[type=email], :root[data-style="starship"] select, :root[data-style="starship"] textarea,
+:root[data-style="starship"] .search, :root[data-style="starship"] .chip, :root[data-style="starship"] .seg, :root[data-style="starship"] .seg button { border-radius: 0; }
+:root[data-style="starship"] .tabs a, :root[data-style="starship"] .tabs button { text-transform: uppercase; letter-spacing: .08em; font-size: 12.5px; font-family: var(--s-mono); }
+
+/* Readouts. */
+:root[data-style="starship"] .pill { border-radius: 0; font-family: var(--s-mono); letter-spacing: .08em; font-size: 11.5px; }
+:root[data-style="starship"] .tbl th { font-family: var(--s-mono); text-transform: uppercase; letter-spacing: .12em; font-size: 11.5px; background: var(--panel-2); border-bottom-color: var(--border-strong); }
+:root[data-style="starship"] .tbl td { font-variant-numeric: tabular-nums; }
+:root[data-style="starship"] .tbl tr.click:hover td { background: rgba(255, 181, 71, .05); }
+:root[data-style="starship"] .beats i { border-radius: 0; }
+:root[data-style="starship"] .verdict { border-radius: 0; letter-spacing: .06em; }

@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.17 — 2026-11-15
+
+**Added**
+- Three page styles for registered installations: Relic, Legend and Starship.
+
 ## v2.6.16 — 2026-11-14
 
 **Added**

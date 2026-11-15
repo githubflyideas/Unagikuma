@@ -17,4 +17,8 @@ theme, light and dark.
    and colour contrast (WCAG AA) on the console and the public status
    page.
 
+A style may also bring its own colours, as Relic, Legend and Starship
+do: set the theme variables under its selector and hide the theme dots
+(`.themes { display: none; }`).
+
 "classic" is the base stylesheet itself and has no file of its own.

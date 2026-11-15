@@ -658,6 +658,12 @@ func (p *peer) reader(r *bufio.Reader, maxMsg int) error {
 			delete(p.pings, pg.Seq)
 			if ok {
 				rtt := got.Sub(sent)
+				if rtt <= 0 {
+					// Some clocks (Windows) move in ticks, so a quick round
+					// trip can read as zero; it was measured all the same,
+					// and zero would read as never measured.
+					rtt = time.Microsecond
+				}
 				p.status.RTT = rtt
 				// The agent read its clock about half a round trip after
 				// the ping left.
