@@ -4,6 +4,9 @@
 
 A review of how each check's value is read and judged. A file that used to load with one of these mistakes now says so; the last good version keeps running until it is corrected.
 
+**Added**
+- `warn=` and `crit=` on an application or Redis monitor can join two to four comparisons of its fields with `and` or with `or`: `crit="busy>50 and queue>100"`, `warn="free_bytes<100GB or drives_offline>0"`. Each comparison names a field, uses `<`, `<=`, `>` or `>=`, and its limit must fit that field's unit; a total that only grows is compared by its rate. All `and` or all `or` in one condition; mixing them is refused, as is a single comparison (write the limit alone with `field=`) and naming a field twice. The reason lists the comparisons that held.
+
 **Fixed**
 - Limits that could never work are refused when the file is checked instead of being saved and staying silent: `warn` and `crit` at the same number, limits on opposite sides that leave no value fine (`warn=<10 crit=>5`), a limit below zero on a value that is never negative, a percentage limit above 100, `for=` or `direction=` without the rule they belong to, and `change=150% direction=down`.
 - A limit's unit must fit a described value: `80%`, `500Mbps` or `5s` on a count of connections is refused. Application fields in bytes and seconds now say so, so `warn=1GB` and `crit=<300s` are read and shown in those units (`967 KB`, not `990728`).

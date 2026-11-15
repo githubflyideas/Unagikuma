@@ -5,15 +5,41 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/githubflyideas/unagikuma/internal/appprofile"
 	"github.com/githubflyideas/unagikuma/internal/valuerule"
 )
 
 // validateValueRules checks a monitor's value rules (warn=, crit=,
 // change= and the rest) for a check that reads a number in unit.
 func validateValueRules(o opts, unit string) error {
-	_, err := valuerule.Parse(func(k string) string { return o.str(k, "") }, unit)
+	_, err := valuerule.ParseWith(func(k string) string { return o.str(k, "") }, unit, valueFields(o))
 	return err
 }
+
+// valueFields are the named numbers a condition in warn= or crit= may use:
+// the fields of the application's page, or of Redis's INFO. A check that
+// reads one number has none.
+func valueFields(o opts) valuerule.Fields {
+	var p *appprofile.Profile
+	if ap, ok := appProfile(o); ok {
+		p = ap
+	} else if strings.EqualFold(o.str("proto", ""), "redis") {
+		p = redisProfile()
+	}
+	if p == nil {
+		return nil
+	}
+	return func(name string) (valuerule.Field, bool) {
+		f, ok := p.Field(name)
+		if !ok {
+			return valuerule.Field{}, false
+		}
+		return valuerule.Field{Unit: f.LimitUnit(), Counter: f.Type == "counter"}, true
+	}
+}
+
+// ValueFields is valueFields for a spec, for the engine that judges it.
+func ValueFields(s Spec) valuerule.Fields { return valueFields(opts(s.Opts)) }
 
 // rulesSet reports whether the monitor has a rule that judges a number.
 func rulesSet(o opts) bool { return o.has("warn") || o.has("crit") || o.has("change") }

@@ -617,7 +617,7 @@ func judgeOnce(spec probe.Spec, res probe.Result) (probe.Result, string) {
 	if res.Vote != probe.VoteOK {
 		return res, ""
 	}
-	rules, err := valuerule.Parse(func(k string) string { return spec.Opts[k] }, probe.ValueUnit(spec))
+	rules, err := valuerule.ParseWith(func(k string) string { return spec.Opts[k] }, probe.ValueUnit(spec), probe.ValueFields(spec))
 	if err != nil || !rules.Active() {
 		return res, ""
 	}

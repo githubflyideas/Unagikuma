@@ -163,7 +163,7 @@ nrpe-web  IN EXEC "check_nrpe -H $HOSTADDRESS$ -c check_users" address=10.0.0.21
 
 ### Application status pages (APP)
 
-A well-known application has a status page of its own, and an APP monitor reads it: `app=` names the application, and its profile says where the page is and what each number on it is. The address may be a URL, `host` or `host:port`; the profile's page and port fill in what it leaves out. `field=` names the number the limits judge (the profile's main one when it is not given); a total that only grows, such as requests, is judged by its rate per second. A reply that is not that application's page fails and says what is missing.
+A well-known application has a status page of its own, and an APP monitor reads it: `app=` names the application, and its profile says where the page is and what each number on it is. The address may be a URL, `host` or `host:port`; the profile's page and port fill in what it leaves out. `field=` names the number the limits judge (the profile's main one when it is not given); a total that only grows, such as requests, is judged by its rate per second. A reply that is not that application's page fails and says what is missing. `warn=` and `crit=` may also join two to four comparisons of the page's fields, all with `and` or all with `or`, such as `crit="busy>50 and queue>100"` (every comparison must hold) or `warn="free_bytes<100GB or drives_offline>0"` (any one); the same works on a REDIS monitor with `field=`. The units follow each field, a total that only grows is compared by its rate, and `and` and `or` are not mixed in one condition.
 
 ```
 web1  30s IN APP 10.0.0.5 app=nginx warn=800 crit=1500

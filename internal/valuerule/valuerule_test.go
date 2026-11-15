@@ -294,3 +294,95 @@ func TestChangeFromZeroAndNegative(t *testing.T) {
 		t.Errorf("-20 -> -21: %+v", out)
 	}
 }
+
+func fieldsOf(m map[string]Field) Fields {
+	return func(n string) (Field, bool) { f, ok := m[n]; return f, ok }
+}
+
+var testFields = fieldsOf(map[string]Field{
+	"busy":  {Unit: "1"},
+	"queue": {Unit: "1"},
+	"free":  {Unit: "B"},
+	"reqs":  {Unit: "1", Counter: true},
+})
+
+func condRules(t *testing.T, opts map[string]string) (*Rules, error) {
+	return ParseWith(func(k string) string { return opts[k] }, "1", testFields)
+}
+
+// Two or more comparisons with one joiner; anything else is refused.
+func TestConditionParse(t *testing.T) {
+	for _, c := range []struct {
+		crit string
+		ok   bool
+	}{
+		{"busy>50 and queue>100", true},
+		{"busy > 50 AND queue >= 100", true},
+		{"busy>50 or queue>100 or free<1GB", true},
+		{"busy>50 and queue>100 and free<1GB and reqs>5", true},
+		{"busy>50 and queue>100 or free<1GB", false}, // mixed: no brackets, no meaning
+		{"busy>50 and queue>100 and free<1GB and reqs>5 and busy>1", false},
+		{"busy>50 and busy<10", false},   // one field twice
+		{"busy>50 and nope>1", false},    // not a field
+		{"busy>50 and queue==1", false},  // no equality on numbers
+		{"busy>50 and queue>80%", false}, // the unit must fit
+		{"busy>50 and free>abc", false},  // not a number
+		{"busy>50 and", false},           // a comparison is missing
+		{"busy>50 and queue", false},     // no limit
+		{"busy>50", false},               // one field: field= and a limit
+	} {
+		_, err := condRules(t, map[string]string{"crit": c.crit})
+		if (err == nil) != c.ok {
+			t.Errorf("crit=%q: ok=%v, err=%v", c.crit, c.ok, err)
+		}
+	}
+	// A check without named numbers has nothing to name.
+	if _, err := Parse(func(k string) string { return map[string]string{"crit": "busy>5 and queue>5"}[k] }, ""); err == nil {
+		t.Error("condition accepted on a check without fields")
+	}
+}
+
+// "and" needs every comparison, "or" any; warn and crit each take one;
+// a counter's comparison is on its rate.
+func TestConditionJudge(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	obs := func(tr *Tracker, at time.Time, busy, queue, reqs float64) Outcome {
+		return tr.Observe(at, map[string]float64{"value": busy, "app.busy": busy, "app.queue": queue, "app.reqs": reqs, "app.free": 5 << 30})
+	}
+	r, err := condRules(t, map[string]string{"crit": "busy>50 and queue>100", "warn": "busy>50 or queue>100"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr := &Tracker{Rules: r}
+	for _, c := range []struct {
+		busy, queue float64
+		want        Level
+	}{
+		{10, 10, OK}, {60, 10, Warn}, {10, 200, Warn}, {60, 200, Crit}, {50, 100, OK},
+	} {
+		if out := obs(tr, now, c.busy, c.queue, 0); out.Level != c.want {
+			t.Errorf("busy %v queue %v: %+v, want level %v", c.busy, c.queue, out, c.want)
+		}
+	}
+	if out := obs(tr, now, 60, 200, 0); !strings.Contains(out.Detail, "busy 60 >50 and queue 200 >100") {
+		t.Errorf("reason %q", out.Detail)
+	}
+	// A counter is compared by its rate: 600 requests in a minute is 10/s.
+	r, _ = condRules(t, map[string]string{"crit": "reqs>5 and busy>1"})
+	tr = &Tracker{Rules: r}
+	if out := obs(tr, now, 3, 0, 1000); out.Level != OK {
+		t.Errorf("first reading: %+v", out)
+	}
+	if out := obs(tr, now.Add(time.Minute), 3, 0, 1600); out.Level != Crit {
+		t.Errorf("10/s with busy 3: %+v", out)
+	}
+	if out := obs(tr, now.Add(2*time.Minute), 3, 0, 1660); out.Level != OK {
+		t.Errorf("1/s with busy 3: %+v", out)
+	}
+	// A field with no number leaves an "and" unconfirmed.
+	r, _ = condRules(t, map[string]string{"crit": "busy>50 and queue>100"})
+	tr = &Tracker{Rules: r}
+	if out := tr.Observe(now, map[string]float64{"value": 60, "app.busy": 60}); out.Level != OK {
+		t.Errorf("queue missing: %+v", out)
+	}
+}

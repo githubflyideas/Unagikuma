@@ -141,3 +141,34 @@ func TestTextOrNumber(t *testing.T) {
 		}
 	}
 }
+
+// A condition joins comparisons of an application's own fields.
+func TestConditionOptions(t *testing.T) {
+	for _, c := range []struct {
+		typ string
+		o   map[string]string
+		ok  bool
+	}{
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 and waiting>500"}, true},
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 or waiting>500", "warn": "active>400 and requests>50"}, true},
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 and waiting>50%"}, false}, // a count has no percentage
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 and nope>5"}, false},      // not an nginx field
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 and waiting>5 or idle>1"}, false},
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800"}, false}, // one comparison
+		{"HTTP", map[string]string{"app": "minio", "crit": "free_bytes<1GB or drives_offline>0"}, true},
+		{"HTTP", map[string]string{"app": "minio", "crit": "free_bytes<80% or drives_offline>0"}, false},
+		{"HTTP", map[string]string{"json-path": "$.x", "crit": "a>1 and b>2"}, false}, // a JSON value has no names
+		{"TCP", map[string]string{"proto": "redis", "field": "connected_clients", "crit": "connected_clients>500 and blocked_clients>5"}, true},
+		{"TCP", map[string]string{"proto": "redis", "field": "connected_clients", "crit": "used_memory>1GB and evicted_keys>10"}, true},
+		{"TCP", map[string]string{"proto": "redis", "field": "connected_clients", "crit": "used_memory>1GB and master_last_io>3"}, false},
+	} {
+		target := "http://127.0.0.1/x"
+		if c.typ == "TCP" {
+			target = "127.0.0.1:6379"
+		}
+		err := Validate(Spec{Type: c.typ, Target: target, Opts: c.o})
+		if (err == nil) != c.ok {
+			t.Errorf("%s %v: ok=%v, err=%v", c.typ, c.o, c.ok, err)
+		}
+	}
+}

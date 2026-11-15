@@ -46,3 +46,10 @@ and its help text follow from it.
 - A total that has not been counted yet is 0: an application lists a
   counter from its first event on, so its absence on the right page is
   not a failure.
+- Two to four comparisons of an application's fields may be joined in one
+  `warn=` or `crit=`, all by `and` or all by `or`: `crit="busy>50 and
+  queue>100"`. Each follows the rules above for its own field and unit; a
+  counter field is compared by its rate. A check that reads one number
+  (a JSON path, an SNMP OID, a SQL query) has no field names, so it takes
+  no condition. No brackets and no mixing: that would need a language of
+  its own.

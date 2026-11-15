@@ -43,8 +43,39 @@ func (b Bound) breached(v float64) bool {
 	return v > b.X || (b.Incl && v == b.X)
 }
 
+// A Field is a named number a check reads (a field of an application's
+// page), which a condition may name.
+type Field struct {
+	Unit    string // the unit its limits are written in
+	Counter bool   // a total that only grows: judged by its rate
+}
+
+// Fields resolves the names a condition may use; nil when the check has
+// no named numbers.
+type Fields func(name string) (Field, bool)
+
+// A Term is one comparison of a condition: busy>50, free<1GB.
+type Term struct {
+	Name  string
+	Field Field
+	Bound Bound
+}
+
+// A Cond combines two to MaxTerms comparisons with one joiner, all "and"
+// or all "or": busy>50 and queue>100. It is the value of warn= or crit=
+// in place of a single limit.
+type Cond struct {
+	Terms []Term
+	Or    bool
+	Text  string
+}
+
+// MaxTerms is how many comparisons one condition holds.
+const MaxTerms = 4
+
 // Rules are the options of one monitor.
 type Rules struct {
+	WarnCond, CritCond *Cond
 	// Value names the number judged: "" (the check's own value), or for a
 	// network port "in", "out" or "util".
 	Value      string
@@ -62,12 +93,18 @@ var Keys = []string{"value", "warn", "crit", "change", "compare", "min", "for", 
 
 // Active reports whether any rule is set.
 func (r *Rules) Active() bool {
-	return r != nil && (r.Warn != nil || r.Crit != nil || r.Change > 0)
+	return r != nil && (r.Warn != nil || r.Crit != nil || r.WarnCond != nil || r.CritCond != nil || r.Change > 0)
 }
 
 // Parse reads the rules from a monitor's options (get returns "" for an
 // option that is not set). unit is the unit of the check's own value.
 func Parse(get func(string) string, unit string) (*Rules, error) {
+	return ParseWith(get, unit, nil)
+}
+
+// ParseWith is Parse for a check whose numbers have names: warn= and crit=
+// may then be a condition on several of them.
+func ParseWith(get func(string) string, unit string, fields Fields) (*Rules, error) {
 	r := &Rules{Value: get("value"), Direction: "both", Unit: unit}
 	switch r.Value {
 	case "":
@@ -79,11 +116,33 @@ func Parse(get func(string) string, unit string) (*Rules, error) {
 		return nil, fmt.Errorf("value must be in, out or util, got %q", r.Value)
 	}
 	var err error
-	if r.Warn, err = parseBound(get("warn"), r.Unit); err != nil {
-		return nil, fmt.Errorf("warn: %w", err)
+	for _, k := range []string{"warn", "crit"} {
+		v := get(k)
+		if !isCondition(v) {
+			if i := strings.IndexAny(v, "<>"); i > 0 && strings.Trim(v[:i], "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_ ") == "" && strings.TrimSpace(v[:i]) != "" {
+				return nil, fmt.Errorf("%s: %q compares one field: name it with field= and write the limit alone, or join two comparisons with and / or", k, v)
+			}
+			continue
+		}
+		c, err := parseCond(v, fields)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", k, err)
+		}
+		if k == "warn" {
+			r.WarnCond = c
+		} else {
+			r.CritCond = c
+		}
 	}
-	if r.Crit, err = parseBound(get("crit"), r.Unit); err != nil {
-		return nil, fmt.Errorf("crit: %w", err)
+	if r.WarnCond == nil {
+		if r.Warn, err = parseBound(get("warn"), r.Unit); err != nil {
+			return nil, fmt.Errorf("warn: %w", err)
+		}
+	}
+	if r.CritCond == nil {
+		if r.Crit, err = parseBound(get("crit"), r.Unit); err != nil {
+			return nil, fmt.Errorf("crit: %w", err)
+		}
 	}
 	if err := checkBounds(r.Warn, r.Crit, get("warn"), get("crit")); err != nil {
 		return nil, err
@@ -177,6 +236,101 @@ func checkBounds(w, c *Bound, ws, cs string) error {
 		return fmt.Errorf("no value would be fine: warn %s and crit %s leave nothing between them", ws, cs)
 	}
 	return nil
+}
+
+// isCondition reports whether a limit is written as a condition (it holds
+// the word and, or or).
+func isCondition(v string) bool {
+	return splitJoiner(v) != nil || strings.Contains(strings.ToLower(v), " and ") || strings.Contains(strings.ToLower(v), " or ")
+}
+
+// splitJoiner cuts v at every " and " or " or " (any case), giving the
+// parts and the joiners found.
+func splitJoiner(v string) []string {
+	parts := []string{}
+	rest := v
+	for {
+		lo := strings.ToLower(rest)
+		ia, io := strings.Index(lo, " and "), strings.Index(lo, " or ")
+		i, w := ia, 5
+		if ia < 0 || (io >= 0 && io < ia) {
+			i, w = io, 4
+		}
+		if i < 0 {
+			parts = append(parts, strings.TrimSpace(rest))
+			break
+		}
+		parts = append(parts, strings.TrimSpace(rest[:i]), strings.ToLower(strings.TrimSpace(rest[i:i+w])))
+		rest = rest[i+w:]
+	}
+	if len(parts) == 1 {
+		return nil
+	}
+	return parts
+}
+
+// parseCond reads "busy>50 and queue>=100": two to MaxTerms comparisons,
+// one joiner throughout, each naming a field of the check, compared with
+// <, <=, > or >= to a limit in that field's unit.
+func parseCond(v string, fields Fields) (*Cond, error) {
+	if fields == nil {
+		return nil, errors.New("a condition names fields of an application page, and this check has none")
+	}
+	parts := splitJoiner(v)
+	if parts == nil {
+		return nil, fmt.Errorf("want a condition such as busy>50 and queue>100, got %q", v)
+	}
+	c := &Cond{Text: strings.Join(strings.Fields(v), " ")}
+	for i, p := range parts {
+		if i%2 == 1 {
+			or := p == "or"
+			if i == 1 {
+				c.Or = or
+			} else if or != c.Or {
+				return nil, errors.New("use only and, or only or, in one condition: mixing them has no single meaning without brackets")
+			}
+			continue
+		}
+		t, err := parseTerm(p, fields)
+		if err != nil {
+			return nil, err
+		}
+		c.Terms = append(c.Terms, t)
+	}
+	if len(c.Terms) > MaxTerms {
+		return nil, fmt.Errorf("a condition holds at most %d comparisons", MaxTerms)
+	}
+	seen := map[string]bool{}
+	for _, t := range c.Terms {
+		if seen[t.Name] {
+			return nil, fmt.Errorf("%s is compared twice: write one limit per field", t.Name)
+		}
+		seen[t.Name] = true
+	}
+	return c, nil
+}
+
+func parseTerm(p string, fields Fields) (Term, error) {
+	i := strings.IndexAny(p, "<>=!")
+	if i <= 0 {
+		return Term{}, fmt.Errorf("want field<limit or field>limit, got %q", p)
+	}
+	name, rest := strings.TrimSpace(p[:i]), strings.TrimSpace(p[i:])
+	f, ok := fields(name)
+	if !ok {
+		return Term{}, fmt.Errorf("%q is not a field of this check", name)
+	}
+	if !strings.HasPrefix(rest, "<") && !strings.HasPrefix(rest, ">") {
+		return Term{}, fmt.Errorf("%q: compare with <, <=, > or >=", p)
+	}
+	b, err := parseBound(rest, f.Unit)
+	if err != nil {
+		return Term{}, fmt.Errorf("%s: %w", name, err)
+	}
+	if b == nil {
+		return Term{}, fmt.Errorf("%q has no limit", p)
+	}
+	return Term{Name: name, Field: f, Bound: *b}, nil
 }
 
 func parseBound(v, unit string) (*Bound, error) {
@@ -350,8 +504,9 @@ type Tracker struct {
 	samples []Sample
 	// counters: the last raw reading of each counter, for rates.
 	counters map[string]Sample
-	since    time.Time // the current breach started
-	speed    float64   // the port speed last seen
+	since    time.Time          // the current breach started
+	speed    float64            // the port speed last seen
+	termVals map[string]float64 // this round's number of each field a condition names
 }
 
 // Load gives the tracker samples kept from before (a restart).
@@ -377,6 +532,7 @@ type Outcome struct {
 
 // Observe takes one round's numbers (the check's metrics) and judges them.
 func (t *Tracker) Observe(now time.Time, m map[string]float64) Outcome {
+	t.readTerms(now, m) // before anything can return: a counter's rate needs every reading
 	v, ok, note := t.value(now, m)
 	if !ok {
 		if note == noValue {
@@ -466,7 +622,14 @@ func (t *Tracker) judge(now time.Time, v float64) Outcome {
 	r := t.Rules
 	out := Outcome{Level: OK}
 	level, why := OK, ""
-	if r.Crit != nil && r.Crit.breached(v) {
+	if why = t.condWhy(r.CritCond); why != "" {
+		level = Crit
+	} else if why = t.condWhy(r.WarnCond); why != "" {
+		level = Warn
+	}
+	if level == Crit {
+		// a condition already decided the worst
+	} else if r.Crit != nil && r.Crit.breached(v) {
 		level, why = Crit, fmt.Sprintf("%s, limit %s%s", Format(v, r.Unit), side(r.Crit), Format(r.Crit.X, r.Unit))
 	} else if r.Warn != nil && r.Warn.breached(v) {
 		level, why = Warn, fmt.Sprintf("%s, limit %s%s", Format(v, r.Unit), side(r.Warn), Format(r.Warn.X, r.Unit))
@@ -517,6 +680,71 @@ func (t *Tracker) judge(now time.Time, v float64) Outcome {
 	}
 	out.Level, out.Detail = level, why
 	return out
+}
+
+// readTerms takes this round's number of each field a condition names;
+// a counter's number is its rate, so a field that is missing, or a counter
+// on its first reading, has none.
+func (t *Tracker) readTerms(now time.Time, m map[string]float64) {
+	t.termVals = map[string]float64{}
+	if t.Rules == nil {
+		return
+	}
+	if t.counters == nil {
+		t.counters = map[string]Sample{}
+	}
+	for _, c := range []*Cond{t.Rules.WarnCond, t.Rules.CritCond} {
+		if c == nil {
+			continue
+		}
+		for _, tm := range c.Terms {
+			if _, done := t.termVals[tm.Name]; done {
+				continue
+			}
+			key := "app." + tm.Name
+			raw, ok := m[key]
+			if !ok {
+				continue
+			}
+			if !tm.Field.Counter {
+				t.termVals[tm.Name] = raw
+				continue
+			}
+			prev, had := t.counters["cond:"+tm.Name]
+			t.counters["cond:"+tm.Name] = Sample{now, raw}
+			if dt := now.Sub(prev.At).Seconds(); had && dt > 0 && raw >= prev.V {
+				t.termVals[tm.Name] = (raw - prev.V) / dt
+			}
+		}
+	}
+}
+
+// condWhy says why a condition holds ("busy 60 >50 and queue 120 >100"),
+// or "" when it does not. A comparison with no number this round does not
+// hold, so an "and" cannot be confirmed and an "or" rests on the others.
+func (t *Tracker) condWhy(c *Cond) string {
+	if c == nil {
+		return ""
+	}
+	var held []string
+	for _, tm := range c.Terms {
+		v, ok := t.termVals[tm.Name]
+		if ok && tm.Bound.breached(v) {
+			unit := tm.Field.Unit
+			if tm.Field.Counter && (unit == "" || unit == "1") {
+				unit = "/s"
+			}
+			held = append(held, fmt.Sprintf("%s %s %s%s", tm.Name, Format(v, unit), side(&tm.Bound), Format(tm.Bound.X, unit)))
+		}
+	}
+	if (c.Or && len(held) > 0) || (!c.Or && len(held) == len(c.Terms)) {
+		joiner := " and "
+		if c.Or {
+			joiner = " or "
+		}
+		return strings.Join(held, joiner)
+	}
+	return ""
 }
 
 func side(b *Bound) string {

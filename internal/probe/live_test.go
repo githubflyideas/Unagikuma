@@ -139,3 +139,23 @@ func TestLiveMetricsApps(t *testing.T) {
 		t.Errorf("etcd leader: %+v", r)
 	}
 }
+
+// A condition of two fields, judged on real Apache and Redis: the numbers
+// are the ones the servers report now.
+func TestLiveConditions(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		spec Spec
+		want Vote
+	}{
+		{"apache and, both hold", Spec{Type: "HTTP", Target: "http://127.0.0.1:18081/server-status?auto", Opts: map[string]string{"app": "apache", "crit": "busy>=1 and idle>10"}}, VoteFail},
+		{"apache and, one does not", Spec{Type: "HTTP", Target: "http://127.0.0.1:18081/server-status?auto", Opts: map[string]string{"app": "apache", "crit": "busy>=1 and idle>1000"}}, VoteOK},
+		{"apache or, one holds", Spec{Type: "HTTP", Target: "http://127.0.0.1:18081/server-status?auto", Opts: map[string]string{"app": "apache", "crit": "busy>50 or idle>10"}}, VoteFail},
+		{"redis and, both hold", Spec{Type: "TCP", Target: "127.0.0.1:16379", Opts: map[string]string{"proto": "redis", "field": "connected_clients", "crit": "connected_clients>=1 and used_memory>1KB"}}, VoteFail},
+		{"redis and, memory limit not reached", Spec{Type: "TCP", Target: "127.0.0.1:16379", Opts: map[string]string{"proto": "redis", "field": "connected_clients", "crit": "connected_clients>=1 and used_memory>1GB"}}, VoteOK},
+	} {
+		if r := run(t, c.spec); r.Vote != c.want {
+			t.Errorf("%s: %s %s %s", c.name, r.Vote, r.Reason, r.Detail)
+		}
+	}
+}
