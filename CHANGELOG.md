@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.23 — 2026-11-15
+
+**Added**
+- APP profiles for Prometheus, etcd, Caddy, RabbitMQ, Grafana, Traefik and MinIO, each run on the real application.
+
 ## v2.6.22 — 2026-11-15
 
 **Added**

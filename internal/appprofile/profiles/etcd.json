@@ -1,0 +1,16 @@
+{
+  "id": "etcd", "title": "etcd", "reader": "metrics", "path": "/metrics", "port": 2379,
+  "docs": "https://etcd.io/docs/latest/metrics/",
+  "needs": "Nothing: etcd serves metrics on its client URL; with TLS or listen-metrics-urls set, give that address.",
+  "verified": "etcd 3.4.30",
+  "primary": "has_leader",
+  "summary": ["has_leader", "is_leader", "leader_changes", "db_size"],
+  "fields": [
+    {"key": "has_leader", "label": "Has a leader (1 yes, 0 no)", "type": "quantity", "metric": "etcd_server_has_leader"},
+    {"key": "is_leader", "label": "Is the leader (1 yes, 0 no)", "type": "quantity", "metric": "etcd_server_is_leader"},
+    {"key": "leader_changes", "label": "Leader changes seen", "type": "counter", "metric": "etcd_server_leader_changes_seen_total"},
+    {"key": "db_size", "label": "Database size (bytes)", "type": "quantity", "metric": "etcd_mvcc_db_total_size_in_bytes"},
+    {"key": "proposals_failed", "label": "Proposals failed", "type": "counter", "metric": "etcd_server_proposals_failed_total"},
+    {"key": "proposals_committed", "label": "Proposals committed", "type": "counter", "metric": "etcd_server_proposals_committed_total"}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "prometheus", "title": "Prometheus", "reader": "metrics", "path": "/metrics", "port": 9090,
+  "docs": "https://prometheus.io/docs/prometheus/latest/getting_started/",
+  "needs": "Nothing: Prometheus serves its own metrics at /metrics; allow only the monitoring host.",
+  "verified": "Prometheus 2.45.3",
+  "primary": "head_series",
+  "summary": ["head_series", "config_ok", "notifications_dropped"],
+  "fields": [
+    {"key": "head_series", "label": "Series in memory", "type": "quantity", "metric": "prometheus_tsdb_head_series"},
+    {"key": "head_chunks", "label": "Chunks in memory", "type": "quantity", "metric": "prometheus_tsdb_head_chunks"},
+    {"key": "config_ok", "label": "Last config reload succeeded (1 yes, 0 no)", "type": "quantity", "metric": "prometheus_config_last_reload_successful"},
+    {"key": "targets", "label": "Scrape targets", "type": "quantity", "metric": "prometheus_target_scrape_pool_targets"},
+    {"key": "notifications_dropped", "label": "Alert notifications dropped", "type": "counter", "metric": "prometheus_notifications_dropped_total"},
+    {"key": "scrapes_over_limit", "label": "Scrapes over the sample limit", "type": "counter", "metric": "prometheus_target_scrapes_exceeded_sample_limit_total"},
+    {"key": "compactions_failed", "label": "Compactions failed", "type": "counter", "metric": "prometheus_tsdb_compactions_failed_total"},
+    {"key": "wal_corruptions", "label": "WAL corruptions", "type": "counter", "metric": "prometheus_tsdb_wal_corruptions_total"}
+  ]
+}

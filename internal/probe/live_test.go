@@ -3,6 +3,7 @@
 package probe
 
 import (
+	"github.com/githubflyideas/unagikuma/internal/appprofile"
 	"strings"
 	"testing"
 )
@@ -97,5 +98,44 @@ func TestLiveSQL(t *testing.T) {
 		if r := my(q); r.Vote != VoteFail || !strings.Contains(r.Detail, why) {
 			t.Errorf("mysql %q: %+v", q, r)
 		}
+	}
+}
+
+// Every required field of the metrics-page profiles is found on the real
+// applications (scripts/live/metrics.sh starts them).
+func TestLiveMetricsApps(t *testing.T) {
+	for app, url := range map[string]string{
+		"prometheus": "http://127.0.0.1:19090/metrics",
+		"etcd":       "http://127.0.0.1:12379/metrics",
+		"caddy":      "http://127.0.0.1:12019/metrics",
+		"rabbitmq":   "http://127.0.0.1:15692/metrics",
+		"grafana":    "http://127.0.0.1:13000/metrics",
+		"traefik":    "http://127.0.0.1:18087/metrics",
+		"minio":      "http://127.0.0.1:19100/minio/v2/metrics/cluster",
+	} {
+		p, ok := appprofile.Get(app)
+		if !ok {
+			t.Fatalf("no profile %s", app)
+		}
+		for _, f := range p.Fields {
+			if f.Optional {
+				continue
+			}
+			r := run(t, Spec{Type: "HTTP", Target: url, Opts: map[string]string{"app": app, "field": f.Key}})
+			if r.Vote != VoteOK {
+				t.Errorf("%s %s: %s %s", app, f.Key, r.Reason, r.Detail)
+			}
+		}
+	}
+	// Traefik reports its backend servers only once a service exists; the
+	// live setup has one healthy server.
+	for _, f := range []string{"servers_all_up", "servers", "requests"} {
+		if r := run(t, Spec{Type: "HTTP", Target: "http://127.0.0.1:18087/metrics", Opts: map[string]string{"app": "traefik", "field": f}}); r.Vote != VoteOK {
+			t.Errorf("traefik %s: %s %s", f, r.Reason, r.Detail)
+		}
+	}
+	// etcd's leader is a 1 on a healthy node.
+	if r := run(t, Spec{Type: "HTTP", Target: "http://127.0.0.1:12379/metrics", Opts: map[string]string{"app": "etcd", "field": "has_leader", "crit": "<1"}}); r.Vote != VoteOK || r.Metrics["value"] != 1 {
+		t.Errorf("etcd leader: %+v", r)
 	}
 }
