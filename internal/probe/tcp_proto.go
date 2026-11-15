@@ -251,7 +251,7 @@ func validateRedisInfo(o opts, proto string) error {
 		}
 		return fmt.Errorf("redis has no field %q (%s)", o.str("field", ""), strings.Join(keys, ", "))
 	}
-	return validateValueRules(o, f.Unit)
+	return validateValueRules(o, f.LimitUnit())
 }
 
 func redisProfile() *appprofile.Profile {

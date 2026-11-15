@@ -7,6 +7,10 @@ set -e
 chmod 1777 /tmp/live 2>/dev/null || { mkdir -p /tmp/live; chmod 1777 /tmp/live; }
 cd /tmp/live
 PGBIN=$(ls -d /usr/lib/postgresql/*/bin | head -1)
+# Safe to run again: stop what an earlier run left, then start from scratch.
+redis-cli -p 16379 shutdown nosave >/dev/null 2>&1 || true
+[ -d pg ] && runuser -u postgres -- "$PGBIN/pg_ctl" -D /tmp/live/pg -m immediate stop >/dev/null 2>&1 || true
+pkill -x mariadbd 2>/dev/null || true; sleep 2
 redis-server --port 16379 --bind 127.0.0.1 --daemonize yes --save "" --dir /tmp/live >/dev/null
 rm -rf pg mdb; mkdir pg mdb; chown postgres:postgres pg; chown mysql:mysql mdb
 echo supersecret > pgpw; chmod 644 pgpw

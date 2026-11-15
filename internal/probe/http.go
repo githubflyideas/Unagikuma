@@ -69,6 +69,9 @@ func validateHTTP(target string, o opts) error {
 	if err := validateApp(o); err != nil {
 		return err
 	}
+	if err := textAndNumber(o, "json-expect", "json-expect-num"); err != nil {
+		return err
+	}
 	if err := validateValueRules(o, appUnit(o)); err != nil {
 		return err
 	}

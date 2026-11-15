@@ -31,6 +31,7 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/server"
 	"github.com/githubflyideas/unagikuma/internal/store"
 	"github.com/githubflyideas/unagikuma/internal/tunables"
+	"github.com/githubflyideas/unagikuma/internal/valuerule"
 	"github.com/githubflyideas/unagikuma/web"
 )
 
@@ -559,8 +560,7 @@ func runProbe(args []string) error {
 	if len(args) == 0 {
 		return errors.New(`usage: unagikuma probe <target> [k=v...] (e.g. "https://example.com", "udp 10.0.0.1:ntp", "tcp db:5432")`)
 	}
-	line := strings.Join(args, " ")
-	src := "$FILE revision=1 master=probe attempts=1\n" + quickLine(line) + "\n"
+	src := "$FILE revision=1 master=probe attempts=1\n" + quickLine(probeTokens(args)) + "\n"
 	_, cfg, diags := config.Load("probe", []byte(src), config.Options{})
 	for _, d := range diags {
 		if d.Severity == config.SevError {
@@ -575,6 +575,7 @@ func runProbe(args []string) error {
 	}
 	app.ApplyProbeDefaults(&spec, cfg.Tunables)
 	res := probe.Run(context.Background(), spec)
+	res, note := judgeOnce(spec, res)
 	vote := string(res.Vote)
 	if res.Vote == probe.VoteOK && res.Degraded {
 		// A certificate inside its warning days, packet loss above the
@@ -582,6 +583,9 @@ func runProbe(args []string) error {
 		vote = "warn"
 	}
 	fmt.Printf("%s %s → %s (%s) in %s, depth %s\n%s\n", m.Type, spec.Target, vote, res.Reason, res.Latency.Round(time.Microsecond), res.Depth, res.Detail)
+	if note != "" {
+		fmt.Println(note)
+	}
 	if ev := res.Evidence; ev != nil {
 		for _, f := range ev.Decoded {
 			fmt.Printf("  %-12s %s\n", f.Name, f.Value)
@@ -606,9 +610,55 @@ func runProbe(args []string) error {
 	return nil
 }
 
+// judgeOnce applies the monitor's limits (warn=, crit=) to the one reading
+// a probe makes, as the running monitor would. What needs more than one
+// reading (a counter's rate, change=) is not judged, and the note says so.
+func judgeOnce(spec probe.Spec, res probe.Result) (probe.Result, string) {
+	if res.Vote != probe.VoteOK {
+		return res, ""
+	}
+	rules, err := valuerule.ParseWith(func(k string) string { return spec.Opts[k] }, probe.ValueUnit(spec), probe.ValueFields(spec))
+	if err != nil || !rules.Active() {
+		return res, ""
+	}
+	if rules.Change > 0 {
+		rules.Change = 0 // one reading has nothing to compare with
+		if !rules.Active() {
+			return res, "change= compares readings over time: it is judged when the monitor runs"
+		}
+	}
+	rules.For = 0
+	out := (&valuerule.Tracker{Rules: rules}).Observe(time.Now(), res.Metrics)
+	switch out.Level {
+	case valuerule.Crit:
+		res.Vote, res.Reason, res.Detail = probe.VoteFail, probe.ReasonValueBreach, out.Detail
+	case valuerule.Warn, valuerule.Missing:
+		res.Degraded, res.Detail = true, out.Detail
+	case valuerule.Skip:
+		return res, "this value is a total that only grows: its rate needs two readings, so the limits are judged when the monitor runs"
+	default:
+		return res, "value " + out.Detail + ": within the limits"
+	}
+	return res, ""
+}
+
+// probeTokens splits the arguments into the words of a record line. An
+// option whose value holds spaces (query="SELECT 1 FROM t") stays whole.
+func probeTokens(args []string) []string {
+	var out []string
+	for _, a := range args {
+		k, v, ok := strings.Cut(a, "=")
+		if ok && !strings.ContainsAny(k, " \t") && strings.ContainsAny(v, " \t") && !strings.Contains(v, `"`) {
+			out = append(out, k+`="`+v+`"`)
+			continue
+		}
+		out = append(out, strings.Fields(a)...)
+	}
+	return out
+}
+
 // quickLine turns "udp host:ntp k=v" / "https://x" into a record line.
-func quickLine(line string) string {
-	f := strings.Fields(line)
+func quickLine(f []string) string {
 	typ, rest := "", f
 	switch strings.ToLower(f[0]) {
 	case "http", "https", "tcp", "udp", "ping", "dns", "ntp", "snmp", "syslog":

@@ -163,7 +163,7 @@ nrpe-web  IN EXEC "check_nrpe -H $HOSTADDRESS$ -c check_users" address=10.0.0.21
 
 ### Application status pages (APP)
 
-A well-known application has a status page of its own, and an APP monitor reads it: `app=` names the application, and its profile says where the page is and what each number on it is. The address may be a URL, `host` or `host:port`; the profile's page and port fill in what it leaves out. `field=` names the number the limits judge (the profile's main one when it is not given); a total that only grows, such as requests, is judged by its rate per second. A reply that is not that application's page fails and says what is missing.
+A well-known application has a status page of its own, and an APP monitor reads it: `app=` names the application, and its profile says where the page is and what each number on it is. The address may be a URL, `host` or `host:port`; the profile's page and port fill in what it leaves out. `field=` names the number the limits judge (the profile's main one when it is not given); a total that only grows, such as requests, is judged by its rate per second. A reply that is not that application's page fails and says what is missing. `warn=` and `crit=` may also join two to four comparisons of the page's fields, all with `and` or all with `or`, such as `crit="busy>50 and queue>100"` (every comparison must hold) or `warn="free_bytes<100GB or drives_offline>0"` (any one); the same works on a REDIS monitor with `field=`. The units follow each field, a total that only grows is compared by its rate, and `and` and `or` are not mixed in one condition.
 
 ```
 web1  30s IN APP 10.0.0.5 app=nginx warn=800 crit=1500
@@ -193,20 +193,7 @@ A REDIS monitor reads Redis the same way: `field=` names a number of `INFO` (con
 cache IN REDIS 10.0.0.20 password=${secret:redis} field=used_memory warn=1GB crit=2GB
 ```
 
-A POSTGRES or MYSQL monitor can judge a number a query returns: `query=` is one `SELECT` whose first column of the first row is the number, and `warn=`, `crit=` and the other rules judge it. The check logs in with `user=` to run it. It never changes anything: the statement must be a single `SELECT` (no `;` inside it, no `INTO`, so a literal containing either is refused too), the session is made read-only before it runs (a startup parameter in PostgreSQL, `SET SESSION TRANSACTION READ ONLY` in MySQL), and the account should be one that can only read.
-
-```
-orders IN POSTGRES db1 user=monitor password=${secret:pg} database=shop query="SELECT count(*) FROM orders WHERE created_at > now() - interval '5 minutes'" crit=<1
-conn   IN MYSQL    db2 user=monitor password=${secret:my} query="SELECT COUNT(*) FROM information_schema.processlist" warn=150
-```
-
-A REDIS monitor reads Redis the same way: `field=` names a number of `INFO` (connected clients, memory used, keys evicted, and so on, listed in the monitor form) and the limits judge it, with a counter such as commands processed judged by its rate:
-
-```
-cache IN REDIS 10.0.0.20 password=${secret:redis} field=used_memory warn=1GB crit=2GB
-```
-
-A POSTGRES or MYSQL monitor can judge a number a query returns: `query=` is one `SELECT` whose first column of the first row is the number, and `warn=`, `crit=` and the other rules judge it. The check logs in with `user=` to run it. It never changes anything: the statement must be a single `SELECT` (no `;` inside it, no `INTO`, so a literal containing either is refused too), the session is made read-only before it runs (a startup parameter in PostgreSQL, `SET SESSION TRANSACTION READ ONLY` in MySQL), and the account should be one that can only read.
+A POSTGRES or MYSQL monitor can judge a number a query returns: `query=` is one `SELECT` whose first column of the first row is the number, and `warn=`, `crit=` and the other rules judge it. The check logs in with `user=` to run it. It never changes anything: the statement must be a single `SELECT` (no `;` inside it, no `INTO`, no locking read such as `FOR UPDATE`, so a literal containing `;` or `INTO` is refused too), the session is made read-only before it runs (a startup parameter in PostgreSQL, `SET SESSION TRANSACTION READ ONLY` in MySQL), and the account should be one that can only read.
 
 ```
 orders IN POSTGRES db1 user=monitor password=${secret:pg} database=shop query="SELECT count(*) FROM orders WHERE created_at > now() - interval '5 minutes'" crit=<1

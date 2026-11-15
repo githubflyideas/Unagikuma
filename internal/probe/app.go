@@ -36,7 +36,7 @@ func appField(p *appprofile.Profile, o opts) (*appprofile.Field, bool) {
 func appUnit(o opts) string {
 	if p, ok := appProfile(o); ok {
 		if f, ok := appField(p, o); ok {
-			return f.Unit
+			return f.LimitUnit()
 		}
 	}
 	return ""
@@ -95,6 +95,12 @@ func appAssertions(r Result, o opts, data []byte) Result {
 	}
 	f, _ := appField(p, o)
 	v, ok := vals[f.Key]
+	if !ok && f.Optional && f.Type == "counter" {
+		// A total that has not been counted yet is not on the page: an
+		// application lists a counter from its first event on. The page
+		// is the application's (Read checked that), so the total is 0.
+		v, ok = 0, true
+	}
 	if !ok {
 		return failKeep(r, ReasonAssertFailed, "%s has no %q on this page (%s)", p.Title, f.Label, o.str("select", "no select"))
 	}

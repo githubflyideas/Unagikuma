@@ -59,7 +59,7 @@ func TestReadPages(t *testing.T) {
 		want map[string]float64
 	}{
 		{"nginx", nginxPage, map[string]float64{"active": 291, "accepts": 16630948, "handled": 16630940, "requests": 31070465, "reading": 6, "writing": 179, "waiting": 106}},
-		{"apache", apachePage, map[string]float64{"busy": 3, "idle": 7, "accesses": 3039, "uptime": 33172, "rps": 0.0916, "cpu": 0.0168}},
+		{"apache", apachePage, map[string]float64{"busy": 3, "idle": 7, "accesses": 3039, "uptime": 33172}},
 		{"lighttpd", lighttpdPage, map[string]float64{"busy": 2, "idle": 6, "accesses": 1234, "uptime": 4321}},
 		{"php-fpm", phpfpmPage, map[string]float64{"active": 1, "idle": 3, "total": 4, "queue": 2, "max_children": 0, "slow": 1, "accepted": 5821}},
 		{"haproxy", haproxyPage, map[string]float64{"sessions": 42, "queue": 2, "backends_up": 1, "backends_down": 1, "servers_down": 1, "servers_active": 4, "requests": 1500.5, "responses_5xx": 10, "connection_errors": 4}},

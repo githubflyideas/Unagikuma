@@ -219,6 +219,16 @@ func validateSNMP(o opts) error {
 	if err := validateValueRules(o, snmpUnit(o)); err != nil {
 		return err
 	}
+	// A port without value= reports its state, which has no size.
+	if o.has("port") && rulesSet(o) && !o.has("value") {
+		return errors.New("warn=, crit= and change= on a port judge its traffic: set value=in, out or util")
+	}
+	if o.has("value") && !o.has("port") {
+		return errors.New("value= goes with port=")
+	}
+	if err := textAndNumber(o, "expect", "expect-num"); err != nil {
+		return err
+	}
 	if oid := o.str("oid", ""); oid != "" {
 		if _, err := encodeOID(oid); err != nil {
 			return err

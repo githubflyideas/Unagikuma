@@ -128,8 +128,11 @@ func TestRedisInfo(t *testing.T) {
 	if r.Metrics["value"] != 90 || r.Metrics["value.counter"] != 1 {
 		t.Fatalf("counter %v", r.Metrics)
 	}
-	// A replica-only field is optional on the page, and on a master it is missing.
-	want(t, run(t, spec(map[string]string{"field": "master_last_io"})), VoteFail, ReasonAssertFailed)
+	// Seconds since the master was heard is -1 once the link is down, which
+	// no limit can tell from "just now": the field is not offered.
+	if err := Validate(spec(map[string]string{"field": "master_last_io"})); err == nil {
+		t.Fatal("master_last_io accepted")
+	}
 	for _, c := range []struct {
 		o  map[string]string
 		ok bool

@@ -11,8 +11,7 @@
     {"key": "drives_online", "label": "Drives online", "type": "quantity", "metric": "minio_cluster_drive_online_total"},
     {"key": "nodes_offline", "label": "Nodes offline", "type": "quantity", "metric": "minio_cluster_nodes_offline_total"},
     {"key": "nodes_online", "label": "Nodes online", "type": "quantity", "metric": "minio_cluster_nodes_online_total"},
-    {"key": "free_bytes", "label": "Usable free bytes", "type": "quantity", "metric": "minio_cluster_capacity_usable_free_bytes"},
-    {"key": "total_bytes", "label": "Usable total bytes", "type": "quantity", "metric": "minio_cluster_capacity_usable_total_bytes"},
-    {"key": "open_fds", "label": "Open file descriptors", "type": "quantity", "metric": "minio_node_file_descriptor_open_total"}
+    {"key": "free_bytes", "label": "Usable free bytes", "type": "quantity", "unit": "B", "metric": "minio_cluster_capacity_usable_free_bytes"},
+    {"key": "total_bytes", "label": "Usable total bytes", "type": "quantity", "unit": "B", "metric": "minio_cluster_capacity_usable_total_bytes"}
   ]
 }

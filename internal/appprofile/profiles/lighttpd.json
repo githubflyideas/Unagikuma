@@ -9,6 +9,6 @@
     {"key": "busy", "label": "Busy servers", "type": "quantity", "line": "BusyServers"},
     {"key": "idle", "label": "Idle servers", "type": "quantity", "line": "IdleServers"},
     {"key": "accesses", "label": "Total accesses", "type": "counter", "line": "Total Accesses"},
-    {"key": "uptime", "label": "Uptime (s)", "type": "quantity", "line": "Uptime"}
+    {"key": "uptime", "label": "Uptime (s)", "type": "quantity", "unit": "s", "line": "Uptime"}
   ]
 }

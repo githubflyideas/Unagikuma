@@ -907,6 +907,13 @@ func (o *monOpts) flags() {
 
 // monitorChecks gives the warnings and checks that need the whole monitor.
 func (b *builder) monitorChecks(m *Monitor, r Record) {
+	if _, ok := m.Opts["timeout"]; ok && m.Timeout <= 0 {
+		b.errf(r.NamePos, "invalid_duration", "timeout must be longer than 0")
+	}
+	// A reply slower than the timeout is a failure, not a slow reply.
+	if _, ok := m.Opts["degraded"]; ok && m.Degraded > 0 && m.Timeout > 0 && m.Degraded >= m.Timeout {
+		b.warnf(r.NamePos, "degraded_ge_timeout", "degraded %s can never be reached: the check gives up at timeout %s", m.Degraded, m.Timeout)
+	}
 	if m.Timeout >= m.Interval && m.Type != "PUSH" {
 		b.warnf(r.NamePos, "timeout_ge_interval", "timeout %s is not shorter than the interval %s", m.Timeout, m.Interval)
 	}

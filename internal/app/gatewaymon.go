@@ -12,7 +12,7 @@ import (
 // The two gateways are where most outages of a single machine start: the
 // router in front of it (the LAN gateway, found from the routing table) and
 // the address on the internet chosen as the internet gateway. Each gets a
-// ping monitor of its own, added once the user has monitors of their own. A monitor the user deletes stays
+// ping monitor of its own, added once the user has monitors of their own, at the head of the list. A monitor the user deletes stays
 // deleted; one whose gateway moves follows it.
 
 // gatewayMonitor is one of the monitors added for a gateway.
@@ -93,7 +93,7 @@ func (a *App) ensureGatewayMonitors() {
 			_ = a.store.SetSetting(g.setting, addr)
 			continue
 		}
-		spec := config.RecordSpec{Name: g.name, Interval: "1m", Type: "PING", Target: addr,
+		spec := config.RecordSpec{Name: g.name, Interval: "1m", Type: "PING", Target: addr, First: true,
 			Opts: []config.Opt{{Key: "attempts", Value: "1"}, {Key: "title", Value: i18n.T(a.messageLang(), g.title)}}}
 		change := func(f *config.File) error {
 			if r, ok := f.Record(g.name); ok {

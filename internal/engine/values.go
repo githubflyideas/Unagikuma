@@ -30,7 +30,7 @@ func (e *Engine) valueTracker(m *MonitorSpec) *valueState {
 	}
 	vs := &valueState{defHash: m.DefHash}
 	e.values[m.Name] = vs
-	rules, err := valuerule.Parse(func(k string) string { return m.Probe.Opts[k] }, probe.ValueUnit(m.Probe))
+	rules, err := valuerule.ParseWith(func(k string) string { return m.Probe.Opts[k] }, probe.ValueUnit(m.Probe), probe.ValueFields(m.Probe))
 	if err == nil && rules.Active() {
 		vs.tr = &valuerule.Tracker{Rules: rules}
 		if s := e.preload[m.Name]; len(s) > 0 {

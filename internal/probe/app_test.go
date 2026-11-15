@@ -81,7 +81,9 @@ func TestAppValidate(t *testing.T) {
 		{map[string]string{"app": "haproxy", "select": "proxy"}, false},      // not label=value
 		{map[string]string{"app": "nginx", "json-path": "$.x"}, false},       // two ways to read the number
 		{map[string]string{"app": "nginx", "keyword": "x"}, false},           // the page is read by the profile
-		{map[string]string{"app": "nginx", "warn": "500Mbps"}, true},         // a plain count takes any limit
+		{map[string]string{"app": "nginx", "warn": "500Mbps"}, false},        // a count is not a rate
+		{map[string]string{"app": "nginx", "warn": "2k"}, true},              // 2000 connections
+		{map[string]string{"app": "nginx", "warn": "<0"}, false},             // never below zero
 		{map[string]string{"app": "nginx", "crit": "5", "warn": "9"}, false}, // crit nearer than warn
 		{map[string]string{"warn": "5"}, false},                              // nothing to judge
 	} {
@@ -92,5 +94,81 @@ func TestAppValidate(t *testing.T) {
 	}
 	if got := OptionsFor("APP"); len(got) < 10 {
 		t.Errorf("options for APP: %v", got)
+	}
+}
+
+// A total nothing has been counted for yet is not on the page; it is 0,
+// not a failure (a restarted Traefik lists requests from the first one).
+func TestAppCounterNotYetCounted(t *testing.T) {
+	page := []byte("traefik_open_connections{entrypoint=\"web\",protocol=\"TCP\"} 0\n")
+	r := appAssertions(Result{Vote: VoteOK}, opts{"app": "traefik", "field": "requests"}, page)
+	if r.Vote != VoteOK || r.Metrics["value"] != 0 || r.Metrics["value.counter"] != 1 {
+		t.Errorf("requests on a fresh page: %+v", r)
+	}
+	// A quantity that is missing is still a failure.
+	r = appAssertions(Result{Vote: VoteOK}, opts{"app": "traefik", "field": "servers"}, page)
+	if r.Vote == VoteOK {
+		t.Errorf("servers on a page without services passed: %+v", r)
+	}
+}
+
+// One value is judged as a text or as a number, not both; a port's limits
+// need the traffic they judge.
+func TestTextOrNumber(t *testing.T) {
+	for _, c := range []struct {
+		typ string
+		o   map[string]string
+		ok  bool
+	}{
+		{"HTTP", map[string]string{"json-path": "$.x", "json-expect": "ok", "warn": "5"}, false},
+		{"HTTP", map[string]string{"json-path": "$.x", "json-expect": "ok"}, true},
+		{"HTTP", map[string]string{"json-path": "$.x", "json-expect": "5", "json-expect-num": ">3"}, false},
+		{"SNMP", map[string]string{"oid": "1.3.6.1.2.1.1.3.0", "expect": "up", "crit": "5"}, false},
+		{"SNMP", map[string]string{"oid": "1.3.6.1.2.1.1.3.0", "expect": "5", "warn": "9"}, true},
+		{"SNMP", map[string]string{"oid": "1.3.6.1.2.1.1.3.0", "expect": "5", "expect-num": ">5"}, false},
+		{"SNMP", map[string]string{"port": "Gi0/1", "warn": "1.5"}, false},
+		{"SNMP", map[string]string{"port": "Gi0/1", "value": "util", "warn": "80"}, true},
+		{"SNMP", map[string]string{"port": "Gi0/1", "value": "util", "warn": "150"}, false},
+		{"SNMP", map[string]string{"oid": "1.3.6.1.2.1.1.3.0", "value": "in"}, false},
+	} {
+		typ, target := c.typ, "http://127.0.0.1/x"
+		if c.typ == "SNMP" {
+			typ, target = "UDP", "127.0.0.1:snmp"
+		}
+		err := Validate(Spec{Type: typ, Target: target, Opts: c.o})
+		if (err == nil) != c.ok {
+			t.Errorf("%s %v: ok=%v, err=%v", c.typ, c.o, c.ok, err)
+		}
+	}
+}
+
+// A condition joins comparisons of an application's own fields.
+func TestConditionOptions(t *testing.T) {
+	for _, c := range []struct {
+		typ string
+		o   map[string]string
+		ok  bool
+	}{
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 and waiting>500"}, true},
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 or waiting>500", "warn": "active>400 and requests>50"}, true},
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 and waiting>50%"}, false}, // a count has no percentage
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 and nope>5"}, false},      // not an nginx field
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800 and waiting>5 or idle>1"}, false},
+		{"HTTP", map[string]string{"app": "nginx", "crit": "active>800"}, false}, // one comparison
+		{"HTTP", map[string]string{"app": "minio", "crit": "free_bytes<1GB or drives_offline>0"}, true},
+		{"HTTP", map[string]string{"app": "minio", "crit": "free_bytes<80% or drives_offline>0"}, false},
+		{"HTTP", map[string]string{"json-path": "$.x", "crit": "a>1 and b>2"}, false}, // a JSON value has no names
+		{"TCP", map[string]string{"proto": "redis", "field": "connected_clients", "crit": "connected_clients>500 and blocked_clients>5"}, true},
+		{"TCP", map[string]string{"proto": "redis", "field": "connected_clients", "crit": "used_memory>1GB and evicted_keys>10"}, true},
+		{"TCP", map[string]string{"proto": "redis", "field": "connected_clients", "crit": "used_memory>1GB and master_last_io>3"}, false},
+	} {
+		target := "http://127.0.0.1/x"
+		if c.typ == "TCP" {
+			target = "127.0.0.1:6379"
+		}
+		err := Validate(Spec{Type: c.typ, Target: target, Opts: c.o})
+		if (err == nil) != c.ok {
+			t.Errorf("%s %v: ok=%v, err=%v", c.typ, c.o, c.ok, err)
+		}
 	}
 }
