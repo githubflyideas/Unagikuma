@@ -2,5 +2,6 @@
   {"id": "modern"},
   {"id": "relic", "registered": true},
   {"id": "legend", "registered": true},
-  {"id": "starship", "registered": true}
+  {"id": "starship", "registered": true},
+  {"id": "rune", "registered": true}
 ]

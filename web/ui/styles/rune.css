@@ -1,0 +1,138 @@
+/* Rune: ancient technology in a carved hand. Deep night blue, light-blue
+   corner brackets on every panel, carved capitals for titles, a book serif
+   for text and wide-set monospaced labels, with small diamonds as
+   ornament. It brings its own colours and fonts (Cinzel, Spectral and IBM
+   Plex Mono, all under the SIL Open Font Licence, see fonts/), so the
+   theme choice is set aside while it is in use. Chinese and other scripts
+   fall back to the system serif. Status colours keep their meaning. */
+@font-face { font-family: "Rune Display"; src: url("fonts/cinzel-latin-600-normal.woff2") format("woff2"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "Rune Serif"; src: url("fonts/spectral-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Rune Serif"; src: url("fonts/spectral-latin-600-normal.woff2") format("woff2"); font-weight: 500 900; font-display: swap; }
+@font-face { font-family: "Rune Mono"; src: url("fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Rune Mono"; src: url("fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); font-weight: 500 900; font-display: swap; }
+
+:root[data-style="rune"] {
+  --bg: #0b1422; --side: #0a111d; --panel: #101c2e; --panel-2: #14233a; --border: #213a55; --border-strong: #2f5274;
+  --text: #e6eef6; --muted: #a9b9c9; --faint: #97aabd;
+  --accent: #7cc8f5; --accent-soft: #12304a; --accent-text: #06121e; --link: #9ad6fa;
+  --ok: #6fd38a; --ok-soft: #10301f; --degraded: #f0a860; --degraded-soft: #33230f;
+  --critical: #ef7a64; --critical-soft: #3a1a17; --unknown: #b5a2f5; --unknown-soft: #262145;
+  --pending: #a9b9c9; --pending-soft: #1a2940; --maint: #8bb8f8; --maint-soft: #142a4a;
+  --on-status: #0b1422; --on-degraded: #1d1205;
+  --empty: #1c2d45; --stripe: rgba(154, 214, 250, .025);
+  --shadow: 0 0 24px rgba(124, 200, 245, .06); --radius: 2px;
+  --bg-image: radial-gradient(circle at 85% 8%, rgba(124, 200, 245, .07), transparent 40%),
+    radial-gradient(circle at 10% 70%, rgba(124, 200, 245, .04), transparent 35%),
+    repeating-radial-gradient(circle at 80% 30%, transparent 0 120px, rgba(124, 200, 245, .025) 121px 122px);
+  --side-text: #d2dfeb; --side-muted: #9fb2c5; --side-hover: rgba(124, 200, 245, .07); --side-on: #13304a; --side-on-text: #b5e3fd; --side-mark: #7cc8f5;
+  --u-display: "Rune Display", "Trajan Pro", "Cinzel", Georgia, "Songti SC", "STSong", "SimSun", serif;
+  --u-serif: "Rune Serif", "Spectral", Georgia, "Songti SC", "STSong", "SimSun", serif;
+  --u-mono: "Rune Mono", "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --sans: var(--u-serif); --mono: var(--u-mono);
+  --u-corner: #8fd3fb; --u-glow: 0 0 14px rgba(124, 200, 245, .45);
+  color-scheme: dark;
+}
+:root[data-style="rune"] body { font-size: 15px; line-height: 1.55; }
+:root[data-style="rune"] .themes { display: none; }
+
+/* Corner brackets: drawn as backgrounds so menus inside a panel are not clipped. */
+:root[data-style="rune"] .card, :root[data-style="rune"] .pub .overall, :root[data-style="rune"] .modal {
+  --rc: var(--u-corner);
+  background:
+    linear-gradient(var(--rc), var(--rc)) left top / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) left top / 2px 18px no-repeat,
+    linear-gradient(var(--rc), var(--rc)) right top / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) right top / 2px 18px no-repeat,
+    linear-gradient(var(--rc), var(--rc)) left bottom / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) left bottom / 2px 18px no-repeat,
+    linear-gradient(var(--rc), var(--rc)) right bottom / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) right bottom / 2px 18px no-repeat,
+    linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--border-strong); border-radius: 0; box-shadow: var(--shadow);
+}
+
+/* A list that scrolls inside its card keeps its heading row on top; the
+   top corners are drawn on that row so they stay in view. */
+:root[data-style="rune"] .page.list .card.scroll thead th:first-child { background:
+  linear-gradient(var(--rc), var(--rc)) left top / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) left top / 2px 18px no-repeat, var(--panel-2); }
+:root[data-style="rune"] .page.list .card.scroll thead th:last-child { background:
+  linear-gradient(var(--rc), var(--rc)) right top / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) right top / 2px 18px no-repeat, var(--panel-2); }
+:root[data-style="rune"] .page.list .card.scroll thead th { background-color: var(--panel-2); }
+
+/* Titles. */
+:root[data-style="rune"] h1 { font-family: var(--u-serif); font-weight: 600; font-size: 26px; letter-spacing: .01em; }
+:root[data-style="rune"] .brand, :root[data-style="rune"] .crumbs { font-family: var(--u-display); letter-spacing: .22em; text-shadow: var(--u-glow); color: #dff3ff; }
+:root[data-style="rune"] .brand { font-size: 19px; }
+:root[data-style="rune"] .brand .edition, :root[data-style="rune"] .side .foot { font-family: var(--u-mono); letter-spacing: .12em; text-shadow: none; font-size: 11.5px; }
+:root[data-style="rune"] .card > .hd { border-bottom: 1px solid var(--border); gap: 12px; }
+:root[data-style="rune"] .card > .hd::before { content: ""; width: 8px; height: 8px; flex: none; transform: rotate(45deg); background: var(--accent); box-shadow: var(--u-glow); }
+:root[data-style="rune"] .card > .hd h2, :root[data-style="rune"] .card > .hd h3, :root[data-style="rune"] .modal .hd h2, :root[data-style="rune"] .modal .hd h3 {
+  font-family: var(--u-mono); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .24em; color: var(--muted); }
+:root[data-style="rune"] .tile b, :root[data-style="rune"] .val-now { font-family: var(--u-display); color: #dff3ff; text-shadow: var(--u-glow); }
+:root[data-style="rune"] .tile b { font-size: 30px; letter-spacing: .02em; }
+:root[data-style="rune"] .tile span, :root[data-style="rune"] .kpi .label { font-family: var(--u-mono); font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; }
+:root[data-style="rune"] hr { border: 0; height: 10px; position: relative; overflow: visible;
+  background: linear-gradient(90deg, transparent, var(--border-strong) 15%, var(--border-strong) 46%, transparent 46% 54%, var(--border-strong) 54%, var(--border-strong) 85%, transparent) center / 100% 1px no-repeat; }
+:root[data-style="rune"] hr::after { content: ""; position: absolute; left: calc(50% - 4px); top: 1px; width: 8px; height: 8px; transform: rotate(45deg); background: var(--accent); box-shadow: var(--u-glow); }
+
+/* Shell. */
+:root[data-style="rune"] .side { border-inline-end: 1px solid var(--border-strong); box-shadow: inset -1px 0 0 rgba(124, 200, 245, .1); }
+:root[data-style="rune"] .side .nav a { border-radius: 0; }
+:root[data-style="rune"] .side .nav a.on { box-shadow: inset 2px 0 0 var(--side-mark); text-shadow: var(--u-glow); }
+:root[data-style="rune"] .top { border-bottom-color: var(--border-strong); background: color-mix(in srgb, var(--bg) 90%, transparent); }
+:root[data-style="rune"] .page { gap: 24px; padding: 24px 28px 52px; }
+:root[data-style="rune"] .tile { border-radius: 0; border: 1px solid var(--border-strong); border-top: 2px solid var(--u-corner); background: linear-gradient(180deg, var(--panel-2), var(--panel)); }
+:root[data-style="rune"] .tile.ok { border-top-color: var(--ok); } :root[data-style="rune"] .tile.critical { border-top-color: var(--critical); }
+:root[data-style="rune"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="rune"] .banner { border-radius: 0; }
+
+/* Controls: square keys, lettered labels. */
+:root[data-style="rune"] .btn { border-radius: 0; font-family: var(--u-mono); font-weight: 500; font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; border-color: var(--border-strong); background: var(--panel-2); }
+:root[data-style="rune"] .btn:hover { border-color: var(--accent); box-shadow: var(--u-glow); background: var(--panel-2); }
+:root[data-style="rune"] .btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); box-shadow: var(--u-glow); }
+:root[data-style="rune"] .btn.danger { background: transparent; }
+:root[data-style="rune"] .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+:root[data-style="rune"] input[type=text], :root[data-style="rune"] input[type=password], :root[data-style="rune"] input[type=number],
+:root[data-style="rune"] input[type=url], :root[data-style="rune"] input[type=email], :root[data-style="rune"] select, :root[data-style="rune"] textarea { background: #0c1727; border-radius: 0; }
+:root[data-style="rune"] input:focus, :root[data-style="rune"] select:focus, :root[data-style="rune"] textarea:focus { box-shadow: var(--u-glow); }
+:root[data-style="rune"] .chip, :root[data-style="rune"] .seg, :root[data-style="rune"] .seg button, :root[data-style="rune"] .search { border-radius: 0; }
+:root[data-style="rune"] .tabs a, :root[data-style="rune"] .tabs button { font-family: var(--u-mono); font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; }
+:root[data-style="rune"] .tabs a.on, :root[data-style="rune"] .tabs button.on { text-shadow: var(--u-glow); }
+
+/* Status: outlined plates with a dot. */
+:root[data-style="rune"] .pill, :root[data-style="rune"] .pill.ok, :root[data-style="rune"] .pill.degraded, :root[data-style="rune"] .pill.critical,
+:root[data-style="rune"] .pill.unknown, :root[data-style="rune"] .pill.maintenance, :root[data-style="rune"] .pill.pending {
+  border-radius: 0; background: transparent; box-shadow: inset 0 0 0 1px currentColor; font-family: var(--u-mono); font-weight: 500;
+  font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase; padding: 2px 10px; gap: 8px; }
+:root[data-style="rune"] .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="rune"] .pill.ok { color: var(--ok); } :root[data-style="rune"] .pill.degraded { color: var(--degraded); }
+:root[data-style="rune"] .pill.critical { color: var(--critical); } :root[data-style="rune"] .pill.unknown { color: var(--unknown); }
+:root[data-style="rune"] .pill.maintenance { color: var(--maint); } :root[data-style="rune"] .pill.pending { color: var(--pending); }
+:root[data-style="rune"] .verdict { border-radius: 0; font-family: var(--u-mono); letter-spacing: .1em; }
+:root[data-style="rune"] .tbl th { font-family: var(--u-mono); font-weight: 500; text-transform: uppercase; letter-spacing: .16em; font-size: 11.5px; color: var(--muted); background: transparent; border-bottom-color: var(--border-strong); }
+:root[data-style="rune"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="rune"] .tbl tr.click:hover td { background: rgba(124, 200, 245, .06); }
+:root[data-style="rune"] .tag { font-family: var(--u-mono); }
+:root[data-style="rune"] .beats i { border-radius: 0; }
+
+/* Problems: a diamond with the state inside instead of a bar. */
+:root[data-style="rune"] .inc { gap: 16px; padding: 16px 18px; border-bottom: 1px dashed var(--border-strong); }
+:root[data-style="rune"] .inc .sev { width: 24px; height: 24px; align-self: flex-start; margin: 6px 4px 0; border-radius: 0; background: transparent;
+  border: 1.5px solid currentColor; transform: rotate(45deg); color: var(--critical); display: grid; place-items: center; }
+:root[data-style="rune"] .inc .sev::after { content: "!"; transform: rotate(-45deg); font: 700 13px var(--u-serif); }
+:root[data-style="rune"] .inc .sev.degraded { color: var(--degraded); background: transparent; } :root[data-style="rune"] .inc .sev.unknown { color: var(--unknown); background: transparent; }
+:root[data-style="rune"] .inc .sev.ok { color: var(--ok); background: transparent; } :root[data-style="rune"] .inc .sev.sys { color: var(--maint); background: transparent; }
+:root[data-style="rune"] .inc .sev.ok::after { content: "✓"; }
+
+/* Public status page: a carved title over a rule with a diamond, and the
+   overall state as a framed plate in its own colour. */
+:root[data-style="rune"] .pub { gap: 22px; }
+:root[data-style="rune"] .pub .head { flex-direction: column; text-align: center; gap: 12px; padding-bottom: 22px; position: relative;
+  background: linear-gradient(90deg, transparent, var(--border-strong) 20%, var(--border-strong) 47%, transparent 47% 53%, var(--border-strong) 53%, var(--border-strong) 80%, transparent) bottom / 100% 1px no-repeat; }
+:root[data-style="rune"] .pub .head::after { content: ""; position: absolute; bottom: -4px; left: calc(50% - 4px); width: 8px; height: 8px; transform: rotate(45deg); background: var(--accent); box-shadow: var(--u-glow); }
+:root[data-style="rune"] .pub .head h1 { font-family: var(--u-display); font-size: 30px; letter-spacing: .24em; text-shadow: var(--u-glow); color: #dff3ff; }
+:root[data-style="rune"] .pub .overall { padding: 22px 24px; font-family: var(--u-display); font-size: 20px; letter-spacing: .12em; text-transform: uppercase; }
+:root[data-style="rune"] .pub .overall.ok { --rc: var(--ok); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); text-shadow: 0 0 12px rgba(111, 211, 138, .4); }
+:root[data-style="rune"] .pub .overall.degraded { --rc: var(--degraded); color: var(--degraded); border-color: color-mix(in srgb, var(--degraded) 45%, transparent); text-shadow: 0 0 12px rgba(240, 168, 96, .4);
+  background-color: #1d160c; }
+:root[data-style="rune"] .pub .overall.critical { --rc: var(--critical); color: var(--critical); border-color: color-mix(in srgb, var(--critical) 45%, transparent); text-shadow: 0 0 12px rgba(239, 122, 100, .4); }
+:root[data-style="rune"] .pub .mon { padding: 16px 20px; }
+:root[data-style="rune"] .pub .mon b { font-family: var(--u-serif); font-size: 18px; font-weight: 600; }
+:root[data-style="rune"] .pub footer { font-family: var(--u-mono); letter-spacing: .08em; font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { :root[data-style="rune"] * { transition: none !important; } }
