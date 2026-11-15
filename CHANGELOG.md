@@ -18,6 +18,7 @@ A review of how each check's value is read and judged. A file that used to load 
 - The state label in the top bar was too faint to read in some themes when the state was unknown (4.1:1) or a warning (3.8:1 in Calm); both are above 4.5:1 in every theme now.
 
 **Changed**
+- Application fields whose meaning was not certain are no longer offered: Redis `master_last_io` (it reads -1 once the link is down, so a limit says "fine" exactly when the master is gone), Traefik `reload_failures` (never appears when a reload fails), Apache `cpu` (not reported by Apache 2.4.58 here, unit unknown), Apache `rps` (an average since start, not the present rate; use `accesses`) and MinIO `open_fds` (one per node, no limit to compare). A monitor that names one of them is refused when the file is checked. A field now enters a profile only after it has been read on a running instance.
 - The two gateway monitors added automatically now head the monitor list instead of ending it.
 - `unagikuma probe` applies `warn=` and `crit=` to the reading it makes, as the running monitor does, and says when a value needs more than one reading (a rate, `change=`). An option whose value holds spaces can be given: `query="SELECT count(*) FROM t"`.
 

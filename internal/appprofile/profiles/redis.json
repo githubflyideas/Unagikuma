@@ -21,7 +21,6 @@
     {"key": "keyspace_misses", "label": "Keyspace misses", "type": "counter", "line": "keyspace_misses"},
     {"key": "uptime", "label": "Uptime (s)", "type": "quantity", "unit": "s", "line": "uptime_in_seconds"},
     {"key": "replicas", "label": "Connected replicas", "type": "quantity", "line": "connected_slaves"},
-    {"key": "unsaved_changes", "label": "Changes since the last save", "type": "quantity", "line": "rdb_changes_since_last_save"},
-    {"key": "master_last_io", "label": "Seconds since the master was heard (replica)", "type": "quantity", "unit": "s", "line": "master_last_io_seconds_ago", "optional": true}
+    {"key": "unsaved_changes", "label": "Changes since the last save", "type": "quantity", "line": "rdb_changes_since_last_save"}
   ]
 }

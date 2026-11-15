@@ -451,3 +451,11 @@ func (f *Field) LimitUnit() string {
 	}
 	return f.Unit
 }
+
+// A field enters a profile only when its meaning is certain: it has been
+// read on a running instance of the application, its unit is known, and
+// every value it can take (a -1 for "never", a total that is absent until
+// the first event) is something a limit can judge. A field nobody has
+// seen, or whose value can say the opposite of what it is named after, is
+// left out; a field an application lists only after its first event is
+// marked optional, and it is shown only after that event has been seen.
