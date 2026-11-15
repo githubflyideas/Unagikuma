@@ -179,6 +179,10 @@ lb    30s IN APP 10.0.0.7:8404 app=haproxy select=proxy=www field=sessions warn=
 | `lighttpd` | `/server-status?auto` | text | `mod_status`, `status.status-url` |
 | `php-fpm` | `/status` | text | `pm.status_path` in the pool |
 | `haproxy` | `/metrics` (port 8404) | metrics | the built-in Prometheus exporter |
+| `prometheus` | `/metrics` (port 9090) | metrics | nothing |
+| `etcd` | `/metrics` (port 2379) | metrics | nothing |
+| `caddy` | `/metrics` (admin port 2019) | metrics | `servers { metrics }` |
+| `rabbitmq` | `/metrics` (port 15692) | metrics | the `rabbitmq_prometheus` plugin |
 
 A REDIS monitor reads Redis the same way: `field=` names a number of `INFO` (connected clients, memory used, keys evicted, and so on, listed in the monitor form) and the limits judge it, with a counter such as commands processed judged by its rate:
 

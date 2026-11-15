@@ -1,0 +1,21 @@
+{
+  "id": "rabbitmq", "title": "RabbitMQ", "reader": "metrics", "path": "/metrics", "port": 15692,
+  "docs": "https://www.rabbitmq.com/docs/prometheus",
+  "needs": "Enable the rabbitmq_prometheus plugin (rabbitmq-plugins enable rabbitmq_prometheus); it serves port 15692.",
+  "verified": "RabbitMQ 3.12.1",
+  "primary": "messages_ready",
+  "summary": ["messages_ready", "messages_unacked", "connections", "consumers"],
+  "fields": [
+    {"key": "messages_ready", "label": "Messages ready", "type": "quantity", "metric": "rabbitmq_queue_messages_ready"},
+    {"key": "messages_unacked", "label": "Messages unacknowledged", "type": "quantity", "metric": "rabbitmq_queue_messages_unacked"},
+    {"key": "connections", "label": "Connections", "type": "quantity", "metric": "rabbitmq_connections"},
+    {"key": "channels", "label": "Channels", "type": "quantity", "metric": "rabbitmq_channels"},
+    {"key": "consumers", "label": "Consumers", "type": "quantity", "metric": "rabbitmq_consumers"},
+    {"key": "alarm_memory", "label": "Memory alarm (1 raised)", "type": "quantity", "metric": "rabbitmq_alarms_memory_used_watermark"},
+    {"key": "alarm_disk", "label": "Disk alarm (1 raised)", "type": "quantity", "metric": "rabbitmq_alarms_free_disk_space_watermark"},
+    {"key": "alarm_fd", "label": "File descriptor alarm (1 raised)", "type": "quantity", "metric": "rabbitmq_alarms_file_descriptor_limit"},
+    {"key": "memory_used", "label": "Memory used (bytes)", "type": "quantity", "metric": "rabbitmq_process_resident_memory_bytes"},
+    {"key": "disk_free", "label": "Disk free (bytes)", "type": "quantity", "metric": "rabbitmq_disk_space_available_bytes"},
+    {"key": "published", "label": "Messages published", "type": "counter", "metric": "rabbitmq_channel_messages_published_total"}
+  ]
+}
