@@ -4,6 +4,10 @@
 
 **Added**
 - Rune style for registered installations: carved titles, corner brackets, framed status plates; its fonts are built in.
+- Ten wallpaper styles for registered installations: Aurora, Nebula, Ocean, Sunset, Forest, Sakura, Dune, Neon, Glacier and Ink.
+
+**Fixed**
+- Starship's background grid did not show.
 
 ## v2.6.17 — 2026-11-15
 

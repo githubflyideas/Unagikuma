@@ -1,0 +1,57 @@
+/* Aurora: a polar night with bands of green, teal and violet light, drawn with gradients behind frosted-glass
+   panels. It brings its own colours, so the theme choice is set aside
+   while it is in use. Status colours keep their meaning. Generated with the
+   other wallpaper styles from one pattern; adjust the values here. */
+:root[data-style="aurora"] {
+  --bg: #050b14; --side: rgba(4, 12, 20, .70); --panel: rgba(10, 22, 34, .80); --panel-2: rgba(16, 32, 48, .82); --border: rgba(110, 231, 183, .16); --border-strong: rgba(110, 231, 183, .32);
+  --text: #e8f5f1; --muted: #a9c4bd; --faint: #9db8b1;
+  --accent: #34d399; --accent-soft: #0e3328; --accent-text: #03140e; --link: #6ee7b7;
+  --ok: #4ade80; --ok-soft: #12301f; --degraded: #fbbf24; --degraded-soft: #33280c;
+  --critical: #f87171; --critical-soft: #3a1616; --unknown: #c4b5fd; --unknown-soft: #2a2347;
+  --pending: #a9c4bd; --pending-soft: rgba(16, 32, 48, .82); --maint: #93c5fd; --maint-soft: #142b48;
+  --on-status: #0b0b10; --on-degraded: #1d1305;
+  --empty: rgba(110, 231, 183, .16); --stripe: transparent;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .35); --radius: 8px;
+  --bg-image: radial-gradient(ellipse 80% 40% at 25% 8%, rgba(52, 211, 153, .32), transparent 62%), radial-gradient(ellipse 60% 35% at 72% 4%, rgba(139, 92, 246, .30), transparent 60%), radial-gradient(ellipse 70% 28% at 50% 22%, rgba(45, 212, 191, .22), transparent 65%), radial-gradient(1.5px 1.5px at 12% 40%, rgba(255, 255, 255, .7), transparent), radial-gradient(1px 1px at 33% 55%, rgba(255, 255, 255, .7), transparent), radial-gradient(1.5px 1.5px at 58% 47%, rgba(255, 255, 255, .7), transparent), radial-gradient(1px 1px at 81% 38%, rgba(255, 255, 255, .7), transparent), radial-gradient(1.5px 1.5px at 90% 60%, rgba(255, 255, 255, .7), transparent), radial-gradient(1px 1px at 45% 70%, rgba(255, 255, 255, .7), transparent), linear-gradient(180deg, #071a2a, #050b14 60%, #03060c);
+  --side-text: #d6ece6; --side-muted: #9cbab2; --side-hover: rgba(52, 211, 153, .16); --side-on: rgba(52, 211, 153, .16); --side-on-text: #a7f3d0; --side-mark: #34d399;
+  color-scheme: dark;
+}
+:root[data-style="aurora"] .themes { display: none; }
+:root[data-style="aurora"] body { background-color: var(--bg); background-image: var(--bg-image); background-attachment: fixed; }
+:root[data-style="aurora"] body:has(.shell) { background-color: var(--bg); }
+:root[data-style="aurora"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="aurora"] .side { background: var(--side); backdrop-filter: blur(16px) saturate(1.2); border-inline-end: 1px solid var(--border); }
+:root[data-style="aurora"] .side .nav a { border-radius: 8px; box-shadow: none; }
+:root[data-style="aurora"] .side .nav a.on { font-weight: 650; }
+:root[data-style="aurora"] .top { background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(16px) saturate(1.2); border-bottom-color: var(--border); }
+:root[data-style="aurora"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="aurora"] .card, :root[data-style="aurora"] .tile, :root[data-style="aurora"] .modal { background: var(--panel); backdrop-filter: blur(18px) saturate(1.3); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+:root[data-style="aurora"] .card > .hd { border-bottom-color: var(--border); padding: 15px 20px; }
+:root[data-style="aurora"] .card > .hd h2, :root[data-style="aurora"] .card > .hd h3 { font-size: 14.5px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="aurora"] .card > .bd { padding: 18px 20px; }
+:root[data-style="aurora"] .card > .bd.flush { padding: 0; }
+:root[data-style="aurora"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="aurora"] .tile.ok { border-top-color: var(--ok); } :root[data-style="aurora"] .tile.critical { border-top-color: var(--critical); } :root[data-style="aurora"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="aurora"] .tile b { font-size: 28px; }
+:root[data-style="aurora"] .btn { border-radius: 8px; background: var(--panel-2); border-color: var(--border-strong); }
+:root[data-style="aurora"] .btn:hover { background: var(--panel); }
+:root[data-style="aurora"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="aurora"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="aurora"] input[type=text], :root[data-style="aurora"] input[type=password], :root[data-style="aurora"] input[type=number], :root[data-style="aurora"] input[type=url], :root[data-style="aurora"] input[type=email], :root[data-style="aurora"] select, :root[data-style="aurora"] textarea { background: var(--panel-2); border-radius: 8px; }
+:root[data-style="aurora"] .search, :root[data-style="aurora"] .chip, :root[data-style="aurora"] .seg { border-radius: 8px; background: var(--panel-2); }
+:root[data-style="aurora"] .banner { border-radius: 10px; }
+:root[data-style="aurora"] .pill, :root[data-style="aurora"] .pill.ok, :root[data-style="aurora"] .pill.degraded, :root[data-style="aurora"] .pill.critical, :root[data-style="aurora"] .pill.unknown, :root[data-style="aurora"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="aurora"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="aurora"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 75%, var(--text)); }
+:root[data-style="aurora"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 75%, var(--text)); }
+:root[data-style="aurora"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
+:root[data-style="aurora"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
+:root[data-style="aurora"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
+:root[data-style="aurora"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="aurora"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="aurora"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="aurora"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+:root[data-style="aurora"] .page > :is(p, a, .small, .muted), :root[data-style="aurora"] .page > .col > :is(p.small, p.muted) { width: fit-content; max-width: 100%; padding: 4px 10px; border-radius: 8px;
+  background: var(--panel); backdrop-filter: blur(12px); }
+:root[data-style="aurora"] .pub .overall { border-radius: 14px; backdrop-filter: blur(12px); }
+:root[data-style="aurora"] .pub .head h1 { text-shadow: 0 1px 12px rgba(0, 0, 0, .5); }

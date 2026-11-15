@@ -1,0 +1,57 @@
+/* Sunset: an evening sky from violet through rose to orange, drawn with gradients behind frosted-glass
+   panels. It brings its own colours, so the theme choice is set aside
+   while it is in use. Status colours keep their meaning. Generated with the
+   other wallpaper styles from one pattern; adjust the values here. */
+:root[data-style="sunset"] {
+  --bg: #2a1b3d; --side: rgba(28, 16, 36, .76); --panel: rgba(36, 20, 44, .84); --panel-2: rgba(52, 28, 60, .86); --border: rgba(253, 186, 116, .18); --border-strong: rgba(253, 186, 116, .34);
+  --text: #fff1ea; --muted: #e3c3c3; --faint: #d9b6b6;
+  --accent: #fb923c; --accent-soft: #4a2420; --accent-text: #1f0d04; --link: #fdba74;
+  --ok: #4ade80; --ok-soft: #12301f; --degraded: #fbbf24; --degraded-soft: #33280c;
+  --critical: #f87171; --critical-soft: #3a1616; --unknown: #c4b5fd; --unknown-soft: #2a2347;
+  --pending: #e3c3c3; --pending-soft: rgba(52, 28, 60, .86); --maint: #93c5fd; --maint-soft: #142b48;
+  --on-status: #0b0b10; --on-degraded: #1d1305;
+  --empty: rgba(253, 186, 116, .18); --stripe: transparent;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .35); --radius: 10px;
+  --bg-image: radial-gradient(circle at 50% 82%, rgba(253, 224, 171, .55), rgba(251, 146, 60, .25) 18%, transparent 38%), linear-gradient(180deg, #2a1b3d 0%, #5b2a5e 32%, #b04a6b 58%, #e9795f 78%, #f6b17a 100%);
+  --side-text: #f8e2dc; --side-muted: #d6b0b4; --side-hover: rgba(251, 146, 60, .18); --side-on: rgba(251, 146, 60, .18); --side-on-text: #fed7aa; --side-mark: #fb923c;
+  color-scheme: dark;
+}
+:root[data-style="sunset"] .themes { display: none; }
+:root[data-style="sunset"] body { background-color: var(--bg); background-image: var(--bg-image); background-attachment: fixed; }
+:root[data-style="sunset"] body:has(.shell) { background-color: var(--bg); }
+:root[data-style="sunset"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="sunset"] .side { background: var(--side); backdrop-filter: blur(16px) saturate(1.2); border-inline-end: 1px solid var(--border); }
+:root[data-style="sunset"] .side .nav a { border-radius: 10px; box-shadow: none; }
+:root[data-style="sunset"] .side .nav a.on { font-weight: 650; }
+:root[data-style="sunset"] .top { background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(16px) saturate(1.2); border-bottom-color: var(--border); }
+:root[data-style="sunset"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="sunset"] .card, :root[data-style="sunset"] .tile, :root[data-style="sunset"] .modal { background: var(--panel); backdrop-filter: blur(18px) saturate(1.3); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+:root[data-style="sunset"] .card > .hd { border-bottom-color: var(--border); padding: 15px 20px; }
+:root[data-style="sunset"] .card > .hd h2, :root[data-style="sunset"] .card > .hd h3 { font-size: 14.5px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="sunset"] .card > .bd { padding: 18px 20px; }
+:root[data-style="sunset"] .card > .bd.flush { padding: 0; }
+:root[data-style="sunset"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="sunset"] .tile.ok { border-top-color: var(--ok); } :root[data-style="sunset"] .tile.critical { border-top-color: var(--critical); } :root[data-style="sunset"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="sunset"] .tile b { font-size: 28px; }
+:root[data-style="sunset"] .btn { border-radius: 10px; background: var(--panel-2); border-color: var(--border-strong); }
+:root[data-style="sunset"] .btn:hover { background: var(--panel); }
+:root[data-style="sunset"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="sunset"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="sunset"] input[type=text], :root[data-style="sunset"] input[type=password], :root[data-style="sunset"] input[type=number], :root[data-style="sunset"] input[type=url], :root[data-style="sunset"] input[type=email], :root[data-style="sunset"] select, :root[data-style="sunset"] textarea { background: var(--panel-2); border-radius: 10px; }
+:root[data-style="sunset"] .search, :root[data-style="sunset"] .chip, :root[data-style="sunset"] .seg { border-radius: 10px; background: var(--panel-2); }
+:root[data-style="sunset"] .banner { border-radius: 12px; }
+:root[data-style="sunset"] .pill, :root[data-style="sunset"] .pill.ok, :root[data-style="sunset"] .pill.degraded, :root[data-style="sunset"] .pill.critical, :root[data-style="sunset"] .pill.unknown, :root[data-style="sunset"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="sunset"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="sunset"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 75%, var(--text)); }
+:root[data-style="sunset"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 75%, var(--text)); }
+:root[data-style="sunset"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
+:root[data-style="sunset"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
+:root[data-style="sunset"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
+:root[data-style="sunset"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="sunset"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="sunset"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="sunset"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+:root[data-style="sunset"] .page > :is(p, a, .small, .muted), :root[data-style="sunset"] .page > .col > :is(p.small, p.muted) { width: fit-content; max-width: 100%; padding: 4px 10px; border-radius: 10px;
+  background: var(--panel); backdrop-filter: blur(12px); }
+:root[data-style="sunset"] .pub .overall { border-radius: 16px; backdrop-filter: blur(12px); }
+:root[data-style="sunset"] .pub .head h1 { text-shadow: 0 1px 12px rgba(0, 0, 0, .5); }

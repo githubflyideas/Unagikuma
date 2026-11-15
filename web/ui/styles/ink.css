@@ -1,0 +1,60 @@
+/* Ink: rice paper with washes of ink and serif titles, drawn with gradients behind frosted-glass
+   panels. It brings its own colours, so the theme choice is set aside
+   while it is in use. Status colours keep their meaning. Generated with the
+   other wallpaper styles from one pattern; adjust the values here. */
+:root[data-style="ink"] {
+  --bg: #f4efe4; --side: rgba(246, 241, 229, .86); --panel: rgba(252, 249, 241, .9); --panel-2: rgba(246, 241, 229, .92); --border: rgba(40, 40, 40, .14); --border-strong: rgba(40, 40, 40, .28);
+  --text: #1f1f1f; --muted: #4f4a42; --faint: #57514a;
+  --accent: #1f4e5a; --accent-soft: #dde8e8; --accent-text: #ffffff; --link: #1f4e5a;
+  --ok: #15803d; --ok-soft: #dcfce7; --degraded: #b45309; --degraded-soft: #fef3c7;
+  --critical: #b91c1c; --critical-soft: #fee2e2; --unknown: #6d28d9; --unknown-soft: #ede9fe;
+  --pending: #4f4a42; --pending-soft: rgba(246, 241, 229, .92); --maint: #1d4ed8; --maint-soft: #dbeafe;
+  --on-status: #ffffff; --on-degraded: #2a1700;
+  --empty: rgba(40, 40, 40, .14); --stripe: transparent;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .08); --radius: 2px;
+  --bg-image: radial-gradient(ellipse 50% 30% at 85% 15%, rgba(40, 40, 40, .10), transparent 70%), radial-gradient(ellipse 70% 25% at 10% 90%, rgba(40, 40, 40, .12), transparent 70%), radial-gradient(ellipse 40% 18% at 30% 85%, rgba(40, 40, 40, .08), transparent 70%), linear-gradient(180deg, #f8f4ea, #efe8d8);
+  --side-text: #2a2620; --side-muted: #57514a; --side-hover: rgba(31, 78, 90, .12); --side-on: rgba(31, 78, 90, .12); --side-on-text: #1f4e5a; --side-mark: #1f4e5a;
+  color-scheme: light;
+}
+:root[data-style="ink"] .themes { display: none; }
+:root[data-style="ink"] body { background-color: var(--bg); background-image: var(--bg-image); background-attachment: fixed; }
+:root[data-style="ink"] body:has(.shell) { background-color: var(--bg); }
+:root[data-style="ink"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="ink"] .side { background: var(--side); backdrop-filter: blur(16px) saturate(1.2); border-inline-end: 1px solid var(--border); }
+:root[data-style="ink"] .side .nav a { border-radius: 2px; box-shadow: none; }
+:root[data-style="ink"] .side .nav a.on { font-weight: 650; }
+:root[data-style="ink"] .top { background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(16px) saturate(1.2); border-bottom-color: var(--border); }
+:root[data-style="ink"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="ink"] .card, :root[data-style="ink"] .tile, :root[data-style="ink"] .modal { background: var(--panel); backdrop-filter: blur(18px) saturate(1.3); border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--shadow); }
+:root[data-style="ink"] .card > .hd { border-bottom-color: var(--border); padding: 15px 20px; }
+:root[data-style="ink"] .card > .hd h2, :root[data-style="ink"] .card > .hd h3 { font-size: 14.5px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="ink"] .card > .bd { padding: 18px 20px; }
+:root[data-style="ink"] .card > .bd.flush { padding: 0; }
+:root[data-style="ink"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="ink"] .tile.ok { border-top-color: var(--ok); } :root[data-style="ink"] .tile.critical { border-top-color: var(--critical); } :root[data-style="ink"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="ink"] .tile b { font-size: 28px; }
+:root[data-style="ink"] .btn { border-radius: 2px; background: var(--panel-2); border-color: var(--border-strong); }
+:root[data-style="ink"] .btn:hover { background: var(--panel); }
+:root[data-style="ink"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="ink"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="ink"] input[type=text], :root[data-style="ink"] input[type=password], :root[data-style="ink"] input[type=number], :root[data-style="ink"] input[type=url], :root[data-style="ink"] input[type=email], :root[data-style="ink"] select, :root[data-style="ink"] textarea { background: var(--panel-2); border-radius: 2px; }
+:root[data-style="ink"] .search, :root[data-style="ink"] .chip, :root[data-style="ink"] .seg { border-radius: 2px; background: var(--panel-2); }
+:root[data-style="ink"] .banner { border-radius: 2px; }
+:root[data-style="ink"] .pill, :root[data-style="ink"] .pill.ok, :root[data-style="ink"] .pill.degraded, :root[data-style="ink"] .pill.critical, :root[data-style="ink"] .pill.unknown, :root[data-style="ink"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="ink"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="ink"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 75%, var(--text)); }
+:root[data-style="ink"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 60%, var(--text)); }
+:root[data-style="ink"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
+:root[data-style="ink"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
+:root[data-style="ink"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
+:root[data-style="ink"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="ink"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="ink"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="ink"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+:root[data-style="ink"] .page > :is(p, a, .small, .muted), :root[data-style="ink"] .page > .col > :is(p.small, p.muted) { width: fit-content; max-width: 100%; padding: 4px 10px; border-radius: 2px;
+  background: var(--panel); backdrop-filter: blur(12px); }
+:root[data-style="ink"] .pub .overall { border-radius: 4px; backdrop-filter: blur(12px); }
+:root[data-style="ink"] .pub .head h1 { text-shadow: 0 1px 12px rgba(255, 255, 255, .8); }
+:root[data-style="ink"] h1, :root[data-style="ink"] .brand, :root[data-style="ink"] .crumbs, :root[data-style="ink"] .card > .hd h2, :root[data-style="ink"] .card > .hd h3, :root[data-style="ink"] .tile b { font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "SimSun", Georgia, serif; }
+:root[data-style="ink"] .card > .hd { border-bottom: 1px solid var(--text); }
+:root[data-style="ink"] .btn.primary { letter-spacing: .08em; }

@@ -1,0 +1,57 @@
+/* Glacier: ice blue and snow white, drawn with gradients behind frosted-glass
+   panels. It brings its own colours, so the theme choice is set aside
+   while it is in use. Status colours keep their meaning. Generated with the
+   other wallpaper styles from one pattern; adjust the values here. */
+:root[data-style="glacier"] {
+  --bg: #e3f2fb; --side: rgba(240, 249, 255, .82); --panel: rgba(255, 255, 255, .84); --panel-2: rgba(244, 250, 254, .9); --border: rgba(14, 116, 144, .14); --border-strong: rgba(14, 116, 144, .28);
+  --text: #0f2a3a; --muted: #41606f; --faint: #4a6a7a;
+  --accent: #0e7490; --accent-soft: #d5f0f7; --accent-text: #ffffff; --link: #0b5d74;
+  --ok: #15803d; --ok-soft: #dcfce7; --degraded: #b45309; --degraded-soft: #fef3c7;
+  --critical: #b91c1c; --critical-soft: #fee2e2; --unknown: #6d28d9; --unknown-soft: #ede9fe;
+  --pending: #41606f; --pending-soft: rgba(244, 250, 254, .9); --maint: #1d4ed8; --maint-soft: #dbeafe;
+  --on-status: #ffffff; --on-degraded: #2a1700;
+  --empty: rgba(14, 116, 144, .14); --stripe: transparent;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .08); --radius: 8px;
+  --bg-image: radial-gradient(ellipse 80% 35% at 30% 100%, rgba(255, 255, 255, .9), transparent 70%), radial-gradient(ellipse 70% 30% at 80% 95%, rgba(186, 222, 245, .9), transparent 70%), linear-gradient(135deg, transparent 55%, rgba(255, 255, 255, .5) 55% 58%, transparent 58%), linear-gradient(180deg, #f2f9fe 0%, #d6ecf8 55%, #bcdcef 100%);
+  --side-text: #16354a; --side-muted: #4a6a7a; --side-hover: rgba(14, 116, 144, .12); --side-on: rgba(14, 116, 144, .12); --side-on-text: #0b5d74; --side-mark: #0e7490;
+  color-scheme: light;
+}
+:root[data-style="glacier"] .themes { display: none; }
+:root[data-style="glacier"] body { background-color: var(--bg); background-image: var(--bg-image); background-attachment: fixed; }
+:root[data-style="glacier"] body:has(.shell) { background-color: var(--bg); }
+:root[data-style="glacier"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="glacier"] .side { background: var(--side); backdrop-filter: blur(16px) saturate(1.2); border-inline-end: 1px solid var(--border); }
+:root[data-style="glacier"] .side .nav a { border-radius: 8px; box-shadow: none; }
+:root[data-style="glacier"] .side .nav a.on { font-weight: 650; }
+:root[data-style="glacier"] .top { background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(16px) saturate(1.2); border-bottom-color: var(--border); }
+:root[data-style="glacier"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="glacier"] .card, :root[data-style="glacier"] .tile, :root[data-style="glacier"] .modal { background: var(--panel); backdrop-filter: blur(18px) saturate(1.3); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+:root[data-style="glacier"] .card > .hd { border-bottom-color: var(--border); padding: 15px 20px; }
+:root[data-style="glacier"] .card > .hd h2, :root[data-style="glacier"] .card > .hd h3 { font-size: 14.5px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="glacier"] .card > .bd { padding: 18px 20px; }
+:root[data-style="glacier"] .card > .bd.flush { padding: 0; }
+:root[data-style="glacier"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="glacier"] .tile.ok { border-top-color: var(--ok); } :root[data-style="glacier"] .tile.critical { border-top-color: var(--critical); } :root[data-style="glacier"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="glacier"] .tile b { font-size: 28px; }
+:root[data-style="glacier"] .btn { border-radius: 8px; background: var(--panel-2); border-color: var(--border-strong); }
+:root[data-style="glacier"] .btn:hover { background: var(--panel); }
+:root[data-style="glacier"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="glacier"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="glacier"] input[type=text], :root[data-style="glacier"] input[type=password], :root[data-style="glacier"] input[type=number], :root[data-style="glacier"] input[type=url], :root[data-style="glacier"] input[type=email], :root[data-style="glacier"] select, :root[data-style="glacier"] textarea { background: var(--panel-2); border-radius: 8px; }
+:root[data-style="glacier"] .search, :root[data-style="glacier"] .chip, :root[data-style="glacier"] .seg { border-radius: 8px; background: var(--panel-2); }
+:root[data-style="glacier"] .banner { border-radius: 10px; }
+:root[data-style="glacier"] .pill, :root[data-style="glacier"] .pill.ok, :root[data-style="glacier"] .pill.degraded, :root[data-style="glacier"] .pill.critical, :root[data-style="glacier"] .pill.unknown, :root[data-style="glacier"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="glacier"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="glacier"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 75%, var(--text)); }
+:root[data-style="glacier"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 60%, var(--text)); }
+:root[data-style="glacier"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
+:root[data-style="glacier"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
+:root[data-style="glacier"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
+:root[data-style="glacier"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="glacier"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="glacier"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="glacier"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+:root[data-style="glacier"] .page > :is(p, a, .small, .muted), :root[data-style="glacier"] .page > .col > :is(p.small, p.muted) { width: fit-content; max-width: 100%; padding: 4px 10px; border-radius: 8px;
+  background: var(--panel); backdrop-filter: blur(12px); }
+:root[data-style="glacier"] .pub .overall { border-radius: 14px; backdrop-filter: blur(12px); }
+:root[data-style="glacier"] .pub .head h1 { text-shadow: 0 1px 12px rgba(255, 255, 255, .8); }
