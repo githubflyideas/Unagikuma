@@ -180,6 +180,12 @@ lb    30s IN APP 10.0.0.7:8404 app=haproxy select=proxy=www field=sessions warn=
 | `php-fpm` | `/status` | text | `pm.status_path` in the pool |
 | `haproxy` | `/metrics` (port 8404) | metrics | the built-in Prometheus exporter |
 
+A REDIS monitor reads Redis the same way: `field=` names a number of `INFO` (connected clients, memory used, keys evicted, and so on, listed in the monitor form) and the limits judge it, with a counter such as commands processed judged by its rate:
+
+```
+cache IN REDIS 10.0.0.20 password=${secret:redis} field=used_memory warn=1GB crit=2GB
+```
+
 Open the page only to the monitoring host. `select=label=value` narrows a metrics page to one proxy, topic or the like. The profiles are data files (`internal/appprofile/profiles/`). Each says the version of the application it was last run against (shown in the monitor form); `scripts/live/start.sh` starts those applications and `go test -tags live ./internal/probe` runs every profile against them. To add an application, see [value-types](value-types.md) for the types a field may have.
 ## Alerting
 

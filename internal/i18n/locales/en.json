@@ -1584,6 +1584,8 @@
 "ui.mon.app_field": "Number judged",
 "ui.mon.app_field_hint": "The limits apply to this number; a total that only grows is judged by its rate per second.",
 "ui.mon.app_rate": "per second",
+"ui.mon.redis_field": "Number judged (Redis INFO)",
+"ui.mon.redis_field_hint": "Optional: a number from INFO that warn= and crit= judge, such as connected clients or memory used. Left empty, the monitor only checks that Redis answers.",
 "ui.mon.app_needs": "Needs",
 "ui.mon.app_docs": "documentation",
 "ui.mon.app_verified_docs": "checked against the documented format only, not on a live instance",

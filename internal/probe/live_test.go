@@ -39,3 +39,21 @@ func TestLiveApps(t *testing.T) {
 		}
 	}
 }
+
+// A real Redis (redis-server --port 16379): INFO is read and each field
+// of the profile is found.
+func TestLiveRedis(t *testing.T) {
+	for _, f := range redisProfile().Fields {
+		if f.Optional {
+			continue
+		}
+		r := run(t, Spec{Type: "TCP", Target: "127.0.0.1:16379", Opts: map[string]string{"proto": "redis", "field": f.Key}})
+		if r.Vote != VoteOK {
+			t.Errorf("redis %s: %s %s", f.Key, r.Reason, r.Detail)
+		}
+	}
+	r := run(t, Spec{Type: "TCP", Target: "127.0.0.1:16379", Opts: map[string]string{"proto": "redis", "field": "connected_clients", "role": "master"}})
+	if r.Vote != VoteOK || r.Metrics["value"] < 1 {
+		t.Errorf("redis role: %+v", r)
+	}
+}

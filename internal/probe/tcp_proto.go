@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/githubflyideas/unagikuma/internal/appprofile"
 )
 
 // Protocol checks run over a TCP connection that is already established
@@ -19,7 +21,9 @@ import (
 var protoNames = map[string]bool{"redis": true, "postgres": true, "mysql": true, "grpc": true}
 
 // protoOpts are the options each protocol accepts on top of the TCP ones.
-var protoOpts = map[string]bool{"proto": true, "user": true, "password": true, "database": true, "service": true, "role": true, "ssl": true}
+var protoOpts = map[string]bool{"proto": true, "user": true, "password": true, "database": true, "service": true, "role": true, "ssl": true,
+	// A number read from the service (Redis INFO) and the rules judging it.
+	"field": true, "warn": true, "crit": true, "change": true, "compare": true, "min": true, "for": true, "direction": true}
 
 func validateProto(o opts) error {
 	p := strings.ToLower(o.str("proto", ""))
@@ -57,6 +61,9 @@ func validateProto(o opts) error {
 	}
 	if r := strings.ToLower(o.str("role", "")); r != "" && r != "master" && r != "replica" && r != "slave" && r != "sentinel" {
 		return fmt.Errorf("role must be master, replica or sentinel")
+	}
+	if err := validateRedisInfo(o, p); err != nil {
+		return err
 	}
 	if o.has("service") && p != "grpc" {
 		return errors.New("service applies to proto=grpc")
@@ -153,6 +160,15 @@ func redisCheck(conn net.Conn, o opts, r Result) Result {
 		return failKeep(r, ReasonProtoError, "not a Redis reply: %q", s)
 	}
 	r.Detail = "Redis PONG"
+	info := ""
+	if o.has("field") {
+		// Before ROLE: INFO's reply is read whole, so nothing is left in
+		// the reader for the next command.
+		if r = redisInfo(conn, br, o, r); r.Vote != VoteOK {
+			return r
+		}
+		info = r.Detail
+	}
 	want := strings.ToLower(o.str("role", ""))
 	if want == "" {
 		return r
@@ -184,6 +200,99 @@ func redisCheck(conn net.Conn, o opts, r Result) Result {
 		return failKeep(r, ReasonAssertFailed, "Redis role is %s, expected %s", got, want)
 	}
 	r.Detail = "Redis PONG, role " + got
+	if info != "" {
+		r.Detail = info + ", role " + got
+	}
+	return r
+}
+
+// validateRedisInfo checks field= and the value rules, which read a number
+// from Redis INFO.
+func validateRedisInfo(o opts, proto string) error {
+	rules := []string{"field", "warn", "crit", "change", "compare", "min", "for", "direction"}
+	if proto != "redis" {
+		for _, k := range rules {
+			if o.has(k) {
+				return fmt.Errorf("%s applies to proto=redis", k)
+			}
+		}
+		return nil
+	}
+	for _, k := range rules[1:] {
+		if o.has(k) && !o.has("field") {
+			return fmt.Errorf("%s= judges a number of Redis INFO: set field=", k)
+		}
+	}
+	if !o.has("field") {
+		return nil
+	}
+	f, ok := redisField(o)
+	if !ok {
+		var keys []string
+		for _, f := range redisProfile().Fields {
+			keys = append(keys, f.Key)
+		}
+		return fmt.Errorf("redis has no field %q (%s)", o.str("field", ""), strings.Join(keys, ", "))
+	}
+	return validateValueRules(o, f.Unit)
+}
+
+func redisProfile() *appprofile.Profile {
+	p, _ := appprofile.Get("redis")
+	return p
+}
+
+func redisField(o opts) (*appprofile.Field, bool) {
+	return redisProfile().Field(o.str("field", ""))
+}
+
+// redisInfo sends INFO and turns its reply into the metrics the value
+// rules judge ("app.<field>", and "value" for field=).
+func redisInfo(conn net.Conn, br *bufio.Reader, o opts, r Result) Result {
+	if _, err := conn.Write(respCommand("INFO")); err != nil {
+		return protoFail(r, "INFO", err)
+	}
+	head, err := br.ReadString('\n')
+	if err != nil {
+		return protoFail(r, "INFO", err)
+	}
+	head = strings.TrimRight(head, "\r\n")
+	if strings.HasPrefix(head, "-") {
+		reason := ReasonProtoError
+		if strings.HasPrefix(head, "-NOPERM") || strings.HasPrefix(head, "-NOAUTH") {
+			reason = ReasonAuthError
+		}
+		return failKeep(r, reason, "Redis refused INFO: %s", strings.TrimPrefix(head, "-"))
+	}
+	n, err := strconv.Atoi(strings.TrimPrefix(head, "$"))
+	if !strings.HasPrefix(head, "$") || err != nil || n < 0 || n > 1<<20 {
+		return failKeep(r, ReasonProtoError, "INFO: unexpected reply %q", head)
+	}
+	body := make([]byte, n+2) // the text and its closing CRLF
+	if _, err := io.ReadFull(br, body); err != nil {
+		return protoFail(r, "INFO", err)
+	}
+	p := redisProfile()
+	vals, err := p.Read(body[:n], appprofile.Select{})
+	if err != nil {
+		return failKeep(r, ReasonProtoError, "%s", strings.Replace(err.Error(), "this is not the Redis status page", "this is not Redis INFO", 1))
+	}
+	f, _ := redisField(o)
+	if r.Metrics == nil {
+		r.Metrics = map[string]float64{}
+	}
+	for k, x := range vals {
+		r.Metrics["app."+k] = x
+	}
+	v, ok := vals[f.Key]
+	if !ok {
+		return failKeep(r, ReasonAssertFailed, "Redis INFO has no %q (a replica-only field on a master?)", f.Label)
+	}
+	r.Metrics["value"] = v
+	if f.Type == "counter" {
+		r.Metrics["value.counter"] = 1
+	}
+	r.Detail = p.Describe(vals)
 	return r
 }
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.22 — 2026-11-15
+
+**Added**
+- REDIS monitors can judge a number of `INFO` with `field=`, `warn=` and `crit=`: clients, memory, hit rate, evictions, replication. Verified on Redis 7.0.15.
+
 ## v2.6.21 — 2026-11-15
 
 **Fixed**

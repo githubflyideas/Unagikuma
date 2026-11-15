@@ -1576,6 +1576,8 @@
 "ui.mon.app_field": "判断的数值",
 "ui.mon.app_field_hint": "阈值针对这个数值；只增不减的累计值按每秒速率判断。",
 "ui.mon.app_rate": "每秒速率",
+"ui.mon.redis_field": "判断的数值（Redis INFO）",
+"ui.mon.redis_field_hint": "可选：INFO 里的某个数值，warn=、crit= 针对它判断，例如连接数或内存用量。留空则只检查 Redis 是否应答。",
 "ui.mon.app_needs": "前提",
 "ui.mon.app_docs": "官方文档",
 "ui.mon.app_verified_docs": "只按官方文档的格式核对过，未在真实实例上验证",

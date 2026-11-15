@@ -34,7 +34,7 @@ func OptionsFor(typ string) []string {
 	case "TCP":
 		addMap(tcpOpts)
 	case "REDIS":
-		add("user", "password", "role")
+		add("user", "password", "role", "field", "warn", "crit", "change", "compare", "min", "for", "direction")
 		add(tlsOpts...)
 	case "GRPC":
 		add("service")
