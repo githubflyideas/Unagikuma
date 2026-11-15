@@ -61,4 +61,5 @@ mkdir -p /tmp/live/gf /tmp/live/minio
 cd ..
 sleep 25
 curl -s -o /dev/null http://127.0.0.1:18085/
+curl -s -o /dev/null http://127.0.0.1:18086/ # one request through Traefik
 echo started

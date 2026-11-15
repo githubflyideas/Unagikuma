@@ -2,9 +2,23 @@
 
 ## v2.6.24 — 2026-11-15
 
+A review of how each check's value is read and judged. A file that used to load with one of these mistakes now says so; the last good version keeps running until it is corrected.
+
 **Fixed**
-- A `query=` that asks for a locking read (`FOR UPDATE`, `FOR SHARE`, `LOCK IN SHARE MODE`) is refused when the file is checked: MySQL allows it in a read-only session and it takes row locks.
+- Limits that could never work are refused when the file is checked instead of being saved and staying silent: `warn` and `crit` at the same number, limits on opposite sides that leave no value fine (`warn=<10 crit=>5`), a limit below zero on a value that is never negative, a percentage limit above 100, `for=` or `direction=` without the rule they belong to, and `change=150% direction=down`.
+- A limit's unit must fit a described value: `80%`, `500Mbps` or `5s` on a count of connections is refused. Application fields in bytes and seconds now say so, so `warn=1GB` and `crit=<300s` are read and shown in those units (`967 KB`, not `990728`).
+- One value is no longer judged both as a text and as a number: `expect=up warn=5`, `json-expect=ok crit=3`, and `expect=` together with `expect-num=` are refused.
+- Limits on an SNMP port without `value=` judged nothing and only showed a warning at run time; the file check now asks for `value=in`, `out` or `util`. `value=` without `port=` is refused.
+- A change from 0 to something, and a change of a value below zero (a temperature), was not judged by `change=`.
+- A counter the application has not listed yet (Traefik's requests after a restart, HAProxy's 5xx before the first one) failed the check as "not on this page"; it is 0.
+- `timeout=0s` is refused, and `degraded=` not shorter than the timeout gets a warning: it can never be reached.
+- A limit written `>=` or `<=` was shown as `>` or `<` in the reason.
+- A `query=` that asks for a locking read (`FOR UPDATE`, `FOR SHARE`, `LOCK IN SHARE MODE`) is refused: MySQL allows it in a read-only session and it takes row locks.
 - The manual listed the Redis and SQL sections twice.
+- The state label in the top bar was too faint to read in some themes when the state was unknown (4.1:1) or a warning (3.8:1 in Calm); both are above 4.5:1 in every theme now.
+
+**Changed**
+- `unagikuma probe` applies `warn=` and `crit=` to the reading it makes, as the running monitor does, and says when a value needs more than one reading (a rate, `change=`). An option whose value holds spaces can be given: `query="SELECT count(*) FROM t"`.
 
 ## v2.6.23 — 2026-11-15
 

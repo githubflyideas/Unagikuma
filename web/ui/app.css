@@ -182,9 +182,9 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .verdict i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
 /* Status colours are mixed toward the text colour where they are text, so
    they keep 4.5:1 on their soft backgrounds in light and dark tones alike. */
-.verdict.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 70%, var(--text)); } .verdict.warn { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 55%, var(--text)); }
+.verdict.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 70%, var(--text)); } .verdict.warn { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 40%, var(--text)); }
 .verdict.held { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 70%, var(--text)); }
-.verdict.unknown { background: color-mix(in srgb, var(--faint) 18%, transparent); color: var(--muted); }
+.verdict.unknown { background: color-mix(in srgb, var(--faint) 18%, transparent); color: var(--text); }
 .rdot.setup { background: var(--degraded); }
 .top-sub { color: var(--muted); font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .search { display: flex; align-items: center; gap: 8px; width: 460px; max-width: 40vw; flex: 0 1 460px; padding: 5px 10px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel-2); color: var(--muted); }

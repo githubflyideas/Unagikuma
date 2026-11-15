@@ -85,16 +85,8 @@ func Parse(get func(string) string, unit string) (*Rules, error) {
 	if r.Crit, err = parseBound(get("crit"), r.Unit); err != nil {
 		return nil, fmt.Errorf("crit: %w", err)
 	}
-	// Both limits on the same side: the severe one must lie further out,
-	// or it can never be reached before the other.
-	if w, c := r.Warn, r.Crit; w != nil && c != nil && w.Below == c.Below {
-		if (!w.Below && c.X < w.X) || (w.Below && c.X > w.X) {
-			side := "above"
-			if w.Below {
-				side = "below"
-			}
-			return nil, fmt.Errorf("crit must be further %s than warn (warn %s, crit %s)", side, get("warn"), get("crit"))
-		}
+	if err := checkBounds(r.Warn, r.Crit, get("warn"), get("crit")); err != nil {
+		return nil, err
 	}
 	if v := get("change"); v != "" {
 		f, err := ParseNumber(strings.TrimSuffix(v, "%"))
@@ -142,7 +134,49 @@ func Parse(get func(string) string, unit string) (*Rules, error) {
 	if (r.Compare > 0 || r.Min > 0) && r.Change == 0 {
 		return nil, errors.New("compare and min apply to change, which is not set")
 	}
+	if get("direction") != "" && r.Change == 0 {
+		return nil, errors.New("direction applies to change, which is not set")
+	}
+	if r.For > 0 && !r.Active() {
+		return nil, errors.New("for applies to warn, crit or change, and none is set")
+	}
+	// A value cannot fall by more than all of itself.
+	if r.Change > 1 && r.Direction == "down" {
+		return nil, fmt.Errorf("change %s with direction=down can never happen: a value falls by 100%% at most", get("change"))
+	}
 	return r, nil
+}
+
+// checkBounds refuses limits that cannot work together. On the same side
+// the severe one must lie further out, or the other can never show. On
+// opposite sides there must be a value between them that is fine.
+func checkBounds(w, c *Bound, ws, cs string) error {
+	if w == nil || c == nil {
+		return nil
+	}
+	if w.Below == c.Below {
+		side := "above"
+		if w.Below {
+			side = "below"
+		}
+		if (!w.Below && c.X < w.X) || (w.Below && c.X > w.X) {
+			return fmt.Errorf("crit must be further %s than warn (warn %s, crit %s)", side, ws, cs)
+		}
+		// The same number: warn only shows when it includes the number and
+		// crit does not.
+		if c.X == w.X && !(w.Incl && !c.Incl) {
+			return fmt.Errorf("warn can never show: crit is reached at the same value (warn %s, crit %s)", ws, cs)
+		}
+		return nil
+	}
+	low, high := w, c // low: breached below it; high: breached above it
+	if c.Below {
+		low, high = c, w
+	}
+	if high.X < low.X || (high.X == low.X && (high.Incl || low.Incl)) {
+		return fmt.Errorf("no value would be fine: warn %s and crit %s leave nothing between them", ws, cs)
+	}
+	return nil
 }
 
 func parseBound(v, unit string) (*Bound, error) {
@@ -165,20 +199,28 @@ func parseBound(v, unit string) (*Bound, error) {
 		return nil, err
 	}
 	b.X = f
+	if unit == "%" && f > 100 {
+		return nil, fmt.Errorf("%q can never be reached: a percentage does not exceed 100", v)
+	}
+	if b.Below && f == 0 && !b.Incl && NeverNegative(unit) {
+		return nil, fmt.Errorf("%q can never be reached: this value is never below zero", "<"+v)
+	}
 	return b, nil
 }
 
-// ParseQuantity reads a limit for a value measured in unit ("bps", "%",
-// "°C", or "" for a plain number). A unit written with the number must
-// measure the same thing as the value: 500Mbps is not a percentage and
-// 80% is not a temperature, which would otherwise be converted quietly
-// into a limit that can never be reached.
+// ParseQuantity reads a limit for a value measured in unit: "bps", "%",
+// "°C", "B" (bytes), "s" (seconds), "1" (a plain count or ratio), or ""
+// when what the value measures is not known. A unit written with the
+// number must measure the same thing as the value: 500Mbps is not a
+// percentage and 80% is not a count, which would otherwise be converted
+// quietly into a limit that can never be reached. A limit below zero is
+// refused for a value that is never negative.
 func ParseQuantity(v, unit string) (float64, error) {
 	f, err := ParseNumber(v)
 	if err != nil {
 		return 0, err
 	}
-	want := map[string]string{"bps": "rate", "%": "percent", "°C": "temperature"}[unit]
+	want := unitKind[unit]
 	if want == "" {
 		return f, nil
 	}
@@ -188,15 +230,31 @@ func ParseQuantity(v, unit string) (float64, error) {
 		i++
 	}
 	suffix := strings.ToLower(strings.TrimSpace(t[i:]))
-	if got := unitClass[suffix]; got != "plain" && got != "scale" && got != want {
-		return 0, fmt.Errorf("%q is %s, but this value is a %s", v, article(got), want)
+	got := unitClass[suffix]
+	if got != "plain" && got != "scale" && got != want {
+		return 0, fmt.Errorf("%q is %s, but this value is %s", v, article(got), article(want))
+	}
+	if want == "time" && got == "time" {
+		f /= 1000 // limits with a time unit are read in ms; the value is in seconds
+	}
+	if f < 0 && want != "temperature" {
+		return 0, fmt.Errorf("%q is below zero, which this value never is", v)
 	}
 	return f, nil
 }
 
+// unitKind says what a value's unit measures.
+var unitKind = map[string]string{"bps": "rate", "%": "percent", "°C": "temperature", "B": "size", "s": "time", "1": "count", "/s": "count"}
+
+// NeverNegative reports whether a value in unit is never below zero.
+func NeverNegative(unit string) bool { k := unitKind[unit]; return k != "" && k != "temperature" }
+
 func article(class string) string {
-	if class == "" {
+	switch class {
+	case "":
 		return "another kind of quantity"
+	case "count":
+		return "a plain number"
 	}
 	return "a " + class
 }
@@ -262,8 +320,18 @@ func Format(v float64, unit string) string {
 		return num(v) + "%"
 	case "/s":
 		return num(v) + "/s"
-	case "":
+	case "", "1":
 		return num(v)
+	case "B":
+		for _, u := range []struct {
+			n string
+			f float64
+		}{{"TB", 1 << 40}, {"GB", 1 << 30}, {"MB", 1 << 20}, {"KB", 1 << 10}} {
+			if math.Abs(v) >= u.f {
+				return num(v/u.f) + " " + u.n
+			}
+		}
+		return num(v) + " B"
 	}
 	return num(v) + " " + unit
 }
@@ -383,7 +451,7 @@ func (t *Tracker) value(now time.Time, m map[string]float64) (float64, bool, str
 		if !ok {
 			return 0, false, ""
 		}
-		if t.Rules.Unit == "" {
+		if t.Rules.Unit == "" || t.Rules.Unit == "1" {
 			t.Rules.Unit = "/s"
 		}
 		return r, true, note
@@ -413,10 +481,10 @@ func (t *Tracker) judge(now time.Time, v float64) Outcome {
 				out.Detail = fmt.Sprintf("%s; learning, a reference in %s", Format(v, r.Unit), left.Round(time.Minute))
 				return out
 			}
-		case v < r.Min && ref < r.Min:
+		case math.Abs(v) < r.Min && math.Abs(ref) < r.Min:
 			// Both small: an idle port going from 1 to 5 is no news.
-		case ref > 0:
-			ch := (v - ref) / ref
+		case ref != 0:
+			ch := (v - ref) / math.Abs(ref)
 			up := ch > 0
 			if math.Abs(ch) > r.Change && (r.Direction == "both" || (r.Direction == "up") == up) && level < Crit {
 				dir := "above"
@@ -429,6 +497,10 @@ func (t *Tracker) judge(now time.Time, v float64) Outcome {
 		}
 		if ok && v == 0 && ref > r.Min && ref > 0 && level < Warn && r.Direction != "up" {
 			level, why = Warn, fmt.Sprintf("fell to 0 from %s %s", Format(ref, r.Unit), t.refName())
+		}
+		// From nothing to something has no percentage, but it is a change.
+		if ok && ref == 0 && v > r.Min && v > 0 && level < Warn && r.Direction != "down" {
+			level, why = Warn, fmt.Sprintf("%s, up from 0 %s", Format(v, r.Unit), t.refName())
 		}
 	}
 	if level == OK {
@@ -448,10 +520,14 @@ func (t *Tracker) judge(now time.Time, v float64) Outcome {
 }
 
 func side(b *Bound) string {
+	s := ">"
 	if b.Below {
-		return "<"
+		s = "<"
 	}
-	return ">"
+	if b.Incl {
+		s += "="
+	}
+	return s
 }
 
 func (t *Tracker) refName() string {

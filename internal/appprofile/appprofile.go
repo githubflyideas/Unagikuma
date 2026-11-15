@@ -33,7 +33,8 @@ type Field struct {
 	// Type is "quantity" (a number to compare with limits) or "counter"
 	// (a total that only grows: it is judged by its rate per second).
 	Type string `json:"type"`
-	// Unit is "", "%", "bps" or "°C": what limits written with a unit may
+	// Unit is "" (a plain count or ratio), "%", "bps", "°C", "B" (bytes)
+	// or "s" (seconds): what limits written with a unit may
 	// measure.
 	Unit     string `json:"unit,omitempty"`
 	Optional bool   `json:"optional,omitempty"` // an older version may not have it
@@ -157,9 +158,9 @@ func (p *Profile) prepare() error {
 			return fmt.Errorf("field %s: type must be quantity or counter", f.Key)
 		}
 		switch f.Unit {
-		case "", "%", "bps", "°C":
+		case "", "%", "bps", "°C", "B", "s":
 		default:
-			return fmt.Errorf("field %s: unit must be empty, %%, bps or °C", f.Key)
+			return fmt.Errorf("field %s: unit must be empty, %%, bps, °C, B or s", f.Key)
 		}
 		switch p.Reader {
 		case "text":
@@ -439,4 +440,14 @@ next:
 		sum += v
 	}
 	return sum, true
+}
+
+// LimitUnit is the unit the value rules judge the field in. A field
+// without a unit is a plain number, which is known and not the same as a
+// value nobody has described: 80% is not a limit on a count.
+func (f *Field) LimitUnit() string {
+	if f.Unit == "" {
+		return "1"
+	}
+	return f.Unit
 }

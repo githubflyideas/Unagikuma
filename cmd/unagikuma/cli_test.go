@@ -244,7 +244,7 @@ func TestQuickLine(t *testing.T) {
 		"tcp db:5432 tls=yes": "probe IN TCP db:5432 tls=yes",
 		"dns example.com x=1": "probe IN DNS example.com x=1",
 	} {
-		if got := quickLine(in); got != want {
+		if got := quickLine(strings.Fields(in)); got != want {
 			t.Errorf("quickLine(%q) = %q, want %q", in, got, want)
 		}
 	}

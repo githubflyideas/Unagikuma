@@ -9,7 +9,7 @@
     {"key": "busy", "label": "Busy workers", "type": "quantity", "line": "BusyWorkers"},
     {"key": "idle", "label": "Idle workers", "type": "quantity", "line": "IdleWorkers"},
     {"key": "accesses", "label": "Total accesses", "type": "counter", "line": "Total Accesses"},
-    {"key": "uptime", "label": "Uptime (s)", "type": "quantity", "line": "Uptime"},
+    {"key": "uptime", "label": "Uptime (s)", "type": "quantity", "unit": "s", "line": "Uptime"},
     {"key": "rps", "label": "Requests per second", "type": "quantity", "line": "ReqPerSec", "optional": true},
     {"key": "cpu", "label": "CPU load", "type": "quantity", "line": "CPULoad", "optional": true}
   ]

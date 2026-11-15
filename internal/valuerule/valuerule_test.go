@@ -176,7 +176,11 @@ func TestLimitOrder(t *testing.T) {
 		warn, crit string
 		ok         bool
 	}{
-		{"70", "90", true}, {"90", "70", false}, {"70", "70", true},
+		{"70", "90", true}, {"90", "70", false}, {"70", "70", false},
+		{">=70", ">70", true},  // warn at exactly 70, crit above it
+		{">70", ">=70", false}, // crit already holds at 70: warn never shows
+		{"<10", ">5", false},   // nothing between them is fine
+		{"<5", ">5", true}, {"<=5", ">5", false}, {">80", "<5", true},
 		{"<20", "<10", true}, {"<10", "<20", false},
 		{"80", "<5", true}, // different sides: both can apply
 		{"", "90", true}, {"70", "", true},
@@ -220,5 +224,73 @@ func TestCounterValue(t *testing.T) {
 	}
 	if o := obs(100); o.Level != Skip { // restarted
 		t.Fatalf("wrap: %+v", o)
+	}
+}
+
+// A limit must measure what the value measures, and must be reachable.
+func TestLimitFitsTheValue(t *testing.T) {
+	for _, c := range []struct {
+		unit, limit string
+		ok          bool
+		want        float64
+	}{
+		{"1", "100", true, 100}, {"1", "2k", true, 2000}, {"1", "80%", false, 0}, {"1", "500Mbps", false, 0},
+		{"1", "35C", false, 0}, {"1", "5s", false, 0}, {"1", "1GB", false, 0}, {"1", "-5", false, 0}, {"1", "<0", false, 0},
+		{"1", "<=0", true, 0}, {"1", "<1", true, 1},
+		{"B", "1GB", true, 1 << 30}, {"B", "500MB", true, 500 << 20}, {"B", "1000000", true, 1e6}, {"B", "80%", false, 0},
+		{"s", "300", true, 300}, {"s", "300s", true, 300}, {"s", "1500ms", true, 1.5}, {"s", "1GB", false, 0},
+		{"°C", "-5", true, -5}, {"°C", "<0", true, 0}, {"%", "-1", false, 0}, {"bps", "<0", false, 0},
+		{"", "80%", true, 80}, {"", "-5", true, -5}, {"", "<0", true, 0}, // what it measures is not known
+	} {
+		b, err := parseBound(c.limit, c.unit)
+		if (err == nil) != c.ok || (err == nil && b.X != c.want) {
+			t.Errorf("unit %q limit %q: ok=%v, got %+v, err=%v", c.unit, c.limit, c.ok, b, err)
+		}
+	}
+	if got := Format(1.5*(1<<30), "B"); got != "1.5 GB" {
+		t.Errorf("Format bytes = %q", got)
+	}
+}
+
+// Options that modify a rule need the rule.
+func TestModifiersNeedTheirRule(t *testing.T) {
+	for _, c := range []struct {
+		opts map[string]string
+		ok   bool
+	}{
+		{map[string]string{"for": "5m"}, false},
+		{map[string]string{"for": "5m", "warn": "3"}, true},
+		{map[string]string{"direction": "up"}, false},
+		{map[string]string{"direction": "up", "change": "50%"}, true},
+		{map[string]string{"change": "150%", "direction": "down"}, false},
+		{map[string]string{"change": "100%", "direction": "down"}, true},
+		{map[string]string{"change": "150%"}, true},
+	} {
+		if _, err := Parse(func(k string) string { return c.opts[k] }, ""); (err == nil) != c.ok {
+			t.Errorf("%v: ok=%v, err=%v", c.opts, c.ok, err)
+		}
+	}
+}
+
+// A change from nothing, and from a negative value, is still judged.
+func TestChangeFromZeroAndNegative(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	tr := rules(t, map[string]string{"change": "50%"}, "")
+	tr.Observe(now, map[string]float64{"value": 0})
+	if out := tr.Observe(now.Add(time.Minute), map[string]float64{"value": 40}); out.Level != Warn {
+		t.Errorf("0 -> 40: %+v", out)
+	}
+	tr = rules(t, map[string]string{"change": "50%", "direction": "down"}, "")
+	tr.Observe(now, map[string]float64{"value": 0})
+	if out := tr.Observe(now.Add(time.Minute), map[string]float64{"value": 40}); out.Level != OK {
+		t.Errorf("0 -> 40 with direction=down: %+v", out)
+	}
+	tr = rules(t, map[string]string{"change": "50%"}, "°C")
+	tr.Observe(now, map[string]float64{"value": -10})
+	if out := tr.Observe(now.Add(time.Minute), map[string]float64{"value": -20}); out.Level != Warn {
+		t.Errorf("-10 -> -20: %+v", out)
+	}
+	if out := tr.Observe(now.Add(2*time.Minute), map[string]float64{"value": -21}); out.Level != OK {
+		t.Errorf("-20 -> -21: %+v", out)
 	}
 }

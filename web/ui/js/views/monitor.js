@@ -152,8 +152,12 @@ function fmtValue(v, unit) {
     for (const [u, f] of [['Tbps', 1e12], ['Gbps', 1e9], ['Mbps', 1e6], ['Kbps', 1e3]]) if (Math.abs(v) >= f) return n(v / f) + ' ' + u;
     return n(v) + ' bps';
   }
-  if (unit === '%') return n(v) + '%';
-  return unit ? n(v) + ' ' + unit : n(v);
+  if (unit === 'B') {
+    for (const [u, f] of [['TB', 2 ** 40], ['GB', 2 ** 30], ['MB', 2 ** 20], ['KB', 2 ** 10]]) if (Math.abs(v) >= f) return n(v / f) + ' ' + u;
+    return n(v) + ' B';
+  }
+  if (unit === '%' || unit === '/s') return n(v) + unit;
+  return unit && unit !== '1' ? n(v) + ' ' + unit : n(v);
 }
 
 // ValueCard shows the value the monitor's rules judge: now, against its
