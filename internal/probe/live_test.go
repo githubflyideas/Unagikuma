@@ -3,9 +3,12 @@
 package probe
 
 import (
-	"github.com/githubflyideas/unagikuma/internal/appprofile"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/githubflyideas/unagikuma/internal/appprofile"
+	"github.com/githubflyideas/unagikuma/internal/valuerule"
 )
 
 // Checks every application profile against the real application, started
@@ -154,8 +157,20 @@ func TestLiveConditions(t *testing.T) {
 		{"redis and, both hold", Spec{Type: "TCP", Target: "127.0.0.1:16379", Opts: map[string]string{"proto": "redis", "field": "connected_clients", "crit": "connected_clients>=1 and used_memory>1KB"}}, VoteFail},
 		{"redis and, memory limit not reached", Spec{Type: "TCP", Target: "127.0.0.1:16379", Opts: map[string]string{"proto": "redis", "field": "connected_clients", "crit": "connected_clients>=1 and used_memory>1GB"}}, VoteOK},
 	} {
-		if r := run(t, c.spec); r.Vote != c.want {
-			t.Errorf("%s: %s %s %s", c.name, r.Vote, r.Reason, r.Detail)
+		// probe.Run reads the numbers; the engine judges them with the rules.
+		r := run(t, c.spec)
+		if r.Vote != VoteOK {
+			t.Errorf("%s: read failed: %s %s", c.name, r.Reason, r.Detail)
+			continue
+		}
+		rules, err := valuerule.ParseWith(func(k string) string { return c.spec.Opts[k] }, ValueUnit(c.spec), ValueFields(c.spec))
+		if err != nil {
+			t.Errorf("%s: %v", c.name, err)
+			continue
+		}
+		out := (&valuerule.Tracker{Rules: rules}).Observe(time.Now(), r.Metrics)
+		if got := out.Level == valuerule.Crit; got != (c.want == VoteFail) {
+			t.Errorf("%s: level %v, %s", c.name, out.Level, out.Detail)
 		}
 	}
 }

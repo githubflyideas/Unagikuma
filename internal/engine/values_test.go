@@ -72,3 +72,37 @@ func TestValueRules(t *testing.T) {
 		t.Fatalf("restored samples: %v", s)
 	}
 }
+
+// A condition of two fields fails the check when it holds, degrades it for
+// warn=, and a counter's comparison is on its rate.
+func TestConditionRules(t *testing.T) {
+	e := New(Deps{
+		Probe: func(context.Context, probe.Spec) probe.Result { return probe.Result{Vote: probe.VoteOK} },
+		Sink:  newMemSink(), HostClock: func() (hostclock.Reading, bool) { return hostclock.Reading{}, false },
+		Gateways: func() ([]netscope.Gateway, error) { return nil, nil },
+	})
+	ts, _ := tunables.New(map[string]string{"engine.first-round-delay": "0s", "localnet.enabled": "off"})
+	spec := MonitorSpec{Name: "web", Title: "web", DefHash: "a", Interval: time.Hour, Attempts: 1,
+		Probe: probe.Spec{Name: "web", Type: "HTTP", Target: "http://127.0.0.1/s", Timeout: time.Second,
+			Opts: map[string]string{"app": "nginx", "crit": "active>800 and waiting>500", "warn": "active>400 or requests>100"}}}
+	e.Apply(Config{Tunables: ts, Location: time.UTC, Monitors: []MonitorSpec{spec}})
+	m := e.monitors["web"]
+	at := time.Now()
+	read := func(d time.Duration, active, waiting, requests float64) probe.Result {
+		return e.applyValues(m, probe.Result{Vote: probe.VoteOK, Detail: "nginx", Metrics: map[string]float64{
+			"value": active, "app.active": active, "app.waiting": waiting, "app.requests": requests}}, at.Add(d))
+	}
+	if r := read(0, 100, 10, 1000); r.Vote != probe.VoteOK || r.Degraded {
+		t.Fatalf("quiet: %+v", r)
+	}
+	if r := read(time.Minute, 900, 100, 1000); r.Vote != probe.VoteOK || !r.Degraded || r.Detail != "active 900 >400" {
+		t.Fatalf("busy only: %+v", r)
+	}
+	if r := read(2*time.Minute, 900, 600, 1000); r.Vote != probe.VoteFail || r.Reason != probe.ReasonValueBreach || r.Detail != "active 900 >800 and waiting 600 >500" {
+		t.Fatalf("both: %+v", r)
+	}
+	// 12000 requests in a minute is 200/s, over warn's 100/s on its own.
+	if r := read(3*time.Minute, 100, 10, 1000+12000); r.Vote != probe.VoteOK || !r.Degraded || r.Detail != "requests 200/s >100/s" {
+		t.Fatalf("rate: %+v", r)
+	}
+}
