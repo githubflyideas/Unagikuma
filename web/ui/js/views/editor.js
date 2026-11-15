@@ -57,7 +57,7 @@ const OPT_EXAMPLE = {
   aa: 'yes', 'allow-metadata': 'yes', 'expect-len': '48', fallback: 'off', 'host-check': 'off', 'max-offset': '500ms', 'max-stratum': '4',
   'min-answers': '2', retransmit: '2', 'src-port': '1024', template: 'snmp',
   auth: 'sha', 'auth-pass': '${secret:snmp_auth}', priv: 'aes', 'priv-pass': '${secret:snmp_priv}', port: 'Gi0/1', sensor: 'Inlet',
-  profile: 'huawei', value: 'util', warn: '70', crit: '90', change: '50%', compare: '24h', min: '10Mbps', for: '5m', direction: 'up',
+  profile: 'huawei', value: 'util', warn: '70', crit: '90', change: '50%', compare: '24h', min: '10', for: '5m', direction: 'up',
 };
 
 // Options shown as their own form fields rather than in the table

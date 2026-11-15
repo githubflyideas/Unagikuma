@@ -145,23 +145,50 @@ func snmpOID(ctx context.Context, c *snmpClient, o opts) Result {
 	if len(vbs) == 0 {
 		return Result{Vote: VoteFail, Reason: ReasonProtoError, Detail: "empty varbind list"}
 	}
-	text, num, isNum, missing := snmpValue(vbs[0].Value)
-	res := Result{Vote: VoteOK, Reason: ReasonOK, Detail: oid + " = " + text, Metrics: map[string]float64{}}
+	res := Result{Metrics: map[string]float64{}}
+	snmpJudge(&res, oid, vbs[0].Value, o)
+	return res
+}
+
+// snmpJudge reads one value into res (its numbers for the value rules) and
+// judges it against expect= and expect-num=. Both paths that read an OID
+// (v1/v2c and the client) use it, so they cannot drift apart.
+//
+// A text is matched by containing expect=; a number is not text: expect=
+// must be that number exactly (10 does not match 100), and a comparison
+// is expect-num=. A counter (Counter32 and Counter64) only ever grows, so
+// the value rules judge its rate and not its total.
+func snmpJudge(res *Result, oid string, e berElem, o opts) {
+	text, num, isNum, missing := snmpValue(e)
 	if isNum {
 		res.Metrics["snmp.value"], res.Metrics["value"] = num, num
-	}
-	switch exp, expNum := o.str("expect", ""), o.str("expect-num", ""); {
-	case missing:
-		res.Vote, res.Reason = VoteFail, ReasonAssertFailed
-	case exp != "" && !strings.Contains(text, exp):
-		res.Vote, res.Reason, res.Detail = VoteFail, ReasonAssertFailed, fmt.Sprintf("%s = %q does not contain %q", oid, text, exp)
-	case expNum != "":
-		ne, _ := parseNumExpect(expNum)
-		if !isNum || !ne.match(num) {
-			res.Vote, res.Reason, res.Detail = VoteFail, ReasonAssertFailed, fmt.Sprintf("%s = %s, expected %s", oid, text, ne)
+		if e.tag == 0x41 || e.tag == 0x46 {
+			res.Metrics["value.counter"] = 1
 		}
 	}
-	return res
+	res.Vote, res.Reason, res.Detail = VoteOK, ReasonOK, oid+" = "+text
+	fail := func(format string, args ...any) {
+		res.Vote, res.Reason, res.Detail = VoteFail, ReasonAssertFailed, fmt.Sprintf(format, args...)
+	}
+	exp, expNum := o.str("expect", ""), o.str("expect-num", "")
+	switch {
+	case missing:
+		res.Vote, res.Reason = VoteFail, ReasonAssertFailed
+	case exp != "" && isNum:
+		if want, err := strconv.ParseFloat(strings.TrimSpace(exp), 64); err != nil {
+			fail("%s = %s is a number: expect= must be that number (use expect-num= to compare), got %q", oid, text, exp)
+		} else if want != num {
+			fail("%s = %s, expected %s", oid, text, exp)
+		}
+	case exp != "" && !strings.Contains(text, exp):
+		fail("%s = %q does not contain %q", oid, text, exp)
+	}
+	if res.Vote == VoteOK && expNum != "" {
+		ne, _ := parseNumExpect(expNum)
+		if !isNum || !ne.match(num) {
+			fail("%s = %s, expected %s", oid, text, ne)
+		}
+	}
 }
 
 // snmpLookup finds the index of the row of column whose text is name: exactly

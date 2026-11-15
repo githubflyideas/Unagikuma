@@ -135,3 +135,90 @@ func TestParse(t *testing.T) {
 		t.Error(Format(9.2e9, "bps"), Format(41, "°C"), Format(72.456, "%"))
 	}
 }
+
+// A limit's unit must measure what the value measures: 500Mbps cannot be
+// a limit on a percentage, nor 80% on a temperature.
+func TestLimitUnitMustMatch(t *testing.T) {
+	get := func(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
+	for _, c := range []struct {
+		unit string
+		opts map[string]string
+		ok   bool
+	}{
+		{"%", map[string]string{"value": "util", "warn": "70"}, true},
+		{"%", map[string]string{"value": "util", "warn": "70%"}, true},
+		{"%", map[string]string{"value": "util", "warn": "500Mbps"}, false},
+		{"bps", map[string]string{"value": "in", "warn": "500Mbps"}, true},
+		{"bps", map[string]string{"value": "in", "warn": "80%"}, false},
+		{"bps", map[string]string{"value": "in", "warn": "1.5GB"}, false}, // bytes are not a rate
+		{"°C", map[string]string{"warn": "35"}, true},
+		{"°C", map[string]string{"warn": "35°C"}, true},
+		{"°C", map[string]string{"warn": "80%"}, false},
+		{"°C", map[string]string{"warn": "100Mbps"}, false},
+		{"", map[string]string{"warn": "100"}, true}, // a plain number takes what it is given
+		{"", map[string]string{"warn": "5k"}, true},
+		{"%", map[string]string{"value": "util", "change": "50%", "min": "10Mbps"}, false},
+		{"bps", map[string]string{"value": "in", "change": "50%", "min": "10Mbps"}, true},
+	} {
+		_, err := Parse(get(c.opts), c.unit)
+		if (err == nil) != c.ok {
+			t.Errorf("unit %q %v: ok=%v, err=%v", c.unit, c.opts, c.ok, err)
+		}
+	}
+}
+
+// crit must be reached after warn, on the same side.
+func TestLimitOrder(t *testing.T) {
+	get := func(w, c string) func(string) string {
+		return func(k string) string { return map[string]string{"warn": w, "crit": c}[k] }
+	}
+	for _, c := range []struct {
+		warn, crit string
+		ok         bool
+	}{
+		{"70", "90", true}, {"90", "70", false}, {"70", "70", true},
+		{"<20", "<10", true}, {"<10", "<20", false},
+		{"80", "<5", true}, // different sides: both can apply
+		{"", "90", true}, {"70", "", true},
+	} {
+		if _, err := Parse(get(c.warn, c.crit), ""); (err == nil) != c.ok {
+			t.Errorf("warn=%q crit=%q: ok=%v, err=%v", c.warn, c.crit, c.ok, err)
+		}
+	}
+}
+
+func TestInclusiveLimit(t *testing.T) {
+	tr := rules(t, map[string]string{"crit": ">=100"}, "")
+	now := time.Unix(1_700_000_000, 0)
+	if o := tr.Observe(now, map[string]float64{"value": 100}); o.Level != Crit {
+		t.Fatalf(">=100 at 100: %v", o.Level)
+	}
+	if o := rules(t, map[string]string{"crit": "100"}, "").Observe(now, map[string]float64{"value": 100}); o.Level != OK {
+		t.Fatalf(">100 at 100: %v", o.Level)
+	}
+	if o := rules(t, map[string]string{"warn": "<=10"}, "").Observe(now, map[string]float64{"value": 10}); o.Level != Warn {
+		t.Fatalf("<=10 at 10: %v", o.Level)
+	}
+}
+
+// A counter's total only grows, so the rules judge its rate.
+func TestCounterValue(t *testing.T) {
+	tr := rules(t, map[string]string{"crit": "1000"}, "")
+	now := time.Unix(1_700_000_000, 0)
+	obs := func(v float64) Outcome {
+		now = now.Add(10 * time.Second)
+		return tr.Observe(now, map[string]float64{"value": v, "value.counter": 1})
+	}
+	if o := obs(5_000_000); o.Level != Skip {
+		t.Fatalf("first reading: %v", o.Level)
+	}
+	if o := obs(5_005_000); o.Level != OK || o.Value != 500 { // 500 a second
+		t.Fatalf("500/s: %+v", o)
+	}
+	if o := obs(5_025_000); o.Level != Crit || !strings.Contains(o.Detail, "/s") { // 2000 a second
+		t.Fatalf("2000/s: %+v", o)
+	}
+	if o := obs(100); o.Level != Skip { // restarted
+		t.Fatalf("wrap: %+v", o)
+	}
+}

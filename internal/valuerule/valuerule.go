@@ -33,13 +33,14 @@ const (
 type Bound struct {
 	X     float64
 	Below bool // "<10": a value under 10 breaches
+	Incl  bool // "<=10" / ">=10": the limit itself breaches too
 }
 
 func (b Bound) breached(v float64) bool {
 	if b.Below {
-		return v < b.X
+		return v < b.X || (b.Incl && v == b.X)
 	}
-	return v > b.X
+	return v > b.X || (b.Incl && v == b.X)
 }
 
 // Rules are the options of one monitor.
@@ -78,11 +79,22 @@ func Parse(get func(string) string, unit string) (*Rules, error) {
 		return nil, fmt.Errorf("value must be in, out or util, got %q", r.Value)
 	}
 	var err error
-	if r.Warn, err = parseBound(get("warn")); err != nil {
+	if r.Warn, err = parseBound(get("warn"), r.Unit); err != nil {
 		return nil, fmt.Errorf("warn: %w", err)
 	}
-	if r.Crit, err = parseBound(get("crit")); err != nil {
+	if r.Crit, err = parseBound(get("crit"), r.Unit); err != nil {
 		return nil, fmt.Errorf("crit: %w", err)
+	}
+	// Both limits on the same side: the severe one must lie further out,
+	// or it can never be reached before the other.
+	if w, c := r.Warn, r.Crit; w != nil && c != nil && w.Below == c.Below {
+		if (!w.Below && c.X < w.X) || (w.Below && c.X > w.X) {
+			side := "above"
+			if w.Below {
+				side = "below"
+			}
+			return nil, fmt.Errorf("crit must be further %s than warn (warn %s, crit %s)", side, get("warn"), get("crit"))
+		}
 	}
 	if v := get("change"); v != "" {
 		f, err := ParseNumber(strings.TrimSuffix(v, "%"))
@@ -105,9 +117,12 @@ func Parse(get func(string) string, unit string) (*Rules, error) {
 		}
 	}
 	if v := get("min"); v != "" {
-		f, err := ParseNumber(v)
+		f, err := ParseQuantity(v, r.Unit)
 		if err != nil || f < 0 {
-			return nil, fmt.Errorf("min must be a number, got %q", v)
+			if err == nil {
+				err = errors.New("must not be negative")
+			}
+			return nil, fmt.Errorf("min: %w", err)
 		}
 		r.Min = f
 	}
@@ -130,22 +145,69 @@ func Parse(get func(string) string, unit string) (*Rules, error) {
 	return r, nil
 }
 
-func parseBound(v string) (*Bound, error) {
+func parseBound(v, unit string) (*Bound, error) {
 	if v == "" {
 		return nil, nil
 	}
 	b := &Bound{}
-	if strings.HasPrefix(v, "<") {
+	switch {
+	case strings.HasPrefix(v, "<="):
+		b.Below, b.Incl, v = true, true, v[2:]
+	case strings.HasPrefix(v, ">="):
+		b.Incl, v = true, v[2:]
+	case strings.HasPrefix(v, "<"):
 		b.Below, v = true, v[1:]
-	} else {
+	default:
 		v = strings.TrimPrefix(v, ">")
 	}
-	f, err := ParseNumber(v)
+	f, err := ParseQuantity(v, unit)
 	if err != nil {
 		return nil, err
 	}
 	b.X = f
 	return b, nil
+}
+
+// ParseQuantity reads a limit for a value measured in unit ("bps", "%",
+// "°C", or "" for a plain number). A unit written with the number must
+// measure the same thing as the value: 500Mbps is not a percentage and
+// 80% is not a temperature, which would otherwise be converted quietly
+// into a limit that can never be reached.
+func ParseQuantity(v, unit string) (float64, error) {
+	f, err := ParseNumber(v)
+	if err != nil {
+		return 0, err
+	}
+	want := map[string]string{"bps": "rate", "%": "percent", "°C": "temperature"}[unit]
+	if want == "" {
+		return f, nil
+	}
+	i := 0
+	t := strings.TrimSpace(v)
+	for i < len(t) && (t[i] == '-' || t[i] == '+' || t[i] == '.' || (t[i] >= '0' && t[i] <= '9') || t[i] == 'e' && i > 0 && i+1 < len(t) && (t[i+1] >= '0' && t[i+1] <= '9' || t[i+1] == '-')) {
+		i++
+	}
+	suffix := strings.ToLower(strings.TrimSpace(t[i:]))
+	if got := unitClass[suffix]; got != "plain" && got != "scale" && got != want {
+		return 0, fmt.Errorf("%q is %s, but this value is a %s", v, article(got), want)
+	}
+	return f, nil
+}
+
+func article(class string) string {
+	if class == "" {
+		return "another kind of quantity"
+	}
+	return "a " + class
+}
+
+// unitClass says what each unit measures.
+var unitClass = map[string]string{
+	"": "plain", "%": "percent", "°c": "temperature", "c": "temperature", "℃": "temperature",
+	"ms": "time", "s": "time",
+	"bps": "rate", "kbps": "rate", "mbps": "rate", "gbps": "rate", "tbps": "rate",
+	"b": "size", "kb": "size", "mb": "size", "gb": "size", "tb": "size",
+	"k": "scale", "m": "scale", "g": "scale",
 }
 
 // ParseNumber reads a number with an optional unit: 80, 80%, 1.5GB,
@@ -198,6 +260,8 @@ func Format(v float64, unit string) string {
 		return num(v) + " bps"
 	case "%":
 		return num(v) + "%"
+	case "/s":
+		return num(v) + "/s"
 	case "":
 		return num(v)
 	}
@@ -312,6 +376,17 @@ func (t *Tracker) value(now time.Time, m map[string]float64) (float64, bool, str
 	v, ok := m["value"]
 	if !ok {
 		return 0, false, noValue
+	}
+	if m["value.counter"] == 1 {
+		// A counter only ever grows: its rate is what means something.
+		r, ok := rate("value")
+		if !ok {
+			return 0, false, ""
+		}
+		if t.Rules.Unit == "" {
+			t.Rules.Unit = "/s"
+		}
+		return r, true, note
 	}
 	return v, ok, note
 }
