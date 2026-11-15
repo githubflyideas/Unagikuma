@@ -1,0 +1,15 @@
+{
+  "id": "traefik", "title": "Traefik", "reader": "metrics", "path": "/metrics", "port": 8082,
+  "docs": "https://doc.traefik.io/traefik/observability/metrics/prometheus/",
+  "needs": "Turn on the Prometheus metrics (metrics.prometheus) and give them their own entry point; port 8082 is the usual one.",
+  "verified": "Traefik 3.2.0",
+  "primary": "servers_all_up",
+  "summary": ["servers_all_up", "open_connections", "requests"],
+  "fields": [
+    {"key": "servers_all_up", "label": "Every backend server up (1 = yes)", "type": "quantity", "metric": "traefik_service_server_up", "agg": "min", "optional": true},
+    {"key": "servers", "label": "Backend servers", "type": "quantity", "metric": "traefik_service_server_up", "agg": "count", "optional": true},
+    {"key": "open_connections", "label": "Open connections", "type": "quantity", "metric": "traefik_open_connections"},
+    {"key": "requests", "label": "Requests", "type": "counter", "metric": "traefik_entrypoint_requests_total", "optional": true},
+    {"key": "reload_failures", "label": "Failed configuration reloads", "type": "counter", "metric": "traefik_config_reloads_failure_total", "optional": true}
+  ]
+}

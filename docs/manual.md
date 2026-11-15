@@ -183,6 +183,9 @@ lb    30s IN APP 10.0.0.7:8404 app=haproxy select=proxy=www field=sessions warn=
 | `etcd` | `/metrics` (port 2379) | metrics | nothing |
 | `caddy` | `/metrics` (admin port 2019) | metrics | `servers { metrics }` |
 | `rabbitmq` | `/metrics` (port 15692) | metrics | the `rabbitmq_prometheus` plugin |
+| `grafana` | `/metrics` (port 3000) | metrics | nothing |
+| `traefik` | `/metrics` (port 8082) | metrics | `metrics.prometheus` on its own entry point |
+| `minio` | `/minio/v2/metrics/cluster` (port 9000) | metrics | `MINIO_PROMETHEUS_AUTH_TYPE=public` |
 
 A REDIS monitor reads Redis the same way: `field=` names a number of `INFO` (connected clients, memory used, keys evicted, and so on, listed in the monitor form) and the limits judge it, with a counter such as commands processed judged by its rate:
 

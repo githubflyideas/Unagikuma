@@ -1,0 +1,18 @@
+{
+  "id": "minio", "title": "MinIO", "reader": "metrics", "path": "/minio/v2/metrics/cluster", "port": 9000,
+  "docs": "https://min.io/docs/minio/linux/operations/monitoring/collect-minio-metrics-using-prometheus.html",
+  "needs": "Set MINIO_PROMETHEUS_AUTH_TYPE=public so the metrics can be read without a token, and open it only to the monitoring host.",
+  "verified": "MinIO (built from the official source)",
+  "primary": "health",
+  "summary": ["health", "drives_offline", "nodes_offline"],
+  "fields": [
+    {"key": "health", "label": "Cluster healthy (1 = yes)", "type": "quantity", "metric": "minio_cluster_health_status"},
+    {"key": "drives_offline", "label": "Drives offline", "type": "quantity", "metric": "minio_cluster_drive_offline_total"},
+    {"key": "drives_online", "label": "Drives online", "type": "quantity", "metric": "minio_cluster_drive_online_total"},
+    {"key": "nodes_offline", "label": "Nodes offline", "type": "quantity", "metric": "minio_cluster_nodes_offline_total"},
+    {"key": "nodes_online", "label": "Nodes online", "type": "quantity", "metric": "minio_cluster_nodes_online_total"},
+    {"key": "free_bytes", "label": "Usable free bytes", "type": "quantity", "metric": "minio_cluster_capacity_usable_free_bytes"},
+    {"key": "total_bytes", "label": "Usable total bytes", "type": "quantity", "metric": "minio_cluster_capacity_usable_total_bytes"},
+    {"key": "open_fds", "label": "Open file descriptors", "type": "quantity", "metric": "minio_node_file_descriptor_open_total"}
+  ]
+}

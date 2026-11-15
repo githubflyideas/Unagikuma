@@ -109,6 +109,9 @@ func TestLiveMetricsApps(t *testing.T) {
 		"etcd":       "http://127.0.0.1:12379/metrics",
 		"caddy":      "http://127.0.0.1:12019/metrics",
 		"rabbitmq":   "http://127.0.0.1:15692/metrics",
+		"grafana":    "http://127.0.0.1:13000/metrics",
+		"traefik":    "http://127.0.0.1:18087/metrics",
+		"minio":      "http://127.0.0.1:19100/minio/v2/metrics/cluster",
 	} {
 		p, ok := appprofile.Get(app)
 		if !ok {
@@ -122,6 +125,13 @@ func TestLiveMetricsApps(t *testing.T) {
 			if r.Vote != VoteOK {
 				t.Errorf("%s %s: %s %s", app, f.Key, r.Reason, r.Detail)
 			}
+		}
+	}
+	// Traefik reports its backend servers only once a service exists; the
+	// live setup has one healthy server.
+	for _, f := range []string{"servers_all_up", "servers", "requests"} {
+		if r := run(t, Spec{Type: "HTTP", Target: "http://127.0.0.1:18087/metrics", Opts: map[string]string{"app": "traefik", "field": f}}); r.Vote != VoteOK {
+			t.Errorf("traefik %s: %s %s", f, r.Reason, r.Detail)
 		}
 	}
 	// etcd's leader is a 1 on a healthy node.
