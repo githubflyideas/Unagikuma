@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.18 — 2026-11-15
+
+**Changed**
+- Relic style redone: carved titles, corner brackets, framed status plates; its fonts are built in.
+
 ## v2.6.17 — 2026-11-15
 
 **Added**

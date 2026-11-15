@@ -1,63 +1,130 @@
-/* Relic: ancient technology. Slate stone, thin glowing cyan lines, corner
-   marks on every panel and wide-set capitals. It brings its own colours,
-   so the theme choice is set aside while it is in use. Status colours keep
-   their meaning; failures are a warm red and never the cyan of the frame. */
+/* Relic: ancient technology. Deep night blue, light-blue corner brackets
+   on every panel, carved capitals for titles, a book serif for text and
+   wide-set monospaced labels, with small diamonds as ornament. It brings
+   its own colours and fonts (Cinzel, Spectral and IBM Plex Mono, all under
+   the SIL Open Font Licence, see fonts/), so the theme choice is set aside
+   while it is in use. Chinese and other scripts fall back to the system's
+   serif. Status colours keep their meaning. */
+@font-face { font-family: "Relic Display"; src: url("fonts/cinzel-latin-600-normal.woff2") format("woff2"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "Relic Serif"; src: url("fonts/spectral-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Relic Serif"; src: url("fonts/spectral-latin-600-normal.woff2") format("woff2"); font-weight: 500 900; font-display: swap; }
+@font-face { font-family: "Relic Mono"; src: url("fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Relic Mono"; src: url("fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); font-weight: 500 900; font-display: swap; }
+
 :root[data-style="relic"] {
-  --bg: #12171c; --side: #0d1115; --panel: #192027; --panel-2: #1e262e; --border: #2a3a46; --border-strong: #3a5263;
-  --text: #dfe9ef; --muted: #9db0bd; --faint: #8fa3b1;
-  --accent: #4fc3f7; --accent-soft: #11313f; --accent-text: #061820; --link: #7fd6ff;
-  --ok: #4fd8a4; --ok-soft: #10302a; --degraded: #ffb454; --degraded-soft: #3a2a12;
-  --critical: #ff6a5c; --critical-soft: #3d1a1a; --unknown: #b49cff; --unknown-soft: #2a2442;
-  --pending: #9db0bd; --pending-soft: #222c34; --maint: #7fb4ff; --maint-soft: #172a44;
-  --on-status: #0b1014; --on-degraded: #1a1205;
-  --empty: #26313a; --stripe: rgba(127, 214, 255, .025);
-  --shadow: 0 0 0 1px rgba(79, 195, 247, .05), 0 6px 24px rgba(0, 0, 0, .35); --radius: 4px;
-  --bg-image: radial-gradient(900px 500px at 80% -10%, rgba(79, 195, 247, .08), transparent 60%),
-    repeating-linear-gradient(135deg, rgba(127, 214, 255, .018) 0 2px, transparent 2px 14px);
-  --side-text: #c9d8e2; --side-muted: #93a7b4; --side-hover: rgba(79, 195, 247, .08); --side-on: #13303d; --side-on-text: #9fe2ff; --side-mark: #4fc3f7;
-  --r-glow: 0 0 10px rgba(79, 195, 247, .35);
+  --bg: #0b1422; --side: #0a111d; --panel: #101c2e; --panel-2: #14233a; --border: #213a55; --border-strong: #2f5274;
+  --text: #e6eef6; --muted: #a9b9c9; --faint: #97aabd;
+  --accent: #7cc8f5; --accent-soft: #12304a; --accent-text: #06121e; --link: #9ad6fa;
+  --ok: #6fd38a; --ok-soft: #10301f; --degraded: #f0a860; --degraded-soft: #33230f;
+  --critical: #ef7a64; --critical-soft: #3a1a17; --unknown: #b5a2f5; --unknown-soft: #262145;
+  --pending: #a9b9c9; --pending-soft: #1a2940; --maint: #8bb8f8; --maint-soft: #142a4a;
+  --on-status: #0b1422; --on-degraded: #1d1205;
+  --empty: #1c2d45; --stripe: rgba(154, 214, 250, .025);
+  --shadow: 0 0 24px rgba(124, 200, 245, .06); --radius: 2px;
+  --bg-image: radial-gradient(circle at 85% 8%, rgba(124, 200, 245, .07), transparent 40%),
+    radial-gradient(circle at 10% 70%, rgba(124, 200, 245, .04), transparent 35%),
+    repeating-radial-gradient(circle at 80% 30%, transparent 0 120px, rgba(124, 200, 245, .025) 121px 122px);
+  --side-text: #d2dfeb; --side-muted: #9fb2c5; --side-hover: rgba(124, 200, 245, .07); --side-on: #13304a; --side-on-text: #b5e3fd; --side-mark: #7cc8f5;
+  --r-display: "Relic Display", "Trajan Pro", "Cinzel", Georgia, "Songti SC", "STSong", "SimSun", serif;
+  --r-serif: "Relic Serif", "Spectral", Georgia, "Songti SC", "STSong", "SimSun", serif;
+  --r-mono: "Relic Mono", "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --sans: var(--r-serif); --mono: var(--r-mono);
+  --r-corner: #8fd3fb; --r-glow: 0 0 14px rgba(124, 200, 245, .45);
   color-scheme: dark;
 }
+:root[data-style="relic"] body { font-size: 15px; line-height: 1.55; }
 :root[data-style="relic"] .themes { display: none; }
-/* Names are shown as written; only the page labels are set in capitals. */
-:root[data-style="relic"] h1, :root[data-style="relic"] .brand { letter-spacing: .08em; font-weight: 600; }
-:root[data-style="relic"] .crumbs { letter-spacing: .12em; text-transform: uppercase; font-weight: 600; }
-:root[data-style="relic"] h1 { font-size: 22px; text-shadow: var(--r-glow); }
-:root[data-style="relic"] .side { border-inline-end: 1px solid var(--border-strong); box-shadow: inset -1px 0 0 rgba(79, 195, 247, .12); }
-:root[data-style="relic"] .side .nav a { border-radius: 2px; letter-spacing: .04em; }
-:root[data-style="relic"] .side .nav a.on { box-shadow: inset 2px 0 0 var(--side-mark), var(--r-glow); }
-:root[data-style="relic"] .top { border-bottom-color: var(--border-strong); background: color-mix(in srgb, var(--bg) 88%, transparent); }
-:root[data-style="relic"] .page { gap: 22px; padding: 22px 26px 48px; }
 
-/* Panels carry a corner mark at each top corner. */
-:root[data-style="relic"] .card { position: relative; border-radius: 3px; border-color: var(--border-strong); overflow: visible; }
-:root[data-style="relic"] .card::before, :root[data-style="relic"] .card::after {
-  content: ""; position: absolute; top: -1px; width: 14px; height: 14px; pointer-events: none;
-  border-top: 2px solid var(--accent); filter: drop-shadow(0 0 3px rgba(79, 195, 247, .6)); }
-:root[data-style="relic"] .card::before { inset-inline-start: -1px; border-inline-start: 2px solid var(--accent); }
-:root[data-style="relic"] .card::after { inset-inline-end: -1px; border-inline-end: 2px solid var(--accent); }
-:root[data-style="relic"] .card > .hd { border-bottom: 1px solid var(--border-strong); background: linear-gradient(90deg, rgba(79, 195, 247, .07), transparent 60%); }
-:root[data-style="relic"] .card > .hd h2, :root[data-style="relic"] .card > .hd h3 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .16em; color: var(--link); font-weight: 600; }
-:root[data-style="relic"] .modal { border: 1px solid var(--border-strong); border-radius: 3px; box-shadow: 0 0 0 1px rgba(79, 195, 247, .15), 0 20px 60px rgba(0, 0, 0, .6); }
-:root[data-style="relic"] .tile { border-radius: 3px; border-color: var(--border-strong); }
-:root[data-style="relic"] .tile b { letter-spacing: .04em; }
-:root[data-style="relic"] .banner { border-radius: 3px; }
+/* Corner brackets: drawn as backgrounds so menus inside a panel are not clipped. */
+:root[data-style="relic"] .card, :root[data-style="relic"] .pub .overall, :root[data-style="relic"] .modal {
+  --rc: var(--r-corner);
+  background:
+    linear-gradient(var(--rc), var(--rc)) left top / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) left top / 2px 18px no-repeat,
+    linear-gradient(var(--rc), var(--rc)) right top / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) right top / 2px 18px no-repeat,
+    linear-gradient(var(--rc), var(--rc)) left bottom / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) left bottom / 2px 18px no-repeat,
+    linear-gradient(var(--rc), var(--rc)) right bottom / 18px 2px no-repeat, linear-gradient(var(--rc), var(--rc)) right bottom / 2px 18px no-repeat,
+    linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--border-strong); border-radius: 0; box-shadow: var(--shadow);
+}
 
-/* Controls: hairline frames that light up. */
-:root[data-style="relic"] .btn { border-radius: 2px; letter-spacing: .06em; border-color: var(--border-strong); background: var(--panel-2); }
+/* Titles. */
+:root[data-style="relic"] h1 { font-family: var(--r-serif); font-weight: 600; font-size: 26px; letter-spacing: .01em; }
+:root[data-style="relic"] .brand, :root[data-style="relic"] .crumbs { font-family: var(--r-display); letter-spacing: .22em; text-shadow: var(--r-glow); color: #dff3ff; }
+:root[data-style="relic"] .brand { font-size: 19px; }
+:root[data-style="relic"] .brand .edition, :root[data-style="relic"] .side .foot { font-family: var(--r-mono); letter-spacing: .12em; text-shadow: none; font-size: 11.5px; }
+:root[data-style="relic"] .card > .hd { border-bottom: 1px solid var(--border); gap: 12px; }
+:root[data-style="relic"] .card > .hd::before { content: ""; width: 8px; height: 8px; flex: none; transform: rotate(45deg); background: var(--accent); box-shadow: var(--r-glow); }
+:root[data-style="relic"] .card > .hd h2, :root[data-style="relic"] .card > .hd h3, :root[data-style="relic"] .modal .hd h2, :root[data-style="relic"] .modal .hd h3 {
+  font-family: var(--r-mono); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .24em; color: var(--muted); }
+:root[data-style="relic"] .tile b, :root[data-style="relic"] .val-now { font-family: var(--r-display); color: #dff3ff; text-shadow: var(--r-glow); }
+:root[data-style="relic"] .tile b { font-size: 30px; letter-spacing: .02em; }
+:root[data-style="relic"] .tile span, :root[data-style="relic"] .kpi .label { font-family: var(--r-mono); font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; }
+:root[data-style="relic"] hr { border: 0; height: 10px; position: relative; overflow: visible;
+  background: linear-gradient(90deg, transparent, var(--border-strong) 15%, var(--border-strong) 46%, transparent 46% 54%, var(--border-strong) 54%, var(--border-strong) 85%, transparent) center / 100% 1px no-repeat; }
+:root[data-style="relic"] hr::after { content: ""; position: absolute; left: calc(50% - 4px); top: 1px; width: 8px; height: 8px; transform: rotate(45deg); background: var(--accent); box-shadow: var(--r-glow); }
+
+/* Shell. */
+:root[data-style="relic"] .side { border-inline-end: 1px solid var(--border-strong); box-shadow: inset -1px 0 0 rgba(124, 200, 245, .1); }
+:root[data-style="relic"] .side .nav a { border-radius: 0; }
+:root[data-style="relic"] .side .nav a.on { box-shadow: inset 2px 0 0 var(--side-mark); text-shadow: var(--r-glow); }
+:root[data-style="relic"] .top { border-bottom-color: var(--border-strong); background: color-mix(in srgb, var(--bg) 90%, transparent); }
+:root[data-style="relic"] .page { gap: 24px; padding: 24px 28px 52px; }
+:root[data-style="relic"] .tile { border-radius: 0; border: 1px solid var(--border-strong); border-top: 2px solid var(--r-corner); background: linear-gradient(180deg, var(--panel-2), var(--panel)); }
+:root[data-style="relic"] .tile.ok { border-top-color: var(--ok); } :root[data-style="relic"] .tile.critical { border-top-color: var(--critical); }
+:root[data-style="relic"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="relic"] .banner { border-radius: 0; }
+
+/* Controls: square keys, lettered labels. */
+:root[data-style="relic"] .btn { border-radius: 0; font-family: var(--r-mono); font-weight: 500; font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; border-color: var(--border-strong); background: var(--panel-2); }
 :root[data-style="relic"] .btn:hover { border-color: var(--accent); box-shadow: var(--r-glow); background: var(--panel-2); }
 :root[data-style="relic"] .btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); box-shadow: var(--r-glow); }
+:root[data-style="relic"] .btn.danger { background: transparent; }
 :root[data-style="relic"] .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+:root[data-style="relic"] input[type=text], :root[data-style="relic"] input[type=password], :root[data-style="relic"] input[type=number],
+:root[data-style="relic"] input[type=url], :root[data-style="relic"] input[type=email], :root[data-style="relic"] select, :root[data-style="relic"] textarea { background: #0c1727; border-radius: 0; }
 :root[data-style="relic"] input:focus, :root[data-style="relic"] select:focus, :root[data-style="relic"] textarea:focus { box-shadow: var(--r-glow); }
-:root[data-style="relic"] .chip, :root[data-style="relic"] .seg, :root[data-style="relic"] .search { border-radius: 2px; }
-:root[data-style="relic"] .seg button { border-radius: 1px; }
+:root[data-style="relic"] .chip, :root[data-style="relic"] .seg, :root[data-style="relic"] .seg button, :root[data-style="relic"] .search { border-radius: 0; }
+:root[data-style="relic"] .tabs a, :root[data-style="relic"] .tabs button { font-family: var(--r-mono); font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; }
 :root[data-style="relic"] .tabs a.on, :root[data-style="relic"] .tabs button.on { text-shadow: var(--r-glow); }
 
-/* Status: outlined plates with a lit edge. */
-:root[data-style="relic"] .pill { border-radius: 2px; letter-spacing: .1em; font-size: 11.5px; }
-:root[data-style="relic"] .tbl th { text-transform: uppercase; letter-spacing: .14em; font-size: 11.5px; color: var(--muted); background: var(--panel-2); border-bottom-color: var(--border-strong); }
-:root[data-style="relic"] .tbl td { border-bottom-color: var(--border); }
-:root[data-style="relic"] .tbl tr.click:hover td { background: rgba(79, 195, 247, .06); }
+/* Status: outlined plates with a dot. */
+:root[data-style="relic"] .pill, :root[data-style="relic"] .pill.ok, :root[data-style="relic"] .pill.degraded, :root[data-style="relic"] .pill.critical,
+:root[data-style="relic"] .pill.unknown, :root[data-style="relic"] .pill.maintenance, :root[data-style="relic"] .pill.pending {
+  border-radius: 0; background: transparent; box-shadow: inset 0 0 0 1px currentColor; font-family: var(--r-mono); font-weight: 500;
+  font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase; padding: 2px 10px; gap: 8px; }
+:root[data-style="relic"] .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="relic"] .pill.ok { color: var(--ok); } :root[data-style="relic"] .pill.degraded { color: var(--degraded); }
+:root[data-style="relic"] .pill.critical { color: var(--critical); } :root[data-style="relic"] .pill.unknown { color: var(--unknown); }
+:root[data-style="relic"] .pill.maintenance { color: var(--maint); } :root[data-style="relic"] .pill.pending { color: var(--pending); }
+:root[data-style="relic"] .verdict { border-radius: 0; font-family: var(--r-mono); letter-spacing: .1em; }
+:root[data-style="relic"] .tbl th { font-family: var(--r-mono); font-weight: 500; text-transform: uppercase; letter-spacing: .16em; font-size: 11.5px; color: var(--muted); background: transparent; border-bottom-color: var(--border-strong); }
+:root[data-style="relic"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="relic"] .tbl tr.click:hover td { background: rgba(124, 200, 245, .06); }
+:root[data-style="relic"] .tag { font-family: var(--r-mono); }
 :root[data-style="relic"] .beats i { border-radius: 0; }
-:root[data-style="relic"] .verdict { border-radius: 2px; letter-spacing: .06em; }
+
+/* Problems: a diamond with the state inside instead of a bar. */
+:root[data-style="relic"] .inc { gap: 16px; padding: 16px 18px; border-bottom: 1px dashed var(--border-strong); }
+:root[data-style="relic"] .inc .sev { width: 24px; height: 24px; align-self: flex-start; margin: 6px 4px 0; border-radius: 0; background: transparent;
+  border: 1.5px solid currentColor; transform: rotate(45deg); color: var(--critical); display: grid; place-items: center; }
+:root[data-style="relic"] .inc .sev::after { content: "!"; transform: rotate(-45deg); font: 700 13px var(--r-serif); }
+:root[data-style="relic"] .inc .sev.degraded { color: var(--degraded); background: transparent; } :root[data-style="relic"] .inc .sev.unknown { color: var(--unknown); background: transparent; }
+:root[data-style="relic"] .inc .sev.ok { color: var(--ok); background: transparent; } :root[data-style="relic"] .inc .sev.sys { color: var(--maint); background: transparent; }
+:root[data-style="relic"] .inc .sev.ok::after { content: "✓"; }
+
+/* Public status page: a carved title over a rule with a diamond, and the
+   overall state as a framed plate in its own colour. */
+:root[data-style="relic"] .pub { gap: 22px; }
+:root[data-style="relic"] .pub .head { flex-direction: column; text-align: center; gap: 12px; padding-bottom: 22px; position: relative;
+  background: linear-gradient(90deg, transparent, var(--border-strong) 20%, var(--border-strong) 47%, transparent 47% 53%, var(--border-strong) 53%, var(--border-strong) 80%, transparent) bottom / 100% 1px no-repeat; }
+:root[data-style="relic"] .pub .head::after { content: ""; position: absolute; bottom: -4px; left: calc(50% - 4px); width: 8px; height: 8px; transform: rotate(45deg); background: var(--accent); box-shadow: var(--r-glow); }
+:root[data-style="relic"] .pub .head h1 { font-family: var(--r-display); font-size: 30px; letter-spacing: .24em; text-shadow: var(--r-glow); color: #dff3ff; }
+:root[data-style="relic"] .pub .overall { padding: 22px 24px; font-family: var(--r-display); font-size: 20px; letter-spacing: .12em; text-transform: uppercase; }
+:root[data-style="relic"] .pub .overall.ok { --rc: var(--ok); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); text-shadow: 0 0 12px rgba(111, 211, 138, .4); }
+:root[data-style="relic"] .pub .overall.degraded { --rc: var(--degraded); color: var(--degraded); border-color: color-mix(in srgb, var(--degraded) 45%, transparent); text-shadow: 0 0 12px rgba(240, 168, 96, .4);
+  background-color: #1d160c; }
+:root[data-style="relic"] .pub .overall.critical { --rc: var(--critical); color: var(--critical); border-color: color-mix(in srgb, var(--critical) 45%, transparent); text-shadow: 0 0 12px rgba(239, 122, 100, .4); }
+:root[data-style="relic"] .pub .mon { padding: 16px 20px; }
+:root[data-style="relic"] .pub .mon b { font-family: var(--r-serif); font-size: 18px; font-weight: 600; }
+:root[data-style="relic"] .pub footer { font-family: var(--r-mono); letter-spacing: .08em; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { :root[data-style="relic"] * { transition: none !important; } }
