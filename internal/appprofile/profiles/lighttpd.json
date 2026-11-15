@@ -2,7 +2,7 @@
   "id": "lighttpd", "title": "Lighttpd", "reader": "text", "path": "/server-status?auto", "port": 80,
   "docs": "https://redmine.lighttpd.net/projects/lighttpd/wiki/Docs_ModStatus",
   "needs": "Load mod_status and set status.status-url to /server-status; allow only the monitoring host.",
-  "verified": "docs",
+  "verified": "Lighttpd 1.4.74",
   "primary": "busy",
   "summary": ["busy", "idle"],
   "fields": [

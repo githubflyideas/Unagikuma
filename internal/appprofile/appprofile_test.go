@@ -15,23 +15,25 @@ const (
 
 	phpfpmPage = "pool:                 www\nprocess manager:      dynamic\naccepted conn:        5821\nlisten queue:         2\nmax listen queue:     4\nlisten queue len:     128\nidle processes:       3\nactive processes:     1\ntotal processes:      4\nmax active processes: 5\nmax children reached: 0\nslow requests:        1\n"
 
-	haproxyPage = `# HELP haproxy_frontend_current_sessions Current number of active sessions.
-# TYPE haproxy_frontend_current_sessions gauge
+	haproxyPage = `# TYPE haproxy_frontend_current_sessions gauge
 haproxy_frontend_current_sessions{proxy="www"} 12
 haproxy_frontend_current_sessions{proxy="api"} 30
 # TYPE haproxy_backend_current_queue gauge
 haproxy_backend_current_queue{proxy="app"} 2
 haproxy_backend_current_queue{proxy="static"} 0
-# TYPE haproxy_backend_up gauge
-haproxy_backend_up{proxy="app"} 1
-haproxy_backend_up{proxy="static"} 0
-# TYPE haproxy_backend_active_servers gauge
+# TYPE haproxy_backend_status gauge
+haproxy_backend_status{proxy="app",state="DOWN"} 0
+haproxy_backend_status{proxy="app",state="UP"} 1
+haproxy_backend_status{proxy="static",state="DOWN"} 1
+haproxy_backend_status{proxy="static",state="UP"} 0
+haproxy_server_status{proxy="app",server="s1",state="DOWN"} 0
+haproxy_server_status{proxy="app",server="s1",state="UP"} 1
+haproxy_server_status{proxy="app",server="s2",state="DOWN"} 1
+haproxy_server_status{proxy="app",server="s2",state="UP"} 0
 haproxy_backend_active_servers{proxy="app"} 3
 haproxy_backend_active_servers{proxy="static"} 1
-# TYPE haproxy_frontend_http_requests_total counter
 haproxy_frontend_http_requests_total{proxy="www"} 1000
 haproxy_frontend_http_requests_total{proxy="api"} 500.5
-# TYPE haproxy_frontend_http_responses_total counter
 haproxy_frontend_http_responses_total{proxy="www",code="2xx"} 900
 haproxy_frontend_http_responses_total{proxy="www",code="5xx"} 7
 haproxy_frontend_http_responses_total{proxy="api",code="5xx"} 3
@@ -60,7 +62,7 @@ func TestReadPages(t *testing.T) {
 		{"apache", apachePage, map[string]float64{"busy": 3, "idle": 7, "accesses": 3039, "uptime": 33172, "rps": 0.0916, "cpu": 0.0168}},
 		{"lighttpd", lighttpdPage, map[string]float64{"busy": 2, "idle": 6, "accesses": 1234, "uptime": 4321}},
 		{"php-fpm", phpfpmPage, map[string]float64{"active": 1, "idle": 3, "total": 4, "queue": 2, "max_children": 0, "slow": 1, "accepted": 5821}},
-		{"haproxy", haproxyPage, map[string]float64{"sessions": 42, "queue": 2, "backend_up": 0, "backends_up": 1, "servers_active": 4, "requests": 1500.5, "responses_5xx": 10, "connection_errors": 4}},
+		{"haproxy", haproxyPage, map[string]float64{"sessions": 42, "queue": 2, "backends_up": 1, "backends_down": 1, "servers_down": 1, "servers_active": 4, "requests": 1500.5, "responses_5xx": 10, "connection_errors": 4}},
 	} {
 		p, _ := Get(c.id)
 		got, err := p.Read([]byte(c.page), Select{})
