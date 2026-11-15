@@ -12,8 +12,8 @@
   --on-status: #06080d; --on-degraded: #1a1302;
   --empty: #1a2438; --stripe: rgba(108, 182, 255, .025);
   --shadow: 0 0 0 1px rgba(255, 181, 71, .04), 0 10px 30px rgba(0, 0, 0, .5); --radius: 2px;
-  --bg-image: linear-gradient(rgba(108, 182, 255, .035) 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(90deg, rgba(108, 182, 255, .035) 1px, transparent 1px) 0 0 / 32px 32px,
+  --bg-image: repeating-linear-gradient(0deg, rgba(108, 182, 255, .035) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(90deg, rgba(108, 182, 255, .035) 0 1px, transparent 1px 32px),
     radial-gradient(1000px 600px at 90% -20%, rgba(255, 181, 71, .08), transparent 60%);
   --side-text: #c9d5e8; --side-muted: #8fa1bd; --side-hover: rgba(255, 181, 71, .07); --side-on: #1c1608; --side-on-text: #ffc978; --side-mark: #ffb547;
   --s-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;

@@ -1,0 +1,57 @@
+/* Ocean: water deepening from blue to ink with light falling through it, drawn with gradients behind frosted-glass
+   panels. It brings its own colours, so the theme choice is set aside
+   while it is in use. Status colours keep their meaning. Generated with the
+   other wallpaper styles from one pattern; adjust the values here. */
+:root[data-style="ocean"] {
+  --bg: #041826; --side: rgba(3, 20, 32, .72); --panel: rgba(4, 28, 44, .80); --panel-2: rgba(8, 40, 62, .82); --border: rgba(125, 211, 252, .16); --border-strong: rgba(125, 211, 252, .32);
+  --text: #e6f6ff; --muted: #a8cbe0; --faint: #9cc0d6;
+  --accent: #38bdf8; --accent-soft: #0b3550; --accent-text: #02131e; --link: #7dd3fc;
+  --ok: #4ade80; --ok-soft: #12301f; --degraded: #fbbf24; --degraded-soft: #33280c;
+  --critical: #f87171; --critical-soft: #3a1616; --unknown: #c4b5fd; --unknown-soft: #2a2347;
+  --pending: #a8cbe0; --pending-soft: rgba(8, 40, 62, .82); --maint: #93c5fd; --maint-soft: #142b48;
+  --on-status: #0b0b10; --on-degraded: #1d1305;
+  --empty: rgba(125, 211, 252, .16); --stripe: transparent;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .35); --radius: 8px;
+  --bg-image: repeating-linear-gradient(100deg, rgba(186, 230, 253, .035) 0 40px, transparent 40px 130px), radial-gradient(ellipse 70% 35% at 50% -5%, rgba(125, 211, 252, .30), transparent 70%), linear-gradient(180deg, #0c4a6e 0%, #083554 35%, #052338 70%, #031420);
+  --side-text: #d4ecfa; --side-muted: #9cc0d6; --side-hover: rgba(56, 189, 248, .16); --side-on: rgba(56, 189, 248, .16); --side-on-text: #bae6fd; --side-mark: #38bdf8;
+  color-scheme: dark;
+}
+:root[data-style="ocean"] .themes { display: none; }
+:root[data-style="ocean"] body { background-color: var(--bg); background-image: var(--bg-image); background-attachment: fixed; }
+:root[data-style="ocean"] body:has(.shell) { background-color: var(--bg); }
+:root[data-style="ocean"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="ocean"] .side { background: var(--side); backdrop-filter: blur(16px) saturate(1.2); border-inline-end: 1px solid var(--border); }
+:root[data-style="ocean"] .side .nav a { border-radius: 8px; box-shadow: none; }
+:root[data-style="ocean"] .side .nav a.on { font-weight: 650; }
+:root[data-style="ocean"] .top { background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(16px) saturate(1.2); border-bottom-color: var(--border); }
+:root[data-style="ocean"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="ocean"] .card, :root[data-style="ocean"] .tile, :root[data-style="ocean"] .modal { background: var(--panel); backdrop-filter: blur(18px) saturate(1.3); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+:root[data-style="ocean"] .card > .hd { border-bottom-color: var(--border); padding: 15px 20px; }
+:root[data-style="ocean"] .card > .hd h2, :root[data-style="ocean"] .card > .hd h3 { font-size: 14.5px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="ocean"] .card > .bd { padding: 18px 20px; }
+:root[data-style="ocean"] .card > .bd.flush { padding: 0; }
+:root[data-style="ocean"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="ocean"] .tile.ok { border-top-color: var(--ok); } :root[data-style="ocean"] .tile.critical { border-top-color: var(--critical); } :root[data-style="ocean"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="ocean"] .tile b { font-size: 28px; }
+:root[data-style="ocean"] .btn { border-radius: 8px; background: var(--panel-2); border-color: var(--border-strong); }
+:root[data-style="ocean"] .btn:hover { background: var(--panel); }
+:root[data-style="ocean"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="ocean"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="ocean"] input[type=text], :root[data-style="ocean"] input[type=password], :root[data-style="ocean"] input[type=number], :root[data-style="ocean"] input[type=url], :root[data-style="ocean"] input[type=email], :root[data-style="ocean"] select, :root[data-style="ocean"] textarea { background: var(--panel-2); border-radius: 8px; }
+:root[data-style="ocean"] .search, :root[data-style="ocean"] .chip, :root[data-style="ocean"] .seg { border-radius: 8px; background: var(--panel-2); }
+:root[data-style="ocean"] .banner { border-radius: 10px; }
+:root[data-style="ocean"] .pill, :root[data-style="ocean"] .pill.ok, :root[data-style="ocean"] .pill.degraded, :root[data-style="ocean"] .pill.critical, :root[data-style="ocean"] .pill.unknown, :root[data-style="ocean"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="ocean"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="ocean"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 75%, var(--text)); }
+:root[data-style="ocean"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 75%, var(--text)); }
+:root[data-style="ocean"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
+:root[data-style="ocean"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
+:root[data-style="ocean"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
+:root[data-style="ocean"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="ocean"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="ocean"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="ocean"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+:root[data-style="ocean"] .page > :is(p, a, .small, .muted), :root[data-style="ocean"] .page > .col > :is(p.small, p.muted) { width: fit-content; max-width: 100%; padding: 4px 10px; border-radius: 8px;
+  background: var(--panel); backdrop-filter: blur(12px); }
+:root[data-style="ocean"] .pub .overall { border-radius: 14px; backdrop-filter: blur(12px); }
+:root[data-style="ocean"] .pub .head h1 { text-shadow: 0 1px 12px rgba(0, 0, 0, .5); }

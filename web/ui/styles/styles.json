@@ -2,5 +2,16 @@
   {"id": "modern"},
   {"id": "relic", "registered": true},
   {"id": "legend", "registered": true},
-  {"id": "starship", "registered": true}
+  {"id": "starship", "registered": true},
+  {"id": "rune", "registered": true},
+  {"id": "aurora", "registered": true},
+  {"id": "nebula", "registered": true},
+  {"id": "ocean", "registered": true},
+  {"id": "sunset", "registered": true},
+  {"id": "forest", "registered": true},
+  {"id": "sakura", "registered": true},
+  {"id": "dune", "registered": true},
+  {"id": "neon", "registered": true},
+  {"id": "glacier", "registered": true},
+  {"id": "ink", "registered": true}
 ]

@@ -1,0 +1,57 @@
+/* Dune: warm sand dunes under a pale sky, drawn with gradients behind frosted-glass
+   panels. It brings its own colours, so the theme choice is set aside
+   while it is in use. Status colours keep their meaning. Generated with the
+   other wallpaper styles from one pattern; adjust the values here. */
+:root[data-style="dune"] {
+  --bg: #f6dcb4; --side: rgba(253, 243, 226, .82); --panel: rgba(255, 251, 243, .86); --panel-2: rgba(253, 244, 228, .9); --border: rgba(146, 84, 34, .16); --border-strong: rgba(146, 84, 34, .32);
+  --text: #3a2615; --muted: #6b4e33; --faint: #735639;
+  --accent: #a0521d; --accent-soft: #f8e3cc; --accent-text: #ffffff; --link: #8a4516;
+  --ok: #15803d; --ok-soft: #dcfce7; --degraded: #b45309; --degraded-soft: #fef3c7;
+  --critical: #b91c1c; --critical-soft: #fee2e2; --unknown: #6d28d9; --unknown-soft: #ede9fe;
+  --pending: #6b4e33; --pending-soft: rgba(253, 244, 228, .9); --maint: #1d4ed8; --maint-soft: #dbeafe;
+  --on-status: #ffffff; --on-degraded: #2a1700;
+  --empty: rgba(146, 84, 34, .16); --stripe: transparent;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .08); --radius: 8px;
+  --bg-image: radial-gradient(ellipse 120% 40% at 20% 100%, rgba(201, 127, 69, .55), transparent 60%), radial-gradient(ellipse 110% 45% at 85% 105%, rgba(232, 168, 101, .6), transparent 60%), radial-gradient(circle at 80% 15%, rgba(255, 250, 235, .9), transparent 18%), linear-gradient(180deg, #fbefdc 0%, #f6d9ae 50%, #ecbd84 100%);
+  --side-text: #45301c; --side-muted: #735639; --side-hover: rgba(160, 82, 29, .13); --side-on: rgba(160, 82, 29, .13); --side-on-text: #8a4516; --side-mark: #a0521d;
+  color-scheme: light;
+}
+:root[data-style="dune"] .themes { display: none; }
+:root[data-style="dune"] body { background-color: var(--bg); background-image: var(--bg-image); background-attachment: fixed; }
+:root[data-style="dune"] body:has(.shell) { background-color: var(--bg); }
+:root[data-style="dune"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="dune"] .side { background: var(--side); backdrop-filter: blur(16px) saturate(1.2); border-inline-end: 1px solid var(--border); }
+:root[data-style="dune"] .side .nav a { border-radius: 8px; box-shadow: none; }
+:root[data-style="dune"] .side .nav a.on { font-weight: 650; }
+:root[data-style="dune"] .top { background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(16px) saturate(1.2); border-bottom-color: var(--border); }
+:root[data-style="dune"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="dune"] .card, :root[data-style="dune"] .tile, :root[data-style="dune"] .modal { background: var(--panel); backdrop-filter: blur(18px) saturate(1.3); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
+:root[data-style="dune"] .card > .hd { border-bottom-color: var(--border); padding: 15px 20px; }
+:root[data-style="dune"] .card > .hd h2, :root[data-style="dune"] .card > .hd h3 { font-size: 14.5px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="dune"] .card > .bd { padding: 18px 20px; }
+:root[data-style="dune"] .card > .bd.flush { padding: 0; }
+:root[data-style="dune"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="dune"] .tile.ok { border-top-color: var(--ok); } :root[data-style="dune"] .tile.critical { border-top-color: var(--critical); } :root[data-style="dune"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="dune"] .tile b { font-size: 28px; }
+:root[data-style="dune"] .btn { border-radius: 8px; background: var(--panel-2); border-color: var(--border-strong); }
+:root[data-style="dune"] .btn:hover { background: var(--panel); }
+:root[data-style="dune"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="dune"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="dune"] input[type=text], :root[data-style="dune"] input[type=password], :root[data-style="dune"] input[type=number], :root[data-style="dune"] input[type=url], :root[data-style="dune"] input[type=email], :root[data-style="dune"] select, :root[data-style="dune"] textarea { background: var(--panel-2); border-radius: 8px; }
+:root[data-style="dune"] .search, :root[data-style="dune"] .chip, :root[data-style="dune"] .seg { border-radius: 8px; background: var(--panel-2); }
+:root[data-style="dune"] .banner { border-radius: 10px; }
+:root[data-style="dune"] .pill, :root[data-style="dune"] .pill.ok, :root[data-style="dune"] .pill.degraded, :root[data-style="dune"] .pill.critical, :root[data-style="dune"] .pill.unknown, :root[data-style="dune"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="dune"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="dune"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 75%, var(--text)); }
+:root[data-style="dune"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 60%, var(--text)); }
+:root[data-style="dune"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
+:root[data-style="dune"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
+:root[data-style="dune"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
+:root[data-style="dune"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="dune"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="dune"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="dune"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+:root[data-style="dune"] .page > :is(p, a, .small, .muted), :root[data-style="dune"] .page > .col > :is(p.small, p.muted) { width: fit-content; max-width: 100%; padding: 4px 10px; border-radius: 8px;
+  background: var(--panel); backdrop-filter: blur(12px); }
+:root[data-style="dune"] .pub .overall { border-radius: 14px; backdrop-filter: blur(12px); }
+:root[data-style="dune"] .pub .head h1 { text-shadow: 0 1px 12px rgba(255, 255, 255, .8); }

@@ -1,0 +1,57 @@
+/* Sakura: soft pink with falling petals, drawn with gradients behind frosted-glass
+   panels. It brings its own colours, so the theme choice is set aside
+   while it is in use. Status colours keep their meaning. Generated with the
+   other wallpaper styles from one pattern; adjust the values here. */
+:root[data-style="sakura"] {
+  --bg: #fdeef3; --side: rgba(255, 240, 246, .80); --panel: rgba(255, 255, 255, .84); --panel-2: rgba(255, 245, 248, .88); --border: rgba(219, 39, 119, .14); --border-strong: rgba(219, 39, 119, .28);
+  --text: #3b1d2a; --muted: #6e4a5a; --faint: #7a5566;
+  --accent: #be185d; --accent-soft: #fce7f3; --accent-text: #ffffff; --link: #9d174d;
+  --ok: #15803d; --ok-soft: #dcfce7; --degraded: #b45309; --degraded-soft: #fef3c7;
+  --critical: #b91c1c; --critical-soft: #fee2e2; --unknown: #6d28d9; --unknown-soft: #ede9fe;
+  --pending: #6e4a5a; --pending-soft: rgba(255, 245, 248, .88); --maint: #1d4ed8; --maint-soft: #dbeafe;
+  --on-status: #ffffff; --on-degraded: #2a1700;
+  --empty: rgba(219, 39, 119, .14); --stripe: transparent;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .08); --radius: 12px;
+  --bg-image: radial-gradient(9px 9px at 10% 15%, rgba(244, 114, 182, .35), transparent), radial-gradient(7px 7px at 27% 62%, rgba(244, 114, 182, .35), transparent), radial-gradient(6px 6px at 44% 25%, rgba(244, 114, 182, .35), transparent), radial-gradient(9px 9px at 63% 80%, rgba(244, 114, 182, .35), transparent), radial-gradient(7px 7px at 78% 18%, rgba(244, 114, 182, .35), transparent), radial-gradient(8px 8px at 91% 52%, rgba(244, 114, 182, .35), transparent), radial-gradient(6px 6px at 18% 88%, rgba(244, 114, 182, .35), transparent), radial-gradient(5px 5px at 55% 48%, rgba(244, 114, 182, .35), transparent), radial-gradient(ellipse 60% 40% at 85% 10%, rgba(251, 207, 232, .7), transparent 70%), linear-gradient(160deg, #fff5f8, #fde2ea 45%, #f9cfdc);
+  --side-text: #4a2434; --side-muted: #7a5566; --side-hover: rgba(190, 24, 93, .12); --side-on: rgba(190, 24, 93, .12); --side-on-text: #9d174d; --side-mark: #be185d;
+  color-scheme: light;
+}
+:root[data-style="sakura"] .themes { display: none; }
+:root[data-style="sakura"] body { background-color: var(--bg); background-image: var(--bg-image); background-attachment: fixed; }
+:root[data-style="sakura"] body:has(.shell) { background-color: var(--bg); }
+:root[data-style="sakura"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="sakura"] .side { background: var(--side); backdrop-filter: blur(16px) saturate(1.2); border-inline-end: 1px solid var(--border); }
+:root[data-style="sakura"] .side .nav a { border-radius: 12px; box-shadow: none; }
+:root[data-style="sakura"] .side .nav a.on { font-weight: 650; }
+:root[data-style="sakura"] .top { background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(16px) saturate(1.2); border-bottom-color: var(--border); }
+:root[data-style="sakura"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="sakura"] .card, :root[data-style="sakura"] .tile, :root[data-style="sakura"] .modal { background: var(--panel); backdrop-filter: blur(18px) saturate(1.3); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
+:root[data-style="sakura"] .card > .hd { border-bottom-color: var(--border); padding: 15px 20px; }
+:root[data-style="sakura"] .card > .hd h2, :root[data-style="sakura"] .card > .hd h3 { font-size: 14.5px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="sakura"] .card > .bd { padding: 18px 20px; }
+:root[data-style="sakura"] .card > .bd.flush { padding: 0; }
+:root[data-style="sakura"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="sakura"] .tile.ok { border-top-color: var(--ok); } :root[data-style="sakura"] .tile.critical { border-top-color: var(--critical); } :root[data-style="sakura"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="sakura"] .tile b { font-size: 28px; }
+:root[data-style="sakura"] .btn { border-radius: 12px; background: var(--panel-2); border-color: var(--border-strong); }
+:root[data-style="sakura"] .btn:hover { background: var(--panel); }
+:root[data-style="sakura"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="sakura"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="sakura"] input[type=text], :root[data-style="sakura"] input[type=password], :root[data-style="sakura"] input[type=number], :root[data-style="sakura"] input[type=url], :root[data-style="sakura"] input[type=email], :root[data-style="sakura"] select, :root[data-style="sakura"] textarea { background: var(--panel-2); border-radius: 12px; }
+:root[data-style="sakura"] .search, :root[data-style="sakura"] .chip, :root[data-style="sakura"] .seg { border-radius: 12px; background: var(--panel-2); }
+:root[data-style="sakura"] .banner { border-radius: 14px; }
+:root[data-style="sakura"] .pill, :root[data-style="sakura"] .pill.ok, :root[data-style="sakura"] .pill.degraded, :root[data-style="sakura"] .pill.critical, :root[data-style="sakura"] .pill.unknown, :root[data-style="sakura"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="sakura"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="sakura"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 75%, var(--text)); }
+:root[data-style="sakura"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 60%, var(--text)); }
+:root[data-style="sakura"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
+:root[data-style="sakura"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
+:root[data-style="sakura"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
+:root[data-style="sakura"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="sakura"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="sakura"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="sakura"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+:root[data-style="sakura"] .page > :is(p, a, .small, .muted), :root[data-style="sakura"] .page > .col > :is(p.small, p.muted) { width: fit-content; max-width: 100%; padding: 4px 10px; border-radius: 12px;
+  background: var(--panel); backdrop-filter: blur(12px); }
+:root[data-style="sakura"] .pub .overall { border-radius: 18px; backdrop-filter: blur(12px); }
+:root[data-style="sakura"] .pub .head h1 { text-shadow: 0 1px 12px rgba(255, 255, 255, .8); }

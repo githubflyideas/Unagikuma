@@ -1,0 +1,60 @@
+/* Neon: a night city grid in magenta and cyan, drawn with gradients behind frosted-glass
+   panels. It brings its own colours, so the theme choice is set aside
+   while it is in use. Status colours keep their meaning. Generated with the
+   other wallpaper styles from one pattern; adjust the values here. */
+:root[data-style="neon"] {
+  --bg: #07040f; --side: rgba(8, 5, 18, .78); --panel: rgba(12, 8, 24, .84); --panel-2: rgba(20, 12, 36, .86); --border: rgba(34, 211, 238, .22); --border-strong: rgba(236, 72, 153, .45);
+  --text: #f5f3ff; --muted: #c0b8dc; --faint: #b2aad0;
+  --accent: #22d3ee; --accent-soft: #0a2a33; --accent-text: #021014; --link: #67e8f9;
+  --ok: #4ade80; --ok-soft: #12301f; --degraded: #fbbf24; --degraded-soft: #33280c;
+  --critical: #f87171; --critical-soft: #3a1616; --unknown: #c4b5fd; --unknown-soft: #2a2347;
+  --pending: #c0b8dc; --pending-soft: rgba(20, 12, 36, .86); --maint: #93c5fd; --maint-soft: #142b48;
+  --on-status: #0b0b10; --on-degraded: #1d1305;
+  --empty: rgba(34, 211, 238, .22); --stripe: transparent;
+  --shadow: 0 8px 30px rgba(0, 0, 0, .35); --radius: 2px;
+  --bg-image: radial-gradient(ellipse 60% 30% at 15% 100%, rgba(236, 72, 153, .35), transparent 70%), radial-gradient(ellipse 60% 30% at 85% 100%, rgba(34, 211, 238, .30), transparent 70%), repeating-linear-gradient(0deg, rgba(236, 72, 153, .07) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(34, 211, 238, .06) 0 1px, transparent 1px 40px), linear-gradient(180deg, #0b0618, #07040f);
+  --side-text: #e6e1fa; --side-muted: #aaa2c8; --side-hover: rgba(236, 72, 153, .18); --side-on: rgba(236, 72, 153, .18); --side-on-text: #f9a8d4; --side-mark: #22d3ee;
+  color-scheme: dark;
+}
+:root[data-style="neon"] .themes { display: none; }
+:root[data-style="neon"] body { background-color: var(--bg); background-image: var(--bg-image); background-attachment: fixed; }
+:root[data-style="neon"] body:has(.shell) { background-color: var(--bg); }
+:root[data-style="neon"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="neon"] .side { background: var(--side); backdrop-filter: blur(16px) saturate(1.2); border-inline-end: 1px solid var(--border); }
+:root[data-style="neon"] .side .nav a { border-radius: 2px; box-shadow: none; }
+:root[data-style="neon"] .side .nav a.on { font-weight: 650; }
+:root[data-style="neon"] .top { background: color-mix(in srgb, var(--bg) 55%, transparent); backdrop-filter: blur(16px) saturate(1.2); border-bottom-color: var(--border); }
+:root[data-style="neon"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="neon"] .card, :root[data-style="neon"] .tile, :root[data-style="neon"] .modal { background: var(--panel); backdrop-filter: blur(18px) saturate(1.3); border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--shadow); }
+:root[data-style="neon"] .card > .hd { border-bottom-color: var(--border); padding: 15px 20px; }
+:root[data-style="neon"] .card > .hd h2, :root[data-style="neon"] .card > .hd h3 { font-size: 14.5px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="neon"] .card > .bd { padding: 18px 20px; }
+:root[data-style="neon"] .card > .bd.flush { padding: 0; }
+:root[data-style="neon"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="neon"] .tile.ok { border-top-color: var(--ok); } :root[data-style="neon"] .tile.critical { border-top-color: var(--critical); } :root[data-style="neon"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="neon"] .tile b { font-size: 28px; }
+:root[data-style="neon"] .btn { border-radius: 2px; background: var(--panel-2); border-color: var(--border-strong); }
+:root[data-style="neon"] .btn:hover { background: var(--panel); }
+:root[data-style="neon"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="neon"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="neon"] input[type=text], :root[data-style="neon"] input[type=password], :root[data-style="neon"] input[type=number], :root[data-style="neon"] input[type=url], :root[data-style="neon"] input[type=email], :root[data-style="neon"] select, :root[data-style="neon"] textarea { background: var(--panel-2); border-radius: 2px; }
+:root[data-style="neon"] .search, :root[data-style="neon"] .chip, :root[data-style="neon"] .seg { border-radius: 2px; background: var(--panel-2); }
+:root[data-style="neon"] .banner { border-radius: 2px; }
+:root[data-style="neon"] .pill, :root[data-style="neon"] .pill.ok, :root[data-style="neon"] .pill.degraded, :root[data-style="neon"] .pill.critical, :root[data-style="neon"] .pill.unknown, :root[data-style="neon"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="neon"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="neon"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 75%, var(--text)); }
+:root[data-style="neon"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 75%, var(--text)); }
+:root[data-style="neon"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
+:root[data-style="neon"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
+:root[data-style="neon"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
+:root[data-style="neon"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="neon"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="neon"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="neon"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+:root[data-style="neon"] .page > :is(p, a, .small, .muted), :root[data-style="neon"] .page > .col > :is(p.small, p.muted) { width: fit-content; max-width: 100%; padding: 4px 10px; border-radius: 2px;
+  background: var(--panel); backdrop-filter: blur(12px); }
+:root[data-style="neon"] .pub .overall { border-radius: 4px; backdrop-filter: blur(12px); }
+:root[data-style="neon"] .pub .head h1 { text-shadow: 0 1px 12px rgba(0, 0, 0, .5); }
+:root[data-style="neon"] h1, :root[data-style="neon"] .brand, :root[data-style="neon"] .crumbs, :root[data-style="neon"] .card > .hd h2, :root[data-style="neon"] .card > .hd h3, :root[data-style="neon"] .tile b { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace; }
+:root[data-style="neon"] .card, :root[data-style="neon"] .tile { box-shadow: 0 0 0 1px rgba(236, 72, 153, .12), 0 0 24px rgba(34, 211, 238, .08); }
+:root[data-style="neon"] .btn.primary { box-shadow: 0 0 16px rgba(34, 211, 238, .45); }
