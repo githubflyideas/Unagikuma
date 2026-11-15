@@ -34,13 +34,13 @@ func OptionsFor(typ string) []string {
 	case "TCP":
 		addMap(tcpOpts)
 	case "REDIS":
-		add("user", "password", "role")
+		add("user", "password", "role", "field", "warn", "crit", "change", "compare", "min", "for", "direction")
 		add(tlsOpts...)
 	case "GRPC":
 		add("service")
 		add(tlsOpts...)
 	case "POSTGRES", "MYSQL":
-		add("user", "password", "database", "ssl")
+		add("user", "password", "database", "ssl", "query", "warn", "crit", "change", "compare", "min", "for", "direction")
 	case "PING":
 		addMap(pingOpts)
 		delete(set, "interval") // the spacing of echoes, not the monitor's interval; rarely wanted

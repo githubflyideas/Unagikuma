@@ -24,7 +24,7 @@ func appProfile(o opts) (*appprofile.Profile, bool) {
 	if !o.has("app") {
 		return nil, false
 	}
-	return appprofile.Get(o.str("app", ""))
+	return appprofile.App(o.str("app", ""))
 }
 
 // appField is the field the monitor judges.

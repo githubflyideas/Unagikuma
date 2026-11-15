@@ -1,0 +1,27 @@
+{
+  "id": "redis", "title": "Redis", "reader": "text", "transport": "redis", "port": 6379,
+  "docs": "https://redis.io/docs/latest/commands/info/",
+  "needs": "A user allowed to run INFO (the default user is).",
+  "verified": "Redis 7.0.15",
+  "primary": "connected_clients",
+  "summary": ["connected_clients", "used_memory", "ops_per_sec", "evicted_keys"],
+  "fields": [
+    {"key": "connected_clients", "label": "Connected clients", "type": "quantity", "line": "connected_clients"},
+    {"key": "blocked_clients", "label": "Blocked clients", "type": "quantity", "line": "blocked_clients"},
+    {"key": "used_memory", "label": "Memory used (bytes)", "type": "quantity", "line": "used_memory"},
+    {"key": "used_memory_rss", "label": "Memory resident (bytes)", "type": "quantity", "line": "used_memory_rss"},
+    {"key": "mem_fragmentation_ratio", "label": "Memory fragmentation ratio", "type": "quantity", "line": "mem_fragmentation_ratio", "optional": true},
+    {"key": "ops_per_sec", "label": "Operations per second (instantaneous)", "type": "quantity", "line": "instantaneous_ops_per_sec"},
+    {"key": "commands", "label": "Commands processed", "type": "counter", "line": "total_commands_processed"},
+    {"key": "connections", "label": "Connections received", "type": "counter", "line": "total_connections_received"},
+    {"key": "rejected_connections", "label": "Connections rejected", "type": "counter", "line": "rejected_connections"},
+    {"key": "expired_keys", "label": "Keys expired", "type": "counter", "line": "expired_keys"},
+    {"key": "evicted_keys", "label": "Keys evicted", "type": "counter", "line": "evicted_keys"},
+    {"key": "keyspace_hits", "label": "Keyspace hits", "type": "counter", "line": "keyspace_hits"},
+    {"key": "keyspace_misses", "label": "Keyspace misses", "type": "counter", "line": "keyspace_misses"},
+    {"key": "uptime", "label": "Uptime (s)", "type": "quantity", "line": "uptime_in_seconds"},
+    {"key": "replicas", "label": "Connected replicas", "type": "quantity", "line": "connected_slaves"},
+    {"key": "unsaved_changes", "label": "Changes since the last save", "type": "quantity", "line": "rdb_changes_since_last_save"},
+    {"key": "master_last_io", "label": "Seconds since the master was heard (replica)", "type": "quantity", "line": "master_last_io_seconds_ago", "optional": true}
+  ]
+}

@@ -59,6 +59,10 @@ type Profile struct {
 	ID     string `json:"id"`
 	Title  string `json:"title"`
 	Reader string `json:"reader"` // text | metrics
+	// Transport is how the page is fetched: "http" (the default; an APP
+	// monitor) or "redis" (the reply to INFO, read by a REDIS monitor's
+	// field=).
+	Transport string `json:"transport,omitempty"`
 	// Path is where the page is when the monitor's address has none; Port
 	// is the port when it has none either.
 	Path string `json:"path"`
@@ -104,6 +108,9 @@ func init() {
 		if err := json.Unmarshal(b, &p); err != nil {
 			panic(fmt.Sprintf("profile %s: %v", e.Name(), err))
 		}
+		if p.Transport == "" {
+			p.Transport = "http"
+		}
 		if err := p.prepare(); err != nil {
 			panic(fmt.Sprintf("profile %s: %v", e.Name(), err))
 		}
@@ -121,8 +128,20 @@ func (p *Profile) prepare() error {
 	if p.Reader != "text" && p.Reader != "metrics" {
 		return fmt.Errorf("reader must be text or metrics")
 	}
-	if p.Path == "" || !strings.HasPrefix(p.Path, "/") || p.Port < 1 || p.Port > 65535 {
-		return fmt.Errorf("needs a path starting with / and a port")
+	switch p.Transport {
+	case "http":
+		if p.Path == "" || !strings.HasPrefix(p.Path, "/") {
+			return fmt.Errorf("needs a path starting with /")
+		}
+	case "redis":
+		if p.Reader != "text" {
+			return fmt.Errorf("the redis transport is read as text")
+		}
+	default:
+		return fmt.Errorf("transport must be http or redis")
+	}
+	if p.Port < 1 || p.Port > 65535 {
+		return fmt.Errorf("needs a port")
 	}
 	if len(p.Fields) == 0 {
 		return fmt.Errorf("has no fields")
@@ -190,6 +209,13 @@ func Get(id string) (*Profile, bool) {
 	return p, ok
 }
 
+// App returns an HTTP application profile (what app= of an APP monitor
+// names).
+func App(id string) (*Profile, bool) {
+	p, ok := registry[id]
+	return p, ok && p.Transport == "http"
+}
+
 // All lists the profiles by id.
 func All() []*Profile {
 	out := make([]*Profile, 0, len(registry))
@@ -200,11 +226,13 @@ func All() []*Profile {
 	return out
 }
 
-// IDs lists the profile ids, for messages.
+// IDs lists the ids of the HTTP application profiles, for messages.
 func IDs() []string {
 	var ids []string
 	for _, p := range All() {
-		ids = append(ids, p.ID)
+		if p.Transport == "http" {
+			ids = append(ids, p.ID)
+		}
 	}
 	return ids
 }

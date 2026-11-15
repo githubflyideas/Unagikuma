@@ -589,3 +589,30 @@ lb    IN APP http://10.0.0.7:8404 app=haproxy select=proxy=www
 		}
 	}
 }
+
+// A REDIS monitor may judge a number of INFO: the option reaches the
+// probe spec (its values are checked by the probe, see TestRedisInfo).
+func TestRedisInfoField(t *testing.T) {
+	src := "@ IN SOA t. admin.localhost. ( 2026102801 1h 1h 1h 1 )\ncache IN REDIS 10.0.0.20 field=used_memory warn=1GB crit=2GB\n"
+	_, cfg, diags := load(t, src)
+	if HasErrors(diags) {
+		t.Fatalf("%v", diags)
+	}
+	if m := cfg.FindMonitor("cache"); m == nil || m.Opts["field"] != "used_memory" || m.Opts["warn"] != "1GB" || m.Opts["proto"] != "redis" {
+		t.Fatalf("%+v", m)
+	}
+}
+
+// A query is written in quotes and reaches the probe spec whole.
+func TestSQLQueryOption(t *testing.T) {
+	src := "@ IN SOA t. admin.localhost. ( 2026102801 1h 1h 1h 1 )\n" +
+		`orders IN POSTGRES db1 user=monitor database=shop query="SELECT count(*) FROM orders WHERE created_at > now() - interval '5 minutes'" crit=<1` + "\n"
+	_, cfg, diags := load(t, src)
+	if HasErrors(diags) {
+		t.Fatalf("%v", diags)
+	}
+	m := cfg.FindMonitor("orders")
+	if m == nil || m.Opts["query"] != "SELECT count(*) FROM orders WHERE created_at > now() - interval '5 minutes'" || m.Opts["crit"] != "<1" {
+		t.Fatalf("%+v", m)
+	}
+}

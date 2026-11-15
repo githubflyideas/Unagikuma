@@ -13,3 +13,5 @@ lighttpd -f /tmp/live/lighttpd.conf
 haproxy -f /tmp/live/haproxy.cfg -D
 sleep 2
 echo started
+# The databases and Redis (go test -tags live also runs TestLiveRedis and
+# TestLiveSQL against them): see scripts/live/databases.sh.

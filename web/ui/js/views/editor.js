@@ -29,7 +29,7 @@ function AppFields({ profiles, optVal, setMany }) {
       <${Field} label=${t('ui.mon.app')} hint=${t('ui.mon.app_hint')}>
         <select value=${optVal('app')} onChange=${(e) => setMany([['app', e.target.value], ['field', '']])} required>
           <option value="">—</option>
-          ${profiles.map(x => html`<option value=${x.id}>${x.title}</option>`)}
+          ${profiles.filter(x => x.transport === 'http').map(x => html`<option value=${x.id}>${x.title}</option>`)}
         </select><//>
       <${Field} label=${t('ui.mon.app_field')} hint=${t('ui.mon.app_field_hint')}>
         <select value=${field} disabled=${!p} onChange=${(e) => setMany([['app', p.id], ['field', e.target.value === primary ? '' : e.target.value]])}>
@@ -40,6 +40,18 @@ function AppFields({ profiles, optVal, setMany }) {
       <a href=${p.docs} target="_blank" rel="noopener noreferrer">${t('ui.mon.app_docs')}</a>.
       ${p.verified === 'docs' ? t('ui.mon.app_verified_docs') : t('ui.mon.app_verified_live', { v: p.verified })}</div>`}
   </div>`;
+}
+
+// RedisField chooses the number of Redis INFO that the limits judge; with
+// none chosen the monitor only checks that Redis answers.
+function RedisField({ profiles, optVal, setMany }) {
+  const p = profiles.find(x => x.id === 'redis');
+  if (!p) return null;
+  return html`<${Field} label=${t('ui.mon.redis_field')} hint=${t('ui.mon.redis_field_hint')}>
+    <select value=${optVal('field')} onChange=${(e) => setMany([['field', e.target.value]])}>
+      <option value="">—</option>
+      ${p.fields.map(x => html`<option value=${x.key}>${x.label}${x.type === 'counter' ? ' (' + t('ui.mon.app_rate') + ')' : ''}</option>`)}
+    </select><//>`;
 }
 
 // splitHostPort reads "host", "host:port" or "[v6]:port".
@@ -56,7 +68,7 @@ function joinHostPort(host, port) {
 
 const DNS_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'PTR', 'SRV', 'CAA'];
 // Options with their own form fields, per type.
-const OWN_FIELDS = { DNS: ['query', 'qtype', 'expect'], APP: ['app', 'field'] };
+const OWN_FIELDS = { DNS: ['query', 'qtype', 'expect'], APP: ['app', 'field'], REDIS: ['field'], POSTGRES: ['query'], MYSQL: ['query'] };
 
 const PLACEHOLDER = {
   HTTP: 'https://example.com/health', APP: '10.0.0.5 or http://10.0.0.5:8404', TCP: 'db.example.lan:5432', PING: '192.168.1.1', UDP: '10.0.0.1:ntp',
@@ -242,6 +254,9 @@ export function MonitorEditor({ name }) {
           <div class="small muted">${t('ui.mon.share_hint')}</div>
         </div></div>`}
         ${same && same.same.length === 0 && same.host > 0 && html`<div class="small muted">${t('ui.mon.same_host', { n: same.host })}</div>`}
+        ${(f.type === 'POSTGRES' || f.type === 'MYSQL') && html`<${Field} label=${t('ui.mon.sql_query')} hint=${t('ui.mon.sql_query_hint')}>
+          <input type="text" class="ltr" value=${optVal('query')} onInput=${setOwn('query')} placeholder="SELECT count(*) FROM orders" /><//>`}
+        ${f.type === 'REDIS' && html`<${RedisField} profiles=${apps.data || []} optVal=${optVal} setMany=${setOwnMany} />`}
         ${f.type === 'APP' && html`<${AppFields} profiles=${apps.data || []} optVal=${optVal} setMany=${setOwnMany} />`}
         ${f.type === 'DNS' && html`<div class="col" style=${{ gap: '10px' }}>
           <div class="two">

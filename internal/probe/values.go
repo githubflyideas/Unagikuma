@@ -22,6 +22,11 @@ func ValueUnit(s Spec) string {
 	if strings.EqualFold(s.Type, "HTTP") {
 		return appUnit(opts(s.Opts))
 	}
+	if strings.EqualFold(s.Type, "TCP") && strings.EqualFold(s.Opts["proto"], "redis") {
+		if f, ok := redisField(opts(s.Opts)); ok {
+			return f.Unit
+		}
+	}
 	return ""
 }
 

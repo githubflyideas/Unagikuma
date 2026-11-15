@@ -47,6 +47,13 @@ func serve(t *testing.T, h func(net.Conn)) string {
 
 // ---- Redis ----
 
+// redisInfoText is a reply to INFO: sections, key:value lines, CRLF ends.
+const redisInfoText = "# Server\r\nredis_version:7.0.15\r\nuptime_in_seconds:3600\r\n\r\n# Clients\r\nconnected_clients:7\r\nblocked_clients:0\r\n\r\n" +
+	"# Memory\r\nused_memory:966080\r\nused_memory_rss:6991872\r\nmem_fragmentation_ratio:7.98\r\n\r\n" +
+	"# Persistence\r\nrdb_changes_since_last_save:1\r\n\r\n# Stats\r\ntotal_connections_received:30\r\ntotal_commands_processed:1200\r\n" +
+	"instantaneous_ops_per_sec:5\r\nrejected_connections:0\r\nexpired_keys:2\r\nevicted_keys:1\r\nkeyspace_hits:90\r\nkeyspace_misses:10\r\n\r\n" +
+	"# Replication\r\nrole:master\r\nconnected_slaves:0\r\n"
+
 func fakeRedis(pass, role string) func(net.Conn) {
 	return func(c net.Conn) {
 		br := bufio.NewReader(c)
@@ -80,6 +87,8 @@ func fakeRedis(pass, role string) func(net.Conn) {
 				}
 			case "ROLE":
 				c.Write([]byte(fmt.Sprintf("*3\r\n$%d\r\n%s\r\n:0\r\n*0\r\n", len(role), role)))
+			case "INFO":
+				c.Write([]byte(fmt.Sprintf("$%d\r\n%s\r\n", len(redisInfoText), redisInfoText)))
 			}
 		}
 	}
@@ -99,6 +108,45 @@ func TestRedis(t *testing.T) {
 	want(t, run(t, Spec{Type: "TCP", Target: locked, Opts: map[string]string{"proto": "redis"}}), VoteFail, ReasonAuthError)
 	want(t, run(t, Spec{Type: "TCP", Target: locked, Opts: map[string]string{"proto": "redis", "password": "nope"}}), VoteFail, ReasonAuthError)
 	want(t, run(t, Spec{Type: "TCP", Target: locked, Opts: map[string]string{"proto": "redis", "password": "s3cret", "role": "replica"}}), VoteOK, ReasonOK)
+}
+
+// field= reads a number from INFO; the value rules judge it; a counter is
+// flagged for its rate; and role= still works after INFO (nothing is left
+// in the reader).
+func TestRedisInfo(t *testing.T) {
+	addr := serve(t, fakeRedis("", "master"))
+	spec := func(o map[string]string) Spec {
+		o["proto"] = "redis"
+		return Spec{Type: "TCP", Target: addr, Opts: o}
+	}
+	r := run(t, spec(map[string]string{"field": "connected_clients", "warn": "5", "role": "master"}))
+	want(t, r, VoteOK, ReasonOK)
+	if r.Metrics["value"] != 7 || r.Metrics["app.used_memory"] != 966080 || r.Metrics["value.counter"] != 0 || !strings.Contains(r.Detail, "Connected clients 7") {
+		t.Fatalf("%v %q", r.Metrics, r.Detail)
+	}
+	r = run(t, spec(map[string]string{"field": "keyspace_hits"}))
+	if r.Metrics["value"] != 90 || r.Metrics["value.counter"] != 1 {
+		t.Fatalf("counter %v", r.Metrics)
+	}
+	// A replica-only field is optional on the page, and on a master it is missing.
+	want(t, run(t, spec(map[string]string{"field": "master_last_io"})), VoteFail, ReasonAssertFailed)
+	for _, c := range []struct {
+		o  map[string]string
+		ok bool
+	}{
+		{map[string]string{"field": "used_memory", "warn": "1GB"}, true},
+		{map[string]string{"field": "nope"}, false},
+		{map[string]string{"warn": "5"}, false}, // nothing to judge
+		{map[string]string{"field": "connected_clients", "crit": "5", "warn": "9"}, false},
+	} {
+		if err := Validate(spec(c.o)); (err == nil) != c.ok {
+			t.Errorf("%v: ok=%v err=%v", c.o, c.ok, err)
+		}
+	}
+	// Not Redis's option elsewhere.
+	if err := Validate(Spec{Type: "TCP", Target: addr, Opts: map[string]string{"proto": "mysql", "field": "x"}}); err == nil {
+		t.Error("field= accepted on mysql")
+	}
 }
 
 // ---- PostgreSQL ----

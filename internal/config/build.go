@@ -1038,7 +1038,7 @@ func (b *builder) serviceTarget(m *Monitor, r Record, p Pos) {
 // port when the address gives none.
 func (b *builder) appTarget(m *Monitor, r Record, p Pos) {
 	id := m.Opts["app"]
-	prof, ok := appprofile.Get(id)
+	prof, ok := appprofile.App(id)
 	if !ok {
 		b.errf(r.TypePos, "invalid_option", "APP needs app=<application> (one of %s)", strings.Join(appprofile.IDs(), ", "))
 		return

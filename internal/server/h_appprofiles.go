@@ -17,19 +17,20 @@ func (s *Server) appProfiles(w http.ResponseWriter, r *http.Request) (any, error
 		Primary bool   `json:"primary,omitempty"`
 	}
 	type profile struct {
-		ID       string  `json:"id"`
-		Title    string  `json:"title"`
-		Reader   string  `json:"reader"`
-		Path     string  `json:"path"`
-		Port     int     `json:"port"`
-		Docs     string  `json:"docs"`
-		Needs    string  `json:"needs"`
-		Verified string  `json:"verified"`
-		Fields   []field `json:"fields"`
+		ID        string  `json:"id"`
+		Title     string  `json:"title"`
+		Reader    string  `json:"reader"`
+		Transport string  `json:"transport"`
+		Path      string  `json:"path"`
+		Port      int     `json:"port"`
+		Docs      string  `json:"docs"`
+		Needs     string  `json:"needs"`
+		Verified  string  `json:"verified"`
+		Fields    []field `json:"fields"`
 	}
 	out := []profile{}
 	for _, p := range appprofile.All() {
-		pr := profile{ID: p.ID, Title: p.Title, Reader: p.Reader, Path: p.Path, Port: p.Port, Docs: p.Docs, Needs: p.Needs, Verified: p.Verified}
+		pr := profile{ID: p.ID, Title: p.Title, Reader: p.Reader, Transport: p.Transport, Path: p.Path, Port: p.Port, Docs: p.Docs, Needs: p.Needs, Verified: p.Verified}
 		for _, f := range p.Fields {
 			pr.Fields = append(pr.Fields, field{f.Key, f.Label, f.Type, f.Unit, f.Key == p.Primary})
 		}

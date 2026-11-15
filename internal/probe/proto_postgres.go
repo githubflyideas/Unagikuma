@@ -30,7 +30,7 @@ func postgresCheck(ctx context.Context, conn net.Conn, host string, o opts, r Re
 		}
 		conn = tc
 	}
-	l := &pgLogin{conn: conn, pass: o.str("password", "")}
+	l := &pgLogin{conn: conn, pass: o.str("password", ""), o: o}
 	user := o.str("user", "")
 	l.login = user != ""
 	if !l.login {
@@ -40,7 +40,12 @@ func postgresCheck(ctx context.Context, conn net.Conn, host string, o opts, r Re
 	db := o.str("database", user)
 	var p []byte
 	p = binary.BigEndian.AppendUint32(p, 196608) // protocol 3.0
-	for _, kv := range [][2]string{{"user", user}, {"database", db}, {"application_name", "unagikuma"}} {
+	params := [][2]string{{"user", user}, {"database", db}, {"application_name", "unagikuma"}}
+	if o.has("query") {
+		// Whatever the statement does, this session cannot write.
+		params = append(params, [2]string{"default_transaction_read_only", "on"})
+	}
+	for _, kv := range params {
 		p = append(p, kv[0]...)
 		p = append(p, 0)
 		p = append(p, kv[1]...)
@@ -103,6 +108,7 @@ type pgLogin struct {
 	login      bool // credentials were given
 	scram      *scramClient
 	version    string
+	o          opts
 }
 
 func (l *pgLogin) send(typ byte, body []byte) error {
@@ -196,27 +202,65 @@ func (l *pgLogin) sasl(code uint32, data []byte, r Result) (Result, bool) {
 
 // selectOne proves the database answers a query once it is ready for one.
 func (l *pgLogin) selectOne(r Result) Result {
-	if err := l.send('Q', append([]byte("SELECT 1"), 0)); err != nil {
+	query := "SELECT 1"
+	custom := l.o.has("query")
+	if custom {
+		query = statement(l.o.str("query", ""))
+	}
+	if err := l.send('Q', append([]byte(query), 0)); err != nil {
 		return protoFail(r, "query", err)
 	}
+	var first string
+	var null bool
+	rows := 0
 	for {
 		typ, body, err := pgRead(l.br)
 		if err != nil {
 			return protoFail(r, "query", err)
 		}
-		if typ == 'E' {
+		switch typ {
+		case 'E':
 			_, msg := pgError(body)
+			if custom {
+				return failKeep(r, ReasonAssertFailed, "the query failed: %s", msg)
+			}
 			return failKeep(r, ReasonAssertFailed, "SELECT 1 failed: %s", msg)
-		}
-		if typ == 'Z' {
+		case 'D':
+			if rows == 0 {
+				first, null = pgFirstColumn(body)
+			}
+			rows++
+		case 'Z':
 			_ = l.send('X', nil)
 			r.Detail = "PostgreSQL login and SELECT 1 ok"
 			if l.version != "" {
 				r.Detail = "PostgreSQL " + l.version + ": login and SELECT 1 ok"
 			}
+			if custom {
+				r.Detail = "PostgreSQL"
+				if l.version != "" {
+					r.Detail += " " + l.version
+				}
+				return queryNumber(r, l.o, first, null, rows)
+			}
 			return r
 		}
 	}
+}
+
+// pgFirstColumn reads the first column of a DataRow (text format).
+func pgFirstColumn(b []byte) (text string, null bool) {
+	if len(b) < 6 || binary.BigEndian.Uint16(b) == 0 {
+		return "", true
+	}
+	n := int32(binary.BigEndian.Uint32(b[2:]))
+	if n < 0 {
+		return "", true
+	}
+	if int(n) > len(b)-6 {
+		return "", true
+	}
+	return string(b[6 : 6+int(n)]), false
 }
 
 func pgRead(br *bufio.Reader) (byte, []byte, error) {
