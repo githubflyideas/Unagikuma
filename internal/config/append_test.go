@@ -47,3 +47,30 @@ func TestUpsertAlignsWithGroup(t *testing.T) {
 		t.Fatalf("got:\n%s", f.Bytes())
 	}
 }
+
+// A monitor added with First heads its section; the others keep their order.
+func TestUpsertFirst(t *testing.T) {
+	src := "@ IN SOA a. b. ( 2026010101 1m 15s 5s 3 )\n" +
+		"; the shop\n" +
+		"web  1m IN HTTP https://example.com/\n" +
+		"db   1m IN TCP db:5432\n"
+	f, diags := Parse("t", []byte(src))
+	if HasErrors(diags) {
+		t.Fatal(diags)
+	}
+	for _, n := range []string{"lan-gateway", "internet-gateway"} {
+		if err := f.UpsertRecord(RecordSpec{Name: n, Type: "PING", Interval: "1m", Target: "10.0.0.1", First: true}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var names []string
+	for _, r := range f.Records() {
+		names = append(names, r.Name)
+	}
+	if got := strings.Join(names, " "); got != "internet-gateway lan-gateway web db" {
+		t.Fatalf("order %q\n%s", got, f.Bytes())
+	}
+	if !strings.Contains(string(f.Bytes()), "; the shop\ninternet-gateway") {
+		t.Fatalf("comment moved:\n%s", f.Bytes())
+	}
+}

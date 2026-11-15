@@ -18,6 +18,7 @@ A review of how each check's value is read and judged. A file that used to load 
 - The state label in the top bar was too faint to read in some themes when the state was unknown (4.1:1) or a warning (3.8:1 in Calm); both are above 4.5:1 in every theme now.
 
 **Changed**
+- The two gateway monitors added automatically now head the monitor list instead of ending it.
 - `unagikuma probe` applies `warn=` and `crit=` to the reading it makes, as the running monitor does, and says when a value needs more than one reading (a rate, `change=`). An option whose value holds spaces can be given: `query="SELECT count(*) FROM t"`.
 
 ## v2.6.23 — 2026-11-15

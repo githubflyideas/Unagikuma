@@ -190,6 +190,9 @@ type RecordSpec struct {
 	// MoveArea is set.
 	Area     string
 	MoveArea bool
+	// First places a new monitor before the first monitor of its section
+	// instead of after the last one, so it heads the list.
+	First bool
 }
 
 var (
@@ -376,6 +379,7 @@ func (f *File) insertPoint(r RecordSpec) (at int, prev *Stmt, scopeLine string) 
 	at, inGroup, before, area := -1, -1, -1, ""
 	var groupPrev *Stmt
 	anySection := !IsMonitorType(r.Type) // only monitors belong to sections
+	first := -1
 	for i := range f.Stmts {
 		s := &f.Stmts[i]
 		if s.isDirective() {
@@ -392,11 +396,17 @@ func (f *File) insertPoint(r RecordSpec) (at int, prev *Stmt, scopeLine string) 
 			before = s.StartLine - 1
 		}
 		if sameFamily(rec.Type, r.Type) && (anySection || area == r.Area) {
+			if first < 0 {
+				first = s.StartLine - 1
+			}
 			at, prev = s.EndLine, s
 			if group != "" && optValue(rec, "group") == group {
 				inGroup, groupPrev = s.EndLine, s
 			}
 		}
+	}
+	if r.First && IsMonitorType(r.Type) && first >= 0 {
+		return first, nil, ""
 	}
 	if inGroup >= 0 {
 		return inGroup, groupPrev, "" // aligned like its group's records
