@@ -1,3 +1,6 @@
 [
-  {"id": "modern"}
+  {"id": "modern"},
+  {"id": "relic", "registered": true},
+  {"id": "legend", "registered": true},
+  {"id": "starship", "registered": true}
 ]
