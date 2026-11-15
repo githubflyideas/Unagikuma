@@ -282,7 +282,7 @@ type StatusPage struct {
 
 // Monitor types and their shorthands.
 var monitorTypes = map[string]bool{"HTTP": true, "TCP": true, "PING": true, "UDP": true, "DNS": true, "NTP": true, "SNMP": true, "SYSLOG": true, "PUSH": true, "EXEC": true,
-	"REDIS": true, "POSTGRES": true, "MYSQL": true, "GRPC": true, "DOCKER": true, "DOMAIN": true}
+	"REDIS": true, "POSTGRES": true, "MYSQL": true, "GRPC": true, "DOCKER": true, "DOMAIN": true, "APP": true}
 
 // IsMonitorType reports whether t (upper case) is a monitor record type.
 func IsMonitorType(t string) bool { return monitorTypes[t] }

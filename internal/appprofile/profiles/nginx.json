@@ -1,0 +1,17 @@
+{
+  "id": "nginx", "title": "Nginx", "reader": "text", "path": "/nginx_status", "port": 80,
+  "docs": "https://nginx.org/en/docs/http/ngx_http_stub_status_module.html",
+  "needs": "Enable stub_status in a location block and allow only the monitoring host.",
+  "verified": "docs",
+  "primary": "active",
+  "summary": ["active", "reading", "writing", "waiting"],
+  "fields": [
+    {"key": "active", "label": "Active connections", "type": "quantity", "regex": "Active connections:\\s*([0-9]+)"},
+    {"key": "accepts", "label": "Accepted connections", "type": "counter", "regex": "server accepts handled requests\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+"},
+    {"key": "handled", "label": "Handled connections", "type": "counter", "regex": "server accepts handled requests\\s+[0-9]+\\s+([0-9]+)\\s+[0-9]+"},
+    {"key": "requests", "label": "Requests", "type": "counter", "regex": "server accepts handled requests\\s+[0-9]+\\s+[0-9]+\\s+([0-9]+)"},
+    {"key": "reading", "label": "Reading", "type": "quantity", "regex": "Reading:\\s*([0-9]+)"},
+    {"key": "writing", "label": "Writing", "type": "quantity", "regex": "Writing:\\s*([0-9]+)"},
+    {"key": "waiting", "label": "Waiting", "type": "quantity", "regex": "Waiting:\\s*([0-9]+)"}
+  ]
+}

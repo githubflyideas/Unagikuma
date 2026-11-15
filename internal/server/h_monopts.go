@@ -6,7 +6,7 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/probe"
 )
 
-var optionTypes = []string{"HTTP", "TCP", "PING", "UDP", "DNS", "NTP", "SNMP", "SYSLOG", "PUSH", "EXEC", "REDIS", "POSTGRES", "MYSQL", "GRPC", "DOCKER", "DOMAIN"}
+var optionTypes = []string{"HTTP", "TCP", "PING", "UDP", "DNS", "NTP", "SNMP", "SYSLOG", "PUSH", "EXEC", "REDIS", "POSTGRES", "MYSQL", "GRPC", "DOCKER", "DOMAIN", "APP"}
 
 // monitorOptions lists, per monitor type, the options the monitor form
 // offers: the check's own ones, then those of the monitor that apply to

@@ -1,0 +1,16 @@
+{
+  "id": "apache", "title": "Apache HTTP Server", "reader": "text", "path": "/server-status?auto", "port": 80,
+  "docs": "https://httpd.apache.org/docs/2.4/mod/mod_status.html",
+  "needs": "Enable mod_status with a server-status location and allow only the monitoring host.",
+  "verified": "docs",
+  "primary": "busy",
+  "summary": ["busy", "idle", "rps"],
+  "fields": [
+    {"key": "busy", "label": "Busy workers", "type": "quantity", "line": "BusyWorkers"},
+    {"key": "idle", "label": "Idle workers", "type": "quantity", "line": "IdleWorkers"},
+    {"key": "accesses", "label": "Total accesses", "type": "counter", "line": "Total Accesses"},
+    {"key": "uptime", "label": "Uptime (s)", "type": "quantity", "line": "Uptime"},
+    {"key": "rps", "label": "Requests per second", "type": "quantity", "line": "ReqPerSec", "optional": true},
+    {"key": "cpu", "label": "CPU load", "type": "quantity", "line": "CPULoad", "optional": true}
+  ]
+}

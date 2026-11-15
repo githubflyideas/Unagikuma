@@ -19,6 +19,9 @@ func ValueUnit(s Spec) string {
 	if strings.EqualFold(s.Type, "SNMP") || strings.EqualFold(s.Type, "UDP") {
 		return snmpUnit(opts(s.Opts))
 	}
+	if strings.EqualFold(s.Type, "HTTP") {
+		return appUnit(opts(s.Opts))
+	}
 	return ""
 }
 

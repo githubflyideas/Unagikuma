@@ -551,3 +551,41 @@ web   IN DOCKER nginx
 		}
 	}
 }
+
+// An APP monitor is the application's status page, fetched by the HTTP
+// check: the address may be a URL, a host or host:port, and the profile
+// gives the page and the port the address leaves out.
+func TestAppMonitors(t *testing.T) {
+	src := `@ IN SOA t. admin.localhost. ( 2026102801 1h 1h 1h 1 )
+web   IN APP 10.0.0.5 app=nginx
+web2  IN APP 10.0.0.6:8080 app=nginx field=waiting warn=100
+web3  IN APP https://status.example.com/ngx app=nginx
+apa   IN APP [2001:db8::5] app=apache
+lb    IN APP http://10.0.0.7:8404 app=haproxy select=proxy=www
+`
+	_, cfg, diags := load(t, src)
+	for _, d := range diags {
+		if d.Severity == SevError {
+			t.Fatalf("%v", d)
+		}
+	}
+	want := map[string]string{
+		"web":  "http://10.0.0.5:80/nginx_status",
+		"web2": "http://10.0.0.6:8080/nginx_status",
+		"web3": "https://status.example.com/ngx", // a path given is kept
+		"apa":  "http://[2001:db8::5]:80/server-status?auto",
+		"lb":   "http://10.0.0.7:8404/metrics",
+	}
+	for name, target := range want {
+		m := cfg.FindMonitor(name)
+		if m == nil || m.Type != "HTTP" || m.Written != "APP" || m.Target != target || m.Opts["app"] == "" {
+			t.Errorf("%s: %+v", name, m)
+		}
+	}
+	for _, bad := range []string{"x IN APP 10.0.0.1", "x IN APP 10.0.0.1 app=nope", "x IN APP user@10.0.0.1 app=nginx", "x IN APP ftp://h app=nginx"} {
+		_, _, diags := load(t, "@ IN SOA t. admin.localhost. ( 2026102801 1h 1h 1h 1 )\n"+bad+"\n")
+		if !HasErrors(diags) {
+			t.Errorf("accepted %q", bad)
+		}
+	}
+}
