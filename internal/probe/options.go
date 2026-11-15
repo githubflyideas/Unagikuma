@@ -29,6 +29,8 @@ func OptionsFor(typ string) []string {
 	case "HTTP":
 		addMap(httpOpts)
 		add("header.Authorization")
+	case "APP":
+		add(appOpts...)
 	case "TCP":
 		addMap(tcpOpts)
 	case "REDIS":

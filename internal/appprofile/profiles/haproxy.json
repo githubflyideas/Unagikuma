@@ -1,0 +1,18 @@
+{
+  "id": "haproxy", "title": "HAProxy", "reader": "metrics", "path": "/metrics", "port": 8404,
+  "docs": "https://github.com/haproxy/haproxy/blob/master/addons/promex/README",
+  "needs": "Serve the built-in Prometheus exporter: in a frontend, http-request use-service prometheus-exporter if { path /metrics }; allow only the monitoring host.",
+  "verified": "docs",
+  "primary": "sessions",
+  "summary": ["sessions", "queue", "backends_up", "servers_active"],
+  "fields": [
+    {"key": "sessions", "label": "Current sessions", "type": "quantity", "metric": "haproxy_frontend_current_sessions"},
+    {"key": "queue", "label": "Queued requests", "type": "quantity", "metric": "haproxy_backend_current_queue"},
+    {"key": "backend_up", "label": "Backend up (1 up, 0 down; lowest)", "type": "quantity", "metric": "haproxy_backend_up", "agg": "min"},
+    {"key": "backends_up", "label": "Backends up", "type": "quantity", "metric": "haproxy_backend_up"},
+    {"key": "servers_active", "label": "Active servers", "type": "quantity", "metric": "haproxy_backend_active_servers"},
+    {"key": "requests", "label": "HTTP requests", "type": "counter", "metric": "haproxy_frontend_http_requests_total"},
+    {"key": "responses_5xx", "label": "5xx responses", "type": "counter", "metric": "haproxy_frontend_http_responses_total", "labels": {"code": "5xx"}},
+    {"key": "connection_errors", "label": "Backend connection errors", "type": "counter", "metric": "haproxy_backend_connection_errors_total"}
+  ]
+}

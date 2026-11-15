@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/githubflyideas/unagikuma/internal/appprofile"
 	"github.com/githubflyideas/unagikuma/internal/keywords"
 	"github.com/githubflyideas/unagikuma/internal/schedule"
 	"github.com/githubflyideas/unagikuma/internal/tunables"
@@ -961,6 +962,8 @@ func (b *builder) target(m *Monitor, r Record, explicitInterval bool) {
 		}
 	case "REDIS", "POSTGRES", "MYSQL", "GRPC":
 		b.serviceTarget(m, r, p)
+	case "APP":
+		b.appTarget(m, r, p)
 	case "DOMAIN":
 		b.domainTiming(m, r, explicitInterval)
 	case "DOCKER":
@@ -1027,6 +1030,42 @@ func (b *builder) serviceTarget(m *Monitor, r Record, p Pos) {
 	}
 	m.Opts["proto"] = strings.ToLower(m.Type)
 	m.Type, m.Target = "TCP", net.JoinHostPort(host, port)
+}
+
+// appTarget turns an APP monitor into the HTTP check of the application's
+// status page. The target is the address of the application (a URL, or
+// host or host:port); the profile named by app= says which page and which
+// port when the address gives none.
+func (b *builder) appTarget(m *Monitor, r Record, p Pos) {
+	id := m.Opts["app"]
+	prof, ok := appprofile.Get(id)
+	if !ok {
+		b.errf(r.TypePos, "invalid_option", "APP needs app=<application> (one of %s)", strings.Join(appprofile.IDs(), ", "))
+		return
+	}
+	target := r.Target
+	if !strings.Contains(target, "://") {
+		host, port := strings.Trim(target, "[]"), strconv.Itoa(prof.Port)
+		if h, pt, err := net.SplitHostPort(target); err == nil {
+			host, port = h, pt
+		}
+		if host == "" || strings.ContainsAny(host, "/@") {
+			b.errf(p, "invalid_target", "APP target must be a URL, host or host:port")
+			return
+		}
+		target = "http://" + net.JoinHostPort(host, port)
+	}
+	u, err := url.Parse(target)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		b.errf(p, "invalid_target", "APP target must be a URL, host or host:port")
+		return
+	}
+	if u.Path == "" || u.Path == "/" {
+		// The profile's page, with its query when it has one (?auto).
+		pp, q, _ := strings.Cut(prof.Path, "?")
+		u.Path, u.RawQuery = pp, q
+	}
+	m.Type, m.Target = "HTTP", u.String()
 }
 
 // domainTiming: a registry lookup. Hours apart is plenty, and registries

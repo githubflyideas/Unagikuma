@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.20 — 2026-11-15
+
+**Added**
+- Application status pages (type APP): Nginx, Apache, Lighttpd, PHP-FPM and HAProxy, read through profiles kept as data.
+
 ## v2.6.19 — 2026-11-15
 
 **Fixed**

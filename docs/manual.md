@@ -160,6 +160,27 @@ nrpe-web  IN EXEC "check_nrpe -H $HOSTADDRESS$ -c check_users" address=10.0.0.21
 - Plugins get a minimal environment (`PATH`, `UNAGIKUMA_MONITOR`, `UNAGIKUMA_ADDRESS`, `UNAGIKUMA_TIMEOUT`), not the server's. `$HOSTADDRESS$`, `$SERVICEDESC$` and `$TIMEOUT$` are replaced in arguments. At the timeout the plugin and everything it started are killed and the check is CRITICAL.
 - Only administrators can add EXEC checks or change what they run. `probe.exec-concurrency` limits plugins running at once per node.
 
+
+### Application status pages (APP)
+
+A well-known application has a status page of its own, and an APP monitor reads it: `app=` names the application, and its profile says where the page is and what each number on it is. The address may be a URL, `host` or `host:port`; the profile's page and port fill in what it leaves out. `field=` names the number the limits judge (the profile's main one when it is not given); a total that only grows, such as requests, is judged by its rate per second. A reply that is not that application's page fails and says what is missing.
+
+```
+web1  30s IN APP 10.0.0.5 app=nginx warn=800 crit=1500
+web2  30s IN APP 10.0.0.5 app=nginx field=requests warn=2000
+apa   30s IN APP 10.0.0.6 app=apache field=busy crit=45
+lb    30s IN APP 10.0.0.7:8404 app=haproxy select=proxy=www field=sessions warn=500
+```
+
+| `app=` | Page | Reader | Needs in the application |
+|---|---|---|---|
+| `nginx` | `/nginx_status` | text | `stub_status` in a location block |
+| `apache` | `/server-status?auto` | text | `mod_status` |
+| `lighttpd` | `/server-status?auto` | text | `mod_status`, `status.status-url` |
+| `php-fpm` | `/status` | text | `pm.status_path` in the pool |
+| `haproxy` | `/metrics` (port 8404) | metrics | the built-in Prometheus exporter |
+
+Open the page only to the monitoring host. `select=label=value` narrows a metrics page to one proxy, topic or the like. The profiles are data files (`internal/appprofile/profiles/`), checked so far against each application's documented format only; the monitor form says when a profile has been run on a live instance. To add an application, see [value-types](value-types.md) for the types a field may have.
 ## Alerting
 
 Notifications go through **channels** (where a message is sent). Each team has an ordered list of them (see [Teams](#teams)); channels are records in `monitors.conf` with forms under **Alerting**, and a team's list is set under **Advanced › Teams**.

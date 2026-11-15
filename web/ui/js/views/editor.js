@@ -6,7 +6,7 @@ import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, en
 
 // Check types, grouped for the type menu.
 const TYPE_GROUPS = [
-  ['web', ['HTTP', 'TCP', 'PING', 'DOMAIN']],
+  ['web', ['HTTP', 'APP', 'TCP', 'PING', 'DOMAIN']],
   ['network', ['DNS', 'NTP', 'SNMP', 'SYSLOG', 'UDP']],
   ['service', ['REDIS', 'POSTGRES', 'MYSQL', 'GRPC', 'DOCKER']],
   ['other', ['EXEC', 'PUSH']],
@@ -17,6 +17,30 @@ const TYPE_GROUPS = [
 // 10.0.0.53:53). TCP has no default port.
 const DEFAULT_PORT = { TCP: '', DNS: '53', NTP: '123', SNMP: '161', SYSLOG: '514', REDIS: '6379', POSTGRES: '5432', MYSQL: '3306', GRPC: '50051' };
 const hasPort = (type) => type in DEFAULT_PORT;
+
+// AppFields chooses the application an APP monitor watches and the number
+// of its status page that is judged.
+function AppFields({ profiles, optVal, setMany }) {
+  const p = profiles.find(x => x.id === optVal('app'));
+  const primary = p ? (p.fields.find(x => x.primary) || p.fields[0]).key : '';
+  const field = optVal('field') || primary;
+  return html`<div class="col" style=${{ gap: '10px' }}>
+    <div class="two">
+      <${Field} label=${t('ui.mon.app')} hint=${t('ui.mon.app_hint')}>
+        <select value=${optVal('app')} onChange=${(e) => setMany([['app', e.target.value], ['field', '']])} required>
+          <option value="">—</option>
+          ${profiles.map(x => html`<option value=${x.id}>${x.title}</option>`)}
+        </select><//>
+      <${Field} label=${t('ui.mon.app_field')} hint=${t('ui.mon.app_field_hint')}>
+        <select value=${field} disabled=${!p} onChange=${(e) => setMany([['app', p.id], ['field', e.target.value === primary ? '' : e.target.value]])}>
+          ${p && p.fields.map(x => html`<option value=${x.key}>${x.label}${x.type === 'counter' ? ' (' + t('ui.mon.app_rate') + ')' : ''}</option>`)}
+        </select><//>
+    </div>
+    ${p && html`<div class="small muted">${t('ui.mon.app_needs')}: ${has('ui.app.needs.' + p.id) ? t('ui.app.needs.' + p.id) : p.needs}
+      <a href=${p.docs} target="_blank" rel="noopener noreferrer">${t('ui.mon.app_docs')}</a>.
+      ${p.verified === 'docs' ? t('ui.mon.app_verified_docs') : t('ui.mon.app_verified_live', { v: p.verified })}</div>`}
+  </div>`;
+}
 
 // splitHostPort reads "host", "host:port" or "[v6]:port".
 function splitHostPort(target) {
@@ -32,10 +56,10 @@ function joinHostPort(host, port) {
 
 const DNS_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'PTR', 'SRV', 'CAA'];
 // Options with their own form fields, per type.
-const OWN_FIELDS = { DNS: ['query', 'qtype', 'expect'] };
+const OWN_FIELDS = { DNS: ['query', 'qtype', 'expect'], APP: ['app', 'field'] };
 
 const PLACEHOLDER = {
-  HTTP: 'https://example.com/health', TCP: 'db.example.lan:5432', PING: '192.168.1.1', UDP: '10.0.0.1:ntp',
+  HTTP: 'https://example.com/health', APP: '10.0.0.5 or http://10.0.0.5:8404', TCP: 'db.example.lan:5432', PING: '192.168.1.1', UDP: '10.0.0.1:ntp',
   DNS: '192.168.1.1', NTP: 'pool.ntp.org', SNMP: '10.0.0.2', SYSLOG: '10.0.0.3', EXEC: 'check_disk -w 20% -c 10% -p /', PUSH: '',
   REDIS: '10.0.0.20:6379', POSTGRES: 'db.example.lan:5432', MYSQL: 'db.example.lan:3306', GRPC: 'api.example.lan:50051', DOCKER: 'nginx', DOMAIN: 'example.com',
 };
@@ -93,6 +117,7 @@ export function MonitorEditor({ name }) {
   const regions = useFetch(() => get('/regions'), []);
   const mons = useFetch(() => get('/monitors'), []);
   const optList = useFetch(() => get('/monitor-options'), []);
+  const apps = useFetch(() => get('/app-profiles'), []);
   const [f, setF] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -145,6 +170,12 @@ export function MonitorEditor({ name }) {
   // Options with their own fields live in the same list as the others.
   const own = OWN_FIELDS[f.type] || [];
   const optVal = (k) => (f.opts.find(o => o.k === k) || {}).v || '';
+  // Several options at once (choosing an application clears the number judged).
+  const setOwnMany = (pairs) => {
+    let opts = f.opts.filter(o => !pairs.some(([k]) => k === o.k));
+    for (const [k, v] of pairs) if (v) opts = [...opts, { k, v }];
+    setF({ ...f, opts });
+  };
   const setOwn = (k) => (e) => {
     const v = e.target.value;
     const opts = f.opts.filter(o => o.k !== k);
@@ -211,6 +242,7 @@ export function MonitorEditor({ name }) {
           <div class="small muted">${t('ui.mon.share_hint')}</div>
         </div></div>`}
         ${same && same.same.length === 0 && same.host > 0 && html`<div class="small muted">${t('ui.mon.same_host', { n: same.host })}</div>`}
+        ${f.type === 'APP' && html`<${AppFields} profiles=${apps.data || []} optVal=${optVal} setMany=${setOwnMany} />`}
         ${f.type === 'DNS' && html`<div class="col" style=${{ gap: '10px' }}>
           <div class="two">
             <${Field} label=${t('ui.mon.dns_query')} hint=${t('ui.mon.dns_query_hint')}>

@@ -28,7 +28,9 @@ var httpOpts = map[string]bool{
 	"json-path": true, "json-expect": true, "json-expect-num": true, "no-follow": true, "insecure": true,
 	"host": true, "basic": true, "bearer": true, "proxy": true, "cert-days": true, "cert-critical-days": true,
 	"user-agent": true,
-	// Value rules, for the number at json-path.
+	// An application's status page (see app.go).
+	"app": true, "field": true, "select": true,
+	// Value rules, for the number at json-path or on the application's page.
 	"warn": true, "crit": true, "change": true, "compare": true, "min": true, "for": true, "direction": true,
 }
 
@@ -64,12 +66,15 @@ func validateHTTP(target string, o opts) error {
 			return err
 		}
 	}
-	if err := validateValueRules(o, ""); err != nil {
+	if err := validateApp(o); err != nil {
+		return err
+	}
+	if err := validateValueRules(o, appUnit(o)); err != nil {
 		return err
 	}
 	for _, k := range []string{"warn", "crit", "change"} {
-		if o.has(k) && !o.has("json-path") {
-			return fmt.Errorf("%s= judges the number at json-path=, which is not set", k)
+		if o.has(k) && !o.has("json-path") && !o.has("app") {
+			return fmt.Errorf("%s= judges a number: the one at json-path=, or a field of an application's page (app=), and neither is set", k)
 		}
 	}
 	if b := o.str("basic", ""); b != "" && !strings.Contains(b, ":") {
@@ -238,6 +243,9 @@ func httpAssertions(r Result, o opts, status int, data []byte) Result {
 			}
 			r.Metrics["value"] = f
 		}
+	}
+	if o.has("app") {
+		return appAssertions(r, o, data)
 	}
 	return r
 }
