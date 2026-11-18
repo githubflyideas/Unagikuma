@@ -49,3 +49,29 @@ func TestBackupDownloads(t *testing.T) {
 		t.Fatalf("short passphrase: %d", c)
 	}
 }
+
+// The configuration alone is monitors.conf as it is, and what it exports
+// the Unagikuma source imports: nothing is added twice.
+func TestConfigExportAndImportBack(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	e.setup()
+	code, conf := e.raw("GET", "/api/v1/backup?kind=config", nil, "")
+	if code != 200 || !strings.Contains(string(conf), "IN SOA") && !strings.Contains(string(conf), "$FILE") || !strings.Contains(string(conf), "IN HTTP") {
+		t.Fatalf("export: %d %q", code, conf)
+	}
+	if bytes.Contains(conf, []byte("unagikuma.key")) || bytes.Contains(conf, []byte("SQLite format")) {
+		t.Fatal("the export holds more than the configuration")
+	}
+	// Previewing it into the installation it came from adds nothing.
+	code, body := e.raw("POST", "/api/v1/import/unagikuma", conf, "text/plain")
+	if code != 200 {
+		t.Fatalf("preview: %d %s", code, body)
+	}
+	if !strings.Contains(string(body), `"source":"Unagikuma"`) || strings.Contains(string(body), `"status":"imported"`) {
+		t.Fatalf("an import of its own export adds records: %s", body)
+	}
+	// Something that is not a monitors.conf is refused with a reason.
+	if code, body = e.raw("POST", "/api/v1/import/unagikuma", []byte("hello"), "text/plain"); code != 400 {
+		t.Fatalf("junk: %d %s", code, body)
+	}
+}

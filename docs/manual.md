@@ -527,6 +527,18 @@ A licence may limit the number of nodes (the master included) and of accounts. W
 
 The import adds what Unagikuma can run and lists everything else with the reason and what to do instead. It never changes or deletes monitors that are already here, so running it twice is safe: what came over the first time is listed as already here. Always look first with `--dry-run`. On a new machine you can import before the first start: the import creates the data directory.
 
+**From another Unagikuma.** Under **Config & import › Import and export** choose Unagikuma and upload another installation's `monitors.conf` (its *Configuration only* export, below). The preview lists every record before anything is added:
+
+- a record already here, in effect (the same check, with its file's defaults filled in), is left alone, so importing the same file twice adds nothing;
+- a monitor whose name is taken by a different one is added under a free name (`web-2`), and the `parent=` of the monitors imported with it follows;
+- a channel, period, team or status page whose name is taken stays as it is here, because monitors name them;
+- a monitor keeps the timing it had: the interval, retry, timeout and attempts from the other file's header are written into it when they differ from this file's;
+- the gateway monitors every installation adds for itself are left out; sections (`$SCOPE`) are not kept, the monitors go to the section you choose;
+- secret values are not in the file. A `${secret:NAME}` that does not exist here blocks the import until you add it under **Advanced › Secrets**, because a configuration naming a missing secret is refused;
+- `$INCLUDE` is refused, and `$SET`, `$DEFAULT`, `$TAG`, `$QUORUM` and `$DIALECT` are named in the preview as not carried over.
+
+The same is available as `POST /api/v1/import/unagikuma` (add `?apply=1` to apply).
+
 **From Uptime Kuma** (1.23 and 2.x). Stop Uptime Kuma, then:
 
 ```sh
@@ -594,7 +606,12 @@ Main server flags: `--data DIR` (or `UNAGIKUMA_DATA`), `--listen ADDR` (or `UNAG
 
 The data directory holds `monitors.conf`, `core.db` (users, incidents, notification log, configuration history, encrypted secrets), `history.db` (check results and uptime) and `unagikuma.key`, the key that encrypts the secrets. `cluster-ca.*` and `cluster.*` are the certificate authority the other machines of a cluster pin; keep them with the key so they keep trusting a restored master.
 
-A backup is an archive made while the server runs, from **Settings › System** or the command line:
+Under **Config & import › Import and export** there are two ways out:
+
+- **Configuration only** downloads `monitors.conf`: the monitors, channels, teams, periods and status pages. No accounts, no secret values, no history. Another Unagikuma imports it (see above).
+- **Everything** downloads one archive, encrypted with a passphrase of at least 8 characters: accounts, secrets with their key, the cluster CA, settings and the check history. Restore it with `unagikuma restore` (restoring from the page is not there yet).
+
+The same archive comes from the command line, while the server runs:
 
 ```sh
 unagikuma backup --history                         # databases and monitors.conf

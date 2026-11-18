@@ -59,6 +59,10 @@ type Options struct {
 	Resources map[string]string
 	// UserExists reports an account name already in use.
 	UserExists func(name string) bool
+	// Existing is this installation's configuration file as written, for
+	// telling a record that is already here from one that only shares its
+	// name (the Unagikuma source).
+	Existing *config.File
 }
 
 func (o Options) now() time.Time {

@@ -483,41 +483,6 @@ function System() {
   </div>`;
 }
 
-// BackupCard downloads an archive. With a passphrase it is encrypted and
-// also carries the secret key and the cluster CA.
-function BackupCard() {
-  const [history, setHistory] = useState(false);
-  const [pass, setPass] = useState('');
-  const [busy, setBusy] = useState(false);
-  const download = async (e) => {
-    e.preventDefault();
-    if (pass && pass.length < 8) return toast(t('ui.sys.backup_pass_short'), 'error');
-    setBusy(true);
-    try {
-      const r = pass
-        ? await fetch('/api/v1/backup', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Unagikuma-CSRF': getCSRF() }, body: JSON.stringify({ passphrase: pass, history }) })
-        : await fetch('/api/v1/backup' + (history ? '?history=1' : ''), { credentials: 'same-origin' });
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || 'HTTP ' + r.status);
-      const name = ((r.headers.get('content-disposition') || '').match(/filename="([^"]+)"/) || [])[1] || 'unagikuma-backup';
-      const url = URL.createObjectURL(await r.blob());
-      const a = document.createElement('a');
-      a.href = url; a.download = name;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
-    } catch (e2) { toastError(e2); }
-    setBusy(false);
-  };
-  return html`<${Card} title=${t('ui.sys.backup')}>
-    <form class="form" onSubmit=${download}>
-      <p class="small muted" style=${{ margin: 0 }}>${t('ui.sys.backup_hint')}</p>
-      <label class="switch small"><input type="checkbox" checked=${history} onChange=${(e) => setHistory(e.target.checked)} /> ${t('ui.sys.backup_history')}</label>
-      <${Field} label=${t('ui.sys.backup_pass')} hint=${t('ui.sys.backup_pass_hint')}>
-        <input type="password" autocomplete="new-password" value=${pass} onInput=${(e) => setPass(e.target.value)} /><//>
-      <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${busy}>${busy ? html`<span class="spin"></span>` : t('ui.sys.backup')}</button></div>
-    </form>
-  <//>`;
-}
-
 // Account changes the signed-in person's password. It opens from their
 // name at the bottom of the sidebar.
 export function Account({ user, embedded }) {
@@ -739,7 +704,7 @@ function Audit() {
 
 // Everyday settings, and the advanced ones that most installations set
 // once or never: they have their own place in the sidebar.
-const TABS = ['general', 'gateway', 'heartbeat', 'backup', 'scripts', 'branding', 'audit', 'registration'];
+const TABS = ['general', 'gateway', 'heartbeat', 'scripts', 'branding', 'audit', 'registration'];
 export const ADVANCED_TABS = ['teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
 export function Settings({ tab, user, advanced }) {
@@ -765,7 +730,6 @@ export function Settings({ tab, user, advanced }) {
     case 'keywords': body = html`<${Keywords} />`; break;
     case 'gateway': body = html`<${General} part="gateway" />`; break;
     case 'heartbeat': body = html`<${General} part="heartbeat" />`; break;
-    case 'backup': body = html`<${BackupCard} />`; break;
     // What the installation is (version, host, storage) sits under the general settings.
     default: body = html`<${General} /><div style=${{ height: '14px' }}></div><${System} />`;
   }

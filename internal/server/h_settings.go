@@ -812,6 +812,9 @@ func (s *Server) secretUsers(name string) []string {
 // POST with a passphrase also includes the secret key and the cluster CA,
 // encrypted.
 func (s *Server) backup(w http.ResponseWriter, r *http.Request) (any, error) {
+	if r.Method == http.MethodGet && r.URL.Query().Get("kind") == "config" {
+		return s.configExport(w, r)
+	}
 	var req struct {
 		Passphrase string `json:"passphrase"`
 		History    bool   `json:"history"`
@@ -845,6 +848,23 @@ func (s *Server) backup(w http.ResponseWriter, r *http.Request) (any, error) {
 	}
 	_ = s.app.Store().Audit(store.AuditEntry{Actor: actor, Action: "backup.download", Addr: s.ip(r),
 		Detail: withClient(map[string]any{"encrypted": req.Passphrase != "", "history": req.History, "ok": err == nil}, s.client(r, ai))})
+	return nil, errHandled
+}
+
+// configExport sends monitors.conf as it is: the monitors, channels, teams,
+// periods and status pages, and nothing else. No accounts, no secret values
+// (the file only names them), no history; another Unagikuma imports it.
+func (s *Server) configExport(w http.ResponseWriter, r *http.Request) (any, error) {
+	body := s.app.Config().File.Bytes()
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="monitors-%s.conf"`, s.now().Format("20060102-150405")))
+	_, err := w.Write(body)
+	actor, ai := "", authOf(r)
+	if ai != nil {
+		actor = ai.user
+	}
+	_ = s.app.Store().Audit(store.AuditEntry{Actor: actor, Action: "backup.download", Addr: s.ip(r),
+		Detail: withClient(map[string]any{"kind": "config", "ok": err == nil}, s.client(r, ai))})
 	return nil, errHandled
 }
 
