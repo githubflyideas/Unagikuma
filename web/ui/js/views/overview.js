@@ -123,7 +123,6 @@ function Break({ x, y, label, warn, below }) {
 // exitText says what the internet gateway is doing.
 function exitText(p, st) {
   if (!p.exit) return '';
-  if (st === 'idle') return t('ui.ov.exit_idle');
   if (st === 'warn') return t('ui.ov.exit_down');
   if (st === 'ok') return msText(p.exit.rtt_ms);
   return '';

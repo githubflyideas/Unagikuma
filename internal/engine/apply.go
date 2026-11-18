@@ -64,8 +64,10 @@ func (e *Engine) apply(cfg Config) {
 			e.saveState(m.Name, rt)
 			existed = false
 		}
+		resumed := false
 		if old := oldMon[m.Name]; old != nil && old.Paused && !m.Paused {
 			rt.Since = now // resumed: watched again from now
+			resumed = true
 		}
 		if m.Paused || m.Push {
 			e.sched.Remove(m.Name)
@@ -81,7 +83,12 @@ func (e *Engine) apply(cfg Config) {
 			due = now.Add(firstDelay)
 		case first:
 			due = now.Add(firstDelay + Spread(m.Name, min(m.Interval, spread)))
-		case !existed:
+		case !existed, resumed, rt.State.Avail == StatusPending:
+			// New, resumed, or without a result under its present
+			// definition (edited, then paused and resumed before its first
+			// round): check at once. The last check plus the interval would
+			// leave it PENDING for a whole interval, or for ever when the
+			// last check is from before the edit.
 			due = now.Add(firstDelay)
 		default:
 			due = rt.LastCheck.Add(e.intervalFor(m, rt))

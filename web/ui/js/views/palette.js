@@ -4,7 +4,7 @@
 import { html, useState, useEffect, useLayoutEffect, useRef } from '../lib.js';
 import { t, currentLang } from '../i18n.js';
 import { get, post } from '../api.js';
-import { Pill, openMonitor, enc, toast, toastError } from '../ui.js';
+import { Pill, openMonitor, enc, toast, toastError, checkNow } from '../ui.js';
 
 export function openPalette() { dispatchEvent(new CustomEvent('unagikuma:palette')); }
 
@@ -76,7 +76,7 @@ function Palette({ onClose }) {
     const r = find(arg);
     if (r) {
       const inc = incidentOf(arg);
-      if (c === 'check') items.push({ key: 'check', icon: '↻', label: t('ui.pal.check', { name: r.title }), act: run(async () => { await post(`/monitors/${enc(r.name)}/check`); toast(t('ui.mon.check_queued')); }) });
+      if (c === 'check') items.push({ key: 'check', icon: '↻', label: t('ui.pal.check', { name: r.title }), act: run(async () => { await checkNow(r.name, r.title); }) });
       else if (!inc) items.push({ key: 'none', icon: '·', label: t('ui.pal.no_incident', { name: r.title }) });
       else if (c === 'ack') items.push({ key: 'ack', icon: '✓', label: t('ui.pal.ack', { name: r.title }), act: run(async () => { await post(`/incidents/${inc.id}/ack`, {}); toast(t('ui.pal.acked', { name: r.title })); }) });
       else if (c === 'silence') {

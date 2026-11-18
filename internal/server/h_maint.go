@@ -159,12 +159,15 @@ func (s *Server) maintDelete(w http.ResponseWriter, r *http.Request) (any, error
 // kumaImport previews (?apply=0) or applies an Uptime Kuma backup or a
 // Nagios object configuration sent as the request body.
 func (s *Server) kumaImport(w http.ResponseWriter, r *http.Request) (any, error) {
-	if src := r.PathValue("source"); src != "kuma" && src != "nagios" && src != "checkmate" && src != "gatus" {
+	if src := r.PathValue("source"); src != "kuma" && src != "nagios" && src != "checkmate" && src != "gatus" && src != "unagikuma" {
 		return nil, notFound("import source")
 	}
 	limit := int64(32 << 20)
-	if r.PathValue("source") == "gatus" || r.PathValue("source") == "checkmate" {
+	if src := r.PathValue("source"); src == "gatus" || src == "checkmate" || src == "unagikuma" {
 		limit = 1 << 20
+		if src == "unagikuma" {
+			limit = 8 << 20
+		}
 	}
 	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
 	if err != nil {

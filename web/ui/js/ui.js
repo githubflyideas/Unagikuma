@@ -2,7 +2,7 @@
 import { html, useState, useEffect, useRef, useCallback, useLayoutEffect } from './lib.js';
 import { t, ago, fmtTime, fmtNum, detailText } from './i18n.js';
 import { onLive, onConnection } from './live.js';
-import { me } from './api.js';
+import { me, post } from './api.js';
 
 // The product's name, in titles and headers: the installation's own when
 // it has one (see styles.js).
@@ -114,6 +114,17 @@ export function toast(msg, kind) {
   }
 }
 export function toastError(e) { toast(errText(e), 'error'); }
+
+// checkNow runs a monitor's check and says what came out, at once: the
+// state and why, not that something was queued. A check that outlasts the
+// wait says it is still running.
+export async function checkNow(name, title) {
+  const r = await post('/monitors/' + encodeURIComponent(name) + '/check');
+  if (!r || !r.done) { toast(t('ui.mon.check_running', { name: title || name })); return r; }
+  const why = r.status !== 'ok' && r.reason ? ' — ' + reasonText(r.reason, r.detail) : (r.detail ? ' — ' + r.detail : '');
+  toast(t('ui.mon.check_done', { name: title || name, status: t('status.' + r.status) }) + why, r.status === 'critical' || r.status === 'unknown' ? 'error' : undefined);
+  return r;
+}
 
 export function Toasts() {
   const [items, set] = useState([]);

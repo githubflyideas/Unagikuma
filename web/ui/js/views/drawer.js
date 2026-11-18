@@ -3,7 +3,7 @@
 import { html, useState, useEffect } from '../lib.js';
 import { t, fmtTime } from '../i18n.js';
 import { get, post } from '../api.js';
-import { useFetch, useLive, Loading, ErrorBox, Pill, msText, reasonText, quorumText, enc, toast, toastError } from '../ui.js';
+import { useFetch, useLive, Loading, ErrorBox, Pill, msText, reasonText, quorumText, enc, toast, toastError, checkNow } from '../ui.js';
 import { EventRows } from './events.js';
 import { Path } from './monitor.js';
 
@@ -82,7 +82,7 @@ function Drawer({ name, onClose }) {
         <div class="mono muted ltr ellipsis">${row.target}</div>
         ${row.status !== 'ok' && (row.reason || row.unknown_reason) && html`<div style=${{ marginTop: '8px' }}>${reasonText(row.reason || row.unknown_reason, row.detail)}</div>`}
         <div class="row" style=${{ marginTop: '12px' }}>
-          <button class="btn sm primary" onClick=${run(() => post(`/monitors/${enc(name)}/check`), t('ui.mon.check_queued'))}>${t('ui.mon.check_now')}</button>
+          <button class="btn sm primary" onClick=${run(() => checkNow(name, row.title))}>${t('ui.mon.check_now')}</button>
           ${inc && !inc.acked && html`<button class="btn sm" onClick=${run(() => post(`/incidents/${inc.id}/ack`, {}), '')}>${t('ui.inc.ack')}</button>`}
           ${inc && html`<button class="btn sm" onClick=${run(() => post(`/incidents/${inc.id}/silence`, { duration_s: 3600 }), t('ui.inc.silenced'))}>${t('ui.inc.silence')} 1h</button>`}
           <a class="btn sm" href=${'#/monitors/' + enc(name) + '/edit'} onClick=${onClose}>${t('ui.edit')}</a>

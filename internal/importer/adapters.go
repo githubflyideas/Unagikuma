@@ -161,6 +161,14 @@ func adapterRecord(source, name string, m adapterMonitor, keys []string, r *Resu
 // ActivationError is checked by both CLI and application before any writes.
 // A partial migration must never activate a broadened success predicate.
 func (r *Result) ActivationError() error {
+	if r.Source == "Unagikuma" {
+		for _, it := range r.Items {
+			if it.Kind == "secret" && it.Status == StatusLeftOut {
+				return errors.New("import blocked: add the secrets listed in the preview first")
+			}
+		}
+		return nil
+	}
 	if r.Source != "Gatus" && r.Source != "Checkmate" {
 		return nil
 	}

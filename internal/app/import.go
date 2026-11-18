@@ -26,7 +26,7 @@ type KumaOptions struct {
 
 // convert turns the data into records according to its source.
 func (a *App) convert(data []byte, o KumaOptions) (*importer.Result, error) {
-	opts := importer.Options{Area: o.Area, File: "upload", SecretExists: a.secrets.Has,
+	opts := importer.Options{Area: o.Area, File: "upload", SecretExists: a.secrets.Has, Existing: a.Config().File,
 		UserExists: func(name string) bool { _, err := a.store.UserID(name); return err == nil }}
 	switch o.Source {
 	case "nagios":
@@ -35,6 +35,8 @@ func (a *App) convert(data []byte, o KumaOptions) (*importer.Result, error) {
 		return importer.Gatus(data, a.Config().Config, opts)
 	case "checkmate":
 		return importer.Checkmate(data, a.Config().Config, opts)
+	case "unagikuma":
+		return importer.Unagikuma(data, a.Config().Config, opts)
 	case "", "kuma":
 		return importer.Kuma(data, a.Config().Config, opts)
 	default:
@@ -86,6 +88,9 @@ func (a *App) ImportKuma(data []byte, author string, o KumaOptions) (ConfigState
 	from := res.Source
 	if o.Source == "nagios" {
 		from = "Nagios"
+	}
+	if o.Source == "unagikuma" {
+		from = "Unagikuma"
 	}
 	var stored []string
 	undo := func() {
