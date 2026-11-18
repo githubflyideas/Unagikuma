@@ -5,6 +5,7 @@
 **Added**
 - Config & import can import another Unagikuma's `monitors.conf`: what is already here is left alone (importing a file twice adds nothing), a monitor with a taken name is added under a new name with its `parent=` following, a taken channel, period, team or status page name keeps the one here, and the timing from the other file's header is kept. A secret the file names but this installation lacks blocks the import until it is added.
 - Config & import is now Import and export, with two downloads: *Configuration only* (`monitors.conf`, no accounts, secret values or history) and *Everything* (one passphrase-encrypted archive with accounts, secrets and their key, settings and history). The old Settings › Configuration backup tab is gone; its archive is the *Everything* download.
+- A backup can be restored from the same page: the archive is checked and kept, and the next start of the program puts it in place, keeping the files it replaces in a `restore-before-…` folder (a failed restore puts everything back). Cancel it while it waits.
 
 ## v2.6.26 — 2026-11-18
 

@@ -2,8 +2,10 @@ package server
 
 import (
 	"bytes"
+	"encoding/base64"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -73,5 +75,59 @@ func TestConfigExportAndImportBack(t *testing.T) {
 	// Something that is not a monitors.conf is refused with a reason.
 	if code, body = e.raw("POST", "/api/v1/import/unagikuma", []byte("hello"), "text/plain"); code != 400 {
 		t.Fatalf("junk: %d %s", code, body)
+	}
+}
+
+// A backup sent from the page is checked and kept for the next start; the
+// running installation is untouched, and it can be dropped again.
+func TestRestoreIsStagedNotApplied(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	e.setup()
+	send := func(method string, body []byte, pass string) (int, string) {
+		t.Helper()
+		req, _ := http.NewRequest(method, e.ts.URL+"/api/v1/restore", bytes.NewReader(body))
+		req.Header.Set("X-Unagikuma-CSRF", e.csrf)
+		if pass != "" {
+			req.Header.Set("X-Backup-Passphrase", base64.StdEncoding.EncodeToString([]byte(pass)))
+		}
+		resp, err := e.c.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(b)
+	}
+	_, none := send("GET", nil, "")
+	if !strings.Contains(none, `"pending":false`) {
+		t.Fatalf("nothing staged yet: %s", none)
+	}
+	// Something that is not a backup is refused and leaves nothing behind.
+	if code, body := send("POST", []byte("not a backup"), ""); code != 400 {
+		t.Fatalf("junk: %d %s", code, body)
+	}
+	if _, st := send("GET", nil, ""); !strings.Contains(st, `"pending":false`) {
+		t.Fatalf("a refused upload left something staged: %s", st)
+	}
+	before, _ := os.ReadFile(e.app.ConfigPath())
+	_, enc := e.raw("POST", "/api/v1/backup", []byte(`{"passphrase":"long enough"}`), "application/json")
+	// Wrong passphrase: refused.
+	if code, _ := send("POST", enc, "wrong passphrase"); code != 400 {
+		t.Fatalf("wrong passphrase: %d", code)
+	}
+	if code, body := send("POST", enc, "long enough"); code != 200 || !strings.Contains(body, `"staged"`) {
+		t.Fatalf("stage: %d %s", code, body)
+	}
+	if _, st := send("GET", nil, ""); !strings.Contains(st, `"pending":true`) {
+		t.Fatalf("not pending: %s", st)
+	}
+	if after, _ := os.ReadFile(e.app.ConfigPath()); !bytes.Equal(before, after) {
+		t.Fatal("staging changed the running configuration")
+	}
+	if code, _ := send("DELETE", nil, ""); code != 200 {
+		t.Fatalf("cancel: %d", code)
+	}
+	if _, st := send("GET", nil, ""); !strings.Contains(st, `"pending":false`) {
+		t.Fatalf("still pending after cancel: %s", st)
 	}
 }

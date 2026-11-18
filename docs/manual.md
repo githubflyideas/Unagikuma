@@ -609,7 +609,9 @@ The data directory holds `monitors.conf`, `core.db` (users, incidents, notificat
 Under **Config & import › Import and export** there are two ways out:
 
 - **Configuration only** downloads `monitors.conf`: the monitors, channels, teams, periods and status pages. No accounts, no secret values, no history. Another Unagikuma imports it (see above).
-- **Everything** downloads one archive, encrypted with a passphrase of at least 8 characters: accounts, secrets with their key, the cluster CA, settings and the check history. Restore it with `unagikuma restore` (restoring from the page is not there yet).
+- **Everything** downloads one archive, encrypted with a passphrase of at least 8 characters: accounts, secrets with their key, the cluster CA, settings and the check history. Restore it from the same page or with `unagikuma restore`.
+
+To restore from the page, open **Config & import › Import and export**, choose the archive under *Restore from a backup* (and give the passphrase if it is encrypted) and confirm. A running program cannot swap its own databases, so the archive is only checked and kept: a damaged file, a wrong passphrase or an archive without a database is refused and nothing is left behind. Stop the program and start it again and the backup is put in place; the files it replaces (databases, `monitors.conf`, keys) are moved to a `restore-before-<date>` folder in the data directory, and everyone signs in again with the accounts of the backup. The page shows a restore that is waiting and can cancel it. If putting it in place fails, everything is put back as it was and the staged restore is set aside in a `restore-failed-<date>` folder.
 
 The same archive comes from the command line, while the server runs:
 

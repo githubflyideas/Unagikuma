@@ -1,7 +1,7 @@
 // monitors.conf: the file (read-only), its history and imports.
 import { html, useState } from '../lib.js';
 import { t, tn, fmtTime, detailText } from '../i18n.js';
-import { get, post, getCSRF } from '../api.js';
+import { api, get, post, del, getCSRF } from '../api.js';
 import { useFetch, useLive, Loading, ErrorBox, Empty, Field, Modal, Card, PRODUCT, toast, toastError, confirmDialog, useDocTitle } from '../ui.js';
 
 // diffRows turns the line diff ("  " same, "- " old only, "+ " new only)
@@ -295,6 +295,55 @@ function ExportCards() {
   </div>`;
 }
 
+// RestoreCard puts a backup back. The running program cannot swap its own
+// databases, so the file is checked and kept, and the next start of the
+// program puts it in place. Until then it can be cancelled.
+function RestoreCard() {
+  const [file, setFile] = useState(null);
+  const [pass, setPass] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { data, error, reload } = useFetch(() => get('/restore'), []);
+  const staged = data && data.pending ? data.staged : null;
+  const when = (d) => (d ? fmtTime(new Date(d)) : '');
+  const submit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    if (!file) return toast(t('ui.restore.nofile'), 'error');
+    if (!await confirmDialog(t('ui.restore.confirm'), { danger: true })) return;
+    setBusy(true);
+    try {
+      // The passphrase travels in a header, never in an address.
+      const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(pass)));
+      await api('POST', '/restore', file, pass ? { 'X-Backup-Passphrase': b64 } : undefined);
+      toast(t('ui.restore.staged_ok'));
+      setFile(null); setPass('');
+      form.reset();
+      reload();
+    } catch (err) { toastError(err); }
+    setBusy(false);
+  };
+  const cancel = async () => {
+    try { await del('/restore'); toast(t('ui.restore.cancelled')); reload(); } catch (err) { toastError(err); }
+  };
+  return html`<${Card} title=${t('ui.restore.title')}>
+    <div class="form">
+      ${error ? html`<${ErrorBox} error=${error} />` : null}
+      ${staged ? html`<div class="banner warning" role="status">
+        <p style=${{ margin: 0 }}><strong>${t('ui.restore.staged', { instance: staged.instance || '-', created: when(staged.created), version: staged.version || '-' })}</strong></p>
+        <div class="row" style=${{ marginTop: '8px' }}><div class="spacer"></div><button type="button" class="btn" onClick=${cancel}>${t('ui.restore.cancel')}</button></div>
+      </div>` : null}
+      <form class="form" onSubmit=${submit}>
+        <p class="small muted" style=${{ margin: 0 }}>${t('ui.restore.hint')}</p>
+        <${Field} label=${t('ui.restore.file')}>
+          <input type="file" accept=".gz,.tgz,.ukbackup,application/gzip,application/octet-stream" onChange=${(e) => setFile(e.target.files[0] || null)} /><//>
+        <${Field} label=${t('ui.restore.pass')} hint=${t('ui.restore.pass_hint')}>
+          <input type="password" autocomplete="off" value=${pass} onInput=${(e) => setPass(e.target.value)} /><//>
+        <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${busy}>${busy ? html`<span class="spin"></span>` : t('ui.restore.btn')}</button></div>
+      </form>
+    </div>
+  <//>`;
+}
+
 export function ConfigView({ tab }) {
   useDocTitle(t('ui.nav.config'));
   return html`<div class="page">
@@ -303,6 +352,6 @@ export function ConfigView({ tab }) {
       <a href="#/config/history" class=${tab === 'history' ? 'on' : ''}>${t('ui.config.history')}</a>
       <a href="#/config/import" class=${tab === 'import' ? 'on' : ''}>${t('ui.import.tab')}</a>
     </div>
-    ${tab === 'history' ? html`<${HistoryTab} />` : tab === 'import' ? html`<div class="col" style=${{ gap: '12px' }}><${ImportTab} /><h3 class="muted" style=${{ margin: '8px 0 0' }}>${t('ui.export.title')}</h3><${ExportCards} /></div>` : html`<${EditTab} />`}
+    ${tab === 'history' ? html`<${HistoryTab} />` : tab === 'import' ? html`<div class="col" style=${{ gap: '12px' }}><${ImportTab} /><h3 class="muted" style=${{ margin: '8px 0 0' }}>${t('ui.export.title')}</h3><${ExportCards} /><h3 class="muted" style=${{ margin: '8px 0 0' }}>${t('ui.restore.heading')}</h3><${RestoreCard} /></div>` : html`<${EditTab} />`}
   </div>`;
 }

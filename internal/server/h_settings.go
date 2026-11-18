@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"maps"
@@ -866,6 +867,53 @@ func (s *Server) configExport(w http.ResponseWriter, r *http.Request) (any, erro
 	_ = s.app.Store().Audit(store.AuditEntry{Actor: actor, Action: "backup.download", Addr: s.ip(r),
 		Detail: withClient(map[string]any{"kind": "config", "ok": err == nil}, s.client(r, ai))})
 	return nil, errHandled
+}
+
+// maxRestoreBytes bounds an uploaded backup (the history can be large).
+const maxRestoreBytes = 8 << 30
+
+// restoreStatus says whether a restore is waiting for the next start.
+func (s *Server) restoreStatus(w http.ResponseWriter, r *http.Request) (any, error) {
+	st, ok := backup.Pending(s.app.DataDir())
+	out := map[string]any{"pending": ok}
+	if ok {
+		out["staged"] = st
+	}
+	return out, nil
+}
+
+// restoreStage checks an uploaded backup and keeps it for the next start;
+// nothing about the running installation changes. The body is the archive
+// itself; a passphrase, when it is encrypted, comes base64-encoded in
+// X-Backup-Passphrase so that it never appears in an address or a log.
+func (s *Server) restoreStage(w http.ResponseWriter, r *http.Request) (any, error) {
+	pass := ""
+	if h := r.Header.Get("X-Backup-Passphrase"); h != "" {
+		b, err := base64.StdEncoding.DecodeString(h)
+		if err != nil {
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "X-Backup-Passphrase must be base64")
+		}
+		pass = string(b)
+	}
+	st, err := backup.Stage(http.MaxBytesReader(w, r.Body, maxRestoreBytes), s.app.DataDir(), pass, s.now())
+	if err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			return nil, Errorf(http.StatusRequestEntityTooLarge, CodeTooLarge, "the backup is larger than %d GB", maxRestoreBytes>>30)
+		}
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
+	}
+	auditOf(r).note("instance", st.Instance).note("made", st.Created).note("version", st.Version).note("keys", st.Keys).target = "restore"
+	return map[string]any{"staged": st}, nil
+}
+
+// restoreCancel drops the restore waiting for the next start.
+func (s *Server) restoreCancel(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := backup.Cancel(s.app.DataDir()); err != nil {
+		return nil, err
+	}
+	auditOf(r).target = "restore cancelled"
+	return map[string]any{"pending": false}, nil
 }
 
 // errHandled tells handle() the response was already written.
