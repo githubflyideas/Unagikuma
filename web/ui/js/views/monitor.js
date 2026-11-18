@@ -2,7 +2,7 @@
 import { html, useState, useEffect, useRef } from '../lib.js';
 import { t, tn, dur, fmtTime, fmtNum, currentLang, detailText, axisTimes } from '../i18n.js';
 import { get, post, del, ifMatch } from '../api.js';
-import { useFetch, useLive, Card, Loading, ErrorBox, Empty, Pill, Dot, Beats, Ago, Copy, Seg, pct, msText, reasonText, enc, go, toast, toastError, confirmDialog, useDocTitle, gwBad } from '../ui.js';
+import { useFetch, useLive, Card, Loading, ErrorBox, Empty, Pill, Dot, Beats, Ago, Copy, Seg, pct, msText, reasonText, enc, go, toast, toastError, checkNow, confirmDialog, useDocTitle, gwBad } from '../ui.js';
 import { ObservationTable } from '../observations.js';
 import { IncidentList } from './problems.js';
 import { EventRows } from './events.js';
@@ -226,7 +226,7 @@ export function MonitorDetail({ name }) {
   if (!d.data) return html`<div class="page">${d.error ? html`<${ErrorBox} error=${d.error} retry=${d.reload} />` : html`<${Loading} />`}</div>`;
   const { row, uptime } = d.data;
   const check = async () => {
-    try { await post(`/monitors/${enc(name)}/check`); toast(t('ui.mon.check_queued')); } catch (e) { toastError(e); }
+    try { await checkNow(name, row.title); d.reload(); } catch (e) { toastError(e); }
   };
   const pause = async () => {
     try {

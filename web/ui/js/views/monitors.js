@@ -96,6 +96,8 @@ export function Monitors({ query }) {
           case 'region': hit = (r.region || '').toLowerCase() === v; break;
           case 'flag': hit = r.flags.includes(v); break;
           case 'attempts': hit = cmpNum(r.max_attempts, v); break;
+          // failed:2 / failed:>=2 — rounds that failed in a row so far (a hard failure shows the monitor's attempts).
+          case 'failed': hit = r.status !== 'ok' && cmpNum(r.attempt, v); break;
           default: hit = [r.name, r.title, r.target, r.group, r.keyword].join(' ').toLowerCase().includes(term);
         }
         return hit !== neg;
@@ -139,11 +141,16 @@ export function Monitors({ query }) {
   };
   const toggleAll = () => setSel(allPicked ? new Set() : new Set(rows.map(r => r.name)));
   const checkNow = async () => {
-    let n = 0;
+    let n = 0, bad = 0;
     for (const r of picked.slice(0, 50)) {
-      try { await post('/monitors/' + enc(r.name) + '/check'); n++; } catch { /* rate limited */ }
+      try {
+        const res = await post('/monitors/' + enc(r.name) + '/check');
+        n++;
+        if (res && res.done && res.status !== 'ok') bad++;
+      } catch { /* rate limited */ }
     }
-    toast(t('ui.mon.checks_queued', { n }));
+    toast(t('ui.mon.checks_done', { n, bad }), bad ? 'error' : undefined);
+    list.reload();
   };
   // Pause or resume every ticked monitor in one change to the file.
   const pauseAll = async (paused) => {
