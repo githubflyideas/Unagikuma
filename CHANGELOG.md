@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.6.25 — 2026-11-18
+
+**Fixed**
+- A monitor edited so that it must be checked again (a new address, say) shows PENDING until its first round. If it was paused and resumed in that time it stayed PENDING for a whole interval, because the next check was counted from before the edit. A resumed monitor, and one with no result yet, is now checked at once.
+- "Check now" answers with the result (`HTTP 200`, or why it failed) instead of "queued". A target slower than its timeout says it is still being checked.
+
+**Added**
+- The monitor list's search takes `failed:2`, `failed:>=1`, `-failed:1`: monitors whose check has failed that many rounds in a row. (A failure that has become real shows the monitor's attempts.)
+
 ## v2.6.24 — 2026-11-15
 
 A review of how each check's value is read and judged. A file that used to load with one of these mistakes now says so; the last good version keeps running until it is corrected.

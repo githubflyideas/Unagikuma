@@ -909,6 +909,10 @@ func (s *Server) monitorCheck(w http.ResponseWriter, r *http.Request) (any, erro
 	if !seesMonitor(r, s.monitorParam(r)) {
 		return nil, notFound("monitor")
 	}
+	var before time.Time
+	if row, ok := s.app.Engine().Row(s.monitorParam(r)); ok {
+		before = row.LastCheck
+	}
 	err := s.app.Engine().CheckNow(s.monitorParam(r))
 	switch {
 	case errors.Is(err, engine.ErrNotFound):
@@ -918,8 +922,41 @@ func (s *Server) monitorCheck(w http.ResponseWriter, r *http.Request) (any, erro
 	case err != nil:
 		return nil, err
 	}
+	// The check runs now; wait for its result, so the answer is the state
+	// and not "queued". A check that outlasts the wait (a slow target)
+	// is reported as still running and shows up in the list when done.
+	name := s.monitorParam(r)
+	if row, ok := s.awaitCheck(r.Context(), name, before); ok {
+		return map[string]any{"queued": false, "done": true, "status": row.Status, "reason": row.Reason, "detail": row.Detail,
+			"latency_ms": row.LatencyMS, "last_check": row.LastCheck}, nil
+	}
 	w.WriteHeader(http.StatusAccepted)
-	return map[string]any{"queued": true}, nil
+	return map[string]any{"queued": true, "done": false}, nil
+}
+
+// awaitCheck waits until the monitor has a result newer than before, for
+// as long as the check itself may take (its timeout, and a little more).
+func (s *Server) awaitCheck(ctx context.Context, name string, before time.Time) (engine.MonitorRow, bool) {
+	wait := 8 * time.Second
+	if m := s.app.EffectiveConfig().FindMonitor(name); m != nil && m.Timeout > 0 {
+		wait = min(m.Timeout+3*time.Second, 30*time.Second)
+	}
+	deadline := time.NewTimer(wait)
+	defer deadline.Stop()
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		if row, ok := s.app.Engine().Row(name); ok && row.LastCheck.After(before) {
+			return row, true
+		}
+		select {
+		case <-ctx.Done():
+			return engine.MonitorRow{}, false
+		case <-deadline.C:
+			return engine.MonitorRow{}, false
+		case <-tick.C:
+		}
+	}
 }
 
 // probeResultJSON is a probe result as the API shows it: latency in
