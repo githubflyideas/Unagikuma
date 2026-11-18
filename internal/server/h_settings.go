@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"maps"
@@ -812,6 +813,9 @@ func (s *Server) secretUsers(name string) []string {
 // POST with a passphrase also includes the secret key and the cluster CA,
 // encrypted.
 func (s *Server) backup(w http.ResponseWriter, r *http.Request) (any, error) {
+	if r.Method == http.MethodGet && r.URL.Query().Get("kind") == "config" {
+		return s.configExport(w, r)
+	}
 	var req struct {
 		Passphrase string `json:"passphrase"`
 		History    bool   `json:"history"`
@@ -846,6 +850,70 @@ func (s *Server) backup(w http.ResponseWriter, r *http.Request) (any, error) {
 	_ = s.app.Store().Audit(store.AuditEntry{Actor: actor, Action: "backup.download", Addr: s.ip(r),
 		Detail: withClient(map[string]any{"encrypted": req.Passphrase != "", "history": req.History, "ok": err == nil}, s.client(r, ai))})
 	return nil, errHandled
+}
+
+// configExport sends monitors.conf as it is: the monitors, channels, teams,
+// periods and status pages, and nothing else. No accounts, no secret values
+// (the file only names them), no history; another Unagikuma imports it.
+func (s *Server) configExport(w http.ResponseWriter, r *http.Request) (any, error) {
+	body := s.app.Config().File.Bytes()
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="monitors-%s.conf"`, s.now().Format("20060102-150405")))
+	_, err := w.Write(body)
+	actor, ai := "", authOf(r)
+	if ai != nil {
+		actor = ai.user
+	}
+	_ = s.app.Store().Audit(store.AuditEntry{Actor: actor, Action: "backup.download", Addr: s.ip(r),
+		Detail: withClient(map[string]any{"kind": "config", "ok": err == nil}, s.client(r, ai))})
+	return nil, errHandled
+}
+
+// maxRestoreBytes bounds an uploaded backup (the history can be large).
+const maxRestoreBytes = 8 << 30
+
+// restoreStatus says whether a restore is waiting for the next start.
+func (s *Server) restoreStatus(w http.ResponseWriter, r *http.Request) (any, error) {
+	st, ok := backup.Pending(s.app.DataDir())
+	out := map[string]any{"pending": ok}
+	if ok {
+		out["staged"] = st
+	}
+	return out, nil
+}
+
+// restoreStage checks an uploaded backup and keeps it for the next start;
+// nothing about the running installation changes. The body is the archive
+// itself; a passphrase, when it is encrypted, comes base64-encoded in
+// X-Backup-Passphrase so that it never appears in an address or a log.
+func (s *Server) restoreStage(w http.ResponseWriter, r *http.Request) (any, error) {
+	pass := ""
+	if h := r.Header.Get("X-Backup-Passphrase"); h != "" {
+		b, err := base64.StdEncoding.DecodeString(h)
+		if err != nil {
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "X-Backup-Passphrase must be base64")
+		}
+		pass = string(b)
+	}
+	st, err := backup.Stage(http.MaxBytesReader(w, r.Body, maxRestoreBytes), s.app.DataDir(), pass, s.now())
+	if err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			return nil, Errorf(http.StatusRequestEntityTooLarge, CodeTooLarge, "the backup is larger than %d GB", maxRestoreBytes>>30)
+		}
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
+	}
+	auditOf(r).note("instance", st.Instance).note("made", st.Created).note("version", st.Version).note("keys", st.Keys).target = "restore"
+	return map[string]any{"staged": st}, nil
+}
+
+// restoreCancel drops the restore waiting for the next start.
+func (s *Server) restoreCancel(w http.ResponseWriter, r *http.Request) (any, error) {
+	if err := backup.Cancel(s.app.DataDir()); err != nil {
+		return nil, err
+	}
+	auditOf(r).target = "restore cancelled"
+	return map[string]any{"pending": false}, nil
 }
 
 // errHandled tells handle() the response was already written.

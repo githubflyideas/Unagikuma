@@ -1,8 +1,8 @@
 // monitors.conf: the file (read-only), its history and imports.
 import { html, useState } from '../lib.js';
 import { t, tn, fmtTime, detailText } from '../i18n.js';
-import { get, post, getCSRF } from '../api.js';
-import { useFetch, useLive, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, confirmDialog, useDocTitle } from '../ui.js';
+import { api, get, post, del, getCSRF } from '../api.js';
+import { useFetch, useLive, Loading, ErrorBox, Empty, Field, Modal, Card, PRODUCT, toast, toastError, confirmDialog, useDocTitle } from '../ui.js';
 
 // diffRows turns the line diff ("  " same, "- " old only, "+ " new only)
 // into two-column rows: a run of removed lines is paired with the added
@@ -158,8 +158,8 @@ function HistoryTab() {
   </div>`;
 }
 
-// ImportTab converts another tool's monitors: an Uptime Kuma backup, Nagios object files, a Checkmate export or a Gatus file:
-// preview first, then add.
+// ImportTab converts another tool's monitors: an Uptime Kuma backup, Nagios object files, a Checkmate export, a Gatus file
+// or another Unagikuma's monitors.conf: preview first, then add.
 function ImportTab() {
   const [source, setSource] = useState('kuma');
   const [file, setFile] = useState(null);
@@ -202,12 +202,12 @@ function ImportTab() {
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="card"><div class="bd form">
       <${Field} label=${t('ui.import.source')}>
-        <div class="src-cards" role="radiogroup">${[['kuma', 'Uptime Kuma', 'ui.import.src_kuma'], ['nagios', 'Nagios', 'ui.import.src_nagios'], ['checkmate', 'Checkmate', 'ui.import.src_checkmate'], ['gatus', 'Gatus', 'ui.import.src_gatus']].map(([k, name, hint]) => html`
+        <div class="src-cards" role="radiogroup">${[['unagikuma', PRODUCT, 'ui.import.src_unagikuma'], ['kuma', 'Uptime Kuma', 'ui.import.src_kuma'], ['nagios', 'Nagios', 'ui.import.src_nagios'], ['checkmate', 'Checkmate', 'ui.import.src_checkmate'], ['gatus', 'Gatus', 'ui.import.src_gatus']].map(([k, name, hint]) => html`
           <button type="button" role="radio" aria-checked=${source === k} class=${'src-card' + (source === k ? ' on' : '')} onClick=${() => { setSource(k); setFile(null); reset(); }}>
             <b>${name}</b><span class="small muted">${t(hint)}</span></button>`)}</div><//>
-      <p class="small muted" style=${{ margin: 0 }}>${t(source === 'kuma' ? 'ui.import.intro' : source === 'nagios' ? 'ui.import.nagios_intro' : 'ui.import.adapter_intro')}</p>
+      <p class="small muted" style=${{ margin: 0 }}>${t(source === 'kuma' ? 'ui.import.intro' : source === 'nagios' ? 'ui.import.nagios_intro' : source === 'unagikuma' ? 'ui.import.unagikuma_intro' : 'ui.import.adapter_intro')}</p>
       ${source !== 'nagios'
-        ? html`<input key=${source} type="file" accept=${source === 'kuma' ? '.db,.json,application/json,application/vnd.sqlite3' : source === 'checkmate' ? '.json,application/json' : '.yaml,.yml,text/yaml'} onChange=${(e) => { setFile(e.target.files[0] || null); reset(); }} />`
+        ? html`<input key=${source} type="file" accept=${source === 'kuma' ? '.db,.json,application/json,application/vnd.sqlite3' : source === 'checkmate' ? '.json,application/json' : source === 'unagikuma' ? '.conf,.txt,text/plain' : '.yaml,.yml,text/yaml'} onChange=${(e) => { setFile(e.target.files[0] || null); reset(); }} />`
         : html`<input key="nagios" type="file" multiple accept=".cfg,text/plain" onChange=${(e) => {
           // Several object files are simply joined, as Nagios reads them.
           const fs = [...e.target.files];
@@ -219,7 +219,7 @@ function ImportTab() {
           <input type="text" class="ltr" list="import-areas" value=${area} placeholder="region:north" onInput=${(e) => { setArea(e.target.value); reset(); }} />
           <datalist id="import-areas">${areas.map(a => html`<option value=${a} />`)}</datalist><//>
         <${Field} label=${t('ui.import.manager')} hint=${t('ui.import.manager_hint')}>
-          <select value=${manager} disabled=${!area.trim() || source === 'checkmate' || source === 'gatus'} onChange=${(e) => setManager(e.target.value)}>
+          <select value=${manager} disabled=${!area.trim() || source === 'checkmate' || source === 'gatus' || source === 'unagikuma'} onChange=${(e) => setManager(e.target.value)}>
             <option value="">—</option>
             ${((users.data && users.data.items) || []).map(u => html`<option value=${u.username}>${u.username} (${t('ui.user.role.' + u.role)})</option>`)}
           </select><//>
@@ -247,6 +247,103 @@ function ImportTab() {
   </div>`;
 }
 
+// download saves what a request returns as a file, named as the server says.
+async function download(req) {
+  const r = await req;
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || 'HTTP ' + r.status);
+  const name = ((r.headers.get('content-disposition') || '').match(/filename="([^"]+)"/) || [])[1] || 'unagikuma-export';
+  const url = URL.createObjectURL(await r.blob());
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// ExportCards are the two ways out: the configuration alone, which another
+// Unagikuma imports on this page, and everything, which unagikuma restore
+// brings back whole.
+function ExportCards() {
+  const [pass, setPass] = useState('');
+  const [busy, setBusy] = useState('');
+  const run = async (what, f) => {
+    setBusy(what);
+    try { await f(); } catch (e) { toastError(e); }
+    setBusy('');
+  };
+  const config = () => run('config', () => download(fetch('/api/v1/backup?kind=config', { credentials: 'same-origin' })));
+  const everything = (e) => {
+    e.preventDefault();
+    if (pass.length < 8) return toast(t('ui.sys.backup_pass_short'), 'error');
+    return run('all', () => download(fetch('/api/v1/backup', { method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-Unagikuma-CSRF': getCSRF() }, body: JSON.stringify({ passphrase: pass, history: true }) })));
+  };
+  return html`<div class="grid g2">
+    <${Card} title=${t('ui.export.config_title')}>
+      <div class="form">
+        <p class="small muted" style=${{ margin: 0 }}>${t('ui.export.config_hint')}</p>
+        <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!!busy} onClick=${config}>${busy === 'config' ? html`<span class="spin"></span>` : t('ui.export.config_btn')}</button></div>
+      </div>
+    <//>
+    <${Card} title=${t('ui.export.all_title')}>
+      <form class="form" onSubmit=${everything}>
+        <p class="small muted" style=${{ margin: 0 }}>${t('ui.export.all_hint')}</p>
+        <${Field} label=${t('ui.export.pass')} hint=${t('ui.export.pass_hint')}>
+          <input type="password" autocomplete="new-password" value=${pass} onInput=${(e) => setPass(e.target.value)} /><//>
+        <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!!busy}>${busy === 'all' ? html`<span class="spin"></span>` : t('ui.export.all_btn')}</button></div>
+      </form>
+    <//>
+  </div>`;
+}
+
+// RestoreCard puts a backup back. The running program cannot swap its own
+// databases, so the file is checked and kept, and the next start of the
+// program puts it in place. Until then it can be cancelled.
+function RestoreCard() {
+  const [file, setFile] = useState(null);
+  const [pass, setPass] = useState('');
+  const [busy, setBusy] = useState(false);
+  const { data, error, reload } = useFetch(() => get('/restore'), []);
+  const staged = data && data.pending ? data.staged : null;
+  const when = (d) => (d ? fmtTime(new Date(d)) : '');
+  const submit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    if (!file) return toast(t('ui.restore.nofile'), 'error');
+    if (!await confirmDialog(t('ui.restore.confirm'), { danger: true })) return;
+    setBusy(true);
+    try {
+      // The passphrase travels in a header, never in an address.
+      const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(pass)));
+      await api('POST', '/restore', file, pass ? { 'X-Backup-Passphrase': b64 } : undefined);
+      toast(t('ui.restore.staged_ok'));
+      setFile(null); setPass('');
+      form.reset();
+      reload();
+    } catch (err) { toastError(err); }
+    setBusy(false);
+  };
+  const cancel = async () => {
+    try { await del('/restore'); toast(t('ui.restore.cancelled')); reload(); } catch (err) { toastError(err); }
+  };
+  return html`<${Card} title=${t('ui.restore.title')}>
+    <div class="form">
+      ${error ? html`<${ErrorBox} error=${error} />` : null}
+      ${staged ? html`<div class="banner warning" role="status">
+        <p style=${{ margin: 0 }}><strong>${t('ui.restore.staged', { instance: staged.instance || '-', created: when(staged.created), version: staged.version || '-' })}</strong></p>
+        <div class="row" style=${{ marginTop: '8px' }}><div class="spacer"></div><button type="button" class="btn" onClick=${cancel}>${t('ui.restore.cancel')}</button></div>
+      </div>` : null}
+      <form class="form" onSubmit=${submit}>
+        <p class="small muted" style=${{ margin: 0 }}>${t('ui.restore.hint')}</p>
+        <${Field} label=${t('ui.restore.file')}>
+          <input type="file" accept=".gz,.tgz,.ukbackup,application/gzip,application/octet-stream" onChange=${(e) => setFile(e.target.files[0] || null)} /><//>
+        <${Field} label=${t('ui.restore.pass')} hint=${t('ui.restore.pass_hint')}>
+          <input type="password" autocomplete="off" value=${pass} onInput=${(e) => setPass(e.target.value)} /><//>
+        <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${busy}>${busy ? html`<span class="spin"></span>` : t('ui.restore.btn')}</button></div>
+      </form>
+    </div>
+  <//>`;
+}
+
 export function ConfigView({ tab }) {
   useDocTitle(t('ui.nav.config'));
   return html`<div class="page">
@@ -255,6 +352,6 @@ export function ConfigView({ tab }) {
       <a href="#/config/history" class=${tab === 'history' ? 'on' : ''}>${t('ui.config.history')}</a>
       <a href="#/config/import" class=${tab === 'import' ? 'on' : ''}>${t('ui.import.tab')}</a>
     </div>
-    ${tab === 'history' ? html`<${HistoryTab} />` : tab === 'import' ? html`<${ImportTab} />` : html`<${EditTab} />`}
+    ${tab === 'history' ? html`<${HistoryTab} />` : tab === 'import' ? html`<div class="col" style=${{ gap: '12px' }}><${ImportTab} /><h3 class="muted" style=${{ margin: '8px 0 0' }}>${t('ui.export.title')}</h3><${ExportCards} /><h3 class="muted" style=${{ margin: '8px 0 0' }}>${t('ui.restore.heading')}</h3><${RestoreCard} /></div>` : html`<${EditTab} />`}
   </div>`;
 }

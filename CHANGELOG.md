@@ -2,12 +2,23 @@
 
 ## v2.6.25 — 2026-11-18
 
-**Fixed**
-- A monitor edited so that it must be checked again (a new address, say) shows PENDING until its first round. If it was paused and resumed in that time it stayed PENDING for a whole interval, because the next check was counted from before the edit. A resumed monitor, and one with no result yet, is now checked at once.
-- "Check now" answers with the result (`HTTP 200`, or why it failed) instead of "queued". A target slower than its timeout says it is still being checked.
-
 **Added**
-- The monitor list's search takes `failed:2`, `failed:>=1`, `-failed:1`: monitors whose check has failed that many rounds in a row. (A failure that has become real shows the monitor's attempts.)
+- Config & import can import another Unagikuma's `monitors.conf`: what is already here is left alone (importing a file twice adds nothing), a monitor with a taken name is added under a new name with its `parent=` following, a taken channel, period, team or status page name keeps the one here. A secret the file names but this installation lacks blocks the import until it is added.
+- Config & import is now Import and export, with two downloads: *Configuration only* (`monitors.conf`, no accounts, secret values or history) and *Everything* (one passphrase-encrypted archive with accounts, secrets and their key, settings and history). The old Settings › Configuration backup tab is gone.
+- A backup can be restored from the same page: the archive is checked and kept, and the next start of the program puts it in place, keeping the files it replaces in a `restore-before-…` folder (a failed restore puts everything back). Cancel it while it waits.
+- The monitor list's search takes `failed:2`, `failed:>=1`, `-failed:1`: monitors whose check has failed that many rounds in a row.
+
+**Fixed**
+- A monitor edited so that it must be checked again showed PENDING for a whole interval if it was paused and resumed meanwhile. A resumed monitor, and one with no result yet, is now checked at once.
+- "Check now" answers with the result (`HTTP 200`, or why it failed) instead of "queued".
+- The first-run screen said "No permission" when the setup token was wrong. It now says the token is wrong, where to copy it from and that restarting prints a new one.
+- Every text of the console is translated in all 13 other languages (some were still English).
+
+**Changed**
+- Settings: the System tab is gone, its cards sit under General; Style and branding and Audit come just before Registration.
+- Status pages › Wall screen now also holds the managers' summary.
+- The overview no longer says "Not probed: …" under the internet gateway.
+- The Sport theme is removed (accounts that had it get Calm); the Country theme is a little earthier and lighter.
 
 ## v2.6.24 — 2026-11-15
 

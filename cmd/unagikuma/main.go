@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/app"
+	"github.com/githubflyideas/unagikuma/internal/backup"
 	"github.com/githubflyideas/unagikuma/internal/cluster"
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/directory"
@@ -202,6 +203,19 @@ func runServer(args []string) error {
 	log, err := newLogger(*logFile, lvl)
 	if err != nil {
 		return err
+	}
+	// A restore staged from the web UI is put in place before anything is
+	// opened; what it replaces is kept beside the data.
+	cfgForRestore := *cfgPath
+	if cfgForRestore == "" {
+		cfgForRestore = filepath.Join(*data, "monitors.conf")
+	}
+	if applied, st, before, err := backup.ApplyPending(*data, cfgForRestore, time.Now()); err != nil {
+		log.Error("the staged restore could not be applied; the installation is as it was", "err", err)
+		fmt.Fprintf(os.Stderr, "\n  The restore staged from the web UI could not be applied (%v).\n  Nothing was changed; the staged restore was set aside in the data directory.\n\n", err)
+	} else if applied {
+		log.Info("restored from the backup staged in the web UI", "made", st.Created, "instance", st.Instance, "version", st.Version, "replaced_files_kept_in", before)
+		fmt.Fprintf(os.Stderr, "\n  Restored from the backup made %s. The files it replaced are in %s\n\n", st.Created.Format("2006-01-02 15:04"), before)
 	}
 	// Take the port first: when it is busy, nothing is created yet.
 	raw, err := net.Listen("tcp", *listen)

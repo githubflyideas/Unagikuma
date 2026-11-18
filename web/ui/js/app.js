@@ -21,10 +21,10 @@ import { DrawerHost } from './views/drawer.js';
 import { PaletteHost, openPalette } from './views/palette.js';
 import { loadBrand, loadMyStyle, applyCachedStyle, onStyleLoaded, signedOut } from './styles.js';
 
-// Six themes, each its own mood; Calm when none is chosen. Names stored
+// Five themes, each its own mood; Calm when none is chosen. Names stored
 // by earlier versions (and "auto", which there was) map to the nearest.
-const TONES = ['perfume', 'country', 'industrial', 'calm', 'sport', 'passion'];
-const OLD_TONES = { light: 'calm', paper: 'calm', dark: 'industrial', ink: 'industrial', mist: 'sport', slate: 'industrial',
+const TONES = ['perfume', 'country', 'industrial', 'calm', 'passion'];
+const OLD_TONES = { light: 'calm', paper: 'calm', dark: 'industrial', ink: 'industrial', mist: 'calm', sport: 'calm', slate: 'industrial',
   graphite: 'industrial', sky: 'calm', violet: 'country', brand: 'calm', auto: 'calm' };
 // Each dot shows its theme's own sidebar and accent colours.
 const SWATCH = {
@@ -32,7 +32,6 @@ const SWATCH = {
   country: 'linear-gradient(135deg, #4a3426 50%, #e0a526 50%)',
   industrial: 'linear-gradient(135deg, #15181b 50%, #f28c28 50%)',
   calm: 'linear-gradient(135deg, #dfe5e0 50%, #3d7c78 50%)',
-  sport: 'linear-gradient(135deg, #0b1f3a 50%, #2563eb 50%)',
   passion: 'linear-gradient(135deg, #2b0b24 50%, #e0246f 50%)',
 };
 function toneOf(v) {
