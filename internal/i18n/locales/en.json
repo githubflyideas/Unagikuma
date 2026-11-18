@@ -275,6 +275,7 @@
 "ui.setup.intro": "Create the administrator account. You can add monitors right after.",
 "ui.setup.token": "Setup token",
 "ui.setup.token_hint": "Printed in the server log at first start; needed when not opening the UI on the server itself.",
+"ui.setup.bad_token": "Wrong setup token. Copy it from the server log (the “first run … setup_token=…” line); restarting the program prints a new one.",
 "ui.setup.confirm": "Repeat password",
 "ui.setup.create": "Create account",
 "ui.setup.short": "At least 8 characters",

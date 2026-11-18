@@ -76,6 +76,7 @@
 "ui.setup.intro": "Lege das Administratorkonto an. Danach kannst du sofort Monitore hinzufügen.",
 "ui.setup.token": "Einrichtungstoken",
 "ui.setup.token_hint": "Steht beim ersten Start im Serverprotokoll; nötig, wenn die Oberfläche nicht auf dem Server selbst geöffnet wird.",
+"ui.setup.bad_token": "Falsches Einrichtungs-Token. Aus dem Server-Log kopieren (Zeile „first run … setup_token=…“); ein Neustart des Programms gibt ein neues aus.",
 "ui.setup.confirm": "Passwort wiederholen",
 "ui.setup.create": "Konto anlegen",
 "ui.setup.short": "Mindestens 8 Zeichen",

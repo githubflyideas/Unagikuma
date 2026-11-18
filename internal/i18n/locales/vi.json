@@ -76,6 +76,7 @@
 "ui.setup.intro": "Tạo tài khoản quản trị. Ngay sau đó bạn có thể thêm giám sát.",
 "ui.setup.token": "Mã thiết lập",
 "ui.setup.token_hint": "In trong nhật ký máy chủ ở lần chạy đầu; cần khi không mở giao diện trên chính máy chủ.",
+"ui.setup.bad_token": "Mã thiết lập sai. Hãy sao chép từ nhật ký máy chủ (dòng “first run … setup_token=…”); khởi động lại chương trình sẽ in mã mới.",
 "ui.setup.confirm": "Nhập lại mật khẩu",
 "ui.setup.create": "Tạo tài khoản",
 "ui.setup.short": "Ít nhất 8 ký tự",
