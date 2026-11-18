@@ -133,14 +133,14 @@ function ReportTab() {
     <div class="card"><div class="hd"><h3 class=${r.ok ? '' : 'crit-text'}>${r.title}</h3></div>
       <div class="bd"><pre class="report">${r.body}</pre></div></div>
     ${me.role === 'admin' && html`<${WeeklySettings} />`}
-    <${LinkCard} page="summary" k="sum" share=${false} />
   </div>`;
 }
 
-// ScreensTab opens or shares the on-duty wall screen. The managers'
-// summary is a page of the console (/summary), not something to cast.
+// ScreensTab opens or shares the on-duty wall screen, then opens the
+// managers' summary, which is a page of the console (/summary) and not
+// something to cast.
 function ScreensTab() {
-  return html`<div class="links2"><${LinkCard} page="wall" k="wall" /></div>`;
+  return html`<div class="links2"><${LinkCard} page="wall" k="wall" /><${LinkCard} page="summary" k="sum" share=${false} /></div>`;
 }
 
 // Change notices went to Alerts and notifications; this page is about

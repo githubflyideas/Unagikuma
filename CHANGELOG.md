@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.6.26 — 2026-11-18
+
+**Changed**
+- Settings: the System tab is gone, its version, host and storage cards sit under General; Style and branding and Audit come after Check scripts, just before Registration.
+- Status pages › Wall screen now also holds the managers' summary (it was under Daily report).
+- The overview no longer says "Not probed: …" under the internet gateway.
+- The Sport theme is removed (accounts that had it get Calm); the Country theme is a little earthier and lighter.
+
 ## v2.6.24 — 2026-11-15
 
 A review of how each check's value is read and judged. A file that used to load with one of these mistakes now says so; the last good version keeps running until it is corrected.

@@ -739,7 +739,7 @@ function Audit() {
 
 // Everyday settings, and the advanced ones that most installations set
 // once or never: they have their own place in the sidebar.
-const TABS = ['general', 'branding', 'gateway', 'heartbeat', 'backup', 'audit', 'scripts', 'system', 'registration'];
+const TABS = ['general', 'gateway', 'heartbeat', 'backup', 'scripts', 'branding', 'audit', 'registration'];
 export const ADVANCED_TABS = ['teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
 export function Settings({ tab, user, advanced }) {
@@ -763,11 +763,11 @@ export function Settings({ tab, user, advanced }) {
     case 'tokens': body = html`<${Tokens} />`; break;
     case 'secrets': body = html`<${Secrets} />`; break;
     case 'keywords': body = html`<${Keywords} />`; break;
-    case 'system': body = html`<${System} />`; break;
     case 'gateway': body = html`<${General} part="gateway" />`; break;
     case 'heartbeat': body = html`<${General} part="heartbeat" />`; break;
     case 'backup': body = html`<${BackupCard} />`; break;
-    default: body = html`<${General} />`;
+    // What the installation is (version, host, storage) sits under the general settings.
+    default: body = html`<${General} /><div style=${{ height: '14px' }}></div><${System} />`;
   }
   return html`<div class="page">
     <div class="tabs">${tabs.map(k => html`<a href=${base + k} class=${tab === k ? 'on' : ''}>${t('ui.set.tab.' + k)}</a>`)}</div>
