@@ -273,6 +273,7 @@
 "ui.setup.intro": "创建管理员账号，之后就可以添加监控了。",
 "ui.setup.token": "初始化令牌",
 "ui.setup.token_hint": "首次启动时打印在服务器日志中；不在服务器本机打开界面时需要填写。",
+"ui.setup.bad_token": "初始化令牌不对。请从服务器日志里复制（首次启动时打印的 setup_token 那一行）；重启程序会打印新的令牌。",
 "ui.setup.confirm": "再次输入密码",
 "ui.setup.create": "创建账号",
 "ui.setup.short": "至少 8 个字符",

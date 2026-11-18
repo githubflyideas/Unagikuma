@@ -115,7 +115,9 @@ function Setup({ local, onDone, onLang }) {
       const r = await post('/setup', { username: f.username, password: f.password, token: f.token, lang: currentLang(), timezone: localZone() });
       onDone(r);
     } catch (e2) {
-      setErr(errText(e2));
+      // The only thing this form can be refused for is the token: say so,
+      // instead of the general "no permission".
+      setErr(e2 && e2.code === 'forbidden' ? t('ui.setup.bad_token') : errText(e2));
     }
     setBusy(false);
   };

@@ -77,6 +77,7 @@
 "ui.setup.intro": "Créez le compte administrateur. Vous pourrez ensuite ajouter des sondes.",
 "ui.setup.token": "Jeton d’installation",
 "ui.setup.token_hint": "Affiché dans le journal du serveur au premier démarrage ; nécessaire si l’interface n’est pas ouverte sur le serveur lui-même.",
+"ui.setup.bad_token": "Jeton d'initialisation incorrect. Copiez-le depuis le journal du serveur (la ligne « first run … setup_token=… ») ; redémarrer le programme en affiche un nouveau.",
 "ui.setup.confirm": "Répétez le mot de passe",
 "ui.setup.create": "Créer le compte",
 "ui.setup.short": "Au moins 8 caractères",

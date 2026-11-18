@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.27 — 2026-11-18
+
+**Fixed**
+- The first-run screen said "No permission" when the setup token was wrong. It now says the token is wrong, where to copy it from (the `setup_token=` line of the server log) and that restarting the program prints a new one.
+
 ## v2.6.24 — 2026-11-15
 
 A review of how each check's value is read and judged. A file that used to load with one of these mistakes now says so; the last good version keeps running until it is corrected.

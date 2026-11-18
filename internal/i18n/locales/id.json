@@ -77,6 +77,7 @@
 "ui.setup.intro": "Buat akun administrator. Setelah itu Anda bisa langsung menambahkan monitor.",
 "ui.setup.token": "Token penyiapan",
 "ui.setup.token_hint": "Dicetak di log server saat pertama kali dijalankan; diperlukan bila UI tidak dibuka di server itu sendiri.",
+"ui.setup.bad_token": "Token penyiapan salah. Salin dari log server (baris “first run … setup_token=…”); memulai ulang program akan mencetak token baru.",
 "ui.setup.confirm": "Ulangi kata sandi",
 "ui.setup.create": "Buat akun",
 "ui.setup.short": "Minimal 8 karakter",
