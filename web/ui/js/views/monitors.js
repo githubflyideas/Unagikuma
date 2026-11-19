@@ -1,7 +1,7 @@
 // Monitor list: dense table with heartbeat bars, or the honeycomb, with
 // search and status chips. A row opens the monitor's page; ticked rows can
 // be checked now, paused, resumed or deleted together.
-import { html, useState, useEffect, useMemo, useRef } from '../lib.js';
+import { html, Fragment, useState, useEffect, useMemo, useRef } from '../lib.js';
 import { t, tn, fmtNum } from '../i18n.js';
 import { get, post, me } from '../api.js';
 import { onLive } from '../live.js';
@@ -230,13 +230,15 @@ export function Monitors({ query }) {
           </tr>`), [visible, beats.data, sel, multiTeam]);
   return html`<div class="page list">
     <${MonitorTabs} tab="list" />
-    <div class="row">
+    <div class="row" style=${{ flexWrap: 'wrap' }}>
       <div class="spacer"></div>
+      ${picked.length > 0 && html`<${Fragment}>
       <button class="btn" onClick=${() => pauseAll(true)} disabled=${picked.length === nPaused} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.pause')}${picked.length > nPaused ? ' (' + fmtNum(picked.length - nPaused) + ')' : ''}</button>
       <button class="btn" onClick=${() => pauseAll(false)} disabled=${!nPaused} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.resume')}${nPaused ? ' (' + fmtNum(nPaused) + ')' : ''}</button>
       <button class="btn" onClick=${checkNow} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.check_all')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
       ${me.role === 'admin' && html`<button class="btn" onClick=${() => setMoving({ team: '', region: '' })} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.move')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>`}
       <button class="btn danger" onClick=${remove} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.delete')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
+      <//>`}
       <button class="btn primary" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
       <a class="btn" href="#/monitors/new">${t('ui.mon.add')}</a>
     </div>
