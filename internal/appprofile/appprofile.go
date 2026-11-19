@@ -30,6 +30,8 @@ var files embed.FS
 type Field struct {
 	Key   string `json:"key"`
 	Label string `json:"label"`
+	// LabelZH is the label in Chinese; other languages show Label.
+	LabelZH string `json:"label_zh,omitempty"`
 	// Type is "quantity" (a number to compare with limits) or "counter"
 	// (a total that only grows: it is judged by its rate per second).
 	Type string `json:"type"`

@@ -6,14 +6,14 @@
   "primary": "sessions",
   "summary": ["sessions", "queue", "backends_up", "servers_down"],
   "fields": [
-    {"key": "sessions", "label": "Current sessions", "type": "quantity", "metric": "haproxy_frontend_current_sessions"},
-    {"key": "queue", "label": "Queued requests", "type": "quantity", "metric": "haproxy_backend_current_queue"},
-    {"key": "backends_up", "label": "Backends up", "type": "quantity", "metric": "haproxy_backend_status", "labels": {"state": "UP"}},
-    {"key": "backends_down", "label": "Backends down", "type": "quantity", "metric": "haproxy_backend_status", "labels": {"state": "DOWN"}},
-    {"key": "servers_down", "label": "Servers down", "type": "quantity", "metric": "haproxy_server_status", "labels": {"state": "DOWN"}},
-    {"key": "servers_active", "label": "Active servers", "type": "quantity", "metric": "haproxy_backend_active_servers"},
-    {"key": "requests", "label": "HTTP requests", "type": "counter", "metric": "haproxy_frontend_http_requests_total", "optional": true},
-    {"key": "responses_5xx", "label": "5xx responses", "type": "counter", "metric": "haproxy_frontend_http_responses_total", "labels": {"code": "5xx"}, "optional": true},
-    {"key": "connection_errors", "label": "Backend connection errors", "type": "counter", "metric": "haproxy_backend_connection_errors_total"}
+    {"key": "sessions", "label": "Current sessions", "label_zh": "当前会话数", "type": "quantity", "metric": "haproxy_frontend_current_sessions"},
+    {"key": "queue", "label": "Queued requests", "label_zh": "排队的请求", "type": "quantity", "metric": "haproxy_backend_current_queue"},
+    {"key": "backends_up", "label": "Backends up", "label_zh": "在线的后端", "type": "quantity", "metric": "haproxy_backend_status", "labels": {"state": "UP"}},
+    {"key": "backends_down", "label": "Backends down", "label_zh": "离线的后端", "type": "quantity", "metric": "haproxy_backend_status", "labels": {"state": "DOWN"}},
+    {"key": "servers_down", "label": "Servers down", "label_zh": "离线的服务器", "type": "quantity", "metric": "haproxy_server_status", "labels": {"state": "DOWN"}},
+    {"key": "servers_active", "label": "Active servers", "label_zh": "活动的服务器", "type": "quantity", "metric": "haproxy_backend_active_servers"},
+    {"key": "requests", "label": "HTTP requests", "label_zh": "HTTP 请求数", "type": "counter", "metric": "haproxy_frontend_http_requests_total", "optional": true},
+    {"key": "responses_5xx", "label": "5xx responses", "label_zh": "5xx 响应", "type": "counter", "metric": "haproxy_frontend_http_responses_total", "labels": {"code": "5xx"}, "optional": true},
+    {"key": "connection_errors", "label": "Backend connection errors", "label_zh": "后端连接错误", "type": "counter", "metric": "haproxy_backend_connection_errors_total"}
   ]
 }

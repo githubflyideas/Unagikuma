@@ -12,6 +12,7 @@ func (s *Server) appProfiles(w http.ResponseWriter, r *http.Request) (any, error
 	type field struct {
 		Key     string `json:"key"`
 		Label   string `json:"label"`
+		LabelZH string `json:"label_zh,omitempty"`
 		Type    string `json:"type"`
 		Unit    string `json:"unit,omitempty"`
 		Primary bool   `json:"primary,omitempty"`
@@ -32,7 +33,7 @@ func (s *Server) appProfiles(w http.ResponseWriter, r *http.Request) (any, error
 	for _, p := range appprofile.All() {
 		pr := profile{ID: p.ID, Title: p.Title, Reader: p.Reader, Transport: p.Transport, Path: p.Path, Port: p.Port, Docs: p.Docs, Needs: p.Needs, Verified: p.Verified}
 		for _, f := range p.Fields {
-			pr.Fields = append(pr.Fields, field{f.Key, f.Label, f.Type, f.Unit, f.Key == p.Primary})
+			pr.Fields = append(pr.Fields, field{f.Key, f.Label, f.LabelZH, f.Type, f.Unit, f.Key == p.Primary})
 		}
 		out = append(out, pr)
 	}

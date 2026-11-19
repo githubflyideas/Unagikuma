@@ -6,12 +6,12 @@
   "primary": "alerts_error",
   "summary": ["alerts_error", "api_500", "db_in_use"],
   "fields": [
-    {"key": "alerts_error", "label": "Alert rules in error", "type": "quantity", "metric": "grafana_alerting_alerts", "labels": {"state": "error"}},
-    {"key": "alerts_firing", "label": "Alert rules firing", "type": "quantity", "metric": "grafana_alerting_alerts", "labels": {"state": "alerting"}},
-    {"key": "alert_rules", "label": "Alert rules loaded", "type": "quantity", "metric": "grafana_alerting_schedule_alert_rules"},
-    {"key": "db_in_use", "label": "Database connections in use", "type": "quantity", "metric": "grafana_database_conn_in_use"},
-    {"key": "db_open", "label": "Database connections open", "type": "quantity", "metric": "grafana_database_conn_open"},
-    {"key": "api_500", "label": "API 500 responses", "type": "counter", "metric": "grafana_api_response_status_total", "labels": {"code": "500"}},
-    {"key": "page_500", "label": "Page 500 responses", "type": "counter", "metric": "grafana_page_response_status_total", "labels": {"code": "500"}}
+    {"key": "alerts_error", "label": "Alert rules in error", "label_zh": "出错的告警规则", "type": "quantity", "metric": "grafana_alerting_alerts", "labels": {"state": "error"}},
+    {"key": "alerts_firing", "label": "Alert rules firing", "label_zh": "正在触发的告警规则", "type": "quantity", "metric": "grafana_alerting_alerts", "labels": {"state": "alerting"}},
+    {"key": "alert_rules", "label": "Alert rules loaded", "label_zh": "已加载的告警规则", "type": "quantity", "metric": "grafana_alerting_schedule_alert_rules"},
+    {"key": "db_in_use", "label": "Database connections in use", "label_zh": "使用中的数据库连接", "type": "quantity", "metric": "grafana_database_conn_in_use"},
+    {"key": "db_open", "label": "Database connections open", "label_zh": "打开的数据库连接", "type": "quantity", "metric": "grafana_database_conn_open"},
+    {"key": "api_500", "label": "API 500 responses", "label_zh": "API 500 响应", "type": "counter", "metric": "grafana_api_response_status_total", "labels": {"code": "500"}},
+    {"key": "page_500", "label": "Page 500 responses", "label_zh": "页面 500 响应", "type": "counter", "metric": "grafana_page_response_status_total", "labels": {"code": "500"}}
   ]
 }
