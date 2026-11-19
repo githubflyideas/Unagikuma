@@ -1112,8 +1112,6 @@
 "ui.reg.never": "Never expires",
 "ui.reg.days_left": "{n} days left",
 "ui.reg.updates": "Updates until",
-"ui.reg.features": "Features",
-"ui.reg.feat.audit": "Audit log",
 "ui.reg.fingerprint": "Licence fingerprint",
 "ui.reg.import": "Install licence",
 "ui.reg.import_hint": "Choose license.json or paste its contents. An invalid licence is refused and the current one kept.",

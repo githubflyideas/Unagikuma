@@ -1145,8 +1145,6 @@
 "ui.reg.never": "دائم",
 "ui.reg.days_left": "متبقٍ {n} يوم",
 "ui.reg.updates": "التحديثات حتى",
-"ui.reg.features": "الميزات",
-"ui.reg.feat.audit": "سجل التدقيق",
 "ui.reg.fingerprint": "بصمة الترخيص",
 "ui.reg.import": "تثبيت ترخيص",
 "ui.reg.import_hint": "اختر license.json أو الصق محتواه. يُرفض الترخيص غير الصالح ويُحتفظ بالحالي.",

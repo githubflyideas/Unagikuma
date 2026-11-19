@@ -1112,8 +1112,6 @@
 "ui.reg.never": "Unbefristet",
 "ui.reg.days_left": "noch {n} Tage",
 "ui.reg.updates": "Updates bis",
-"ui.reg.features": "Funktionen",
-"ui.reg.feat.audit": "Audit-Protokoll",
 "ui.reg.fingerprint": "Lizenz-Fingerabdruck",
 "ui.reg.import": "Lizenz einspielen",
 "ui.reg.import_hint": "license.json wählen oder Inhalt einfügen. Eine ungültige Lizenz wird abgelehnt, die aktuelle bleibt.",

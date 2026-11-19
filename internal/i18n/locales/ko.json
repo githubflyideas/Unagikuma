@@ -1105,8 +1105,6 @@
 "ui.reg.never": "무기한",
 "ui.reg.days_left": "{n}일 남음",
 "ui.reg.updates": "업데이트 기한",
-"ui.reg.features": "기능",
-"ui.reg.feat.audit": "감사 로그",
 "ui.reg.fingerprint": "라이선스 지문",
 "ui.reg.import": "라이선스 설치",
 "ui.reg.import_hint": "license.json을 선택하거나 내용을 붙여 넣으십시오. 유효하지 않은 라이선스는 거부되고 현재 라이선스가 유지됩니다.",

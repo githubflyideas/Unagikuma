@@ -1129,8 +1129,6 @@
 "ui.reg.never": "Бессрочно",
 "ui.reg.days_left": "осталось дней: {n}",
 "ui.reg.updates": "Обновления до",
-"ui.reg.features": "Функции",
-"ui.reg.feat.audit": "Журнал аудита",
 "ui.reg.fingerprint": "Отпечаток лицензии",
 "ui.reg.import": "Установить лицензию",
 "ui.reg.import_hint": "Выберите license.json или вставьте содержимое. Недействительная лицензия отклоняется, текущая сохраняется.",

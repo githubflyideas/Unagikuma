@@ -10,8 +10,6 @@ import (
 	_ "image/png"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/githubflyideas/unagikuma/internal/license"
 )
 
 // Branding puts an installation's own name, logo and browser icon in
@@ -64,7 +62,7 @@ func (a *App) BrandSettings() Brand {
 }
 
 func (a *App) brandAllowed() bool {
-	return a.license != nil && a.license.State().Allowed(license.FeatBranding)
+	return a.license != nil && a.license.State().Registered
 }
 
 // BrandName is the name in use: the installation's own when it is

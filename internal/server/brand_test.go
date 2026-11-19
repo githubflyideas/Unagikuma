@@ -10,8 +10,6 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
-
-	"github.com/githubflyideas/unagikuma/internal/license"
 )
 
 func pngOf(t *testing.T, w, h int) []byte {
@@ -111,7 +109,7 @@ func TestBranding(t *testing.T) {
 		t.Fatalf("unknown style: %d", c)
 	}
 
-	e.register(license.FeatBranding)
+	e.register()
 	if c, b := e.raw("GET", "/logo.png", nil, ""); c != 200 || !bytes.Equal(b, logo) {
 		t.Fatalf("logo after registering: %d", c)
 	}

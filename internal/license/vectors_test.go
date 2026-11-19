@@ -16,13 +16,13 @@ func TestVector(t *testing.T) {
 	priv := ed25519.NewKeyFromSeed(seed)
 	exp := "2027-10-31"
 	f := Sign(priv, File{InstallationID: "12345678", Customer: "Example KK", Licensee: LicenseeOrganization, Product: Product,
-		License: TypeTrial, Expires: &exp, MaxUsers: 10, Features: []string{"audit", "audit", " "}})
-	const want = "unagikuma-license-v2\n56475aa7\n12345678\nExample KK\norganization\nunagikuma\ntrial\n2027-10-31\nnull\n10\naudit\n"
+		License: TypeTrial, Expires: &exp, MaxUsers: 10})
+	const want = "unagikuma-license-v2\n56475aa7\n12345678\nExample KK\norganization\nunagikuma\ntrial\n2027-10-31\nnull\n10\n"
 	if got := string(Message(f)); got != want {
 		t.Fatalf("message:\n%q\nwant\n%q", got, want)
 	}
 	// Ed25519 is deterministic: the same key and message give this.
-	const sig = "1Ll9MF5NyHI3x+kKmp26QN3orb6i+lc/+6DKqOP8qsrgE2dArfgK1l3NAkWam8wmsydpjuskII68aiJO2XCHBQ=="
+	const sig = "SW6T0zlwFWIOKMeBoRbH9esYDd9oKakdDJXsP1PgMGfzj3fSPY19zgHfze85HAwAdhgW6yF0zonNrjEEcAJCBg=="
 	if f.Signature != sig {
 		t.Fatalf("signature %s", f.Signature)
 	}

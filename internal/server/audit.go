@@ -197,11 +197,11 @@ func withAudit(r *http.Request) (*http.Request, *auditRec) {
 // auditLog lists the log. Without a registration only the last
 // license.FreeAuditDays days are readable; the response says so.
 func (s *Server) auditLog(w http.ResponseWriter, r *http.Request) (any, error) {
-	full := s.app.License().State().Allowed(license.FeatAudit)
+	full := s.app.License().State().Registered
 	sites, _ := s.app.Store().MergedSites()
 	if site := r.URL.Query().Get("site"); site != "" {
 		if !full {
-			_, err := requireFeature(s, license.FeatAudit, nil)(w, r)
+			_, err := requireRegistered(s, nil)(w, r)
 			return nil, err
 		}
 		// Another site's own log, as merged after a split.

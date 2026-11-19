@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 )
@@ -59,36 +58,20 @@ const (
 	FreeAuditDays = 3
 )
 
-// Features a licence can grant. Everything not listed is free.
-const (
-	// FeatAudit opens the audit log of permission and configuration
-	// changes: who gave whom which rights in which section.
-	FeatAudit = "audit"
-	// FeatBranding lets a theme pack replace the product name and logo
-	// (white label) and leave out "Powered by" on status pages. Theme
-	// pack colours and layouts are free.
-	FeatBranding = "branding"
-)
-
-// Features is every feature this build switches on. The issuing tool
-// refuses names that are not here.
-var Features = []string{FeatAudit, FeatBranding}
-
 // File is license.json. MaxUsers 0 means no limit. Expires nil means it
 // never expires; UpdatesUntil then says how long new releases are covered.
 type File struct {
-	KeyID          string   `json:"key_id"`
-	InstallationID string   `json:"installation_id,omitempty"`
-	Customer       string   `json:"customer"`
-	Licensee       string   `json:"licensee"`
-	Product        string   `json:"product"`
-	License        string   `json:"license"`
-	Expires        *string  `json:"expires,omitempty"`
-	UpdatesUntil   *string  `json:"updates_until,omitempty"`
-	MaxUsers       int      `json:"max_users,omitempty"`
-	Features       []string `json:"features,omitempty"`
-	Note           string   `json:"note,omitempty"`
-	Signature      string   `json:"signature,omitempty"`
+	KeyID          string  `json:"key_id"`
+	InstallationID string  `json:"installation_id,omitempty"`
+	Customer       string  `json:"customer"`
+	Licensee       string  `json:"licensee"`
+	Product        string  `json:"product"`
+	License        string  `json:"license"`
+	Expires        *string `json:"expires,omitempty"`
+	UpdatesUntil   *string `json:"updates_until,omitempty"`
+	MaxUsers       int     `json:"max_users,omitempty"`
+	Note           string  `json:"note,omitempty"`
+	Signature      string  `json:"signature,omitempty"`
 }
 
 var b64 = base64.StdEncoding
@@ -119,23 +102,6 @@ var (
 	ErrProduct     = errors.New("license: issued for another product")
 )
 
-// CanonFeatures returns the feature list as it is signed: trimmed,
-// without duplicates or empties, sorted.
-func CanonFeatures(in []string) []string {
-	seen := map[string]bool{}
-	out := make([]string, 0, len(in))
-	for _, f := range in {
-		f = strings.TrimSpace(f)
-		if f == "" || seen[f] {
-			continue
-		}
-		seen[f] = true
-		out = append(out, f)
-	}
-	sort.Strings(out)
-	return out
-}
-
 func orNull(p *string) string {
 	if p == nil || *p == "" {
 		return "null"
@@ -146,7 +112,7 @@ func orNull(p *string) string {
 // printable rejects line breaks: one would let a field pose as the next.
 func printable(f File) error {
 	for _, s := range []string{f.KeyID, f.InstallationID, f.Customer, f.Licensee, f.Product, f.License,
-		orNull(f.Expires), orNull(f.UpdatesUntil), strings.Join(CanonFeatures(f.Features), ",")} {
+		orNull(f.Expires), orNull(f.UpdatesUntil)} {
 		if strings.ContainsAny(s, "\n\r") {
 			return ErrBadField
 		}
@@ -164,15 +130,12 @@ func Message(f File) []byte {
 		b.WriteByte('\n')
 	}
 	fmt.Fprintf(&b, "%d\n", f.MaxUsers)
-	b.WriteString(strings.Join(CanonFeatures(f.Features), ","))
-	b.WriteByte('\n')
 	return []byte(b.String())
 }
 
 // Sign fills in the key id and signature (issuing side).
 func Sign(priv ed25519.PrivateKey, f File) File {
 	f.KeyID = KeyID(priv.Public().(ed25519.PublicKey))
-	f.Features = CanonFeatures(f.Features)
 	f.Signature = b64.EncodeToString(ed25519.Sign(priv, Message(f)))
 	return f
 }

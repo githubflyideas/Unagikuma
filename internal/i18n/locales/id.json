@@ -1105,8 +1105,6 @@
 "ui.reg.never": "Tanpa batas",
 "ui.reg.days_left": "{n} hari lagi",
 "ui.reg.updates": "Pembaruan hingga",
-"ui.reg.features": "Fitur",
-"ui.reg.feat.audit": "Log audit",
 "ui.reg.fingerprint": "Sidik jari lisensi",
 "ui.reg.import": "Pasang lisensi",
 "ui.reg.import_hint": "Pilih license.json atau tempel isinya. Lisensi tidak valid ditolak dan yang lama tetap dipakai.",

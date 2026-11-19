@@ -1113,8 +1113,6 @@
 "ui.reg.never": "कभी समाप्त नहीं",
 "ui.reg.days_left": "{n} दिन शेष",
 "ui.reg.updates": "अपडेट तक",
-"ui.reg.features": "सुविधाएँ",
-"ui.reg.feat.audit": "ऑडिट लॉग",
 "ui.reg.fingerprint": "लाइसेंस फ़िंगरप्रिंट",
 "ui.reg.import": "लाइसेंस स्थापित करें",
 "ui.reg.import_hint": "license.json चुनें या उसकी सामग्री चिपकाएँ। अमान्य लाइसेंस अस्वीकार होता है और मौजूदा बना रहता है।",

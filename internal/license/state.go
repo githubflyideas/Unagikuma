@@ -23,25 +23,24 @@ const (
 // State is what the rest of unagikuma asks. Every failure lands on
 // unregistered, never on something more permissive.
 type State struct {
-	Kind           string   `json:"kind"`
-	Registered     bool     `json:"registered"`
-	Reason         string   `json:"reason,omitempty"`
-	Customer       string   `json:"customer,omitempty"`
-	Licensee       string   `json:"licensee,omitempty"`
-	Type           string   `json:"type,omitempty"`
-	InstallationID string   `json:"installation_id"`
-	KeyID          string   `json:"key_id,omitempty"`
-	Fingerprint    string   `json:"fingerprint,omitempty"`
-	Days           int      `json:"days"` // left; -1 = never expires
-	Expires        string   `json:"expires,omitempty"`
-	UpdatesUntil   string   `json:"updates_until,omitempty"`
-	MaxUsers       int      `json:"max_users"`
-	Features       []string `json:"features"`
+	Kind           string `json:"kind"`
+	Registered     bool   `json:"registered"`
+	Reason         string `json:"reason,omitempty"`
+	Customer       string `json:"customer,omitempty"`
+	Licensee       string `json:"licensee,omitempty"`
+	Type           string `json:"type,omitempty"`
+	InstallationID string `json:"installation_id"`
+	KeyID          string `json:"key_id,omitempty"`
+	Fingerprint    string `json:"fingerprint,omitempty"`
+	Days           int    `json:"days"` // left; -1 = never expires
+	Expires        string `json:"expires,omitempty"`
+	UpdatesUntil   string `json:"updates_until,omitempty"`
+	MaxUsers       int    `json:"max_users"`
 }
 
 // Unregistered is the state without a valid licence.
 func Unregistered(reason string) State {
-	return State{Kind: KindUnregistered, Reason: reason, Features: []string{}}
+	return State{Kind: KindUnregistered, Reason: reason}
 }
 
 // Check turns a licence file into a State. Trials name the installation
@@ -60,7 +59,7 @@ func Check(ring Keyring, f File, installID string, now time.Time) State {
 	}
 	s := State{Kind: KindLicensed, Registered: true, Customer: f.Customer, Licensee: f.Licensee, Type: f.License,
 		KeyID: key.ID, Fingerprint: Fingerprint(f), Days: -1, MaxUsers: f.MaxUsers,
-		Features: CanonFeatures(f.Features)}
+	}
 	if f.UpdatesUntil != nil {
 		s.UpdatesUntil = *f.UpdatesUntil
 	}
@@ -71,25 +70,12 @@ func Check(ring Keyring, f File, installID string, now time.Time) State {
 		}
 		s.Expires = *f.Expires
 		if now.After(end) {
-			s.Kind, s.Registered, s.Reason, s.Days, s.Features = KindExpired, false, "license: expired on "+*f.Expires, 0, []string{}
+			s.Kind, s.Registered, s.Reason, s.Days = KindExpired, false, "license: expired on "+*f.Expires, 0
 			return s
 		}
 		s.Days = int(math.Ceil(end.Sub(now).Hours() / 24))
 	}
 	return s
-}
-
-// Allowed reports whether a registered-only feature may be used.
-func (s State) Allowed(feature string) bool {
-	if !s.Registered {
-		return false
-	}
-	for _, f := range s.Features {
-		if f == feature {
-			return true
-		}
-	}
-	return false
 }
 
 // Parse reads a licence from JSON.

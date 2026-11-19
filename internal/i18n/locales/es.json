@@ -1112,8 +1112,6 @@
 "ui.reg.never": "Sin caducidad",
 "ui.reg.days_left": "quedan {n} días",
 "ui.reg.updates": "Actualizaciones hasta",
-"ui.reg.features": "Funciones",
-"ui.reg.feat.audit": "Registro de auditoría",
 "ui.reg.fingerprint": "Huella de la licencia",
 "ui.reg.import": "Instalar licencia",
 "ui.reg.import_hint": "Elija license.json o pegue su contenido. Una licencia no válida se rechaza y se conserva la actual.",

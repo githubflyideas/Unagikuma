@@ -604,7 +604,6 @@ function Registration() {
         ${row(t('ui.reg.type'), s.type)}
         ${row(t('ui.reg.expires'), s.registered ? (s.days < 0 ? t('ui.reg.never') : s.expires + ' (' + t('ui.reg.days_left', { n: s.days }) + ')') : s.expires)}
         ${row(t('ui.reg.updates'), s.updates_until)}
-        ${row(t('ui.reg.features'), (s.features || []).map(f => t('ui.reg.feat.' + f)).join(', '))}
         ${s.usage && html`<tr><th>${t('ui.reg.nodes')}</th><td>${quota(s.usage.nodes, 0)}</td></tr>
           <tr><th>${t('ui.reg.users')}</th><td>${quota(s.usage.users, s.user_limit)}</td></tr>`}
         ${row(t('ui.reg.fingerprint'), s.fingerprint)}

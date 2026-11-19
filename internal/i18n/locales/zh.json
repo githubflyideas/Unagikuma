@@ -1105,8 +1105,6 @@
 "ui.reg.never": "永久有效",
 "ui.reg.days_left": "剩余 {n} 天",
 "ui.reg.updates": "免费升级至",
-"ui.reg.features": "功能",
-"ui.reg.feat.audit": "审计日志",
 "ui.reg.fingerprint": "许可证指纹",
 "ui.reg.import": "导入许可证",
 "ui.reg.import_hint": "选择 license.json 文件或粘贴其内容。无效的许可证会被拒绝，并保留当前许可证。",

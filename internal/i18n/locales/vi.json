@@ -1105,8 +1105,6 @@
 "ui.reg.never": "Vĩnh viễn",
 "ui.reg.days_left": "còn {n} ngày",
 "ui.reg.updates": "Cập nhật đến",
-"ui.reg.features": "Tính năng",
-"ui.reg.feat.audit": "Nhật ký kiểm toán",
 "ui.reg.fingerprint": "Dấu vân tay giấy phép",
 "ui.reg.import": "Cài giấy phép",
 "ui.reg.import_hint": "Chọn license.json hoặc dán nội dung. Giấy phép không hợp lệ bị từ chối, giấy phép hiện tại được giữ.",

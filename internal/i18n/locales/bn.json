@@ -1113,8 +1113,6 @@
 "ui.reg.never": "মেয়াদহীন",
 "ui.reg.days_left": "{n} দিন বাকি",
 "ui.reg.updates": "আপডেট পর্যন্ত",
-"ui.reg.features": "বৈশিষ্ট্য",
-"ui.reg.feat.audit": "অডিট লগ",
 "ui.reg.fingerprint": "লাইসেন্স ফিঙ্গারপ্রিন্ট",
 "ui.reg.import": "লাইসেন্স ইনস্টল",
 "ui.reg.import_hint": "license.json বেছে নিন বা বিষয়বস্তু পেস্ট করুন। অবৈধ লাইসেন্স প্রত্যাখ্যাত হয়, বর্তমানটি থাকে।",

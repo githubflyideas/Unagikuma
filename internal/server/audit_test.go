@@ -44,7 +44,7 @@ func TestAuditLog(t *testing.T) {
 			t.Fatalf("unregistered %s: %d", p, c)
 		}
 	}
-	admin.register(license.FeatAudit)
+	admin.register()
 
 	var log struct {
 		Items       []auditItem
@@ -167,7 +167,7 @@ func TestAuditTellsSharedAccountApart(t *testing.T) {
 			t.Fatalf("%s: %d", x.name, c)
 		}
 	}
-	a.register(license.FeatAudit)
+	a.register()
 	var log struct{ Items []auditItem }
 	a.do("GET", "/api/v1/audit", nil, &log)
 	client := func(target string) (session, ua string) {

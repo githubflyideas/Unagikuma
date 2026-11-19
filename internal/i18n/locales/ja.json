@@ -1105,8 +1105,6 @@
 "ui.reg.never": "無期限",
 "ui.reg.days_left": "残り {n} 日",
 "ui.reg.updates": "アップデート期限",
-"ui.reg.features": "機能",
-"ui.reg.feat.audit": "監査ログ",
 "ui.reg.fingerprint": "ライセンスのフィンガープリント",
 "ui.reg.import": "ライセンスの導入",
 "ui.reg.import_hint": "license.json を選ぶか内容を貼り付けてください。無効なライセンスは拒否され、現在のものが残ります。",

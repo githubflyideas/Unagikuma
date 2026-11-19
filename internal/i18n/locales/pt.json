@@ -1112,8 +1112,6 @@
 "ui.reg.never": "Sem expiração",
 "ui.reg.days_left": "faltam {n} dias",
 "ui.reg.updates": "Atualizações até",
-"ui.reg.features": "Recursos",
-"ui.reg.feat.audit": "Log de auditoria",
 "ui.reg.fingerprint": "Impressão digital da licença",
 "ui.reg.import": "Instalar licença",
 "ui.reg.import_hint": "Escolha license.json ou cole o conteúdo. Uma licença inválida é recusada e a atual mantida.",

@@ -13,10 +13,10 @@ func TestSignAndCheck(t *testing.T) {
 	ring := SingleKey(pub)
 	exp := "2027-10-31"
 	f := Sign(priv, File{Customer: "Example KK", Licensee: LicenseeOrganization, Product: Product, License: TypeSubscription,
-		Expires: &exp, Features: []string{FeatAudit}})
+		Expires: &exp})
 	now := time.Date(2026, 10, 28, 0, 0, 0, 0, time.UTC)
 	s := Check(ring, f, "12345678", now)
-	if !s.Registered || !s.Allowed(FeatAudit) || s.Days < 360 {
+	if !s.Registered || s.Days < 360 {
 		t.Fatalf("state: %+v", s)
 	}
 	// Any change to a signed field breaks it.
@@ -26,17 +26,17 @@ func TestSignAndCheck(t *testing.T) {
 		t.Fatal("edited licence accepted")
 	}
 	g = f
-	g.Features = []string{FeatAudit, "everything"}
+	g.MaxUsers = 1000
 	if Check(ring, g, "1", now).Registered {
-		t.Fatal("added feature accepted")
+		t.Fatal("raised quota accepted")
 	}
 	// Expired.
-	if s := Check(ring, f, "1", now.AddDate(2, 0, 0)); s.Registered || s.Kind != KindExpired || s.Allowed(FeatAudit) {
+	if s := Check(ring, f, "1", now.AddDate(2, 0, 0)); s.Registered || s.Kind != KindExpired {
 		t.Fatalf("expired: %+v", s)
 	}
 	// Trial pinned to another installation.
 	tr := Sign(priv, File{Customer: "T", Licensee: LicenseeIndividual, Product: Product, License: TypeTrial,
-		InstallationID: "11111111", Expires: &exp, Features: []string{FeatAudit}})
+		InstallationID: "11111111", Expires: &exp})
 	if Check(ring, tr, "22222222", now).Registered || !Check(ring, tr, "11111111", now).Registered {
 		t.Fatal("installation pinning")
 	}
@@ -71,10 +71,10 @@ func TestCheckerInstall(t *testing.T) {
 	if _, err := c.Install([]byte(`{"customer":"x"}`), time.Now()); err == nil {
 		t.Fatal("unsigned licence installed")
 	}
-	f := Sign(priv, File{Customer: "C", Licensee: LicenseeOrganization, Product: Product, License: TypePerpetual, Features: []string{FeatAudit}})
+	f := Sign(priv, File{Customer: "C", Licensee: LicenseeOrganization, Product: Product, License: TypePerpetual})
 	b, _ := json.Marshal(f)
 	st, err := c.Install(b, time.Now())
-	if err != nil || !st.Allowed(FeatAudit) || st.Days != -1 {
+	if err != nil || !st.Registered || st.Days != -1 {
 		t.Fatalf("install: %+v %v", st, err)
 	}
 	c2, _ := OpenWith(dir, SingleKey(pub))

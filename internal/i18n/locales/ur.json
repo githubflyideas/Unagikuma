@@ -1113,8 +1113,6 @@
 "ui.reg.never": "مستقل",
 "ui.reg.days_left": "{n} دن باقی",
 "ui.reg.updates": "اپڈیٹس تک",
-"ui.reg.features": "خصوصیات",
-"ui.reg.feat.audit": "آڈٹ لاگ",
 "ui.reg.fingerprint": "لائسنس فنگرپرنٹ",
 "ui.reg.import": "لائسنس انسٹال کریں",
 "ui.reg.import_hint": "license.json منتخب کریں یا اس کا مواد چسپاں کریں۔ غلط لائسنس مسترد ہوتا ہے اور موجودہ برقرار رہتا ہے۔",
