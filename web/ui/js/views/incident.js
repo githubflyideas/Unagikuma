@@ -5,7 +5,7 @@
 import { html } from '../lib.js';
 import { t, currentLang, fmtTime } from '../i18n.js';
 import { get } from '../api.js';
-import { useFetch, Loading, ErrorBox, useDocTitle } from '../ui.js';
+import { useFetch, Loading, ErrorBox, useDocTitle, shortId } from '../ui.js';
 
 export function IncidentReport({ id }) {
   useDocTitle(t('ui.inc.report') + ' #' + id);
@@ -22,7 +22,7 @@ export function IncidentReport({ id }) {
   return html`<div class="page pm">
     <div class="row"><a href="#/problems/all" class="muted">← ${t('ui.nav.problems')}</a></div>
     <div class="row wrap">
-      <h1 class="spacer">${t('pm.title', { id:r.incident.global_id||id, name: r.incident.monitor || r.incident.title })}</h1>
+      <h1 class="spacer">${t('pm.title', { id: shortId(r.incident.global_id) || id, name: r.incident.monitor || r.incident.title })}</h1>
       <a class="btn" href=${file('md')} download>${t('ui.pm.download_md')}</a>
       <a class="btn" href=${file('html')} download>${t('ui.pm.download_html')}</a>
       <a class="btn" href=${file('json')} download>${t('ui.pm.download_json')}</a>
