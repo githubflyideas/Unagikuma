@@ -1,6 +1,6 @@
 # Unagikuma
 
-<p align="center"><img src="docs/images/IMG_8128.jpeg" alt="Unagikuma" width="240"></p>
+<p align="center"><img src="docs/images/logo.jpeg" alt="Unagikuma" width="240"></p>
 
 **Yet another uptime check tool: u(ptime) + nagi(os) + kuma(Uptime Kuma).**
 
@@ -17,11 +17,13 @@ Friendly, self-hosted monitoring: know the moment your websites and servers go d
 - **Ready in about 30 seconds.** Download one file, run it, open your browser.
 - **One file, nothing else to install.** Works on Linux, macOS, Windows and FreeBSD.
 - **Checks what matters.** Websites, servers, ports, ping, DNS, SSL certificates and domain expiry.
-- **Watches numbers too.** Switch port traffic and temperatures over SNMP (v3 included) and any value in a JSON reply, with limits and sudden-change alerts against the same time yesterday.
+- **Watches numbers too.** Switch port traffic and temperatures over SNMP (v3 included), any value in a JSON reply, the numbers of well-known applications (nginx, Apache, Redis, Prometheus, etcd, Caddy, RabbitMQ, Grafana, Traefik, MinIO and more), a Redis INFO field or a number a SQL query returns, with limits, conditions of two fields and sudden-change alerts against the same time yesterday.
 - **Alerts where you already are.** Email, SMS and calls; Feishu, DingTalk, WeCom, Telegram, Slack, Discord, Teams, LINE, Mattermost, Google Chat; PagerDuty, Opsgenie, Datadog; ntfy, Gotify, Bark, Pushover, Pushbullet, ServerChan, Apprise; and any webhook. Each can have its own message template.
 - **Status pages** to keep your users in the loop.
-- **Easy to switch.** Bring your monitors over from Uptime Kuma, Nagios, Checkmate or Gatus, in the web page or on the command line.
-- **Six themes.** Perfume, Country, Industrial, Calm, Sport and Passion; status colours mean the same in each.
+- **Easy to switch.** Bring your monitors over from Uptime Kuma, Nagios, Checkmate, Gatus or another Unagikuma, in the web page or on the command line.
+- **Easy to back up.** Download the configuration alone or everything in one encrypted archive, and restore it from the same page.
+- **Free to start.** Everything works unregistered, with up to 5 accounts and the last 3 days of the audit log; registering lifts both.
+- **Themes and styles.** Perfume, Country, Industrial, Calm and Passion colours and every interface style are free; status colours mean the same in each.
 - **Speaks your language.** The interface comes in 15 languages.
 
 ## Quick start
@@ -58,7 +60,7 @@ On Windows, run `unagikuma.exe`.
 
 ## Moving from another tool
 
-In the web page, open **Configuration › Import**, pick Uptime Kuma, Nagios, Checkmate or Gatus, upload the file, check the preview and add it.
+In the web page, open **Config › Import and export**, pick Uptime Kuma, Nagios, Checkmate, Gatus or Unagikuma, upload the file, check the preview and add it.
 
 ![Moving from Uptime Kuma, Nagios, Checkmate or Gatus in the web page](docs/images/import.png)
 

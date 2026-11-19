@@ -1,6 +1,6 @@
 # Unagikuma
 
-<p align="center"><img src="docs/images/IMG_8128.jpeg" alt="Unagikuma" width="240"></p>
+<p align="center"><img src="docs/images/logo.jpeg" alt="Unagikuma" width="240"></p>
 
 **एक और अपटाइम जाँच टूल: u(ptime) + nagi(os) + kuma(Uptime Kuma)।**
 

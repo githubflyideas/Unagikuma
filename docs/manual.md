@@ -568,7 +568,7 @@ HTTP checks come over: name, group, address, method, interval, paused state and 
 
 **The report.** All of them print a summary (imported / needs a look / not imported), a table of what was imported, and for each item that needs a look or was not imported the reason and what to do. The same report is saved as text and Markdown in `<data>/import-reports/`. The new records go in one block at the end of `monitors.conf`, in sections headed by where they came from; `title=` keeps the original names. The web UI does the same under **Config & import › Import**. Options: `--area SECTION` puts the monitors in a section, `--role` sets the role of imported accounts, `--report DIR` saves the report elsewhere. Exit status: 0 done (or nothing new), 1 failed (nothing changed), 2 wrong usage.
 
-Over the API, `POST /api/v1/import/{kuma|nagios|checkmate|gatus}` with the file as the body answers with the preview and changes nothing; send the same body to `…?apply=1` to import. `area=` and `role=` work as the options above.
+Over the API, `POST /api/v1/import/{kuma|nagios|checkmate|gatus|unagikuma}` with the file as the body answers with the preview and changes nothing; send the same body to `…?apply=1` to import. `area=` and `role=` work as the options above.
 
 ## Forgot your password?
 
