@@ -572,8 +572,13 @@ func runSerial(args []string) error {
 }
 
 func runProbe(args []string) error {
+	const usage = `usage: unagikuma probe <target> [k=v...] (e.g. "https://example.com", "udp 10.0.0.1:ntp", "tcp db:5432")`
 	if len(args) == 0 {
-		return errors.New(`usage: unagikuma probe <target> [k=v...] (e.g. "https://example.com", "udp 10.0.0.1:ntp", "tcp db:5432")`)
+		return errors.New(usage)
+	}
+	if args[0] == "-h" || args[0] == "-help" || args[0] == "--help" || args[0] == "help" {
+		fmt.Println(usage + "\nExit status: 0 up, 1 down, 2 warning.")
+		return nil
 	}
 	src := "$FILE revision=1 master=probe attempts=1\n" + quickLine(probeTokens(args)) + "\n"
 	_, cfg, diags := config.Load("probe", []byte(src), config.Options{})
