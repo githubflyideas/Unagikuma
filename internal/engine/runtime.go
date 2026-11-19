@@ -25,9 +25,11 @@ import (
 type MonitorSpec struct {
 	Name  string
 	Title string
-	Group string
-	Tags  []string
-	Probe probe.Spec
+	// Description is the monitor's own, free text, for messages that carry it.
+	Description string
+	Group       string
+	Tags        []string
+	Probe       probe.Spec
 	// Handler is an event handler script run on state changes.
 	Handler string
 	Depth   string // L0..L3 as advertised
