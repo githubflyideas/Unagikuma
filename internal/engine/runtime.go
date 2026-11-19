@@ -280,7 +280,7 @@ type Engine struct {
 	values map[string]*valueState
 	// preload: values kept before a restart, until the monitor's tracker
 	// takes them.
-	preload map[string][]valuerule.Sample
+	preload map[string]map[string][]valuerule.Sample
 }
 
 // monRuntime is the live state of one monitor.

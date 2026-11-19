@@ -490,9 +490,9 @@ func TestUptimesOfMatchesUptimeOf(t *testing.T) {
 // batch it is written with (which would lose every other sample in it).
 func TestNonFiniteValueSkipped(t *testing.T) {
 	s, _, _ := open(t)
-	s.Value("bad", t0, math.NaN())
-	s.Value("bad", t0, math.Inf(1))
-	s.Value("good", t0, 7)
+	s.Value("bad", "h", t0, math.NaN())
+	s.Value("bad", "h", t0, math.Inf(1))
+	s.Value("good", "h", t0, 7)
 	s.Flush()
 	var n int
 	if err := s.core.QueryRow(`SELECT count(*) FROM value_samples WHERE monitor='good'`).Scan(&n); err != nil || n != 1 {
