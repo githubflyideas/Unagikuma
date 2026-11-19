@@ -215,7 +215,9 @@ func (e *Engine) onTransition(m *MonitorSpec, rt *monRuntime, t Transition, v Ve
 	if t.Changed() && m.Handler != "" {
 		e.runHandler(m, t, rt)
 	}
-	if t.Changed() {
+	// "critical → critical" (a soft failure becoming hard) says nothing the
+	// incident does not: the event is for a change of what is shown.
+	if t.Changed() && t.From.Display() != t.To.Display() {
 		e.event(Event{Type: EventState, Severity: severityOf(t.To.Display()), Monitor: m.Name,
 			Message: t.From.Display() + " → " + t.To.Display(),
 			Data:    map[string]any{"msg": "state", "from": t.From.Display(), "to": t.To.Display(), "hard": t.To.Hard, "reason": rt.LastReason, "attempt": t.To.Attempt}})

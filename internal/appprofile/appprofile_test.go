@@ -141,3 +141,24 @@ func TestDescribe(t *testing.T) {
 		t.Errorf("describe: %q", d)
 	}
 }
+
+// A page that has the application's identifying number and lacks some of
+// the others (Valkey, a managed service, an older version) is still its
+// page: the missing numbers are absent from the value.
+func TestPartialPageAccepted(t *testing.T) {
+	p, ok := Get("redis")
+	if !ok {
+		t.Fatal("no redis profile")
+	}
+	vals, err := p.Read([]byte("# Clients\r\nconnected_clients:7\r\nblocked_clients:0\r\n# Memory\r\nused_memory:1048576\r\n"), Select{})
+	if err != nil || vals["connected_clients"] != 7 || vals["used_memory"] != 1048576 {
+		t.Fatalf("%v %v", vals, err)
+	}
+	if _, has := vals["evicted_keys"]; has {
+		t.Fatal("a missing field is present")
+	}
+	// Without the identifying field it is not Redis INFO.
+	if _, err := p.Read([]byte("used_memory:1\r\n"), Select{}); err == nil {
+		t.Fatal("a page without connected_clients accepted")
+	}
+}

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"maps"
+	"strings"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/probe"
@@ -83,7 +84,8 @@ func (e *Engine) applyValues(m *MonitorSpec, res probe.Result, at time.Time) pro
 		// Rules that can never fire must not look like they are watching.
 		res.Degraded, res.Detail = true, out.Detail
 	default:
-		if out.Detail != "" {
+		// Not again what the check's own text already says ("Inlet = 31 °C").
+		if out.Detail != "" && !strings.Contains(res.Detail, out.Detail) {
 			if res.Detail != "" {
 				res.Detail += " · "
 			}
