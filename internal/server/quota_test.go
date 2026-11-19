@@ -43,13 +43,13 @@ func TestAccountQuota(t *testing.T) {
 		}
 	}
 	// A licence never gives less than the free number...
-	install(license.File{Tier: license.TierStandard, MaxUsers: 2})
+	install(license.File{MaxUsers: 2})
 	add("op-a", 402)
 	// ...a larger number is what it says...
-	install(license.File{Tier: license.TierStandard, MaxUsers: license.FreeUsers + 1})
+	install(license.File{MaxUsers: license.FreeUsers + 1})
 	add("op-b", 200)
 	add("op-c", 402)
 	// ...and none is no limit.
-	install(license.File{Tier: license.TierStandard})
+	install(license.File{})
 	add("op-d", 200)
 }

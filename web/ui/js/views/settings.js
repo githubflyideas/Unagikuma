@@ -601,7 +601,6 @@ function Registration() {
       <table class="kvtable"><tbody>
         <tr><th>${t('ui.reg.installation')}</th><td class="ltr"><b>${s.installation_id}</b> <${Copy} text=${s.installation_id} /></td></tr>
         ${row(t('ui.reg.licensee'), s.customer && s.customer + (s.licensee ? ' (' + t('ui.reg.licensee.' + s.licensee) + ')' : ''))}
-        ${row(t('ui.reg.tier'), s.tier)}
         ${row(t('ui.reg.type'), s.type)}
         ${row(t('ui.reg.expires'), s.registered ? (s.days < 0 ? t('ui.reg.never') : s.expires + ' (' + t('ui.reg.days_left', { n: s.days }) + ')') : s.expires)}
         ${row(t('ui.reg.updates'), s.updates_until)}

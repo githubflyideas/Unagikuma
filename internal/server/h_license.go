@@ -51,7 +51,7 @@ func (s *Server) licensePut(w http.ResponseWriter, r *http.Request) (any, error)
 	if err != nil {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 	}
-	auditOf(r).note("customer", st.Customer).note("tier", st.Tier).note("fingerprint", st.Fingerprint).target = license.FileName
+	auditOf(r).note("customer", st.Customer).note("fingerprint", st.Fingerprint).target = license.FileName
 	return st, nil
 }
 

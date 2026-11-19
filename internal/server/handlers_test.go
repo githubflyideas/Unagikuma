@@ -450,7 +450,7 @@ var testLicenseKey = ed25519.NewKeyFromSeed(make([]byte, ed25519.SeedSize))
 func (e *env) register(features ...string) {
 	e.t.Helper()
 	f := license.Sign(testLicenseKey, license.File{Customer: "Test KK", Licensee: license.LicenseeOrganization, Product: license.Product,
-		License: license.TypePerpetual, Tier: license.TierStandard, Features: features})
+		License: license.TypePerpetual, Features: features})
 	b, _ := json.Marshal(f)
 	if _, err := e.app.License().Install(b, time.Now()); err != nil {
 		e.t.Fatal(err)

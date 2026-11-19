@@ -29,14 +29,12 @@ type State struct {
 	Customer       string   `json:"customer,omitempty"`
 	Licensee       string   `json:"licensee,omitempty"`
 	Type           string   `json:"type,omitempty"`
-	Tier           string   `json:"tier,omitempty"`
 	InstallationID string   `json:"installation_id"`
 	KeyID          string   `json:"key_id,omitempty"`
 	Fingerprint    string   `json:"fingerprint,omitempty"`
 	Days           int      `json:"days"` // left; -1 = never expires
 	Expires        string   `json:"expires,omitempty"`
 	UpdatesUntil   string   `json:"updates_until,omitempty"`
-	MaxNodes       int      `json:"max_nodes"`
 	MaxUsers       int      `json:"max_users"`
 	Features       []string `json:"features"`
 }
@@ -60,8 +58,8 @@ func Check(ring Keyring, f File, installID string, now time.Time) State {
 	if f.InstallationID != "" && f.InstallationID != installID {
 		return Unregistered("license: issued for installation " + f.InstallationID)
 	}
-	s := State{Kind: KindLicensed, Registered: true, Customer: f.Customer, Licensee: f.Licensee, Type: f.License, Tier: f.Tier,
-		KeyID: key.ID, Fingerprint: Fingerprint(f), Days: -1, MaxNodes: f.MaxNodes, MaxUsers: f.MaxUsers,
+	s := State{Kind: KindLicensed, Registered: true, Customer: f.Customer, Licensee: f.Licensee, Type: f.License,
+		KeyID: key.ID, Fingerprint: Fingerprint(f), Days: -1, MaxUsers: f.MaxUsers,
 		Features: CanonFeatures(f.Features)}
 	if f.UpdatesUntil != nil {
 		s.UpdatesUntil = *f.UpdatesUntil

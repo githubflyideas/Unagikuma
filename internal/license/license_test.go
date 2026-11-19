@@ -13,7 +13,7 @@ func TestSignAndCheck(t *testing.T) {
 	ring := SingleKey(pub)
 	exp := "2027-10-31"
 	f := Sign(priv, File{Customer: "Example KK", Licensee: LicenseeOrganization, Product: Product, License: TypeSubscription,
-		Tier: TierStandard, Expires: &exp, Features: []string{FeatAudit}})
+		Expires: &exp, Features: []string{FeatAudit}})
 	now := time.Date(2026, 10, 28, 0, 0, 0, 0, time.UTC)
 	s := Check(ring, f, "12345678", now)
 	if !s.Registered || !s.Allowed(FeatAudit) || s.Days < 360 {
@@ -35,7 +35,7 @@ func TestSignAndCheck(t *testing.T) {
 		t.Fatalf("expired: %+v", s)
 	}
 	// Trial pinned to another installation.
-	tr := Sign(priv, File{Customer: "T", Licensee: LicenseeIndividual, Product: Product, License: TypeTrial, Tier: TierTrial,
+	tr := Sign(priv, File{Customer: "T", Licensee: LicenseeIndividual, Product: Product, License: TypeTrial,
 		InstallationID: "11111111", Expires: &exp, Features: []string{FeatAudit}})
 	if Check(ring, tr, "22222222", now).Registered || !Check(ring, tr, "11111111", now).Registered {
 		t.Fatal("installation pinning")
@@ -71,7 +71,7 @@ func TestCheckerInstall(t *testing.T) {
 	if _, err := c.Install([]byte(`{"customer":"x"}`), time.Now()); err == nil {
 		t.Fatal("unsigned licence installed")
 	}
-	f := Sign(priv, File{Customer: "C", Licensee: LicenseeOrganization, Product: Product, License: TypePerpetual, Tier: TierTeam, Features: []string{FeatAudit}})
+	f := Sign(priv, File{Customer: "C", Licensee: LicenseeOrganization, Product: Product, License: TypePerpetual, Features: []string{FeatAudit}})
 	b, _ := json.Marshal(f)
 	st, err := c.Install(b, time.Now())
 	if err != nil || !st.Allowed(FeatAudit) || st.Days != -1 {

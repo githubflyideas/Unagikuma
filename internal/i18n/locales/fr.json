@@ -1107,7 +1107,6 @@
 "ui.reg.licensee": "Titulaire",
 "ui.reg.licensee.individual": "Particulier",
 "ui.reg.licensee.organization": "Organisation",
-"ui.reg.tier": "Édition",
 "ui.reg.type": "Type de licence",
 "ui.reg.expires": "Valable jusqu'au",
 "ui.reg.never": "Sans expiration",

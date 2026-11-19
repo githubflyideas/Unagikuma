@@ -1100,7 +1100,6 @@
 "ui.reg.licensee": "授权对象",
 "ui.reg.licensee.individual": "个人",
 "ui.reg.licensee.organization": "组织",
-"ui.reg.tier": "版本",
 "ui.reg.type": "许可类型",
 "ui.reg.expires": "有效期至",
 "ui.reg.never": "永久有效",

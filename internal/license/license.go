@@ -2,7 +2,7 @@
 // installation is therefore allowed to do.
 //
 // A licence is license.json in the data directory: who it is made out to,
-// the tier, the quotas, the features and an Ed25519 signature over all of
+// the number of accounts, the features and an Ed25519 signature over all of
 // them. The private key stays with the author; the public keys are
 // compiled in. Nothing is ever switched off by this package: an
 // installation without a licence keeps monitoring, notifying and keeping
@@ -59,17 +59,6 @@ const (
 	FreeAuditDays = 3
 )
 
-// Tiers. A licence is a trial or a paid one ("standard"); the other names
-// are what earlier licences were issued as and stay valid: they differ in
-// nothing any more.
-const (
-	TierTrial      = "trial"
-	TierTeam       = "team"
-	TierStandard   = "standard"
-	TierEnterprise = "enterprise"
-	TierMSP        = "msp"
-)
-
 // Features a licence can grant. Everything not listed is free.
 const (
 	// FeatAudit opens the audit log of permission and configuration
@@ -85,7 +74,7 @@ const (
 // refuses names that are not here.
 var Features = []string{FeatAudit, FeatBranding}
 
-// File is license.json. A quota of 0 means no limit. Expires nil means it
+// File is license.json. MaxUsers 0 means no limit. Expires nil means it
 // never expires; UpdatesUntil then says how long new releases are covered.
 type File struct {
 	KeyID          string   `json:"key_id"`
@@ -94,10 +83,8 @@ type File struct {
 	Licensee       string   `json:"licensee"`
 	Product        string   `json:"product"`
 	License        string   `json:"license"`
-	Tier           string   `json:"tier"`
 	Expires        *string  `json:"expires,omitempty"`
 	UpdatesUntil   *string  `json:"updates_until,omitempty"`
-	MaxNodes       int      `json:"max_nodes,omitempty"`
 	MaxUsers       int      `json:"max_users,omitempty"`
 	Features       []string `json:"features,omitempty"`
 	Note           string   `json:"note,omitempty"`
@@ -158,7 +145,7 @@ func orNull(p *string) string {
 
 // printable rejects line breaks: one would let a field pose as the next.
 func printable(f File) error {
-	for _, s := range []string{f.KeyID, f.InstallationID, f.Customer, f.Licensee, f.Product, f.License, f.Tier,
+	for _, s := range []string{f.KeyID, f.InstallationID, f.Customer, f.Licensee, f.Product, f.License,
 		orNull(f.Expires), orNull(f.UpdatesUntil), strings.Join(CanonFeatures(f.Features), ",")} {
 		if strings.ContainsAny(s, "\n\r") {
 			return ErrBadField
@@ -170,13 +157,13 @@ func printable(f File) error {
 // Message is what the signature covers and what the issuing tool signs.
 func Message(f File) []byte {
 	var b strings.Builder
-	b.WriteString("unagikuma-license-v1\n")
-	for _, s := range []string{f.KeyID, f.InstallationID, f.Customer, f.Licensee, f.Product, f.License, f.Tier,
+	b.WriteString("unagikuma-license-v2\n")
+	for _, s := range []string{f.KeyID, f.InstallationID, f.Customer, f.Licensee, f.Product, f.License,
 		orNull(f.Expires), orNull(f.UpdatesUntil)} {
 		b.WriteString(s)
 		b.WriteByte('\n')
 	}
-	fmt.Fprintf(&b, "%d\n%d\n", f.MaxNodes, f.MaxUsers)
+	fmt.Fprintf(&b, "%d\n", f.MaxUsers)
 	b.WriteString(strings.Join(CanonFeatures(f.Features), ","))
 	b.WriteByte('\n')
 	return []byte(b.String())

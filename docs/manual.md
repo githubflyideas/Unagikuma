@@ -521,7 +521,7 @@ Pick a theme with the coloured dots under the product name: Perfume, Country, In
 
 Without a licence everything works, with two limits: up to 5 accounts, and the last 3 days of the audit log (no export, no integrity check). Nodes are never limited, and every interface style is free. Install the `license.json` you received under **Settings › Registration**; a trial licence is issued for the installation number shown there.
 
-A licence lists what it adds: the whole audit log, and the product's own name, logo and status page footer. It states its own number of accounts (none stated: no limit) and never gives fewer than the free 5. Beyond the limit, adding a new or imported account is refused with a message saying so. Nothing already in use is switched off, for example when a licence is removed; the registration page shows the usage against the limit. Earlier licences issued as team, standard, enterprise or msp stay valid and mean the same.
+A licence lists what it adds: the whole audit log, and the product's own name, logo and status page footer. It states its own number of accounts (none stated: no limit) and never gives fewer than the free 5. Beyond the limit, adding a new or imported account is refused with a message saying so. Nothing already in use is switched off, for example when a licence is removed; the registration page shows the usage against the limit.
 
 ## Moving from Uptime Kuma, Nagios, Checkmate or Gatus
 
