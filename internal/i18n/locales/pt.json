@@ -2004,7 +2004,7 @@
 "ui.config.diff_changes": "Só alterações",
 "ui.config.diff_unified": "Uma coluna",
 "ui.team.choose": "Escolher uma equipe",
-"ui.team.admin": "Admin",
+"ui.team.admin": "Equipa predefinida",
 "ui.team.builtin": "integrada",
 "ui.team.members": "Membros",
 "ui.team.members_hint": "Uma conta marcada só vê os monitores desta equipe e age conforme seu papel. Administradores sempre veem tudo.",

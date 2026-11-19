@@ -2004,7 +2004,7 @@
 "ui.config.diff_changes": "Changes only",
 "ui.config.diff_unified": "One column",
 "ui.team.choose": "Choose a team",
-"ui.team.admin": "Admin",
+"ui.team.admin": "Default team",
 "ui.team.builtin": "built-in",
 "ui.team.members": "Members",
 "ui.team.members_hint": "A ticked login sees only this team's monitors when it signs in, and acts on them as its role allows. Administrators always see everything.",

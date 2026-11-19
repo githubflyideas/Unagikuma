@@ -2040,7 +2040,7 @@
 "ui.config.diff_changes": "التغييرات فقط",
 "ui.config.diff_unified": "عمود واحد",
 "ui.team.choose": "اختر فريقًا",
-"ui.team.admin": "المسؤول",
+"ui.team.admin": "الفريق الافتراضي",
 "ui.team.builtin": "مدمج",
 "ui.team.members": "الأعضاء",
 "ui.team.members_hint": "الحساب المحدد يرى مراقبات هذا الفريق فقط عند الدخول ويتصرف وفق دوره. المسؤولون يرون كل شيء دائمًا.",

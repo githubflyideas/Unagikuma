@@ -1995,7 +1995,7 @@
 "ui.config.diff_changes": "変更のみ",
 "ui.config.diff_unified": "1 列",
 "ui.team.choose": "チームを選択",
-"ui.team.admin": "管理者",
+"ui.team.admin": "デフォルトチーム",
 "ui.team.builtin": "組み込み",
 "ui.team.members": "メンバー",
 "ui.team.members_hint": "チェックしたログインは、このチームの監視だけを見て、役割の範囲で操作します。管理者は常にすべて見られます。",

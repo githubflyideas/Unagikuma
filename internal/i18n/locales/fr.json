@@ -2004,7 +2004,7 @@
 "ui.config.diff_changes": "Modifications seulement",
 "ui.config.diff_unified": "Une colonne",
 "ui.team.choose": "Choisir une équipe",
-"ui.team.admin": "Admin",
+"ui.team.admin": "Équipe par défaut",
 "ui.team.builtin": "intégrée",
 "ui.team.members": "Membres",
 "ui.team.members_hint": "Un compte coché ne voit que les surveillances de cette équipe et agit selon son rôle. Les administrateurs voient toujours tout.",

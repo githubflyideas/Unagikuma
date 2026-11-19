@@ -1995,7 +1995,7 @@
 "ui.config.diff_changes": "Chỉ thay đổi",
 "ui.config.diff_unified": "Một cột",
 "ui.team.choose": "Chọn nhóm",
-"ui.team.admin": "Quản trị",
+"ui.team.admin": "Nhóm mặc định",
 "ui.team.builtin": "có sẵn",
 "ui.team.members": "Thành viên",
 "ui.team.members_hint": "Tài khoản được chọn chỉ thấy các giám sát của nhóm này và thao tác theo vai trò. Quản trị viên luôn thấy tất cả.",

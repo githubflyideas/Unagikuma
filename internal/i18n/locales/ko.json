@@ -1995,7 +1995,7 @@
 "ui.config.diff_changes": "변경분만",
 "ui.config.diff_unified": "한 열",
 "ui.team.choose": "팀 선택",
-"ui.team.admin": "관리자",
+"ui.team.admin": "기본 팀",
 "ui.team.builtin": "기본 제공",
 "ui.team.members": "구성원",
 "ui.team.members_hint": "선택한 계정은 로그인하면 이 팀의 모니터만 보고 역할에 따라 다룹니다. 관리자는 항상 전부 봅니다.",

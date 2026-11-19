@@ -451,7 +451,7 @@ An operator can also be limited to some `$SCOPE` sections (`region:north`, `bj`)
 
 ### Teams
 
-Every monitor belongs to one team. The built-in **admin** team always exists, cannot be renamed or deleted, and owns every monitor without `team=`. While it is the only team, everyone is in it and works as before.
+Every monitor belongs to one team. The built-in **admin** team (shown as “Default team”) always exists, cannot be renamed or deleted, and owns every monitor without `team=`. While it is the only team, everyone is in it and works as before.
 
 **Advanced › Teams** (administrators) adds teams and their members. Teams are `TEAM` records in monitors.conf, so they reach every node with the rest of the configuration:
 

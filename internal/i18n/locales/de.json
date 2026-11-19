@@ -2004,7 +2004,7 @@
 "ui.config.diff_changes": "Nur Änderungen",
 "ui.config.diff_unified": "Eine Spalte",
 "ui.team.choose": "Team wählen",
-"ui.team.admin": "Admin",
+"ui.team.admin": "Standardteam",
 "ui.team.builtin": "integriert",
 "ui.team.members": "Mitglieder",
 "ui.team.members_hint": "Eine angehakte Anmeldung sieht nur die Monitore dieses Teams und handelt gemäß ihrer Rolle. Administratoren sehen immer alles.",

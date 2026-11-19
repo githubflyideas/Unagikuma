@@ -2004,7 +2004,7 @@
 "ui.config.diff_changes": "केवल बदलाव",
 "ui.config.diff_unified": "एक कॉलम",
 "ui.team.choose": "टीम चुनें",
-"ui.team.admin": "एडमिन",
+"ui.team.admin": "डिफ़ॉल्ट टीम",
 "ui.team.builtin": "अंतर्निहित",
 "ui.team.members": "सदस्य",
 "ui.team.members_hint": "चुना गया लॉगिन केवल इस टीम के मॉनिटर देखता है और अपनी भूमिका के अनुसार काम करता है। प्रशासक हमेशा सब देखते हैं।",

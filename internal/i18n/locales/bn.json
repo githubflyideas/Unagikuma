@@ -2004,7 +2004,7 @@
 "ui.config.diff_changes": "শুধু পরিবর্তন",
 "ui.config.diff_unified": "এক কলাম",
 "ui.team.choose": "দল বেছে নিন",
-"ui.team.admin": "অ্যাডমিন",
+"ui.team.admin": "ডিফল্ট টিম",
 "ui.team.builtin": "অন্তর্নির্মিত",
 "ui.team.members": "সদস্য",
 "ui.team.members_hint": "বাছাই করা লগইন শুধু এই দলের মনিটর দেখে এবং ভূমিকা অনুযায়ী কাজ করে। প্রশাসকরা সবসময় সব দেখেন।",
