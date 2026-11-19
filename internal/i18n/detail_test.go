@@ -55,3 +55,20 @@ func TestDetailPatternsComplete(t *testing.T) {
 		t.Fatal("catalog lacks the detail patterns")
 	}
 }
+
+// The messages of the value rules reach reports and alerts in the
+// reader's language, also when one is wrapped in another.
+func TestValueRuleDetails(t *testing.T) {
+	for in, want := range map[string]string{
+		"291, limit >280":                                       "291，限值 >280",
+		"291, limit >280; for 2m0s of 5m0s":                     "291，限值 >280；已持续 2m0s（需要 5m0s）",
+		"the check reported no value for these rules":           "检查没有给出这些规则所需的数值",
+		"12; learning, a reference in 3h0m0s":                   "12；学习中，还需 3h0m0s 才有参考值",
+		"this is not Redis INFO: no field used_memory":          "这不是 Redis INFO 的回复",
+		"something nobody has translated, limit stays as it is": "something nobody has translated, limit stays as it is",
+	} {
+		if got := Detail("zh", in); got != want {
+			t.Errorf("%q: got %q want %q", in, got, want)
+		}
+	}
+}
