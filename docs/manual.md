@@ -496,7 +496,7 @@ Entries are kept for two years. Only the server's `--audit-retention` (or `UNAGI
 
 The log cannot be changed quietly: each entry carries the hash of the one before it. The page's **Check integrity** button and `unagikuma audit verify` say whether an entry was changed, inserted or removed, and which. `verify` prints the newest entry's hash; keep it elsewhere and pass it later with `--head HASH` to prove nothing was cut off the end. `unagikuma audit export --format csv|json [--since 30d] [--high]` (or the page's export buttons) writes the log out.
 
-Reading the audit log needs a registered installation; see [Registration and quotas](#registration-and-quotas).
+Without a registration the page shows the last 3 days of the log, and export and the integrity check are off; a registered installation reads all of it. See [Registration and quotas](#registration-and-quotas).
 
 ## Wall screen
 
@@ -519,9 +519,9 @@ Pick a theme with the coloured dots under the product name: Perfume, Country, In
 
 ## Registration and quotas
 
-Without a licence everything works except reading the audit log, and nothing is ever limited. Install the `license.json` you received under **Settings › Registration**; a trial licence is issued for the installation number shown there.
+Without a licence everything works, with two limits: up to 5 accounts, and the last 3 days of the audit log (no export, no integrity check). Nodes are never limited, and every interface style is free. Install the `license.json` you received under **Settings › Registration**; a trial licence is issued for the installation number shown there.
 
-A licence may limit the number of nodes (the master included) and of accounts. Within the limit nothing changes; beyond it, adding a node, a joining machine, a new account or an imported account is refused with a message saying so. Nothing already in use is switched off, for example after a smaller licence replaces a larger one; the registration page shows the usage against each limit.
+A licence lists what it adds: the whole audit log, and the product's own name, logo and status page footer. It states its own number of accounts (none stated: no limit) and never gives fewer than the free 5. Beyond the limit, adding a new or imported account is refused with a message saying so. Nothing already in use is switched off, for example when a licence is removed; the registration page shows the usage against the limit. Earlier licences issued as team, standard, enterprise or msp stay valid and mean the same.
 
 ## Moving from Uptime Kuma, Nagios, Checkmate or Gatus
 

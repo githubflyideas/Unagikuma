@@ -1124,6 +1124,8 @@
 "ui.reg.remove_confirm": "Lizenz entfernen? Nur registrierte Funktionen werden abgeschaltet.",
 "ui.audit.locked": "Das Audit-Protokoll erfordert eine registrierte Installation",
 "ui.audit.locked_hint": "Änderungen werden bereits aufgezeichnet; nach der Registrierung sind sie lesbar, auch die von davor.",
+"ui.audit.limited": "Ohne Registrierung werden die letzten {days} Tage des Protokolls angezeigt. Registrieren Sie sich, um es ganz zu lesen, zu exportieren und zu prüfen.",
+"ui.reg.free_note": "Ohne Registrierung: bis zu {n} Konten und die letzten {days} Tage des Audit-Protokolls. Alles andere ist kostenlos.",
 "ui.set.tab.scripts": "Prüfskripte",
 "ui.scripts.badge": "{n} Skriptprüfungen laufen auf einigen Knoten nicht",
 "ui.scripts.state.ok": "vorhanden",

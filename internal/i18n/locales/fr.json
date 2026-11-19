@@ -1124,6 +1124,8 @@
 "ui.reg.remove_confirm": "Retirer la licence ? Seules les fonctions réservées s'arrêtent.",
 "ui.audit.locked": "Le journal d'audit nécessite une installation enregistrée",
 "ui.audit.locked_hint": "Les modifications sont déjà enregistrées ; enregistrez-vous pour les consulter, y compris celles d'avant l'enregistrement.",
+"ui.audit.limited": "Sans enregistrement, les {days} derniers jours du journal sont affichés. Enregistrez-vous pour le lire en entier, l'exporter et le vérifier.",
+"ui.reg.free_note": "Sans enregistrement : jusqu'à {n} comptes et les {days} derniers jours du journal d'audit. Tout le reste est gratuit.",
 "ui.set.tab.scripts": "Scripts de contrôle",
 "ui.scripts.badge": "{n} contrôles par script ne peuvent pas s'exécuter sur certains nœuds",
 "ui.scripts.state.ok": "présent",

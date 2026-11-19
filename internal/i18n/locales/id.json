@@ -1117,6 +1117,8 @@
 "ui.reg.remove_confirm": "Hapus lisensi? Hanya fitur khusus terdaftar yang berhenti.",
 "ui.audit.locked": "Log audit memerlukan instalasi terdaftar",
 "ui.audit.locked_hint": "Perubahan sudah dicatat; daftarkan untuk membacanya, termasuk yang sebelum registrasi.",
+"ui.audit.limited": "Tanpa registrasi, log {days} hari terakhir yang ditampilkan. Daftarkan untuk membacanya seluruhnya, mengekspor, dan memverifikasinya.",
+"ui.reg.free_note": "Tanpa registrasi: hingga {n} akun dan log audit {days} hari terakhir. Selebihnya gratis.",
 "ui.set.tab.scripts": "Skrip pemeriksaan",
 "ui.scripts.badge": "{n} pemeriksaan skrip tidak bisa berjalan di sebagian node",
 "ui.scripts.state.ok": "ada",

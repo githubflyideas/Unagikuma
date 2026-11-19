@@ -1124,6 +1124,8 @@
 "ui.reg.remove_confirm": "Remover a licença? Só os recursos para registrados param.",
 "ui.audit.locked": "O log de auditoria requer uma instalação registrada",
 "ui.audit.locked_hint": "As alterações já estão sendo registradas; registre-se para lê-las, inclusive as anteriores ao registro.",
+"ui.audit.limited": "Sem registo, são mostrados os últimos {days} dias do registo. Registe-se para o ler por inteiro, exportar e verificar.",
+"ui.reg.free_note": "Sem registo: até {n} contas e os últimos {days} dias do registo de auditoria. Tudo o resto é gratuito.",
 "ui.set.tab.scripts": "Scripts de verificação",
 "ui.scripts.badge": "{n} verificações por script não rodam em algum nó",
 "ui.scripts.state.ok": "presente",

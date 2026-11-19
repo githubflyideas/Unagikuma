@@ -1117,6 +1117,8 @@
 "ui.reg.remove_confirm": "移除许可证？注册专属功能将停用，其他一切不受影响。",
 "ui.audit.locked": "审计日志需要注册后使用",
 "ui.audit.locked_hint": "变更已经在记录中；注册后即可查看，包括注册之前的全部记录。",
+"ui.audit.limited": "未注册时只显示最近 {days} 天的日志。注册后可以查看全部、导出和校验。",
+"ui.reg.free_note": "未注册：最多 {n} 个账号，审计日志只看最近 {days} 天。其余功能全部免费。",
 "ui.set.tab.scripts": "检查脚本",
 "ui.scripts.badge": "{n} 个脚本检查在部分节点上无法运行",
 "ui.scripts.state.ok": "已就绪",

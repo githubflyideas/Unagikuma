@@ -12,6 +12,7 @@ import (
 
 	"github.com/githubflyideas/unagikuma/internal/app"
 	"github.com/githubflyideas/unagikuma/internal/config"
+	"github.com/githubflyideas/unagikuma/internal/license"
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
 
@@ -193,9 +194,16 @@ func withAudit(r *http.Request) (*http.Request, *auditRec) {
 }
 
 // auditLog lists the audit log for administrators.
+// auditLog lists the log. Without a registration only the last
+// license.FreeAuditDays days are readable; the response says so.
 func (s *Server) auditLog(w http.ResponseWriter, r *http.Request) (any, error) {
+	full := s.app.License().State().Allowed(license.FeatAudit)
 	sites, _ := s.app.Store().MergedSites()
 	if site := r.URL.Query().Get("site"); site != "" {
+		if !full {
+			_, err := requireFeature(s, license.FeatAudit, nil)(w, r)
+			return nil, err
+		}
 		// Another site's own log, as merged after a split.
 		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 		items, err := s.app.Store().SiteAudit(store.MergeScope(site, r.URL.Query().Get("epoch")), limit)
@@ -205,11 +213,20 @@ func (s *Server) auditLog(w http.ResponseWriter, r *http.Request) (any, error) {
 		return map[string]any{"items": items, "sites": sites}, nil
 	}
 	aq := s.auditQuery(r)
+	out := map[string]any{"sites": sites}
+	if !full {
+		cut := s.now().AddDate(0, 0, -license.FreeAuditDays)
+		if aq.From.Before(cut) {
+			aq.From = cut
+		}
+		out["limited_days"] = license.FreeAuditDays
+	}
 	items, err := s.app.Store().AuditLog(aq)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"items": items, "sites": sites}, nil
+	out["items"] = items
+	return out, nil
 }
 
 func (s *Server) auditQuery(r *http.Request) store.AuditQuery {

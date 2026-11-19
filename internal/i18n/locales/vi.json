@@ -1117,6 +1117,8 @@
 "ui.reg.remove_confirm": "Gỡ giấy phép? Chỉ các tính năng dành cho bản đăng ký dừng lại.",
 "ui.audit.locked": "Nhật ký kiểm toán cần bản đã đăng ký",
 "ui.audit.locked_hint": "Thay đổi đã được ghi lại; đăng ký để xem, kể cả những gì trước khi đăng ký.",
+"ui.audit.limited": "Khi chưa đăng ký, chỉ hiển thị nhật ký {days} ngày gần nhất. Hãy đăng ký để đọc toàn bộ, xuất và xác minh.",
+"ui.reg.free_note": "Chưa đăng ký: tối đa {n} tài khoản và nhật ký kiểm toán {days} ngày gần nhất. Mọi thứ còn lại đều miễn phí.",
 "ui.set.tab.scripts": "Script kiểm tra",
 "ui.scripts.badge": "{n} kiểm tra script không chạy được trên một số nút",
 "ui.scripts.state.ok": "có",

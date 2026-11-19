@@ -1124,6 +1124,8 @@
 "ui.reg.remove_confirm": "¿Quitar la licencia? Se desactivan solo las funciones para registrados.",
 "ui.audit.locked": "El registro de auditoría requiere una instalación registrada",
 "ui.audit.locked_hint": "Los cambios ya se están registrando; regístrese para verlos, incluidos los anteriores al registro.",
+"ui.audit.limited": "Sin registro se muestran los últimos {days} días del registro. Regístrese para leerlo entero, exportarlo y verificarlo.",
+"ui.reg.free_note": "Sin registro: hasta {n} cuentas y los últimos {days} días del registro de auditoría. Todo lo demás es gratis.",
 "ui.set.tab.scripts": "Scripts de comprobación",
 "ui.scripts.badge": "{n} comprobaciones por script no pueden ejecutarse en algún nodo",
 "ui.scripts.state.ok": "presente",

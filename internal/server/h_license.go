@@ -33,8 +33,11 @@ func quotaError(err error) error {
 func (s *Server) licenseGet(w http.ResponseWriter, r *http.Request) (any, error) {
 	return struct {
 		license.State
-		Usage app.Usage `json:"usage"`
-	}{s.app.License().State(), s.app.Usage()}, nil
+		Usage     app.Usage `json:"usage"`
+		UserLimit int       `json:"user_limit"`
+		FreeUsers int       `json:"free_users"`
+		FreeAudit int       `json:"free_audit_days"`
+	}{s.app.License().State(), s.app.Usage(), app.UserLimit(s.app.License().State()), license.FreeUsers, license.FreeAuditDays}, nil
 }
 
 // licensePut installs a licence file (its JSON as the body); an invalid

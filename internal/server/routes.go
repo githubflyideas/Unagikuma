@@ -160,7 +160,7 @@ func (s *Server) routes() {
 	s.handle("PUT /api/v1/nodes/{name}", "admin", s.nodeUpdate)
 	s.handle("GET /api/v1/users", "admin", s.usersList)
 	s.handle("GET /api/v1/scripts", "read", s.scripts)
-	s.handle("GET /api/v1/audit", "admin", requireFeature(s, license.FeatAudit, s.auditLog))
+	s.handle("GET /api/v1/audit", "admin", s.auditLog)
 	s.handle("GET /api/v1/audit/export", "admin", requireFeature(s, license.FeatAudit, s.auditExport))
 	s.handle("GET /api/v1/audit/verify", "admin", requireFeature(s, license.FeatAudit, s.auditVerify))
 	s.handle("GET /api/v1/license", "read", s.licenseGet)

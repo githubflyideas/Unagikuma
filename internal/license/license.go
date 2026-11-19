@@ -51,7 +51,17 @@ const (
 // Licensees is every licensee kind.
 var Licensees = []string{LicenseeIndividual, LicenseeOrganization}
 
-// Tiers.
+// Free is what an installation without a licence gets: up to FreeUsers
+// accounts, and the audit log of the last FreeAuditDays days. Everything
+// else is free. A licence never gives less than this.
+const (
+	FreeUsers     = 5
+	FreeAuditDays = 3
+)
+
+// Tiers. A licence is a trial or a paid one ("standard"); the other names
+// are what earlier licences were issued as and stay valid: they differ in
+// nothing any more.
 const (
 	TierTrial      = "trial"
 	TierTeam       = "team"
