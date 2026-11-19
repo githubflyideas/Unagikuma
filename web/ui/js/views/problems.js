@@ -61,6 +61,9 @@ function statusOf(inc) {
   return inc.state.low ? 'degraded' : 'critical';
 }
 
+// Notifications that reached someone; an incident from before this was kept counts the planned ones.
+const toldCount = (st) => (st.tracked ? st.told || 0 : st.notify_count || 0);
+
 export function IncidentList({ items, reload, compact, selectable, selected, setSelected, empty }) {
   const [acking, setAcking] = useState(null);
   if (!items.length) {
@@ -82,7 +85,7 @@ export function IncidentList({ items, reload, compact, selectable, selected, set
       const st = inc.state;
       const open = !st.resolved_at;
       const link = inc.monitor && !inc.system ? href('/monitors/' + enc(inc.monitor)) : null;
-      const meta = [open ? t('ui.inc.open_for') + ' ' + dur((Date.now() - new Date(st.opened_at)) / 1000) : '', tn('ui.inc.notified', st.notify_count || 0),
+      const meta = [open ? t('ui.inc.open_for') + ' ' + dur((Date.now() - new Date(st.opened_at)) / 1000) : '', tn('ui.inc.notified', toldCount(st)),
         st.acked ? t('ui.inc.acked_by', { who: st.acked_by }) : ''].filter(Boolean).join(' · ');
       return html`<div class="inc">
         <i class=${'sev ' + (inc.system ? 'sys' : statusOf(inc))}></i>
@@ -130,7 +133,7 @@ export function IncidentList({ items, reload, compact, selectable, selected, set
         </td>
         <td class="nowrap small muted hide-sm">
           ${open ? html`${t('ui.inc.open_for')} ${dur((Date.now() - new Date(st.opened_at)) / 1000)}` : html`${t('ui.inc.lasted')} ${dur((new Date(st.resolved_at) - new Date(st.opened_at)) / 1000)}`}
-          <div>${tn('ui.inc.notified', st.notify_count || 0)}</div>
+          <div>${tn('ui.inc.notified', toldCount(st))}</div>
           <div><a href=${href('/incidents/' + inc.id)}>${t('ui.inc.report')}</a></div>
         </td>
         ${!compact || open ? html`<td class="right nowrap">

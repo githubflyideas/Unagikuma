@@ -145,3 +145,14 @@ func TestPacketBudgetOnlyForPackets(t *testing.T) {
 		t.Errorf("three pings started within %v on a budget of one packet a second", last.Sub(t0))
 	}
 }
+
+// A value beyond its limit is a failure of the service's content, not a
+// protocol error, and not a network fault.
+func TestValueBreachReasonClass(t *testing.T) {
+	if got := reasonClass(probe.ReasonValueBreach); got != "value" {
+		t.Fatalf("value breach: %q", got)
+	}
+	if reasonClass(probe.ReasonProtoError) != "protocol" || reasonClass(probe.ReasonConnRefused) != "network" {
+		t.Fatal("other classes moved")
+	}
+}

@@ -138,7 +138,7 @@ func (e *Engine) classOf(inc *Incident) (string, map[string]any) {
 			}
 		}
 		return ClassUncertain, ev
-	case "tls", "protocol":
+	case "tls", "protocol", "value":
 		if m := e.monitors[inc.Monitor]; m != nil && m.Push {
 			return ClassUncertain, ev // a missed push: the job or the way to us
 		}

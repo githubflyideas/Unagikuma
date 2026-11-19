@@ -281,6 +281,8 @@ func reasonClass(reason string) string {
 		return "network"
 	case reason == probe.ReasonTLS:
 		return "tls"
+	case reason == probe.ReasonValueBreach:
+		return "value" // the service answers; a number it reports is beyond its limit
 	}
 	return "protocol"
 }
