@@ -73,7 +73,7 @@ func queryNumber(r Result, o opts, text string, null bool, rows int) Result {
 		return failKeep(r, ReasonAssertFailed, "the query returned NULL: %s", short)
 	}
 	v, err := strconv.ParseFloat(strings.TrimSpace(text), 64)
-	if err != nil {
+	if err != nil || !finite(v) {
 		return failKeep(r, ReasonAssertFailed, "the query returned %q, not a number: %s", oneLine(text), short)
 	}
 	if r.Metrics == nil {

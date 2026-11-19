@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 
@@ -52,4 +53,32 @@ func TestAccountQuota(t *testing.T) {
 	// ...and none is no limit.
 	install(license.File{})
 	add("op-d", 200)
+}
+
+// Requests at the same moment cannot pass the account limit together.
+func TestAccountQuotaConcurrent(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	e.setup()
+	var wg sync.WaitGroup
+	codes := make([]int, 20)
+	for i := range codes {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			codes[i] = e.do("POST", "/api/v1/users", map[string]any{"username": "race" + itoa(int64(i)), "password": "secret123", "role": "viewer"}, nil)
+		}()
+	}
+	wg.Wait()
+	ok := 0
+	for _, c := range codes {
+		if c == 200 {
+			ok++
+		} else if c != 402 {
+			t.Errorf("unexpected status %d", c)
+		}
+	}
+	n, _ := e.app.Store().UserCount()
+	if n != license.FreeUsers || ok != license.FreeUsers-1 {
+		t.Fatalf("%d accounts (%d created at once), want %d", n, ok, license.FreeUsers)
+	}
 }

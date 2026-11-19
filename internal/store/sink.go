@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"math"
 	"sync"
 	"time"
 
@@ -249,6 +250,9 @@ func (s *Store) Counter(name string, n int) { s.batch.add(item{counter: name, n:
 
 // Value implements engine.Sink.
 func (s *Store) Value(name string, at time.Time, v float64) {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return // the column is NOT NULL: one such sample would fail the whole batch
+	}
 	s.batch.add(item{value: &valueItem{name, at, v}})
 }
 

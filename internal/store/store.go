@@ -27,15 +27,19 @@ type Store struct {
 	// ValueRetain is how long value samples are kept (values.retain);
 	// zero keeps a day.
 	ValueRetain time.Duration
-	dir         string
-	core        *sql.DB
-	hist        *sql.DB
-	log         *slog.Logger
-	now         func() time.Time
-	wmu         sync.Mutex // serialises core writes
-	batch       *batcher
-	tool        bool
-	ids         monitorIDs
+	// UserLimit, when set, is the number of accounts allowed (0 = no
+	// limit); a new account is refused inside the same transaction that
+	// would add it, so requests at the same moment cannot both pass.
+	UserLimit func() int
+	dir       string
+	core      *sql.DB
+	hist      *sql.DB
+	log       *slog.Logger
+	now       func() time.Time
+	wmu       sync.Mutex // serialises core writes
+	batch     *batcher
+	tool      bool
+	ids       monitorIDs
 
 	agg5mSince time.Time
 	ret        atomic.Pointer[Retention]

@@ -27,6 +27,11 @@ func Run(ctx context.Context, s Spec) (r Result) {
 			r.Depth = DepthOf(s)
 		}
 		scrub(&r, s.Secrets)
+		for k, v := range r.Metrics {
+			if !finite(v) {
+				delete(r.Metrics, k) // whatever path produced it: never stored or shown
+			}
+		}
 	}()
 	if err := Validate(s); err != nil {
 		return abstain(ReasonConfig, "%v", err)
