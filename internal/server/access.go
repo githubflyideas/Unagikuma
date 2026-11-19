@@ -143,10 +143,10 @@ func (s *Server) execAllowed(ai *authInfo, text []byte) error {
 	return nil
 }
 
-var errSecretAdmin = Errorf(http.StatusForbidden, CodeForbidden, "only administrators may add or change records that use ${secret:…} or ${env:…}: the value is sent where the record points")
+var errSecretAdmin = Errorf(http.StatusForbidden, CodeForbidden, "only administrators may add or change records that use ${secret:…}, ${env:…} or run an SQL query: they act with credentials the administrator saved")
 
 // secretRecords maps every record that uses a secret or an environment
-// variable to its entity tag.
+// variable, or runs an SQL query, to its entity tag.
 func secretRecords(f *config.File) map[string]string {
 	out := map[string]string{}
 	for i := range f.Stmts {
@@ -157,6 +157,9 @@ func secretRecords(f *config.File) map[string]string {
 		uses := usesSecret(r.Target)
 		for _, o := range r.Opts {
 			uses = uses || usesSecret(o.Value)
+			// A query runs with the monitor's database account, whatever
+			// its owner may otherwise do there.
+			uses = uses || (o.Key == "query" && (r.Type == "POSTGRES" || r.Type == "MYSQL"))
 		}
 		if uses {
 			out[r.Name] = f.RecordETag(r.Name)

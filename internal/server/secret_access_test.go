@@ -39,3 +39,22 @@ func TestOperatorCannotUseSecrets(t *testing.T) {
 		t.Fatalf("operator delete: %d", c)
 	}
 }
+
+// A check that runs an SQL query acts with the administrator's database
+// account: operators cannot add one.
+func TestOperatorCannotAddQueries(t *testing.T) {
+	admin := newEnv(t, testBind, nil)
+	admin.setup()
+	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "op", "password": "secret123", "role": "operator"}, nil); c != 200 {
+		t.Fatalf("user: %d", c)
+	}
+	op := admin.loginAs("op", "secret123")
+	rec := map[string]any{"record": map[string]any{"name": "dbq", "type": "POSTGRES", "target": "192.168.1.30:5432",
+		"opts": map[string]string{"user": "mon", "password": "plainpassword", "query": "SELECT count(*) FROM jobs"}}}
+	if c := op.do("POST", "/api/v1/monitors", rec, nil); c != 403 {
+		t.Fatalf("operator added a query check: %d", c)
+	}
+	if c := admin.do("POST", "/api/v1/monitors", rec, nil); c != 200 {
+		t.Fatalf("administrator: %d", c)
+	}
+}
