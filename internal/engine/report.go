@@ -139,6 +139,11 @@ func (e *Engine) SendDailyReport(team string) []Report {
 	return out
 }
 
+// SystemMonitors are the monitors the installation adds for its own
+// connectivity (the gateways): reports leave them out of the hosts and
+// services they count, the local-outage logic watches them.
+var SystemMonitors = map[string]bool{"lan-gateway": true, "internet-gateway": true}
+
 func (e *Engine) report(now time.Time, team, policy string) Report {
 	if team == "admin" {
 		team = ""
@@ -154,6 +159,9 @@ func (e *Engine) report(now time.Time, team, policy string) Report {
 		rows[n] = r
 		m := e.monitors[n]
 		if team != "" && m.Team != team {
+			continue
+		}
+		if SystemMonitors[n] {
 			continue
 		}
 		host := m.Host
