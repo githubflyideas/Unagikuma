@@ -187,9 +187,12 @@ func (a *App) validators() config.Options {
 			if err != nil {
 				return err
 			}
-			// Unresolved references cannot be validated statically.
+			// Unresolved references cannot be validated statically. A
+			// password option keeps the reference itself: its check only
+			// needs to know one is set (an SNMPv3 auth= without auth-pass=
+			// is an error, with ${secret:…} it is not).
 			for k, v := range s.Opts {
-				if strings.Contains(v, "${") {
+				if strings.Contains(v, "${") && !strings.HasSuffix(k, "-pass") {
 					delete(s.Opts, k)
 				}
 			}
