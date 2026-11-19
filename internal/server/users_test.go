@@ -95,6 +95,8 @@ func TestRolesAndSections(t *testing.T) {
 		{"POST", "/api/v1/backup", map[string]any{"passphrase": "long enough"}},
 		{"GET", "/api/v1/restore", nil},
 		{"DELETE", "/api/v1/restore", nil},
+		{"GET", "/api/v1/reports/daily", nil}, // the whole installation, like the weekly one
+		{"GET", "/api/v1/reports/weekly", nil},
 	} {
 		if c := ops.do(req[0].(string), req[1].(string), req[2], nil); c != 403 {
 			t.Fatalf("%s %s by a section operator: %d", req[0], req[1], c)
