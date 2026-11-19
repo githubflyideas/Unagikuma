@@ -118,7 +118,55 @@ func (s *Server) execAllowed(ai *authInfo, text []byte) error {
 			return errExecAdmin
 		}
 	}
+	// A record that uses a secret (or an environment variable) sends its
+	// value wherever the record points: an operator who could add one, or
+	// change where one points, could read any secret the administrator
+	// saved. Such records are the administrators' to add and change;
+	// operators may still pause, acknowledge or delete them.
+	if f, err := config.Parse("", text); err == nil {
+		old := map[string]string{}
+		if cf := s.app.Config().File; cf != nil {
+			old = secretRecords(cf)
+		}
+		for name, etag := range secretRecords(f) {
+			if old[name] != etag {
+				return errSecretAdmin
+			}
+		}
+		etags := f.RecordETags()
+		for name, etag := range old {
+			if now, ok := etags[name]; ok && now != etag {
+				return errSecretAdmin // the reference was taken out, the rest changed with it
+			}
+		}
+	}
 	return nil
+}
+
+var errSecretAdmin = Errorf(http.StatusForbidden, CodeForbidden, "only administrators may add or change records that use ${secret:…} or ${env:…}: the value is sent where the record points")
+
+// secretRecords maps every record that uses a secret or an environment
+// variable to its entity tag.
+func secretRecords(f *config.File) map[string]string {
+	out := map[string]string{}
+	for i := range f.Stmts {
+		r, ok := config.StmtRecord(&f.Stmts[i])
+		if !ok || r.Type == "SOA" {
+			continue
+		}
+		uses := usesSecret(r.Target)
+		for _, o := range r.Opts {
+			uses = uses || usesSecret(o.Value)
+		}
+		if uses {
+			out[r.Name] = f.RecordETag(r.Name)
+		}
+	}
+	return out
+}
+
+func usesSecret(s string) bool {
+	return strings.Contains(s, "${secret:") || strings.Contains(s, "${env:")
 }
 
 // guardExec applies execAllowed to a structured edit.
