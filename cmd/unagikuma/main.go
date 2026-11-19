@@ -54,6 +54,7 @@ Usage:
   unagikuma keywords [dialect]     list the UDP keywords
   unagikuma import kuma FILE       move from Uptime Kuma (kuma.db or a JSON backup); try --dry-run first
   unagikuma import nagios FILE|DIR move from Nagios (nagios.cfg or a folder of .cfg files); try --dry-run first
+  unagikuma import checkmate FILE  move from Checkmate (a Settings export); gatus FILE for a Gatus config
   unagikuma backup [--history] [--passphrase-file F]
                                   write a backup archive (encrypted, with keys, given a passphrase)
   unagikuma restore ARCHIVE        restore a backup into the data directory

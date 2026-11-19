@@ -6,9 +6,9 @@
   "primary": "busy",
   "summary": ["busy", "idle"],
   "fields": [
-    {"key": "busy", "label": "Busy servers", "type": "quantity", "line": "BusyServers"},
-    {"key": "idle", "label": "Idle servers", "type": "quantity", "line": "IdleServers"},
-    {"key": "accesses", "label": "Total accesses", "type": "counter", "line": "Total Accesses"},
-    {"key": "uptime", "label": "Uptime (s)", "type": "quantity", "unit": "s", "line": "Uptime"}
+    {"key": "busy", "label": "Busy servers", "label_zh": "忙碌的服务器", "type": "quantity", "line": "BusyServers"},
+    {"key": "idle", "label": "Idle servers", "label_zh": "空闲的服务器", "type": "quantity", "line": "IdleServers"},
+    {"key": "accesses", "label": "Total accesses", "label_zh": "累计访问数", "type": "counter", "line": "Total Accesses"},
+    {"key": "uptime", "label": "Uptime (s)", "label_zh": "运行时间（秒）", "type": "quantity", "unit": "s", "line": "Uptime"}
   ]
 }

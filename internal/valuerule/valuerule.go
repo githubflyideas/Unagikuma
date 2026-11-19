@@ -155,11 +155,7 @@ func ParseWith(get func(string) string, unit string, fields Fields) (*Rules, err
 		r.Change = f / 100
 	}
 	if v := get("compare"); v != "" && v != "previous" {
-		d, err := time.ParseDuration(strings.Replace(v, "d", "h", 1))
-		if strings.HasSuffix(v, "d") {
-			n, e := strconv.Atoi(strings.TrimSuffix(v, "d"))
-			d, err = time.Duration(n)*24*time.Hour, e
-		}
+		d, err := ParseSpan(v)
 		if err != nil || d < 0 {
 			return nil, fmt.Errorf("compare must be previous, or a time such as 24h, got %q", v)
 		}
@@ -178,7 +174,7 @@ func ParseWith(get func(string) string, unit string, fields Fields) (*Rules, err
 		r.Min = f
 	}
 	if v := get("for"); v != "" {
-		d, err := time.ParseDuration(v)
+		d, err := ParseSpan(v)
 		if err != nil || d < 0 {
 			return nil, fmt.Errorf("for must be a time such as 5m, got %q", v)
 		}
@@ -370,11 +366,15 @@ func parseBound(v, unit string) (*Bound, error) {
 // quietly into a limit that can never be reached. A limit below zero is
 // refused for a value that is never negative.
 func ParseQuantity(v, unit string) (float64, error) {
+	want := unitKind[unit]
+	if want == "time" {
+		// m is minutes here, never mega: 5m on a time value is 300 s.
+		return parseSeconds(v)
+	}
 	f, err := ParseNumber(v)
 	if err != nil {
 		return 0, err
 	}
-	want := unitKind[unit]
 	if want == "" {
 		return f, nil
 	}
@@ -388,8 +388,8 @@ func ParseQuantity(v, unit string) (float64, error) {
 	if got != "plain" && got != "scale" && got != want {
 		return 0, fmt.Errorf("%q is %s, but this value is %s", v, article(got), article(want))
 	}
-	if want == "time" && got == "time" {
-		f /= 1000 // limits with a time unit are read in ms; the value is in seconds
+	if want == "temperature" && f < -273.15 {
+		return 0, fmt.Errorf("%q is below absolute zero", v)
 	}
 	if f < 0 && want != "temperature" {
 		return 0, fmt.Errorf("%q is below zero, which this value never is", v)
@@ -422,6 +422,52 @@ var unitClass = map[string]string{
 	"k": "scale", "m": "scale", "g": "scale",
 }
 
+// ParseSpan reads a length of time: Go's durations plus days, so 1d12h is
+// 36 hours (not 13, nor an error).
+func ParseSpan(v string) (time.Duration, error) {
+	v = strings.TrimSpace(v)
+	var days time.Duration
+	if i := strings.IndexByte(v, 'd'); i > 0 {
+		n, err := strconv.Atoi(v[:i])
+		if err != nil {
+			return 0, fmt.Errorf("want a time such as 90s, 5m, 2h or 1d12h, got %q", v)
+		}
+		days, v = time.Duration(n)*24*time.Hour, v[i+1:]
+		if v == "" {
+			return days, nil
+		}
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return 0, fmt.Errorf("want a time such as 90s, 5m, 2h or 1d12h, got %q", v)
+	}
+	return days + d, nil
+}
+
+// parseSeconds reads a limit for a value in seconds: a plain number is
+// seconds; ms, s, m (minutes), h and d are times.
+func parseSeconds(v string) (float64, error) {
+	t := strings.TrimSpace(v)
+	if f, err := strconv.ParseFloat(t, 64); err == nil {
+		if math.IsNaN(f) || math.IsInf(f, 0) || f < 0 {
+			return 0, fmt.Errorf("want a time such as 300, 500ms, 5m or 2h, got %q", v)
+		}
+		return f, nil
+	}
+	if strings.HasSuffix(t, "ms") && !strings.ContainsAny(t[:len(t)-2], "hdms") {
+		f, err := strconv.ParseFloat(t[:len(t)-2], 64)
+		if err != nil || f < 0 || math.IsNaN(f) || math.IsInf(f, 0) {
+			return 0, fmt.Errorf("want a time such as 300, 500ms, 5m or 2h, got %q", v)
+		}
+		return f / 1000, nil
+	}
+	d, err := ParseSpan(t)
+	if err != nil || d < 0 {
+		return 0, fmt.Errorf("%q is not a time: write 300 (seconds), 500ms, 5m or 2h", v)
+	}
+	return d.Seconds(), nil
+}
+
 // ParseNumber reads a number with an optional unit: 80, 80%, 1.5GB,
 // 100Mbps, 35°C. Rates are in bits per second, sizes in bytes.
 func ParseNumber(v string) (float64, error) {
@@ -434,7 +480,13 @@ func ParseNumber(v string) (float64, error) {
 	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
 		return 0, fmt.Errorf("want a number, got %q", v)
 	}
-	unit := strings.ToLower(strings.TrimSpace(v[i:]))
+	raw := strings.TrimSpace(v[i:])
+	// Gb, Mb, kb, b: bits or bytes? Network people mean bits, the old
+	// reading was bytes. Refused rather than guessed: 1GB is bytes, 1Gbps a rate.
+	if len(raw) > 0 && raw[len(raw)-1] == 'b' && (len(raw) == 1 || raw[len(raw)-2] != 'p') {
+		return 0, fmt.Errorf("%q: write B for bytes (1GB) or bps for a rate (1Gbps); a small b is ambiguous", v)
+	}
+	unit := strings.ToLower(raw)
 	mul, ok := units[unit]
 	if !ok {
 		return 0, fmt.Errorf("unknown unit %q", v[i:])

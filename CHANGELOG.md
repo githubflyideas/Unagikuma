@@ -1,5 +1,28 @@
 # Changelog
 
+## v2.6.28 — 2026-11-19
+
+A review by a tester: two critical and six high findings, and most of the medium ones.
+
+**Fixed**
+- A target answering "NaN", "Infinity" or 1e999 made every monitor list come back empty; such values are refused where they are read, never stored, and an answer that cannot be encoded is a 500 with a reason.
+- The account limit could be passed with requests at the same moment; the count and the insert now share one transaction.
+- Operators could read any saved secret by adding a check that sent it to their own server; records that use `${secret:…}` or `${env:…}` or run an SQL query are now the administrators'.
+- SNMPv3 checks whose passwords are secrets could not be saved from the web page or the API.
+- With 1000 monitors the list was unusable: it draws 200 rows (more on request), applies changes once a second and filters after typing pauses.
+- warn=, crit= and unknown options on a PUSH monitor are refused instead of looking set.
+- Importing another Unagikuma names what it would do here: secrets of this installation sent to its addresses, alerts going to a team or policy that exists here; team members are not carried over.
+- Limits mean one thing: `5m` on a time is minutes, `1Gb` is refused (bits or bytes?), `1d12h` is 36 hours, no temperature below −273.15 °C.
+- Values kept for a change rule belong to the definition that produced them; a redefined, deleted or renamed monitor leaves none behind. The new tables reserve `tenant_id`.
+- "N notifications sent" counts what was delivered. A value beyond its limit is its own reason class.
+- SQL checks are stopped by the server when the check gives up (`statement_timeout`, `max_execution_time`).
+- The packet budget also covers DNS, NTP, SNMP and syslog checks.
+- The daily report preview is as restricted as the weekly one.
+- The built-in team is called the default team (Chinese role name: 可操作).
+- Chinese: application field names and the messages of value rules and Redis are translated.
+- Phone width: batch buttons only when rows are ticked, the toolbar wraps.
+- Documentation, README and command-line help follow the product (APP, `$QUORUM`, import sources, `docs/value-types.md` in the packages).
+
 ## v2.6.27 — 2026-11-19
 
 **Fixed**

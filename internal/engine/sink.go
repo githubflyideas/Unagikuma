@@ -33,7 +33,7 @@ type Sink interface {
 	Counter(name string, n int)
 	// Value keeps one value a monitor's rules judged, so a restart does not
 	// lose the reference of change= compare=.
-	Value(name string, at time.Time, v float64)
+	Value(name, defHash string, at time.Time, v float64)
 }
 
 // StateRecord is a monitor's persisted runtime state.

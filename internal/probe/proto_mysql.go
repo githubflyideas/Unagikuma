@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 )
 
 const (
@@ -131,7 +132,7 @@ func mysqlCheck(ctx context.Context, conn net.Conn, host string, o opts, r Resul
 	if db != "" {
 		want |= myConnectWithDB
 	}
-	l := &myLogin{m: m, pass: o.str("password", ""), plugin: gr.plugin, salt: gr.salt, version: gr.version, o: o}
+	l := &myLogin{m: m, pass: o.str("password", ""), plugin: gr.plugin, salt: gr.salt, version: gr.version, o: o, ctx: ctx}
 	if o.on("ssl") {
 		if gr.caps&mySSL == 0 {
 			return failKeep(r, ReasonAssertFailed, "the server does not offer SSL")
@@ -223,6 +224,7 @@ type myLogin struct {
 	salt            []byte
 	secure          bool // the connection is TLS
 	o               opts
+	ctx             context.Context
 }
 
 // reply handles one packet of the login; done says the check is over.
@@ -378,6 +380,14 @@ func (l *myLogin) query(r Result) Result {
 	}
 	if !res.ok {
 		return failKeep(r, ReasonAssertFailed, "the session cannot be made read-only, so the query is not run: %s", res.err)
+	}
+	// The server stops the statement when the check gives up (MySQL:
+	// max_execution_time in ms, MariaDB: max_statement_time in s). A server
+	// with neither still runs it to the end: the check's own timeout holds.
+	if ms := remainingMS(l.ctx); ms > 0 {
+		if res, err := l.exec("SET SESSION max_execution_time=" + strconv.FormatInt(ms, 10)); err == nil && !res.ok {
+			_, _ = l.exec("SET SESSION max_statement_time=" + strconv.FormatFloat(float64(ms)/1000, 'f', 3, 64))
+		}
 	}
 	res, err = l.exec(statement(l.o.str("query", "")))
 	if err != nil {

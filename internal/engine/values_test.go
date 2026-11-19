@@ -64,7 +64,12 @@ func TestValueRules(t *testing.T) {
 		t.Fatal("samples of a removed monitor kept")
 	}
 	// Values kept before a restart are the tracker's first samples.
-	e.LoadValues(map[string][]valuerule.Sample{"room": {{At: time.Now().Add(-time.Hour), V: 33}}})
+	// Only those of the definition that now runs: a value of another one
+	// ("old") is no reference.
+	e.LoadValues(map[string]map[string][]valuerule.Sample{"room": {
+		"c":   {{At: time.Now().Add(-time.Hour), V: 33}},
+		"old": {{At: time.Now().Add(-time.Hour), V: 99}},
+	}})
 	spec.DefHash = "c"
 	e.Apply(Config{Tunables: ts, Location: time.UTC, Monitors: []MonitorSpec{spec}})
 	e.applyValues(e.monitors["room"], probe.Result{Vote: probe.VoteOK, Metrics: map[string]float64{"value": 34}}, time.Now())

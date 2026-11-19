@@ -115,9 +115,10 @@ func TestPacketBudgetOnlyForPackets(t *testing.T) {
 		mons = append(mons, mon(fmt.Sprintf("web%d", i), "HTTP", fmt.Sprintf("http://10.0.1.%d/", i), fmt.Sprintf("10.0.1.%d", i), false),
 			mon(fmt.Sprintf("tcp%d", i), "TCP", fmt.Sprintf("10.0.2.%d:443", i), fmt.Sprintf("10.0.2.%d", i), false))
 	}
-	for i := range 3 {
+	for i := range 2 {
 		mons = append(mons, mon(fmt.Sprintf("ping%d", i), "PING", fmt.Sprintf("10.0.3.%d", i), fmt.Sprintf("10.0.3.%d", i), true))
 	}
+	mons = append(mons, mon("ping2", "SNMP", "10.0.3.9", "10.0.3.9", false)) // counted like a ping
 	t0 := time.Now()
 	e.Apply(Config{Tunables: ts, Monitors: mons, Location: time.UTC})
 	ctx, cancel := context.WithCancel(context.Background())
@@ -142,5 +143,16 @@ func TestPacketBudgetOnlyForPackets(t *testing.T) {
 	}
 	if last.Sub(t0) < 1500*time.Millisecond {
 		t.Errorf("three pings started within %v on a budget of one packet a second", last.Sub(t0))
+	}
+}
+
+// A value beyond its limit is a failure of the service's content, not a
+// protocol error, and not a network fault.
+func TestValueBreachReasonClass(t *testing.T) {
+	if got := reasonClass(probe.ReasonValueBreach); got != "value" {
+		t.Fatalf("value breach: %q", got)
+	}
+	if reasonClass(probe.ReasonProtoError) != "protocol" || reasonClass(probe.ReasonConnRefused) != "network" {
+		t.Fatal("other classes moved")
 	}
 }

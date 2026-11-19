@@ -88,10 +88,17 @@ func Errorf(status int, code, format string, args ...any) *APIError {
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
+	// Encoded before the status is sent: a value JSON cannot hold (NaN,
+	// an infinity) must not turn into an empty "200 OK".
+	b, err := json.Marshal(v)
+	if err != nil {
+		status = http.StatusInternalServerError
+		b, _ = json.Marshal(map[string]any{"code": CodeInternal, "message": "the answer could not be encoded: " + err.Error()})
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
+	_, _ = w.Write(append(b, '\n'))
 }
 
 func writeError(w http.ResponseWriter, err error) {

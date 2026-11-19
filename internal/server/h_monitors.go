@@ -221,7 +221,13 @@ func (s *Server) rowBase(r engine.MonitorRow, cfg *config.Config, incs map[int64
 		}
 	}
 	if inc, ok := incs[r.IncidentID]; ok && r.IncidentID != 0 {
-		ib := &incidentBrief{ID: inc.ID, NotifyCount: inc.State.NotifyCount, Capped: inc.State.Capped, Acked: inc.State.Acked,
+		// What reached someone, not what was planned: with no channel, or
+		// when none delivered, nothing was sent.
+		told := inc.State.NotifyCount
+		if inc.State.Tracked {
+			told = inc.State.Told
+		}
+		ib := &incidentBrief{ID: inc.ID, NotifyCount: told, Capped: inc.State.Capped, Acked: inc.State.Acked,
 			AckedBy: inc.State.AckedBy, SilencedUntil: tp(inc.State.SilencedUntil), OpenedAt: inc.State.OpenedAt}
 		if p := cfg.FindPolicy(inc.Policy); p != nil {
 			ib.NotifyMax = p.Max

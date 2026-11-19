@@ -107,7 +107,10 @@ func validUsername(s string) bool {
 }
 
 func userError(err error) error {
+	var lim *store.UserLimitError
 	switch {
+	case errors.As(err, &lim):
+		return quotaError(err)
 	case errors.Is(err, store.ErrUserExists):
 		return Errorf(http.StatusConflict, CodeConflict, "%v", err)
 	case errors.Is(err, store.ErrLastAdmin):

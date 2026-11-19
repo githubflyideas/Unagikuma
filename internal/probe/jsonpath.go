@@ -3,6 +3,7 @@ package probe
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -81,8 +82,12 @@ func jsonNumber(data []byte, path string) (float64, bool) {
 		return 0, false
 	}
 	f, err := strconv.ParseFloat(jsonText(v), 64)
-	return f, err == nil
+	return f, err == nil && finite(f)
 }
+
+// finite rejects NaN and the infinities: strconv reads "NaN" and "Inf",
+// and such a value can neither be compared nor stored or sent as JSON.
+func finite(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }
 
 // jsonAt finds the value at path in a JSON document.
 func jsonAt(data []byte, path string) (any, string, bool) {
@@ -127,7 +132,7 @@ func checkJSONValue(v any, path string, o opts) (string, bool) {
 	if expr, ok := o["json-expect-num"]; ok {
 		ne, _ := parseNumExpect(expr)
 		f, err := strconv.ParseFloat(got, 64)
-		if err != nil {
+		if err != nil || !finite(f) {
 			return fmt.Sprintf("%s is %q, not a number", path, got), false
 		}
 		if !ne.match(f) {

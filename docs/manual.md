@@ -134,7 +134,7 @@ api-queue     IN HTTP https://api.example.com/q json-path=$.data.depth warn=500 
 stock         IN HTTP https://shop.example.com/s json-path=$.n crit=<10
 ```
 
-- `warn=` makes the monitor degraded above the value, `crit=` fails it (`<10` means below 10). Units can be written: `80%`, `500Mbps`, `1.5GB`, `35`.
+- `warn=` makes the monitor degraded above the value, `crit=` fails it (`<10` means below 10). Units can be written: `80%`, `500Mbps`, `1.5GB`, `35`. A capital B is bytes and bps a rate; a small b (`1Gb`) is refused as ambiguous. On a time, `m` is minutes: `5m`, `500ms`, `2h`, `1d12h`.
 - `change=50%` warns when the value moves more than that from its reference: the check before (`compare=previous`, the default) or the median of the values within `values.median-window` (10m) around the same time a day or a week earlier (`compare=24h`, `7d`). Until there is such a reference the monitor page says it is learning and nothing is judged. `min=` ignores changes while both values are below it; `direction=up` or `down` looks one way only; a value that falls to 0 from above `min=` warns too.
 - `for=5m` counts a breach only after it has lasted that long.
 - A port: `value=` is `util` (the busier direction as a share of the port speed, the default), `in` or `out` (bits per second). Counters are 64-bit where the device has them; a counter that goes back (a wrap or a restart) skips one round instead of alerting. The port fails while it is down, unless an administrator shut it; a port that renegotiates to a lower speed warns. Ports are found by name (`ifName`, then the description), once, and found again after the device renumbers them.
@@ -193,7 +193,7 @@ A REDIS monitor reads Redis the same way: `field=` names a number of `INFO` (con
 cache IN REDIS 10.0.0.20 password=${secret:redis} field=used_memory warn=1GB crit=2GB
 ```
 
-A POSTGRES or MYSQL monitor can judge a number a query returns: `query=` is one `SELECT` whose first column of the first row is the number, and `warn=`, `crit=` and the other rules judge it. The check logs in with `user=` to run it. It never changes anything: the statement must be a single `SELECT` (no `;` inside it, no `INTO`, no locking read such as `FOR UPDATE`, so a literal containing `;` or `INTO` is refused too), the session is made read-only before it runs (a startup parameter in PostgreSQL, `SET SESSION TRANSACTION READ ONLY` in MySQL), and the account should be one that can only read.
+A POSTGRES or MYSQL monitor can judge a number a query returns: `query=` is one `SELECT` whose first column of the first row is the number, and `warn=`, `crit=` and the other rules judge it. The check logs in with `user=` to run it. It is meant to change nothing, and does its best to: the statement must be a single `SELECT` (no `;` inside it, no `INTO`, no locking read such as `FOR UPDATE`, so a literal containing `;` or `INTO` is refused too), the session is made read-only before it runs (a startup parameter in PostgreSQL, `SET SESSION TRANSACTION READ ONLY` in MySQL), the server is asked to stop the statement when the check gives up (`statement_timeout` in PostgreSQL, `max_execution_time` or `max_statement_time` in MySQL and MariaDB), and the account should be one that can only read: a read-only session does not stop every function with a side effect (`pg_terminate_backend()`, `dblink_exec()`, `GET_LOCK()`), which an account without those rights cannot call. Only administrators may add a check that runs a query.
 
 ```
 orders IN POSTGRES db1 user=monitor password=${secret:pg} database=shop query="SELECT count(*) FROM orders WHERE created_at > now() - interval '5 minutes'" crit=<1
@@ -451,7 +451,7 @@ An operator can also be limited to some `$SCOPE` sections (`region:north`, `bj`)
 
 ### Teams
 
-Every monitor belongs to one team. The built-in **admin** team always exists, cannot be renamed or deleted, and owns every monitor without `team=`. While it is the only team, everyone is in it and works as before.
+Every monitor belongs to one team. The built-in **admin** team (shown as “Default team”) always exists, cannot be renamed or deleted, and owns every monitor without `team=`. While it is the only team, everyone is in it and works as before.
 
 **Advanced › Teams** (administrators) adds teams and their members. Teams are `TEAM` records in monitors.conf, so they reach every node with the rest of the configuration:
 
@@ -568,7 +568,7 @@ HTTP checks come over: name, group, address, method, interval, paused state and 
 
 **The report.** All of them print a summary (imported / needs a look / not imported), a table of what was imported, and for each item that needs a look or was not imported the reason and what to do. The same report is saved as text and Markdown in `<data>/import-reports/`. The new records go in one block at the end of `monitors.conf`, in sections headed by where they came from; `title=` keeps the original names. The web UI does the same under **Config & import › Import**. Options: `--area SECTION` puts the monitors in a section, `--role` sets the role of imported accounts, `--report DIR` saves the report elsewhere. Exit status: 0 done (or nothing new), 1 failed (nothing changed), 2 wrong usage.
 
-Over the API, `POST /api/v1/import/{kuma|nagios|checkmate|gatus}` with the file as the body answers with the preview and changes nothing; send the same body to `…?apply=1` to import. `area=` and `role=` work as the options above.
+Over the API, `POST /api/v1/import/{kuma|nagios|checkmate|gatus|unagikuma}` with the file as the body answers with the preview and changes nothing; send the same body to `…?apply=1` to import. `area=` and `role=` work as the options above.
 
 ## Forgot your password?
 

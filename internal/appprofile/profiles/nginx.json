@@ -6,12 +6,12 @@
   "primary": "active",
   "summary": ["active", "reading", "writing", "waiting"],
   "fields": [
-    {"key": "active", "label": "Active connections", "type": "quantity", "regex": "Active connections:\\s*([0-9]+)"},
-    {"key": "accepts", "label": "Accepted connections", "type": "counter", "regex": "server accepts handled requests\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+"},
-    {"key": "handled", "label": "Handled connections", "type": "counter", "regex": "server accepts handled requests\\s+[0-9]+\\s+([0-9]+)\\s+[0-9]+"},
-    {"key": "requests", "label": "Requests", "type": "counter", "regex": "server accepts handled requests\\s+[0-9]+\\s+[0-9]+\\s+([0-9]+)"},
-    {"key": "reading", "label": "Reading", "type": "quantity", "regex": "Reading:\\s*([0-9]+)"},
-    {"key": "writing", "label": "Writing", "type": "quantity", "regex": "Writing:\\s*([0-9]+)"},
-    {"key": "waiting", "label": "Waiting", "type": "quantity", "regex": "Waiting:\\s*([0-9]+)"}
+    {"key": "active", "label": "Active connections", "label_zh": "活动连接", "type": "quantity", "regex": "Active connections:\\s*([0-9]+)"},
+    {"key": "accepts", "label": "Accepted connections", "label_zh": "已接受的连接", "type": "counter", "regex": "server accepts handled requests\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+"},
+    {"key": "handled", "label": "Handled connections", "label_zh": "已处理的连接", "type": "counter", "regex": "server accepts handled requests\\s+[0-9]+\\s+([0-9]+)\\s+[0-9]+"},
+    {"key": "requests", "label": "Requests", "label_zh": "请求数", "type": "counter", "regex": "server accepts handled requests\\s+[0-9]+\\s+[0-9]+\\s+([0-9]+)"},
+    {"key": "reading", "label": "Reading", "label_zh": "正在读取", "type": "quantity", "regex": "Reading:\\s*([0-9]+)"},
+    {"key": "writing", "label": "Writing", "label_zh": "正在写入", "type": "quantity", "regex": "Writing:\\s*([0-9]+)"},
+    {"key": "waiting", "label": "Waiting", "label_zh": "等待中", "type": "quantity", "regex": "Waiting:\\s*([0-9]+)"}
   ]
 }

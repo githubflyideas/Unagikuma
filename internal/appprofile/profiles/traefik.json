@@ -6,9 +6,9 @@
   "primary": "servers_all_up",
   "summary": ["servers_all_up", "open_connections", "requests"],
   "fields": [
-    {"key": "servers_all_up", "label": "Every backend server up (1 = yes)", "type": "quantity", "metric": "traefik_service_server_up", "agg": "min", "optional": true},
-    {"key": "servers", "label": "Backend servers", "type": "quantity", "metric": "traefik_service_server_up", "agg": "count", "optional": true},
-    {"key": "open_connections", "label": "Open connections", "type": "quantity", "metric": "traefik_open_connections"},
-    {"key": "requests", "label": "Requests", "type": "counter", "metric": "traefik_entrypoint_requests_total", "optional": true}
+    {"key": "servers_all_up", "label": "Every backend server up (1 = yes)", "label_zh": "所有后端服务器都在线（1 = 是）", "type": "quantity", "metric": "traefik_service_server_up", "agg": "min", "optional": true},
+    {"key": "servers", "label": "Backend servers", "label_zh": "后端服务器数", "type": "quantity", "metric": "traefik_service_server_up", "agg": "count", "optional": true},
+    {"key": "open_connections", "label": "Open connections", "label_zh": "打开的连接数", "type": "quantity", "metric": "traefik_open_connections"},
+    {"key": "requests", "label": "Requests", "label_zh": "请求数", "type": "counter", "metric": "traefik_entrypoint_requests_total", "optional": true}
   ]
 }

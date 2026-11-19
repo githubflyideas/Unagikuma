@@ -203,6 +203,7 @@ func (a *App) openStore() error {
 	if a.license, err = license.OpenWith(o.DataDir, ring); err != nil {
 		return err
 	}
+	st.UserLimit = func() int { return UserLimit(a.license.State()) }
 	a.sender = &notify.Sender{Log: o.Log, Instance: a.instance(), Client: &http.Client{Transport: &http.Transport{Proxy: nil, ForceAttemptHTTP2: true, DialContext: (&net.Dialer{Timeout: 10 * time.Second}).DialContext},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 	a.cfg = &configManager{app: a, path: o.ConfigPath}

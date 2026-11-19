@@ -191,6 +191,34 @@ func (s *Store) SyncMonitors(defs []MonitorDef) error {
 			return err
 		}
 	}
+	// The values a rule judged belong to one definition of one monitor:
+	// what was redefined, deleted or renamed leaves none for a later
+	// monitor of the same name to take as its reference.
+	keep := make(map[string]string, len(defs))
+	for _, d := range defs {
+		keep[d.Name] = d.DefHash
+	}
+	srows, err := tx.Query(`SELECT DISTINCT monitor, def_hash FROM value_samples`)
+	if err != nil {
+		return err
+	}
+	var stale [][2]string
+	for srows.Next() {
+		var name, hash string
+		if err := srows.Scan(&name, &hash); err != nil {
+			srows.Close()
+			return err
+		}
+		if h, ok := keep[name]; !ok || h != hash {
+			stale = append(stale, [2]string{name, hash})
+		}
+	}
+	srows.Close()
+	for _, st := range stale {
+		if _, err := tx.Exec(`DELETE FROM value_samples WHERE monitor=? AND def_hash=?`, st[0], st[1]); err != nil {
+			return err
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}

@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -44,6 +45,11 @@ func postgresCheck(ctx context.Context, conn net.Conn, host string, o opts, r Re
 	if o.has("query") {
 		// Whatever the statement does, this session cannot write.
 		params = append(params, [2]string{"default_transaction_read_only", "on"})
+		// The server stops the statement when the check gives up: a slow
+		// query must not pile up one more run each interval.
+		if ms := remainingMS(ctx); ms > 0 {
+			params = append(params, [2]string{"statement_timeout", strconv.FormatInt(ms, 10)}, [2]string{"lock_timeout", strconv.FormatInt(ms, 10)})
+		}
 	}
 	for _, kv := range params {
 		p = append(p, kv[0]...)

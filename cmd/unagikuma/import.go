@@ -14,6 +14,7 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/app"
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/importer"
+	"github.com/githubflyideas/unagikuma/internal/license"
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
 
@@ -247,6 +248,13 @@ func (j *importJob) openStore() error {
 		return err
 	}
 	j.st = st
+	// The same account limit as the running server: the licence in this
+	// data directory, or the free number without one.
+	if lic, err := license.OpenWith(j.data, license.Release()); err == nil {
+		st.UserLimit = func() int { return app.UserLimit(lic.State()) }
+	} else {
+		st.UserLimit = func() int { return license.FreeUsers }
+	}
 	if j.fresh || st.FirstRun {
 		// The first server start is still a first start (no "restarted"
 		// or "exited abnormally").

@@ -1,6 +1,6 @@
 // Monitor editor and quick add. Both write records into monitors.conf.
 import { html, useState, useEffect } from '../lib.js';
-import { t, has, detailText } from '../i18n.js';
+import { t, has, detailText, currentLang } from '../i18n.js';
 import { get, post, put, ifMatch, newKey, me } from '../api.js';
 import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, teamTitle, regionTitle, writableTeams, Copy, Combo, PRESETS } from '../ui.js';
 
@@ -33,7 +33,7 @@ function AppFields({ profiles, optVal, setMany }) {
         </select><//>
       <${Field} label=${t('ui.mon.app_field')} hint=${t('ui.mon.app_field_hint')}>
         <select value=${field} disabled=${!p} onChange=${(e) => setMany([['app', p.id], ['field', e.target.value === primary ? '' : e.target.value]])}>
-          ${p && p.fields.map(x => html`<option value=${x.key}>${x.label}${x.type === 'counter' ? ' (' + t('ui.mon.app_rate') + ')' : ''}</option>`)}
+          ${p && p.fields.map(x => html`<option value=${x.key}>${fieldLabel(x)}${x.type === 'counter' ? ' (' + t('ui.mon.app_rate') + ')' : ''}</option>`)}
         </select><//>
     </div>
     ${p && html`<div class="small muted">${t('ui.mon.app_needs')}: ${has('ui.app.needs.' + p.id) ? t('ui.app.needs.' + p.id) : p.needs}
@@ -50,7 +50,7 @@ function RedisField({ profiles, optVal, setMany }) {
   return html`<${Field} label=${t('ui.mon.redis_field')} hint=${t('ui.mon.redis_field_hint')}>
     <select value=${optVal('field')} onChange=${(e) => setMany([['field', e.target.value]])}>
       <option value="">—</option>
-      ${p.fields.map(x => html`<option value=${x.key}>${x.label}${x.type === 'counter' ? ' (' + t('ui.mon.app_rate') + ')' : ''}</option>`)}
+      ${p.fields.map(x => html`<option value=${x.key}>${fieldLabel(x)}${x.type === 'counter' ? ' (' + t('ui.mon.app_rate') + ')' : ''}</option>`)}
     </select><//>`;
 }
 
@@ -121,6 +121,9 @@ function ProbeResult({ r }) {
     </div>
   </div>`;
 }
+
+// A profile field's name: in Chinese when the interface is.
+const fieldLabel = (x) => (currentLang() === 'zh' && x.label_zh ? x.label_zh : x.label);
 
 export function MonitorEditor({ name }) {
   useDocTitle(name ? t('ui.edit') + ' ' + name : t('ui.mon.add'));

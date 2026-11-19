@@ -6,9 +6,9 @@
   "primary": "busy",
   "summary": ["busy", "idle", "accesses"],
   "fields": [
-    {"key": "busy", "label": "Busy workers", "type": "quantity", "line": "BusyWorkers"},
-    {"key": "idle", "label": "Idle workers", "type": "quantity", "line": "IdleWorkers"},
-    {"key": "accesses", "label": "Total accesses", "type": "counter", "line": "Total Accesses"},
-    {"key": "uptime", "label": "Uptime (s)", "type": "quantity", "unit": "s", "line": "Uptime"}
+    {"key": "busy", "label": "Busy workers", "label_zh": "忙碌的工作进程", "type": "quantity", "line": "BusyWorkers"},
+    {"key": "idle", "label": "Idle workers", "label_zh": "空闲的工作进程", "type": "quantity", "line": "IdleWorkers"},
+    {"key": "accesses", "label": "Total accesses", "label_zh": "累计访问数", "type": "counter", "line": "Total Accesses"},
+    {"key": "uptime", "label": "Uptime (s)", "label_zh": "运行时间（秒）", "type": "quantity", "unit": "s", "line": "Uptime"}
   ]
 }

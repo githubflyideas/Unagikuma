@@ -1,11 +1,13 @@
 package probe
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // query= on a MYSQL or POSTGRES monitor runs one SELECT whose first
@@ -17,6 +19,22 @@ import (
 // account that can only read.
 
 const maxQueryLen = 2000
+
+// remainingMS is the time left before the check gives up, in ms (0 when
+// the context has no deadline).
+func remainingMS(ctx context.Context) int64 {
+	if ctx == nil {
+		return 0
+	}
+	dl, ok := ctx.Deadline()
+	if !ok {
+		return 0
+	}
+	if ms := time.Until(dl).Milliseconds(); ms > 0 {
+		return ms
+	}
+	return 1
+}
 
 var intoWord = regexp.MustCompile(`(?i)\binto\b`)
 
@@ -73,7 +91,7 @@ func queryNumber(r Result, o opts, text string, null bool, rows int) Result {
 		return failKeep(r, ReasonAssertFailed, "the query returned NULL: %s", short)
 	}
 	v, err := strconv.ParseFloat(strings.TrimSpace(text), 64)
-	if err != nil {
+	if err != nil || !finite(v) {
 		return failKeep(r, ReasonAssertFailed, "the query returned %q, not a number: %s", oneLine(text), short)
 	}
 	if r.Metrics == nil {

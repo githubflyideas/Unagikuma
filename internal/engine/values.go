@@ -33,8 +33,8 @@ func (e *Engine) valueTracker(m *MonitorSpec) *valueState {
 	rules, err := valuerule.ParseWith(func(k string) string { return m.Probe.Opts[k] }, probe.ValueUnit(m.Probe), probe.ValueFields(m.Probe))
 	if err == nil && rules.Active() {
 		vs.tr = &valuerule.Tracker{Rules: rules}
-		if s := e.preload[m.Name]; len(s) > 0 {
-			vs.tr.Load(s) // kept from before a restart
+		if s := e.preload[m.Name][m.DefHash]; len(s) > 0 {
+			vs.tr.Load(s) // kept from before a restart, under this definition
 		}
 	}
 	delete(e.preload, m.Name)
@@ -42,8 +42,8 @@ func (e *Engine) valueTracker(m *MonitorSpec) *valueState {
 }
 
 // LoadValues gives the engine the values kept before a restart, by
-// monitor, oldest first. Call it before Run.
-func (e *Engine) LoadValues(v map[string][]valuerule.Sample) { e.preload = v }
+// monitor and definition, oldest first. Call it before Run.
+func (e *Engine) LoadValues(v map[string]map[string][]valuerule.Sample) { e.preload = v }
 
 // applyValues judges the value in a successful local result.
 func (e *Engine) applyValues(m *MonitorSpec, res probe.Result, at time.Time) probe.Result {
@@ -59,7 +59,7 @@ func (e *Engine) applyValues(m *MonitorSpec, res probe.Result, at time.Time) pro
 	out := vs.tr.Observe(at, res.Metrics)
 	vs.last = out
 	if out.Sampled {
-		e.deps.Sink.Value(m.Name, at, out.Value)
+		e.deps.Sink.Value(m.Name, m.DefHash, at, out.Value)
 	}
 	res.Metrics = maps.Clone(res.Metrics)
 	if res.Metrics == nil {

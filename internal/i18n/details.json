@@ -39,5 +39,10 @@
 {"key": "w_empty_select", "re": "^MAINT (?<name>\\S+) selects no monitor$"},
 {"key": "push_site", "re": "^PUSH requires exactly one receiving site$"},
 {"key": "config_read_only", "re": "^configuration is read-only on this site$"},
-{"key": "incident_source_unavailable", "re": "^incident source unavailable$"}
+{"key": "incident_source_unavailable", "re": "^incident source unavailable$"},
+  {"key": "value_for", "re": "^(?<inner>.+); for (?<d>\\S+) of (?<need>\\S+)$"},
+  {"key": "value_none", "re": "^the check reported no value for these rules$"},
+  {"key": "value_learning", "re": "^(?<v>.+); learning, a reference in (?<left>.+)$"},
+  {"key": "value_limit", "re": "^(?<v>.+), limit (?<op>[<>]=?)(?<x>[^;]+)$"},
+  {"key": "redis_not_info", "re": "^this is not Redis INFO.*$"}
 ]

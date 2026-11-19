@@ -151,6 +151,10 @@ func (a *App) ImportKuma(data []byte, author string, o KumaOptions) (ConfigState
 }
 
 func resultOf(err error) string {
+	var lim *store.UserLimitError
+	if errors.As(err, &lim) {
+		return "quota"
+	}
 	if errors.Is(err, store.ErrUserExists) {
 		return "exists"
 	}

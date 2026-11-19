@@ -6,12 +6,12 @@
   "primary": "health",
   "summary": ["health", "drives_offline", "nodes_offline"],
   "fields": [
-    {"key": "health", "label": "Cluster healthy (1 = yes)", "type": "quantity", "metric": "minio_cluster_health_status"},
-    {"key": "drives_offline", "label": "Drives offline", "type": "quantity", "metric": "minio_cluster_drive_offline_total"},
-    {"key": "drives_online", "label": "Drives online", "type": "quantity", "metric": "minio_cluster_drive_online_total"},
-    {"key": "nodes_offline", "label": "Nodes offline", "type": "quantity", "metric": "minio_cluster_nodes_offline_total"},
-    {"key": "nodes_online", "label": "Nodes online", "type": "quantity", "metric": "minio_cluster_nodes_online_total"},
-    {"key": "free_bytes", "label": "Usable free bytes", "type": "quantity", "unit": "B", "metric": "minio_cluster_capacity_usable_free_bytes"},
-    {"key": "total_bytes", "label": "Usable total bytes", "type": "quantity", "unit": "B", "metric": "minio_cluster_capacity_usable_total_bytes"}
+    {"key": "health", "label": "Cluster healthy (1 = yes)", "label_zh": "集群健康（1 = 是）", "type": "quantity", "metric": "minio_cluster_health_status"},
+    {"key": "drives_offline", "label": "Drives offline", "label_zh": "离线的磁盘", "type": "quantity", "metric": "minio_cluster_drive_offline_total"},
+    {"key": "drives_online", "label": "Drives online", "label_zh": "在线的磁盘", "type": "quantity", "metric": "minio_cluster_drive_online_total"},
+    {"key": "nodes_offline", "label": "Nodes offline", "label_zh": "离线的节点", "type": "quantity", "metric": "minio_cluster_nodes_offline_total"},
+    {"key": "nodes_online", "label": "Nodes online", "label_zh": "在线的节点", "type": "quantity", "metric": "minio_cluster_nodes_online_total"},
+    {"key": "free_bytes", "label": "Usable free bytes", "label_zh": "可用空闲字节数", "type": "quantity", "unit": "B", "metric": "minio_cluster_capacity_usable_free_bytes"},
+    {"key": "total_bytes", "label": "Usable total bytes", "label_zh": "可用总字节数", "type": "quantity", "unit": "B", "metric": "minio_cluster_capacity_usable_total_bytes"}
   ]
 }

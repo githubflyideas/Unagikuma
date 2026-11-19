@@ -922,6 +922,15 @@ func (b *builder) monitorChecks(m *Monitor, r Record) {
 		m.Refs = append(m.Refs, b.refs(r.NamePos, map[string]string{"target": m.Target})...)
 	}
 	b.plaintext(r.NamePos, "", m.Opts)
+	if m.Type == "PUSH" {
+		// A push carries no value yet: warn=, crit= and the other check
+		// options would look set and never be judged.
+		for k := range m.Opts {
+			if !metaOpts[k] && !paramOpts[k] && k != "period" {
+				b.errf(r.NamePos, "invalid_option", "%s: a PUSH monitor takes no %s= (it is judged only by whether a push arrives within period= and grace=)", m.Name, k)
+			}
+		}
+	}
 	if b.opt.ValidateMonitor != nil && m.Type != "PUSH" {
 		if err := b.opt.ValidateMonitor(m); err != nil {
 			b.errf(r.NamePos, "invalid_option", "%s: %v", m.Name, err)

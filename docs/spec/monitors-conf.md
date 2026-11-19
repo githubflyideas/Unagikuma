@@ -129,7 +129,7 @@ www IN HTTP https://www.example.com/
 |-----------|-----------|-------|
 | `$VERSION 1` | the syntax version; a file without it is version 1 | once, usually the first line |
 | `$FILE …` | the file header, see above | once, first |
-| `$QUORUM v` | `majority`, `all`, `N` or `N%`: how many nodes must see a failure | after the file header, before other records, once |
+| `$QUORUM v` | read for compatibility and ignored: every site checks and alerts on its own, nodes do not vote | after the file header, before other records, once |
 | `$DIALECT v` | `auto`, `huawei`, `cisco`, `asa`, `xr`: vendor meaning of ambiguous UDP keywords | after the file header, before other records, once |
 | `$SET key=value …` | tunables; each key once per file | anywhere |
 | `$DEFAULT key=value …` | options added to the monitors after it, until the next `$DEFAULT`; an option on the record wins | anywhere |
@@ -171,7 +171,7 @@ upper case by convention and read in any case.
 
 | Type | Kind | Target |
 |------|------|--------|
-| `HTTP`, `TCP`, `PING`, `UDP`, `DNS`, `NTP`, `SNMP`, `SYSLOG`, `PUSH`, `EXEC`, `REDIS`, `POSTGRES`, `MYSQL`, `GRPC`, `DOCKER`, `DOMAIN` | monitor | what is checked (URL, `host:port`, address, script, domain name); `PUSH` has none |
+| `HTTP`, `TCP`, `PING`, `UDP`, `DNS`, `NTP`, `SNMP`, `SYSLOG`, `PUSH`, `EXEC`, `REDIS`, `POSTGRES`, `MYSQL`, `GRPC`, `DOCKER`, `DOMAIN`, `APP` | monitor | what is checked (URL, `host:port`, address, script, domain name); `PUSH` has none |
 | `NODE` | probe node | display title |
 | `CHANNEL` | where notifications go | the channel kind (`feishu`, `email`, `group`, …) |
 | `POLICY` | which channels, how often (files from before 2.6; see below) | none |

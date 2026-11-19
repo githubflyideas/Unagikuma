@@ -178,6 +178,12 @@ var coreMigrations = []string{
 	// references across restarts; kept as long as values.retain.
 	`CREATE TABLE value_samples (monitor TEXT NOT NULL, at INTEGER NOT NULL, v REAL NOT NULL);
  CREATE INDEX value_samples_monitor_at ON value_samples(monitor, at);`,
+	// A sample belongs to the definition that produced it (a redefined
+	// monitor starts over; a deleted or renamed one leaves nothing
+	// behind), and the new tables keep the reserved tenant_id like the rest.
+	`ALTER TABLE value_samples ADD COLUMN def_hash TEXT NOT NULL DEFAULT '';
+ ALTER TABLE value_samples ADD COLUMN tenant_id TEXT;
+ ALTER TABLE saved_alerts ADD COLUMN tenant_id TEXT;`,
 }
 
 var historyMigrations = []string{

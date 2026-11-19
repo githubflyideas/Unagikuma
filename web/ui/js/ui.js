@@ -325,6 +325,11 @@ export function teamTitle(tm) {
   return tm.title || tm.name;
 }
 
+// The name of a team known only by its record name (a monitor's team).
+export function teamLabel(name) {
+  return name === 'admin' ? t('ui.team.admin') : name;
+}
+
 export function regionTitle(name) {
   return name === 'global' ? t('ui.region.global') : name;
 }

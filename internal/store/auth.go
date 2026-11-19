@@ -132,6 +132,13 @@ func (s *Store) CreateUser(username, password string) (int64, error) {
 // ErrUserExists means the username is taken.
 var ErrUserExists = errors.New("a user with this name exists")
 
+// UserLimitError means the account limit is reached.
+type UserLimitError struct{ Used, Limit int }
+
+func (e *UserLimitError) Error() string {
+	return fmt.Sprintf("an installation may have %d accounts and %d are in use; register for more (Settings › Registration)", e.Limit, e.Used)
+}
+
 // CreateUserRole adds an account with a role, optionally limited to some
 // configuration sections.
 func (s *Store) CreateUserRole(username, password, role string, areas []string) (int64, error) {
@@ -165,14 +172,40 @@ func (s *Store) CreateUserHash(username, hash, role string, areas []string) (int
 // insertUser adds the account and gives it its entry in the list of
 // people (see LinkUsers).
 func (s *Store) insertUser(username, hash, role string, areas []string) (int64, error) {
-	s.wmu.Lock()
-	res, err := s.core.Exec(`INSERT INTO users(username,password,created_at,role,areas) VALUES(?,?,?,?,?)`,
-		username, hash, ms(s.now()), role, strings.Join(areas, "\n"))
-	s.wmu.Unlock()
-	if err != nil {
-		return 0, err
+	limit := 0
+	if s.UserLimit != nil {
+		limit = s.UserLimit()
 	}
-	id, err := res.LastInsertId()
+	s.wmu.Lock()
+	id, err := func() (int64, error) {
+		// One transaction (taken for writing at once): the count and the
+		// insert cannot be split by another request or process.
+		tx, err := s.core.Begin()
+		if err != nil {
+			return 0, err
+		}
+		defer func() { _ = tx.Rollback() }()
+		if limit > 0 {
+			var n int
+			if err := tx.QueryRow(`SELECT count(*) FROM users`).Scan(&n); err != nil {
+				return 0, err
+			}
+			if n >= limit {
+				return 0, &UserLimitError{Used: n, Limit: limit}
+			}
+		}
+		res, err := tx.Exec(`INSERT INTO users(username,password,created_at,role,areas) VALUES(?,?,?,?,?)`,
+			username, hash, ms(s.now()), role, strings.Join(areas, "\n"))
+		if err != nil {
+			return 0, err
+		}
+		id, err := res.LastInsertId()
+		if err != nil {
+			return 0, err
+		}
+		return id, tx.Commit()
+	}()
+	s.wmu.Unlock()
 	if err != nil {
 		return 0, err
 	}
