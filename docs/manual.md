@@ -134,7 +134,7 @@ api-queue     IN HTTP https://api.example.com/q json-path=$.data.depth warn=500 
 stock         IN HTTP https://shop.example.com/s json-path=$.n crit=<10
 ```
 
-- `warn=` makes the monitor degraded above the value, `crit=` fails it (`<10` means below 10). Units can be written: `80%`, `500Mbps`, `1.5GB`, `35`.
+- `warn=` makes the monitor degraded above the value, `crit=` fails it (`<10` means below 10). Units can be written: `80%`, `500Mbps`, `1.5GB`, `35`. A capital B is bytes and bps a rate; a small b (`1Gb`) is refused as ambiguous. On a time, `m` is minutes: `5m`, `500ms`, `2h`, `1d12h`.
 - `change=50%` warns when the value moves more than that from its reference: the check before (`compare=previous`, the default) or the median of the values within `values.median-window` (10m) around the same time a day or a week earlier (`compare=24h`, `7d`). Until there is such a reference the monitor page says it is learning and nothing is judged. `min=` ignores changes while both values are below it; `direction=up` or `down` looks one way only; a value that falls to 0 from above `min=` warns too.
 - `for=5m` counts a breach only after it has lasted that long.
 - A port: `value=` is `util` (the busier direction as a share of the port speed, the default), `in` or `out` (bits per second). Counters are 64-bit where the device has them; a counter that goes back (a wrap or a restart) skips one round instead of alerting. The port fails while it is down, unless an administrator shut it; a port that renegotiates to a lower speed warns. Ports are found by name (`ifName`, then the description), once, and found again after the device renumbers them.
