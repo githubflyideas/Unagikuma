@@ -196,6 +196,8 @@
 "ui.mon.none": "ابھی کوئی مانیٹر نہیں",
 "ui.mon.none_hint": "نگرانی کے لیے کوئی ویب سائٹ، پورٹ یا آلہ شامل کریں۔",
 "ui.mon.no_match": "فلٹر سے کچھ نہیں ملا",
+"ui.mon.show_more": "مزید {n} دکھائیں ({left} نہیں دکھائے گئے)",
+"ui.mon.show_all": "سب دکھائیں ({n})",
 "ui.mon.last24h": "پچھلے 24 گھنٹے",
 "ui.mon.changed": "تبدیلی",
 "ui.mon.query_help": "فلٹر: status:critical، type:udp، tag:env:prod، group:lab، depth:l1، flag:weak، attempts:1؛ خارج کرنے کے لیے آگے - لگائیں۔",

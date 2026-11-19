@@ -196,6 +196,8 @@
 "ui.mon.none": "Ainda não há monitores",
 "ui.mon.none_hint": "Adicione um site, uma porta ou um dispositivo para acompanhar.",
 "ui.mon.no_match": "Nada corresponde ao filtro",
+"ui.mon.show_more": "Mostrar mais {n} ({left} por mostrar)",
+"ui.mon.show_all": "Mostrar todos ({n})",
 "ui.mon.last24h": "Últimas 24 horas",
 "ui.mon.changed": "Mudança",
 "ui.mon.query_help": "Filtros: status:critical, type:udp, tag:env:prod, group:lab, depth:l1, flag:weak, attempts:1; use - na frente para excluir.",

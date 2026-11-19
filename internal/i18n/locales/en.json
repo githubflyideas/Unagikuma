@@ -395,6 +395,8 @@
 "ui.mon.none": "No monitors yet",
 "ui.mon.none_hint": "Add a website, a port or a device to watch.",
 "ui.mon.no_match": "Nothing matches the filter",
+"ui.mon.show_more": "Show {n} more ({left} not shown)",
+"ui.mon.show_all": "Show all {n}",
 "ui.mon.last24h": "Last 24 hours",
 "ui.mon.changed": "Changed",
 "ui.mon.query_help": "Filters: status:critical, type:udp, tag:env:prod, group:lab, depth:l1, flag:weak, attempts:1; prefix with - to exclude.",

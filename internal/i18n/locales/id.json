@@ -192,6 +192,8 @@
 "ui.mon.none": "Belum ada monitor",
 "ui.mon.none_hint": "Tambahkan situs web, port, atau perangkat untuk dipantau.",
 "ui.mon.no_match": "Tidak ada yang cocok dengan filter",
+"ui.mon.show_more": "Tampilkan {n} lagi ({left} belum ditampilkan)",
+"ui.mon.show_all": "Tampilkan semua {n}",
 "ui.mon.last24h": "24 jam terakhir",
 "ui.mon.changed": "Berubah",
 "ui.mon.query_help": "Filter: status:critical, type:udp, tag:env:prod, group:lab, depth:l1, flag:weak, attempts:1; awali dengan - untuk mengecualikan.",

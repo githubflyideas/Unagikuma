@@ -192,6 +192,8 @@
 "ui.mon.none": "아직 모니터가 없습니다",
 "ui.mon.none_hint": "웹사이트, 포트 또는 장비를 추가해 감시하세요.",
 "ui.mon.no_match": "필터와 일치하는 항목이 없습니다",
+"ui.mon.show_more": "{n}개 더 보기 (표시되지 않은 {left}개)",
+"ui.mon.show_all": "모두 보기 ({n}개)",
 "ui.mon.last24h": "최근 24시간",
 "ui.mon.changed": "변경",
 "ui.mon.query_help": "필터: status:critical, type:udp, tag:env:prod, group:lab, depth:l1, flag:weak, attempts:1. 앞에 -를 붙이면 제외합니다.",

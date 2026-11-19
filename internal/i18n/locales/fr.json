@@ -196,6 +196,8 @@
 "ui.mon.none": "Aucune sonde",
 "ui.mon.none_hint": "Ajoutez un site web, un port ou un équipement à surveiller.",
 "ui.mon.no_match": "Rien ne correspond au filtre",
+"ui.mon.show_more": "Afficher {n} de plus ({left} non affichés)",
+"ui.mon.show_all": "Tout afficher ({n})",
 "ui.mon.last24h": "Dernières 24 heures",
 "ui.mon.changed": "Changement",
 "ui.mon.query_help": "Filtres : status:critical, type:udp, tag:env:prod, group:lab, depth:l1, flag:weak, attempts:1 ; préfixez par - pour exclure.",

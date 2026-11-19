@@ -196,6 +196,8 @@
 "ui.mon.none": "अभी कोई मॉनिटर नहीं",
 "ui.mon.none_hint": "देखने के लिए कोई वेबसाइट, पोर्ट या डिवाइस जोड़ें।",
 "ui.mon.no_match": "फ़िल्टर से कुछ मेल नहीं खाता",
+"ui.mon.show_more": "{n} और दिखाएँ ({left} नहीं दिखाए गए)",
+"ui.mon.show_all": "सभी {n} दिखाएँ",
 "ui.mon.last24h": "पिछले 24 घंटे",
 "ui.mon.changed": "बदलाव",
 "ui.mon.query_help": "फ़िल्टर: status:critical, type:udp, tag:env:prod, group:lab, depth:l1, flag:weak, attempts:1; बाहर रखने के लिए आगे - लगाएँ।",

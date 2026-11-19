@@ -204,6 +204,8 @@
 "ui.mon.none": "Мониторов пока нет",
 "ui.mon.none_hint": "Добавьте сайт, порт или устройство для наблюдения.",
 "ui.mon.no_match": "Под фильтр ничего не подходит",
+"ui.mon.show_more": "Показать ещё {n} (не показано {left})",
+"ui.mon.show_all": "Показать все ({n})",
 "ui.mon.last24h": "Последние 24 часа",
 "ui.mon.changed": "Изменение",
 "ui.mon.query_help": "Фильтры: status:critical, type:udp, tag:env:prod, group:lab, depth:l1, flag:weak, attempts:1; поставьте - перед условием, чтобы исключить.",

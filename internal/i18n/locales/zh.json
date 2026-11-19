@@ -388,6 +388,8 @@
 "ui.mon.none": "还没有监控",
 "ui.mon.none_hint": "添加一个网站、端口或设备来监控。",
 "ui.mon.no_match": "没有符合筛选条件的监控",
+"ui.mon.show_more": "再显示 {n} 个（还有 {left} 个未显示）",
+"ui.mon.show_all": "全部显示（{n} 个）",
 "ui.mon.last24h": "最近 24 小时",
 "ui.mon.changed": "变化于",
 "ui.mon.query_help": "筛选：status:critical、type:udp、tag:env:prod、group:lab、depth:l1、flag:weak、attempts:1；前面加 - 表示排除。",

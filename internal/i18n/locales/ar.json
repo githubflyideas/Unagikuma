@@ -212,6 +212,8 @@
 "ui.mon.none": "لا توجد مراقبات بعد",
 "ui.mon.none_hint": "أضف موقعًا أو منفذًا أو جهازًا لمراقبته.",
 "ui.mon.no_match": "لا شيء يطابق التصفية",
+"ui.mon.show_more": "عرض {n} أخرى (لم يُعرض {left})",
+"ui.mon.show_all": "عرض الكل ({n})",
 "ui.mon.last24h": "آخر 24 ساعة",
 "ui.mon.changed": "التغيّر",
 "ui.mon.query_help": "عوامل التصفية: status:critical، type:udp، tag:env:prod، group:lab، depth:l1، flag:weak، attempts:1؛ ضع - قبلها للاستبعاد.",

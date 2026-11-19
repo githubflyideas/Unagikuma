@@ -1,7 +1,7 @@
 // Monitor list: dense table with heartbeat bars, or the honeycomb, with
 // search and status chips. A row opens the monitor's page; ticked rows can
 // be checked now, paused, resumed or deleted together.
-import { html, useState, useEffect, useMemo } from '../lib.js';
+import { html, useState, useEffect, useMemo, useRef } from '../lib.js';
 import { t, tn, fmtNum } from '../i18n.js';
 import { get, post, me } from '../api.js';
 import { onLive } from '../live.js';
@@ -34,6 +34,8 @@ export function MonitorTabs({ tab }) {
   return html`<div class="tabs"><a href="#/monitors" class=${tab === 'list' ? 'on' : ''}>${t('ui.mon.tab_list')}</a><a href="#/expiry" class=${tab === 'expiry' ? 'on' : ''}>${t('ui.exp.title')}</a></div>`;
 }
 
+const PAGE = 200;
+
 export function Monitors({ query }) {
   useDocTitle(t('ui.nav.monitors'));
   const [q, setQ] = useState(query.get('q') || '');
@@ -54,23 +56,44 @@ export function Monitors({ query }) {
   const beats = useFetch(() => get('/monitors/heartbeats?range=24h&cells=36'), []);
   useLive(['heartbeat'], beats.reload, 5000);
   useLive(['reset'], list.reload, 500);
-  // State events carry the full row: patch it in place.
-  useEffect(() => onLive('state', (row) => {
-    if (!row || !row.name) return;
-    list.setData(d => {
-      if (!d) return d;
-      const i = d.items.findIndex(x => x.name === row.name);
-      if (i < 0) { list.reload(); return d; }
-      const items = d.items.slice();
-      items[i] = row;
-      return { ...d, items };
+  // State events carry the full row: patch it in place. They are
+  // gathered for a second and applied together, so a burst of changes
+  // re-renders the table once, not once per monitor.
+  const pending = useRef(new Map());
+  useEffect(() => {
+    let timer = 0;
+    const flush = () => {
+      timer = 0;
+      const batch = pending.current;
+      pending.current = new Map();
+      list.setData(d => {
+        if (!d) return d;
+        const items = d.items.slice();
+        let missing = false;
+        const at = new Map(items.map((x, i) => [x.name, i]));
+        for (const [name, row] of batch) {
+          const i = at.get(name);
+          if (i === undefined) missing = true; else items[i] = row;
+        }
+        if (missing) list.reload();
+        return { ...d, items };
+      });
+    };
+    const off = onLive('state', (row) => {
+      if (!row || !row.name) return;
+      pending.current.set(row.name, row);
+      if (!timer) timer = setTimeout(flush, 1000);
     });
-  }), []);
+    return () => { off && off(); if (timer) clearTimeout(timer); };
+  }, []);
   // The search box and the order are in the top bar.
   useEffect(() => { setQ(query.get('q') || ''); }, [query.get('q')]);
   useEffect(() => { setSort(query.get('sort') || 'status'); }, [query.get('sort')]);
 
-  const { status, rest } = splitStatus(q);
+  // The table follows the search a moment after typing stops.
+  const [fq, setFq] = useState(q);
+  useEffect(() => { const id = setTimeout(() => setFq(q), 200); return () => clearTimeout(id); }, [q]);
+  const { status, rest } = splitStatus(fq);
   const counts = useMemo(() => {
     const c = {};
     for (const r of (list.data ? list.data.items : [])) c[r.status] = (c[r.status] || 0) + 1;
@@ -179,6 +202,32 @@ export function Monitors({ query }) {
   };
 
   const total = list.data ? list.data.items.length : 0;
+  // Thousands of rows at once make the page slow: the first PAGE are
+  // drawn, more on request; the search and the counts cover them all.
+  const [shown, setShown] = useState(PAGE);
+  useEffect(() => setShown(PAGE), [fq, sort]);
+  const visible = useMemo(() => (rows.length > shown ? rows.slice(0, shown) : rows), [rows, shown]);
+  // Typing in the search box re-renders this page on every key; the rows
+  // only change when the filtered list, the heartbeats or the ticks do.
+  const tbody = useMemo(() => visible.map(r => html`<tr key=${r.name} class=${'click ' + r.status + (sel.has(r.name) ? ' picked' : '')} onClick=${() => go('/monitors/' + enc(r.name))}>
+            <td class="sel" onClick=${(e) => e.stopPropagation()}><input type="checkbox" checked=${sel.has(r.name)} onChange=${() => toggle(r.name)} aria-label=${r.title} /></td>
+            <td class="nowrap"><${Pill} status=${r.status} soft=${r.state_type === 'soft' && r.status !== 'ok' && r.status !== 'pending'} />
+              ${r.state_type === 'soft' && r.attempt > 0 && r.status !== 'ok' && html` <span class="small muted">${r.attempt}/${r.max_attempts}</span>`}</td>
+            <td style=${{ maxWidth: '420px' }}>
+              <div class="row nowrap"><a class="name ellipsis" href=${'#/monitors/' + enc(r.name)} onClick=${(e) => e.stopPropagation()}>${r.title}</a>
+                ${r.flags.includes('weak') && html`<span class="tag weak" title=${t('ui.flag.weak_hint')}>${t('ui.flag.weak')}</span>`}
+                ${r.flags.includes('held') && html`<span class="tag" title=${t('ui.flag.held_hint')}>${t('ui.flag.held')}</span>`}
+                ${r.incident && r.incident.acked && html`<span class="tag">${t('ui.inc.acked_short')}</span>`}
+              </div>
+              <div class="sub ellipsis"><span class="tag">${r.written_type}</span>${r.team && multiTeam ? html` <span class="tag" title=${t('ui.team.field')}>${r.team}</span>` : ''} <span class="ltr">${r.target}</span>
+                ${r.status !== 'ok' && r.reason ? html` · <span class=${r.status === 'critical' ? 'err-text' : ''}>${reasonText(r.reason, r.detail)}</span>` : ''}</div>
+            </td>
+            <td class="hide-sm" style=${{ minWidth: '180px' }}><${Beats} cells=${beats.data && beats.data.items[r.name]} /></td>
+            <td class="right nowrap hide-sm">${msText(r.latency_ms)}</td>
+            <td class="right nowrap" title=${r.uptime_24h == null && r.coverage_24h > 0 ? t('ui.uptime.coverage', { pct: pct(r.coverage_24h, 0) }) : ''}>${pct(r.uptime_24h)}</td>
+            <td class="nowrap small muted hide-sm"><${Ago} at=${r.last_change} /></td>
+            <td class="right nowrap"><a class="btn sm" href=${'#/monitors/' + enc(r.name) + '/edit'} onClick=${(e) => e.stopPropagation()}>${t('ui.edit')}</a></td>
+          </tr>`), [visible, beats.data, sel, multiTeam]);
   return html`<div class="page list">
     <${MonitorTabs} tab="list" />
     <div class="row">
@@ -229,26 +278,10 @@ export function Monitors({ query }) {
             <${Th} k="status">${t('ui.status')}<//><${Th} k="name">${t('ui.monitor')}<//><th class="hide-sm">${t('ui.mon.last24h')}</th>
             <${Th} k="latency" cls="right hide-sm">${t('ui.latency')}<//><${Th} k="uptime" cls="right">${t('ui.uptime24h')}<//><${Th} k="last_change" cls="hide-sm">${t('ui.mon.changed')}<//><th></th>
           </tr></thead>
-          <tbody>${rows.map(r => html`<tr key=${r.name} class=${'click ' + r.status + (sel.has(r.name) ? ' picked' : '')} onClick=${() => go('/monitors/' + enc(r.name))}>
-            <td class="sel" onClick=${(e) => e.stopPropagation()}><input type="checkbox" checked=${sel.has(r.name)} onChange=${() => toggle(r.name)} aria-label=${r.title} /></td>
-            <td class="nowrap"><${Pill} status=${r.status} soft=${r.state_type === 'soft' && r.status !== 'ok' && r.status !== 'pending'} />
-              ${r.state_type === 'soft' && r.attempt > 0 && r.status !== 'ok' && html` <span class="small muted">${r.attempt}/${r.max_attempts}</span>`}</td>
-            <td style=${{ maxWidth: '420px' }}>
-              <div class="row nowrap"><a class="name ellipsis" href=${'#/monitors/' + enc(r.name)} onClick=${(e) => e.stopPropagation()}>${r.title}</a>
-                ${r.flags.includes('weak') && html`<span class="tag weak" title=${t('ui.flag.weak_hint')}>${t('ui.flag.weak')}</span>`}
-                ${r.flags.includes('held') && html`<span class="tag" title=${t('ui.flag.held_hint')}>${t('ui.flag.held')}</span>`}
-                ${r.incident && r.incident.acked && html`<span class="tag">${t('ui.inc.acked_short')}</span>`}
-              </div>
-              <div class="sub ellipsis"><span class="tag">${r.written_type}</span>${r.team && multiTeam ? html` <span class="tag" title=${t('ui.team.field')}>${r.team}</span>` : ''} <span class="ltr">${r.target}</span>
-                ${r.status !== 'ok' && r.reason ? html` · <span class=${r.status === 'critical' ? 'err-text' : ''}>${reasonText(r.reason, r.detail)}</span>` : ''}</div>
-            </td>
-            <td class="hide-sm" style=${{ minWidth: '180px' }}><${Beats} cells=${beats.data && beats.data.items[r.name]} /></td>
-            <td class="right nowrap hide-sm">${msText(r.latency_ms)}</td>
-            <td class="right nowrap" title=${r.uptime_24h == null && r.coverage_24h > 0 ? t('ui.uptime.coverage', { pct: pct(r.coverage_24h, 0) }) : ''}>${pct(r.uptime_24h)}</td>
-            <td class="nowrap small muted hide-sm"><${Ago} at=${r.last_change} /></td>
-            <td class="right nowrap"><a class="btn sm" href=${'#/monitors/' + enc(r.name) + '/edit'} onClick=${(e) => e.stopPropagation()}>${t('ui.edit')}</a></td>
-          </tr>`)}</tbody>
-        </table>`}
+          <tbody>${tbody}</tbody>
+        </table>${rows.length > shown ? html`<div class="row" style=${{ justifyContent: 'center', padding: '12px' }}>
+          <button class="btn" onClick=${() => setShown(shown + PAGE)}>${t('ui.mon.show_more', { n: fmtNum(Math.min(PAGE, rows.length - shown)), left: fmtNum(rows.length - shown) })}</button>
+          <button class="btn" onClick=${() => setShown(rows.length)}>${t('ui.mon.show_all', { n: fmtNum(rows.length) })}</button></div>` : ''}`}
     </div></div>
     <p class="small muted">${t('ui.mon.query_help')}</p>
     ${quick && html`<${QuickAdd} onClose=${() => setQuick(false)} onDone=${() => { setQuick(false); list.reload(); beats.reload(); }} team=${termOf('team')} region=${termOf('region')} />`}

@@ -192,6 +192,8 @@
 "ui.mon.none": "Chưa có giám sát",
 "ui.mon.none_hint": "Thêm một trang web, cổng hoặc thiết bị để theo dõi.",
 "ui.mon.no_match": "Không có gì khớp bộ lọc",
+"ui.mon.show_more": "Hiện thêm {n} ({left} chưa hiện)",
+"ui.mon.show_all": "Hiện tất cả {n}",
 "ui.mon.last24h": "24 giờ qua",
 "ui.mon.changed": "Thay đổi",
 "ui.mon.query_help": "Bộ lọc: status:critical, type:udp, tag:env:prod, group:lab, depth:l1, flag:weak, attempts:1; thêm - phía trước để loại trừ.",

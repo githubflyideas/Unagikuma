@@ -192,6 +192,8 @@
 "ui.mon.none": "監視がまだありません",
 "ui.mon.none_hint": "Web サイト、ポート、機器を追加して監視しましょう。",
 "ui.mon.no_match": "条件に一致する監視はありません",
+"ui.mon.show_more": "さらに {n} 件表示（未表示 {left} 件）",
+"ui.mon.show_all": "すべて表示（{n} 件）",
 "ui.mon.last24h": "直近 24 時間",
 "ui.mon.changed": "変化",
 "ui.mon.query_help": "フィルタ: status:critical、type:udp、tag:env:prod、group:lab、depth:l1、flag:weak、attempts:1。先頭に - を付けると除外します。",
