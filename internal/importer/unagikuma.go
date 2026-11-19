@@ -148,9 +148,21 @@ func Unagikuma(data []byte, existing *config.Config, o Options) (*Result, error)
 	for _, p := range picks {
 		spec := config.RecordSpec{Name: p.name, Type: p.rec.Type, Target: p.rec.Target, Interval: p.rec.Interval}
 		has := map[string]bool{}
+		it := &r.Items[p.item]
 		for _, op := range p.rec.Opts {
 			has[op.Key] = true
 			v := op.Value
+			// Who belongs to a team is decided here, not by the other
+			// installation's file: the same user name may be someone else.
+			if p.kind == "team" && (op.Key == "members" || op.Key == "managers" || op.Key == "operators" || op.Key == "viewers") {
+				it.attention("Its members ("+v+") are not carried over: accounts here with those names may be other people.", "Add the members under Advanced › Teams.")
+				continue
+			}
+			// A team or policy that already exists here receives these
+			// monitors' alerts: its channels and people, not the other file's.
+			if p.kind == "monitor" && (op.Key == "team" || op.Key == "policy") && here[v].Name != "" && !used[v] {
+				it.attention("Its alerts go to the "+op.Key+" "+v+" that is already here, and to its channels and people.", "")
+			}
 			if op.Key == "parent" && p.kind == "monitor" {
 				v = remapList(v, rename)
 			}
@@ -158,6 +170,14 @@ func Unagikuma(data []byte, existing *config.Config, o Options) (*Result, error)
 			for _, m := range secretRef.FindAllStringSubmatch(v, -1) {
 				if o.SecretExists == nil || !o.SecretExists(m[1]) {
 					missing[m[1]] = appendOnce(missing[m[1]], p.name)
+				} else {
+					// The secret here has the same name, perhaps not the same
+					// purpose: its value goes wherever this record points.
+					where := p.rec.Target
+					if where == "" {
+						where = "where the record points"
+					}
+					it.attention("It uses the secret "+m[1]+" of this installation: its value will be sent to "+where+".", "Check the address before importing, or remove the record from the file.")
 				}
 			}
 		}
