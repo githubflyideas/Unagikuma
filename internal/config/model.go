@@ -3,6 +3,7 @@ package config
 import (
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/keywords"
@@ -289,12 +290,49 @@ func IsMonitorType(t string) bool { return monitorTypes[t] }
 
 // FindMonitor returns a monitor by name.
 func (c *Config) FindMonitor(name string) *Monitor {
+	if m := monitorIndexOf(c)[name]; m != nil && m.Name == name {
+		return m
+	}
+	// Not in the index (or the index is stale): look through them all, so
+	// a miss is never wrong, only slower.
 	for _, m := range c.Monitors {
 		if m.Name == name {
 			return m
 		}
 	}
 	return nil
+}
+
+// monitorIndex maps the monitors of one Config by name. Lookups by name
+// happen once per monitor in list views; a linear search made those
+// quadratic in the number of monitors. One index is kept, for the Config
+// last asked about, and rebuilt when its slice of monitors was replaced or
+// grew.
+type monitorIndex struct {
+	cfg   *Config
+	first **Monitor
+	n     int
+	m     map[string]*Monitor
+}
+
+var lastMonitorIndex atomic.Pointer[monitorIndex]
+
+func monitorIndexOf(c *Config) map[string]*Monitor {
+	var first **Monitor
+	if len(c.Monitors) > 0 {
+		first = &c.Monitors[0]
+	}
+	if ix := lastMonitorIndex.Load(); ix != nil && ix.cfg == c && ix.n == len(c.Monitors) && ix.first == first {
+		return ix.m
+	}
+	ix := &monitorIndex{cfg: c, first: first, n: len(c.Monitors), m: make(map[string]*Monitor, len(c.Monitors))}
+	for _, m := range c.Monitors {
+		if _, dup := ix.m[m.Name]; !dup {
+			ix.m[m.Name] = m
+		}
+	}
+	lastMonitorIndex.Store(ix)
+	return ix.m
 }
 
 // HasName reports whether a record of any type is called name: names are
