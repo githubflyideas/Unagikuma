@@ -115,9 +115,10 @@ func TestPacketBudgetOnlyForPackets(t *testing.T) {
 		mons = append(mons, mon(fmt.Sprintf("web%d", i), "HTTP", fmt.Sprintf("http://10.0.1.%d/", i), fmt.Sprintf("10.0.1.%d", i), false),
 			mon(fmt.Sprintf("tcp%d", i), "TCP", fmt.Sprintf("10.0.2.%d:443", i), fmt.Sprintf("10.0.2.%d", i), false))
 	}
-	for i := range 3 {
+	for i := range 2 {
 		mons = append(mons, mon(fmt.Sprintf("ping%d", i), "PING", fmt.Sprintf("10.0.3.%d", i), fmt.Sprintf("10.0.3.%d", i), true))
 	}
+	mons = append(mons, mon("ping2", "SNMP", "10.0.3.9", "10.0.3.9", false)) // counted like a ping
 	t0 := time.Now()
 	e.Apply(Config{Tunables: ts, Monitors: mons, Location: time.UTC})
 	ctx, cancel := context.WithCancel(context.Background())

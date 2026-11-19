@@ -62,10 +62,18 @@ func spacingKey(m *MonitorSpec) string {
 }
 
 // sendsPackets reports whether a check counts against the packet budget
-// (probe.max-pps): pings and UDP checks. Connection-based checks (HTTP,
+// (probe.max-pps): pings and everything carried by UDP (DNS, NTP, SNMP,
+// syslog and the UDP checks themselves). Connection-based checks (HTTP,
 // TCP and the rest) are bounded by probe.max-concurrency instead.
 func sendsPackets(m *MonitorSpec) bool {
-	return m.Ping || strings.EqualFold(m.Probe.Type, "PING") || strings.EqualFold(m.Probe.Type, "UDP")
+	if m.Ping {
+		return true
+	}
+	switch strings.ToUpper(m.Probe.Type) {
+	case "PING", "UDP", "DNS", "NTP", "SNMP", "SYSLOG":
+		return true
+	}
+	return false
 }
 
 // spaceAfter records that a ping-like round to key started now.
