@@ -392,6 +392,57 @@ type Uptime struct {
 
 // UptimeOf computes availability = up / (up + down) over [from, to),
 // prorating the buckets at the start of the window.
+// UptimesOf is UptimeOf for every monitor at once, keyed by monitor id:
+// one grouped query per aggregate table instead of one per monitor.
+func (s *Store) UptimesOf(from, to time.Time) (map[int64]Uptime, error) {
+	out := map[int64]Uptime{}
+	if !to.After(from) {
+		return out, nil
+	}
+	fine := s.fineFrom()
+	add := func(table string, start, end time.Time, width time.Duration) error {
+		// A bucket that began before from counts for the part inside it.
+		rows, err := s.hist.Query(`SELECT mid, SUM(up_s*f), SUM(down_s*f), SUM(ex_s*f), SUM(deg_s*f) FROM
+			(SELECT mid, up_s, down_s, ex_s, deg_s, CASE WHEN t < ? THEN 1.0 - (? - t) * 1.0 / ? ELSE 1.0 END AS f
+			 FROM `+table+` WHERE t>=? AND t<?) GROUP BY mid`,
+			from.Unix(), from.Unix(), width.Seconds(), start.Unix(), end.Unix())
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var mid int64
+			var up, down, ex, deg float64
+			if err := rows.Scan(&mid, &up, &down, &ex, &deg); err != nil {
+				return err
+			}
+			u := out[mid]
+			u.UpS, u.DownS, u.ExcludedS, u.DegradedS = u.UpS+up, u.DownS+down, u.ExcludedS+ex, u.DegradedS+deg
+			out[mid] = u
+		}
+		return rows.Err()
+	}
+	if from.Before(fine) {
+		if err := add("hourly", from.Truncate(time.Hour), minTime(fine, to), time.Hour); err != nil {
+			return nil, err
+		}
+	}
+	if to.After(fine) {
+		if err := add("agg5m", maxTime(fine, from).Truncate(5*time.Minute), to, 5*time.Minute); err != nil {
+			return nil, err
+		}
+	}
+	for mid, u := range out {
+		if total := u.UpS + u.DownS; total > 0 {
+			ratio := u.UpS / total
+			u.Ratio = &ratio
+		}
+		u.Coverage = min(1, (u.UpS+u.DownS+u.ExcludedS)/to.Sub(from).Seconds())
+		out[mid] = u
+	}
+	return out, nil
+}
+
 func (s *Store) UptimeOf(monitor string, from, to time.Time) (Uptime, error) {
 	var u Uptime
 	mid := s.MonitorID(monitor)

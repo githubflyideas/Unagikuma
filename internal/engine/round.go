@@ -61,6 +61,13 @@ func spacingKey(m *MonitorSpec) string {
 	return ""
 }
 
+// sendsPackets reports whether a check counts against the packet budget
+// (probe.max-pps): pings and UDP checks. Connection-based checks (HTTP,
+// TCP and the rest) are bounded by probe.max-concurrency instead.
+func sendsPackets(m *MonitorSpec) bool {
+	return m.Ping || strings.EqualFold(m.Probe.Type, "PING") || strings.EqualFold(m.Probe.Type, "UDP")
+}
+
 // spaceAfter records that a ping-like round to key started now.
 func (e *Engine) spaceAfter(key string, now time.Time) {
 	gap := e.cfg.Tunables.Duration("probe.same-target-gap")
@@ -92,7 +99,8 @@ func (e *Engine) dispatchDue(ctx context.Context, wg *sync.WaitGroup) {
 		if !e.participates(m) {
 			continue
 		} // assigned to a different receiving site
-		if d := e.pps.Delay(now); d > 0 {
+		packets := sendsPackets(m)
+		if d := e.pps.Delay(now); packets && d > 0 {
 			// Over the packet budget: start it a little later.
 			e.sched.Set(name, now.Add(d))
 			continue
@@ -110,7 +118,9 @@ func (e *Engine) dispatchDue(ctx context.Context, wg *sync.WaitGroup) {
 			}
 			continue
 		}
-		e.pps.Allow(now)
+		if packets {
+			e.pps.Allow(now)
+		}
 		e.spaceAfter(key, now)
 		due := rt.Due
 		if due.IsZero() {

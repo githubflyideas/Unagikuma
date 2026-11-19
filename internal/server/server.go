@@ -54,6 +54,7 @@ type Server struct {
 
 	pageCache pageCache
 	etags     etagCache
+	uptimes   uptimeCache
 	idem      idemCache
 
 	// Live events are handed to a worker so the engine never waits for

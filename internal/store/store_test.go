@@ -450,3 +450,38 @@ func TestPasswordHash(t *testing.T) {
 		t.Fatal("argon2id")
 	}
 }
+
+// The batched uptime used by the monitor list says the same as asking for
+// each monitor alone, also for windows that start inside a bucket.
+func TestUptimesOfMatchesUptimeOf(t *testing.T) {
+	s, c, _ := open(t)
+	at := t0
+	for i := 0; i < 180; i++ {
+		s.Verdict(verdict("web", at, "ok", true, 20))
+		st := "ok"
+		if i%7 == 0 {
+			st = "critical"
+		}
+		s.Verdict(verdict("db", at, st, true, 5))
+		if i > 90 {
+			s.Verdict(verdict("late", at, "critical", true, 0))
+		}
+		at = at.Add(time.Minute)
+	}
+	s.Flush()
+	c.t = at
+	for _, from := range []time.Time{t0, t0.Add(7 * time.Minute), t0.Add(83 * time.Minute), at.Add(-24 * time.Hour)} {
+		all, err := s.UptimesOf(from, at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range []string{"web", "db", "late", "none"} {
+			one, _ := s.UptimeOf(m, from, at)
+			got := all[s.MonitorID(m)]
+			if math.Abs(one.UpS-got.UpS) > 0.01 || math.Abs(one.DownS-got.DownS) > 0.01 || math.Abs(one.ExcludedS-got.ExcludedS) > 0.01 ||
+				math.Abs(one.Coverage-got.Coverage) > 1e-9 || (one.Ratio == nil) != (got.Ratio == nil) || one.Ratio != nil && math.Abs(*one.Ratio-*got.Ratio) > 1e-9 {
+				t.Errorf("%s from %v: one %+v, all %+v", m, from.Sub(t0), one, got)
+			}
+		}
+	}
+}

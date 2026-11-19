@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/app"
@@ -123,6 +124,7 @@ func (s *Server) incidentIndex() map[int64]engine.Incident {
 	return idx
 }
 
+// rowFrom is one monitor's full row, with its uptime read exactly.
 func (s *Server) rowFrom(r engine.MonitorRow, cfg *config.Config, incs map[int64]engine.Incident) rowJSON {
 	out := s.rowBase(r, cfg, incs)
 	out.Observations = s.app.ObservationSnapshot(r.Name)
@@ -130,6 +132,43 @@ func (s *Server) rowFrom(r engine.MonitorRow, cfg *config.Config, incs map[int64
 		out.Uptime24h, out.Coverage24h = s.shownRatio(u), u.Coverage
 	}
 	return out
+}
+
+// listRow is a row of the monitor list: the same, with the uptime from
+// the shared cache.
+func (s *Server) listRow(r engine.MonitorRow, cfg *config.Config, incs map[int64]engine.Incident) rowJSON {
+	out := s.rowBase(r, cfg, incs)
+	out.Observations = s.app.ObservationSnapshot(r.Name)
+	if u, ok := s.uptime24h(r.Name); ok {
+		out.Uptime24h, out.Coverage24h = s.shownRatio(u), u.Coverage
+	}
+	return out
+}
+
+// uptime24h is a monitor's uptime over the last day. Every monitor's is
+// read in one query and kept for uptimeCacheTTL: a list of thousands of
+// monitors then costs one query, not one each, and a day's figure hardly
+// moves in that time.
+func (s *Server) uptime24h(name string) (store.Uptime, bool) {
+	now := s.now()
+	s.uptimes.mu.Lock()
+	defer s.uptimes.mu.Unlock()
+	if s.uptimes.m == nil || now.Sub(s.uptimes.at) > uptimeCacheTTL || now.Before(s.uptimes.at) {
+		m, err := s.app.Store().UptimesOf(now.Add(-24*time.Hour), now)
+		if err != nil {
+			return store.Uptime{}, false
+		}
+		s.uptimes.m, s.uptimes.at = m, now
+	}
+	return s.uptimes.m[s.app.Store().MonitorID(name)], true
+}
+
+const uptimeCacheTTL = 30 * time.Second
+
+type uptimeCache struct {
+	mu sync.Mutex
+	at time.Time
+	m  map[int64]store.Uptime
 }
 
 // rowBase builds a row from memory only (no uptime, which needs the
@@ -204,7 +243,7 @@ func (s *Server) monitors(w http.ResponseWriter, r *http.Request) (any, error) {
 		if !seesMonitor(r, row.Name) {
 			continue
 		}
-		rj := s.rowFrom(row, cfg, incs)
+		rj := s.listRow(row, cfg, incs)
 		if q.match(rj) {
 			out = append(out, rj)
 		}

@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.6.27 — 2026-11-19
+
+**Fixed**
+- The outbound packet budget (`probe.max-pps`, 200 a second) held back every check, not only pings and UDP: with thousands of HTTP or TCP monitors on short intervals many went unchecked. It now applies to pings and UDP checks only.
+- The monitor list and the overview slowed down with the square of the number of monitors. With 20,000 monitors a page of the list took 2.7 s; it now takes about 0.2 s.
+
 ## v2.6.26 — 2026-11-19
 
 **Changed**
