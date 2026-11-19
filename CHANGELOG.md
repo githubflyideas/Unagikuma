@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.6.26 — 2026-11-19
 
 **Changed**
 - Registration: without a licence the audit log shows the last 3 days (export and the integrity check need a registration), and up to 5 accounts can be added. All interface styles are free. A licence no longer limits nodes, has no tiers and lists no features (registered means all of them); it never gives fewer than the free 5 accounts.
