@@ -11,12 +11,12 @@ import (
 // CodeRegistration means the feature needs a registered installation.
 const CodeRegistration = "registration_required"
 
-// requireFeature serves a registered-only feature, or says what is needed.
-func requireFeature(s *Server, feature string, f apiFunc) apiFunc {
+// requireRegistered serves a registered-only feature, or says what is needed.
+func requireRegistered(s *Server, f apiFunc) apiFunc {
 	return func(w http.ResponseWriter, r *http.Request) (any, error) {
-		if st := s.app.License().State(); !st.Allowed(feature) {
+		if st := s.app.License().State(); !st.Registered {
 			e := Errorf(http.StatusPaymentRequired, CodeRegistration, "this feature needs a registered installation (Settings › Registration)")
-			e.Extra = map[string]any{"feature": feature, "installation_id": st.InstallationID}
+			e.Extra = map[string]any{"installation_id": st.InstallationID}
 			return nil, e
 		}
 		return f(w, r)
@@ -33,8 +33,11 @@ func quotaError(err error) error {
 func (s *Server) licenseGet(w http.ResponseWriter, r *http.Request) (any, error) {
 	return struct {
 		license.State
-		Usage app.Usage `json:"usage"`
-	}{s.app.License().State(), s.app.Usage()}, nil
+		Usage     app.Usage `json:"usage"`
+		UserLimit int       `json:"user_limit"`
+		FreeUsers int       `json:"free_users"`
+		FreeAudit int       `json:"free_audit_days"`
+	}{s.app.License().State(), s.app.Usage(), app.UserLimit(s.app.License().State()), license.FreeUsers, license.FreeAuditDays}, nil
 }
 
 // licensePut installs a licence file (its JSON as the body); an invalid
@@ -48,7 +51,7 @@ func (s *Server) licensePut(w http.ResponseWriter, r *http.Request) (any, error)
 	if err != nil {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 	}
-	auditOf(r).note("customer", st.Customer).note("tier", st.Tier).note("fingerprint", st.Fingerprint).target = license.FileName
+	auditOf(r).note("customer", st.Customer).note("fingerprint", st.Fingerprint).target = license.FileName
 	return st, nil
 }
 

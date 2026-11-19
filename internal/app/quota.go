@@ -7,11 +7,11 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/license"
 )
 
-// Quotas come from the licence: a registered installation may add nodes
-// and accounts up to what it states (0 = no limit). Nothing is switched
-// off when they are exceeded, for example after a smaller licence is
-// installed; only adding more is refused. Without a licence there is no
-// limit.
+// Without a licence an installation may have license.FreeUsers accounts;
+// a licence states its own number (0 = no limit) and never gives fewer.
+// Nodes are not limited. Nothing is switched off when the number is
+// exceeded, for example after a licence is removed; only adding more is
+// refused.
 
 // ErrQuota means adding one more would exceed the licence.
 var ErrQuota = errors.New("licence quota")
@@ -24,7 +24,7 @@ type QuotaError struct {
 }
 
 func (e *QuotaError) Error() string {
-	return fmt.Sprintf("the licence allows %d %s and %d are in use; install a licence with a higher limit (Settings › Registration)", e.Limit, e.Kind, e.Used)
+	return fmt.Sprintf("an installation may have %d %s and %d are in use; register for more (Settings › Registration)", e.Limit, e.Kind, e.Used)
 }
 
 func (e *QuotaError) Unwrap() error { return ErrQuota }
@@ -57,15 +57,23 @@ func (a *App) AllowAdd(kind string) error {
 }
 
 func allowAdd(st license.State, u Usage, kind string) error {
-	if !st.Registered {
+	if kind != "users" {
 		return nil
 	}
-	used, limit := u.Users, st.MaxUsers
-	if kind == "nodes" {
-		used, limit = u.Nodes, st.MaxNodes
-	}
-	if limit > 0 && used+1 > limit {
-		return &QuotaError{Kind: kind, Used: used, Limit: limit}
+	if limit := UserLimit(st); limit > 0 && u.Users+1 > limit {
+		return &QuotaError{Kind: "accounts", Used: u.Users, Limit: limit}
 	}
 	return nil
+}
+
+// UserLimit is the number of accounts the installation may have (0 = no
+// limit).
+func UserLimit(st license.State) int {
+	if !st.Registered {
+		return license.FreeUsers
+	}
+	if st.MaxUsers > 0 && st.MaxUsers < license.FreeUsers {
+		return license.FreeUsers
+	}
+	return st.MaxUsers
 }

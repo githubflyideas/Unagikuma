@@ -3,8 +3,6 @@ package server
 import (
 	"strings"
 	"testing"
-
-	"github.com/githubflyideas/unagikuma/internal/license"
 )
 
 // The status page footer line is the registered edition's: unregistered,
@@ -15,7 +13,7 @@ func TestStatusSupportFooter(t *testing.T) {
 	if c := e.do("PUT", "/api/v1/status-support", map[string]string{"text": "Support: ops@example.com"}, nil); c == 200 {
 		t.Fatal("unregistered: footer changed")
 	}
-	e.register(license.FeatBranding)
+	e.register()
 	if c := e.do("PUT", "/api/v1/status-support", map[string]string{"text": strings.Repeat("x", 121)}, nil); c != 400 {
 		t.Fatalf("too long: %d", c)
 	}

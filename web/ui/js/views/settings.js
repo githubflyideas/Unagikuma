@@ -596,18 +596,16 @@ function Registration() {
   return html`<div class="col" style=${{ gap: '12px' }}>
     <${Card} title=${s.registered ? t('ui.reg.registered_to', { name: s.customer }) : s.kind === 'expired' ? t('ui.reg.expired') : t('ui.reg.unregistered')}
       actions=${s.registered && html`<button class="btn sm" onClick=${remove}>${t('ui.reg.remove')}</button>`}>
-      ${!s.registered && html`<p class="small muted" style=${{ marginTop: 0 }}>${t('ui.reg.intro')}</p>`}
+      ${!s.registered && html`<p class="small muted" style=${{ marginTop: 0 }}>${t('ui.reg.intro')} ${t('ui.reg.free_note', { n: s.free_users, days: s.free_audit_days })}</p>`}
       ${s.reason && html`<div class="banner warning small">${s.reason}</div>`}
       <table class="kvtable"><tbody>
         <tr><th>${t('ui.reg.installation')}</th><td class="ltr"><b>${s.installation_id}</b> <${Copy} text=${s.installation_id} /></td></tr>
         ${row(t('ui.reg.licensee'), s.customer && s.customer + (s.licensee ? ' (' + t('ui.reg.licensee.' + s.licensee) + ')' : ''))}
-        ${row(t('ui.reg.tier'), s.tier)}
         ${row(t('ui.reg.type'), s.type)}
         ${row(t('ui.reg.expires'), s.registered ? (s.days < 0 ? t('ui.reg.never') : s.expires + ' (' + t('ui.reg.days_left', { n: s.days }) + ')') : s.expires)}
         ${row(t('ui.reg.updates'), s.updates_until)}
-        ${row(t('ui.reg.features'), (s.features || []).map(f => t('ui.reg.feat.' + f)).join(', '))}
-        ${s.usage && html`<tr><th>${t('ui.reg.nodes')}</th><td>${quota(s.usage.nodes, s.registered && s.max_nodes)}</td></tr>
-          <tr><th>${t('ui.reg.users')}</th><td>${quota(s.usage.users, s.registered && s.max_users)}</td></tr>`}
+        ${s.usage && html`<tr><th>${t('ui.reg.nodes')}</th><td>${quota(s.usage.nodes, 0)}</td></tr>
+          <tr><th>${t('ui.reg.users')}</th><td>${quota(s.usage.users, s.user_limit)}</td></tr>`}
         ${row(t('ui.reg.fingerprint'), s.fingerprint)}
       </tbody></table>
     <//>
@@ -629,6 +627,7 @@ function Audit() {
   const [more, setMore] = useState(false);
   const [err, setErr] = useState(null);
   const [check, setCheck] = useState(null);
+  const [limited, setLimited] = useState(0);
   const query = () => {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(f)) if (v.trim()) q.set(k, v.trim());
@@ -646,6 +645,7 @@ function Audit() {
       setItems(before ? [...items, ...r.items] : r.items);
       setMore(!f.site && r.items.length === 100);
       setSites(r.sites || []);
+      setLimited(r.limited_days || 0);
       setErr(null);
     } catch (e) { setErr(e); }
   };
@@ -656,6 +656,7 @@ function Audit() {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return html`<div class="col" style=${{ gap: '12px' }}>
     <p class="muted small" style=${{ margin: 0 }}>${t('ui.audit.intro')}</p>
+    ${limited > 0 && html`<div class="banner warning small">${t('ui.audit.limited', { days: limited })} <a href="#/settings/registration">${t('ui.set.tab.registration')}</a></div>`}
     <form class="row" onSubmit=${(e) => { e.preventDefault(); load(); }}>
       <input type="text" class="ltr" placeholder=${t('ui.audit.actor')} value=${f.actor} onInput=${set('actor')} style=${{ maxWidth: '180px' }} />
       <select value=${f.action} onChange=${set('action')} style=${{ maxWidth: '180px' }}>
@@ -676,9 +677,9 @@ function Audit() {
       </select>`}
       <button class="btn">${t('ui.audit.filter')}</button>
       <div class="spacer"></div>
-      <a class="btn" href=${'/api/v1/audit/export?format=csv&' + query()} download>${t('ui.audit.export_csv')}</a>
+      ${!limited && html`<a class="btn" href=${'/api/v1/audit/export?format=csv&' + query()} download>${t('ui.audit.export_csv')}</a>
       <a class="btn" href=${'/api/v1/audit/export?format=json&' + query()} download>${t('ui.audit.export_json')}</a>
-      <button type="button" class="btn" onClick=${verify}>${t('ui.audit.verify')}</button>
+      <button type="button" class="btn" onClick=${verify}>${t('ui.audit.verify')}</button>`}
     </form>
     ${check && html`<div class=${'banner ' + (check.ok ? 'ok' : 'error')}>${check.ok ? html`${t('ui.audit.verify_ok', { n: check.entries, head: '' })}<code class="ltr small">${check.head.slice(0, 16)}…</code>` : t('ui.audit.verify_bad', { problem: check.problem })}</div>`}
     ${err && html`<${ErrorBox} error=${err} />`}

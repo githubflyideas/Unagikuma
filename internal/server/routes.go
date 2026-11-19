@@ -7,7 +7,6 @@ import (
 
 	"github.com/githubflyideas/unagikuma/internal/app"
 	"github.com/githubflyideas/unagikuma/internal/cluster"
-	"github.com/githubflyideas/unagikuma/internal/license"
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
 
@@ -131,7 +130,7 @@ func (s *Server) routes() {
 	s.handle("PUT /api/v1/branding", "admin", s.brandPut)
 	s.handle("PUT /api/v1/branding/{image}", "admin", s.brandImagePut)
 	s.handle("DELETE /api/v1/branding/{image}", "admin", s.brandImageDelete)
-	s.handle("PUT /api/v1/status-support", "admin", requireFeature(s, license.FeatBranding, s.supportPut))
+	s.handle("PUT /api/v1/status-support", "admin", requireRegistered(s, s.supportPut))
 	s.handle("POST /api/v1/status-pages", "write", global(s.statusPageCreate))
 	s.handle("PUT /api/v1/status-pages/{name}", "write", global(s.statusPageUpdate))
 	s.handle("DELETE /api/v1/status-pages/{name}", "write", global(s.statusPageDelete))
@@ -160,9 +159,9 @@ func (s *Server) routes() {
 	s.handle("PUT /api/v1/nodes/{name}", "admin", s.nodeUpdate)
 	s.handle("GET /api/v1/users", "admin", s.usersList)
 	s.handle("GET /api/v1/scripts", "read", s.scripts)
-	s.handle("GET /api/v1/audit", "admin", requireFeature(s, license.FeatAudit, s.auditLog))
-	s.handle("GET /api/v1/audit/export", "admin", requireFeature(s, license.FeatAudit, s.auditExport))
-	s.handle("GET /api/v1/audit/verify", "admin", requireFeature(s, license.FeatAudit, s.auditVerify))
+	s.handle("GET /api/v1/audit", "admin", s.auditLog)
+	s.handle("GET /api/v1/audit/export", "admin", requireRegistered(s, s.auditExport))
+	s.handle("GET /api/v1/audit/verify", "admin", requireRegistered(s, s.auditVerify))
 	s.handle("GET /api/v1/license", "read", s.licenseGet)
 	s.handle("PUT /api/v1/license", "admin", s.licensePut)
 	s.handle("DELETE /api/v1/license", "admin", s.licenseDelete)

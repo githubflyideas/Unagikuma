@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/githubflyideas/unagikuma/internal/license"
 )
 
 // The line at the foot of the public status pages says "Powered by
@@ -15,7 +13,7 @@ const supportSetting = "status.support_text"
 
 // supportText is the footer text in use: "" for the usual line.
 func (s *Server) supportText() string {
-	if !s.app.License().State().Allowed(license.FeatBranding) {
+	if !s.app.License().State().Registered {
 		return ""
 	}
 	v, _ := s.app.Store().Setting(supportSetting)
@@ -24,7 +22,7 @@ func (s *Server) supportText() string {
 
 func (s *Server) supportGet(w http.ResponseWriter, r *http.Request) (any, error) {
 	v, _ := s.app.Store().Setting(supportSetting)
-	return map[string]any{"text": v, "allowed": s.app.License().State().Allowed(license.FeatBranding)}, nil
+	return map[string]any{"text": v, "allowed": s.app.License().State().Registered}, nil
 }
 
 func (s *Server) supportPut(w http.ResponseWriter, r *http.Request) (any, error) {

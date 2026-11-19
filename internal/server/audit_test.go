@@ -30,14 +30,30 @@ func TestAuditLog(t *testing.T) {
 	if c := ops.do("GET", "/api/v1/audit", nil, nil); c != 403 {
 		t.Fatalf("operators may not read the audit log: %d", c)
 	}
-	// Recorded all along, readable once registered.
-	if c := admin.do("GET", "/api/v1/audit", nil, nil); c != 402 {
-		t.Fatalf("unregistered: %d", c)
+	// Recorded all along. Unregistered, the last days can be read but not
+	// exported or verified; registered, all of it.
+	var free struct {
+		Items       []auditItem
+		LimitedDays int `json:"limited_days"`
 	}
-	admin.register(license.FeatAudit)
+	if c := admin.do("GET", "/api/v1/audit", nil, &free); c != 200 || free.LimitedDays != license.FreeAuditDays || len(free.Items) == 0 {
+		t.Fatalf("unregistered: %d %+v", c, free)
+	}
+	for _, p := range []string{"/api/v1/audit/export", "/api/v1/audit/verify"} {
+		if c := admin.do("GET", p, nil, nil); c != 402 {
+			t.Fatalf("unregistered %s: %d", p, c)
+		}
+	}
+	admin.register()
 
-	var log struct{ Items []auditItem }
+	var log struct {
+		Items       []auditItem
+		LimitedDays int `json:"limited_days"`
+	}
 	admin.do("GET", "/api/v1/audit", nil, &log)
+	if log.LimitedDays != 0 {
+		t.Fatalf("registered is still limited: %+v", log.LimitedDays)
+	}
 	find := func(action string) *auditItem {
 		for i := range log.Items {
 			if log.Items[i].Action == action {
@@ -151,7 +167,7 @@ func TestAuditTellsSharedAccountApart(t *testing.T) {
 			t.Fatalf("%s: %d", x.name, c)
 		}
 	}
-	a.register(license.FeatAudit)
+	a.register()
 	var log struct{ Items []auditItem }
 	a.do("GET", "/api/v1/audit", nil, &log)
 	client := func(target string) (session, ua string) {
