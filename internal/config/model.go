@@ -305,9 +305,10 @@ func (c *Config) FindMonitor(name string) *Monitor {
 
 // monitorIndex maps the monitors of one Config by name. Lookups by name
 // happen once per monitor in list views; a linear search made those
-// quadratic in the number of monitors. One index is kept, for the Config
-// last asked about, and rebuilt when its slice of monitors was replaced or
-// grew.
+// quadratic in the number of monitors. The indexes of the last few
+// Configs asked about are kept (callers often compare the running and the
+// previous configuration in one loop), each rebuilt when its slice of
+// monitors was replaced or grew.
 type monitorIndex struct {
 	cfg   *Config
 	first **Monitor
@@ -315,15 +316,23 @@ type monitorIndex struct {
 	m     map[string]*Monitor
 }
 
-var lastMonitorIndex atomic.Pointer[monitorIndex]
+const monitorIndexes = 4
+
+var monitorIndexCache atomic.Pointer[[]*monitorIndex]
 
 func monitorIndexOf(c *Config) map[string]*Monitor {
 	var first **Monitor
 	if len(c.Monitors) > 0 {
 		first = &c.Monitors[0]
 	}
-	if ix := lastMonitorIndex.Load(); ix != nil && ix.cfg == c && ix.n == len(c.Monitors) && ix.first == first {
-		return ix.m
+	var cached []*monitorIndex
+	if p := monitorIndexCache.Load(); p != nil {
+		cached = *p
+	}
+	for _, ix := range cached {
+		if ix.cfg == c && ix.n == len(c.Monitors) && ix.first == first {
+			return ix.m
+		}
 	}
 	ix := &monitorIndex{cfg: c, first: first, n: len(c.Monitors), m: make(map[string]*Monitor, len(c.Monitors))}
 	for _, m := range c.Monitors {
@@ -331,7 +340,13 @@ func monitorIndexOf(c *Config) map[string]*Monitor {
 			ix.m[m.Name] = m
 		}
 	}
-	lastMonitorIndex.Store(ix)
+	next := []*monitorIndex{ix}
+	for _, old := range cached {
+		if old.cfg != c && len(next) < monitorIndexes {
+			next = append(next, old)
+		}
+	}
+	monitorIndexCache.Store(&next)
 	return ix.m
 }
 
