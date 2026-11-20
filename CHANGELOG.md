@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.6.30 — 2026-11-20
+
+**Fixed**
+- Operators can no longer use a secret or redirect an administrator's check through a `$DEFAULT`.
+- Upgrading from a release before v2.6.28 with `warn=`/`crit=` on a PUSH monitor no longer stops the server from starting: the options are removed once and the original file is kept as `monitors.conf.before-push-options`.
+
 ## v2.6.29 — 2026-11-20
 
 More of the review's findings.
