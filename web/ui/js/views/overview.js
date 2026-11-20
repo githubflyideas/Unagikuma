@@ -409,7 +409,7 @@ function Saved({ week }) {
       <i style=${{ height: (heldCount(x.counts) / dmx * 100) + '%' }}></i><span>${x.day.slice(5).replace('-', '/')}</span></div>`)}</div>`}
     <div class="sbars">${parts.map(([k, l, n]) => html`<button type="button" class="sbar" disabled=${!n} onClick=${() => setOpen(k)} title=${n ? t('ui.value.show') : ''}>
       <span>${l}</span><b class="mono">${fmtNum(n)}</b><div class="track"><i style=${{ width: (n / mx * 100) + '%' }}></i></div></button>`)}</div>`}
-    ${soft > 0 && html`<p class="small muted" style=${{ margin: '10px 0 0' }}><a href="#/" onClick=${(e) => { e.preventDefault(); setOpen(SOFT); }} title=${t('ui.value.show')}>${t('ui.value.soft_note', { n: fmtNum(soft) })}</a></p>`}
+    ${soft > 0 && html`<p class="small muted" style=${{ margin: '10px 0 0' }}><a href="#/" onClick=${(e) => { e.preventDefault(); setOpen(SOFT); }} title=${t('ui.value.soft_tip')}>${t('ui.value.soft_note', { n: fmtNum(soft) })}</a></p>`}
     ${open && html`<${Modal} title=${t('ui.value.' + open)} onClose=${() => setOpen(null)}>
       ${!items.length ? html`<p class="muted small">${t('ui.value.list_none')}</p>` : html`<table class="tbl small">
         <thead><tr><th>${t('ui.time')}</th><th>${t('ui.value.monitor')}</th></tr></thead>
