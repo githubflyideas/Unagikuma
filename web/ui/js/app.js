@@ -4,7 +4,7 @@ import { t, tn, setLang, detectLang, loadLanguages, langList, currentLang, fmtTi
 import { get, post, del, setCSRF, setMe, me, onUnauthorized } from './api.js';
 import { startLive, stopLive, onConnection } from './live.js';
 import { useRoute, href, Toasts, ConfirmHost, useFetch, useLive, errText, Field, replaceRoute, monitorsPath, MON_SORTS, PRODUCT, Modal } from './ui.js';
-import { Overview } from './views/overview.js';
+import { Overview, heldCount } from './views/overview.js';
 import { Monitors } from './views/monitors.js';
 import { MonitorDetail } from './views/monitor.js';
 import { MonitorEditor } from './views/editor.js';
@@ -306,7 +306,7 @@ function Verdict({ ov }) {
   else if (ov.degraded > 0) { cls = 'warn'; text = t('ui.top.warn'); }
   else if ((ov.counts.unknown || 0) > 0) { cls = 'unknown'; text = t('ui.top.unknown', { n: ov.counts.unknown }); }
   const week = ov.value_week || {};
-  const saved = Object.values(week).reduce((a, n) => a + (n || 0), 0);
+  const saved = heldCount(week);
   const sub = [t('ui.top.monitors', { n: ov.counts.total || 0 }),
     saved ? t('ui.top.saved', { n: saved }) : ''].filter(Boolean).join(' · ');
   return html`<a class=${'verdict ' + cls} href=${cls === 'critical' ? '#/problems' : '#/'}><i></i>${text}</a><span class="top-sub">${sub}</span>`;

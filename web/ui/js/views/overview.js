@@ -384,7 +384,12 @@ function Onboarding({ d, reload }) {
 
 // ---- side ----
 
-const SAVED = [['outage_saved', 'ui.value.outage_saved'], ['soft_filtered', 'ui.value.soft_filtered'], ['outage_merged', 'ui.value.outage_merged'], ['cap_saved', 'ui.value.cap_saved']];
+// Alerts held back that would otherwise have been sent. A blip that
+// recovered before the failure count was never going to alert: it is
+// shown apart, for reference, and not counted with them.
+const SAVED = [['outage_saved', 'ui.value.outage_saved'], ['outage_merged', 'ui.value.outage_merged'], ['cap_saved', 'ui.value.cap_saved']];
+const SOFT = 'soft_filtered';
+export const heldCount = (counts) => SAVED.reduce((a, [k]) => a + ((counts && counts[k]) || 0), 0);
 
 // Saved shows the alerts not sent in the last seven days: the total, a
 // bar per day, and a row per reason that opens the list of those alerts.
@@ -393,18 +398,18 @@ function Saved({ week }) {
   const [open, setOpen] = useState(null);
   const parts = SAVED.map(([k, label]) => [k, t(label), week[k] || 0]);
   const total = parts.reduce((a, p) => a + p[2], 0);
-  if (!total) return html`<p class="muted small" style=${{ margin: 0 }}>${t('ui.value.none')}</p>`;
-  const mx = Math.max(...parts.map(p => p[2]));
+  const soft = week[SOFT] || 0;
+  const mx = Math.max(1, ...parts.map(p => p[2]));
   const days = (d.data && d.data.days) || [];
-  const dayTotal = (x) => Object.values(x.counts).reduce((a, n) => a + n, 0);
-  const dmx = Math.max(1, ...days.map(dayTotal));
+  const dmx = Math.max(1, ...days.map(x => heldCount(x.counts)));
   const items = ((d.data && d.data.items) || []).filter(x => x.name === open);
-  return html`<div class="bignum"><strong>${fmtNum(total)}</strong><span class="muted">${t('ui.ov.saved_unit')}</span></div>
+  return html`${!total ? html`<p class="muted small" style=${{ margin: 0 }}>${t('ui.value.none')}</p>` : html`<div class="bignum"><strong>${fmtNum(total)}</strong><span class="muted">${t('ui.ov.saved_unit')}</span></div>
     <p class="small" style=${{ margin: '0 0 10px' }}>${t('ui.value.summary', { n: fmtNum(total) })}</p>
-    ${days.length > 0 && html`<div class="dbars" role="img" aria-label=${t('ui.value.by_day')}>${days.map(x => html`<div class="dbar" title=${x.day + ': ' + dayTotal(x)}>
-      <i style=${{ height: (dayTotal(x) / dmx * 100) + '%' }}></i><span>${x.day.slice(5).replace('-', '/')}</span></div>`)}</div>`}
+    ${days.length > 0 && html`<div class="dbars" role="img" aria-label=${t('ui.value.by_day')}>${days.map(x => html`<div class="dbar" title=${x.day + ': ' + heldCount(x.counts)}>
+      <i style=${{ height: (heldCount(x.counts) / dmx * 100) + '%' }}></i><span>${x.day.slice(5).replace('-', '/')}</span></div>`)}</div>`}
     <div class="sbars">${parts.map(([k, l, n]) => html`<button type="button" class="sbar" disabled=${!n} onClick=${() => setOpen(k)} title=${n ? t('ui.value.show') : ''}>
-      <span>${l}</span><b class="mono">${fmtNum(n)}</b><div class="track"><i style=${{ width: (n / mx * 100) + '%' }}></i></div></button>`)}</div>
+      <span>${l}</span><b class="mono">${fmtNum(n)}</b><div class="track"><i style=${{ width: (n / mx * 100) + '%' }}></i></div></button>`)}</div>`}
+    ${soft > 0 && html`<p class="small muted" style=${{ margin: '10px 0 0' }}><a href="#/" onClick=${(e) => { e.preventDefault(); setOpen(SOFT); }} title=${t('ui.value.soft_tip')}>${t('ui.value.soft_note', { n: fmtNum(soft) })}</a></p>`}
     ${open && html`<${Modal} title=${t('ui.value.' + open)} onClose=${() => setOpen(null)}>
       ${!items.length ? html`<p class="muted small">${t('ui.value.list_none')}</p>` : html`<table class="tbl small">
         <thead><tr><th>${t('ui.time')}</th><th>${t('ui.value.monitor')}</th></tr></thead>
