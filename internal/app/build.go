@@ -191,9 +191,22 @@ func (a *App) validators() config.Options {
 			// password option keeps the reference itself: its check only
 			// needs to know one is set (an SNMPv3 auth= without auth-pass=
 			// is an error, with ${secret:…} it is not).
+			var refOpts []string
 			for k, v := range s.Opts {
 				if strings.Contains(v, "${") && !strings.HasSuffix(k, "-pass") {
 					delete(s.Opts, k)
+					refOpts = append(refOpts, k)
+				}
+			}
+			// The name is still checked: an option this type does not take
+			// is an error whatever its value, not a check that fails later
+			// with "config_error".
+			for _, k := range refOpts {
+				t := s
+				t.Opts = maps.Clone(s.Opts)
+				t.Opts[k] = "x"
+				if err := probe.Validate(t); err != nil && strings.Contains(err.Error(), "unknown option "+k) {
+					return err
 				}
 			}
 			if strings.Contains(s.Target, "${") {

