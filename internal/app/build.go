@@ -262,7 +262,7 @@ func monitorSpec(m *config.Monitor, cfg *config.Config, resolve func(string) (st
 	depth := string(probe.DepthOf(spec))
 	weak := depth == string(keywords.L1) || (m.UDP != nil && m.UDP.Entry != nil && m.UDP.Entry.Stateful)
 	ms := engine.MonitorSpec{
-		Name: m.Name, Title: m.Title, Group: m.Group, Probe: spec, Depth: depth, Policy: m.Policy,
+		Name: m.Name, Title: m.Title, Description: m.Description, Group: m.Group, Probe: spec, Depth: depth, Policy: m.Policy,
 		Interval: m.Interval, Retry: m.Retry, Attempts: m.Attempts, RecoverAttempts: m.RecoverAttempts,
 		SlowAfter: m.Degraded, Paused: m.Disabled, DefHash: m.DefHash, Parents: m.Parents,
 		Host: m.HostKey(), Address: m.Host(), Area: m.Area, Ping: m.Type == "PING",

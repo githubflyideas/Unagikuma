@@ -20,6 +20,7 @@ type Message struct {
 	Priority         string                `json:"priority"` // high, low
 	Monitor          string                `json:"monitor"`
 	Title            string                `json:"title"` // display name
+	Description      string                `json:"description,omitempty"`
 	Type             string                `json:"type"`
 	Target           string                `json:"target"`
 	Depth            string                `json:"depth"`

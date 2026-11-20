@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 // A webhook body copied from Uptime Kuma works unchanged.
@@ -145,5 +146,22 @@ func TestKumaObjectsAsJSON(t *testing.T) {
 	(&Sender{}).Send(context.Background(), Channel{Name: "w", Kind: "webhook", Opts: o2}, m)
 	if _, got = cap.last(); !json.Valid(got) {
 		t.Fatalf("text body %s", got)
+	}
+}
+
+// monitorJSON and heartbeatJSON follow Kuma's shape: tags is an array, the
+// description is the monitor's own, and the timezone is a zone name.
+func TestKumaDataShape(t *testing.T) {
+	d := kumaData(&Message{Kind: "PROBLEM", Monitor: "web", Title: "Web", Type: "HTTP", Target: "https://x.example/", Detail: "HTTP 503",
+		Description: "the shop front", Time: time.Date(2026, 11, 19, 12, 0, 0, 0, time.UTC)}, "text")
+	mon := d["monitorJSON"].(kumaObject)
+	if tags, ok := mon["tags"].([]string); !ok || tags == nil || len(tags) != 0 {
+		t.Fatalf("tags: %#v", mon["tags"])
+	}
+	if mon["description"] != "the shop front" {
+		t.Fatalf("description: %v", mon["description"])
+	}
+	if tz := d["heartbeatJSON"].(kumaObject)["timezone"]; tz == "Local" || tz == "" {
+		t.Fatalf("timezone: %v", tz)
 	}
 }

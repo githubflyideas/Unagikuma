@@ -14,8 +14,7 @@ import (
 // Styles are built-in layouts of the console: how pages are laid out
 // (cards, tables, spacing, type), independent of the colour theme. They
 // are listed in styles/styles.json of the web files; every style but
-// "classic" has its own styles/<id>.css. A style marked "registered" is
-// served to registered installations only.
+// "classic" has its own styles/<id>.css. Every style is free.
 
 const (
 	styleClassic    = "classic"
@@ -23,8 +22,7 @@ const (
 )
 
 type styleInfo struct {
-	ID         string `json:"id"`
-	Registered bool   `json:"registered,omitempty"`
+	ID string `json:"id"`
 }
 
 func (s *Server) styles() []styleInfo {
@@ -60,15 +58,8 @@ func validStyleID(id string) bool {
 	return true
 }
 
-// styleAllowed reports whether this installation may use the style.
-func (s *Server) styleAllowed(id string) bool {
-	for _, st := range s.styles() {
-		if st.ID == id {
-			return !st.Registered || s.app.License().State().Registered
-		}
-	}
-	return false
-}
+// styleAllowed reports whether the style exists: every style is free.
+func (s *Server) styleAllowed(id string) bool { return s.styleKnown(id) }
 
 // defaultStyle is the style for everyone who has not chosen one, and for
 // the public status pages.
@@ -83,10 +74,9 @@ func (s *Server) defaultStyle() string {
 // brandPublic is what the sign-in page and the screens without an
 // account need: the name to show and the default style.
 func (s *Server) brandPublic(w http.ResponseWriter, r *http.Request) {
-	reg := s.app.License().State().Registered
 	list := []map[string]any{}
 	for _, st := range s.styles() {
-		list = append(list, map[string]any{"id": st.ID, "registered": st.Registered, "allowed": !st.Registered || reg})
+		list = append(list, map[string]any{"id": st.ID})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"name": s.app.BrandName(), "style": s.defaultStyle(), "styles": list})
 }
@@ -108,9 +98,6 @@ func (s *Server) brandPut(w http.ResponseWriter, r *http.Request) (any, error) {
 	if req.Style != nil {
 		v := *req.Style
 		if v != styleClassic && !s.styleAllowed(v) {
-			if validStyleID(v) && s.styleKnown(v) {
-				return nil, requireRegistration(s)
-			}
 			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "no style %q", v)
 		}
 		if err := s.app.Store().SetSetting(styleDefaultKey, v); err != nil {
@@ -135,12 +122,6 @@ func (s *Server) styleKnown(id string) bool {
 		}
 	}
 	return false
-}
-
-func requireRegistration(s *Server) error {
-	e := Errorf(http.StatusPaymentRequired, CodeRegistration, "this style needs a registered installation (Settings › Registration)")
-	e.Extra = map[string]any{"feature": "style", "installation_id": s.app.License().State().InstallationID}
-	return e
 }
 
 func brandError(err error) error {
@@ -221,8 +202,7 @@ func writeImage(w http.ResponseWriter, b []byte) {
 }
 
 // serveBranded answers the paths a brand replaces; it reports whether it
-// did. A style a registered-only listing names is not served without
-// registration.
+// did.
 func (s *Server) serveBranded(w http.ResponseWriter, r *http.Request, p string) bool {
 	switch p {
 	case "logo.png":

@@ -2,11 +2,13 @@ package engine
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/hostclock"
 	"github.com/githubflyideas/unagikuma/internal/netscope"
+	"github.com/githubflyideas/unagikuma/internal/notify"
 	"github.com/githubflyideas/unagikuma/internal/probe"
 	"github.com/githubflyideas/unagikuma/internal/tunables"
 	"github.com/githubflyideas/unagikuma/internal/valuerule"
@@ -109,5 +111,21 @@ func TestConditionRules(t *testing.T) {
 	// 12000 requests in a minute is 200/s, over warn's 100/s on its own.
 	if r := read(3*time.Minute, 100, 10, 1000+12000); r.Vote != probe.VoteOK || !r.Degraded || r.Detail != "requests 200/s >100/s" {
 		t.Fatalf("rate: %+v", r)
+	}
+}
+
+// The value is not added to a detail that already shows it.
+func TestValueDetailNotRepeated(t *testing.T) {
+	e := New(Deps{Probe: func(context.Context, probe.Spec) probe.Result { return probe.Result{Vote: probe.VoteOK} }, Sink: newMemSink(),
+		Send:      func(context.Context, notify.Channel, *notify.Message) notify.Attempt { return notify.Attempt{OK: true} },
+		HostClock: func() (hostclock.Reading, bool) { return hostclock.Reading{}, false },
+		Gateways:  func() ([]netscope.Gateway, error) { return nil, nil }})
+	ts, _ := tunables.New(nil)
+	spec := MonitorSpec{Name: "room", Title: "room", Interval: time.Hour, Attempts: 1, RecoverAttempts: 1, DefHash: "a",
+		Probe: probe.Spec{Name: "room", Type: "SNMP", Target: "10.0.0.1", Opts: map[string]string{"warn": "35", "sensor": "Inlet"}}}
+	e.Apply(Config{Tunables: ts, Location: time.UTC, Monitors: []MonitorSpec{spec}})
+	res := e.applyValues(e.monitors["room"], probe.Result{Vote: probe.VoteOK, Detail: "Inlet = 31 °C", Metrics: map[string]float64{"value": 31}}, time.Now())
+	if strings.Count(res.Detail, "31") != 1 {
+		t.Fatalf("detail: %q", res.Detail)
 	}
 }

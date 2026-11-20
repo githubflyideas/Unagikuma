@@ -326,6 +326,7 @@ func (e *Engine) message(inc *Incident, n PlannedNotice, now time.Time) notify.M
 			msg.Title = m.Title
 		}
 		msg.Type, msg.Target, msg.Depth, msg.Tags = m.Probe.Type, m.Probe.Target, m.Depth, m.Tags
+		msg.Description = m.Description
 		if rt := e.states[m.Name]; rt != nil {
 			msg.Status = rt.State.Display()
 			msg.Observations = e.siteObservationSnapshot(m.Name)

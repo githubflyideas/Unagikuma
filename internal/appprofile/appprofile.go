@@ -254,7 +254,7 @@ func ParseSelect(s string) (Select, error) {
 }
 
 // Read turns a reply into the profile's numbers, by field key. A reply
-// that lacks a field the profile needs is not the application's page: the
+// with none of the profile's fields is not the application's page: the
 // error says what is missing.
 func (p *Profile) Read(body []byte, sel Select) (map[string]float64, error) {
 	vals := map[string]float64{}
@@ -300,7 +300,13 @@ func (p *Profile) Read(body []byte, sel Select) (map[string]float64, error) {
 		}
 		return vals, nil
 	}
-	if len(missing) > 0 {
+	// A page that has some of the numbers is the application's (Valkey,
+	// KeyDB, a managed Redis or an older version leave some out): what is
+	// missing is missing from the value, and a rule that needs it says so.
+	// Only a page without the field that identifies the application (the
+	// profile's primary one), or with none of them, is not its own.
+	_, hasPrimary := vals[p.Primary]
+	if len(missing) > 0 && (len(vals) == 0 || (p.Primary != "" && !hasPrimary)) {
 		return nil, fmt.Errorf("this is not the %s status page: %s not found", p.Title, strings.Join(missing, ", "))
 	}
 	return vals, nil

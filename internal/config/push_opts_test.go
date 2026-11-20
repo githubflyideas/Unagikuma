@@ -27,3 +27,21 @@ func diagText(d []Diagnostic) string {
 	}
 	return b.String()
 }
+
+// A service target written as a URL gets one clear error, not a second one
+// about a type nothing could be checked for.
+func TestServiceTargetAsURLOneError(t *testing.T) {
+	_, _, d := Load("monitors.conf", []byte("$FILE revision=1\ndb IN POSTGRES postgres://app@10.0.0.5:5432/app query=\"SELECT 1\"\n"), Options{})
+	n := 0
+	for _, x := range d {
+		if x.Severity == SevError {
+			n++
+			if !strings.Contains(x.Msg, "host and port only") {
+				t.Errorf("unhelpful: %s", x.Msg)
+			}
+		}
+	}
+	if n != 1 {
+		t.Fatalf("%d errors: %v", n, d)
+	}
+}

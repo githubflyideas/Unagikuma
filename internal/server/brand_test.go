@@ -46,13 +46,13 @@ var brandUI = fstest.MapFS{
 	"index.html":         {Data: []byte("<html></html>")},
 	"logo.png":           {Data: []byte("product logo")},
 	"favicon.png":        {Data: []byte("product icon")},
-	"styles/styles.json": {Data: []byte(`[{"id": "modern"}, {"id": "harbour", "registered": true}]`)},
+	"styles/styles.json": {Data: []byte(`[{"id": "modern"}, {"id": "harbour"}]`)},
 	"styles/modern.css":  {Data: []byte(":root[data-style=modern] {}")},
 	"styles/harbour.css": {Data: []byte(":root[data-style=harbour] {}")},
 }
 
 // A brand can be filled in before registration but shows only after it;
-// a registered-only style is neither offered nor served before.
+// every style is free.
 func TestBranding(t *testing.T) {
 	e := newEnv(t, testBind, brandUI)
 	e.setup()
@@ -60,13 +60,9 @@ func TestBranding(t *testing.T) {
 	var pub struct {
 		Name   string
 		Style  string
-		Styles []struct {
-			ID         string
-			Registered bool
-			Allowed    bool
-		}
+		Styles []struct{ ID string }
 	}
-	if c := e.do("GET", "/api/v1/brand", nil, &pub); c != 200 || pub.Name != "Unagikuma" || pub.Style != "classic" || len(pub.Styles) != 3 || pub.Styles[2].Allowed {
+	if c := e.do("GET", "/api/v1/brand", nil, &pub); c != 200 || pub.Name != "Unagikuma" || pub.Style != "classic" || len(pub.Styles) != 3 {
 		t.Fatalf("public: %d %+v", c, pub)
 	}
 	if c := e.do("PUT", "/api/v1/branding", map[string]string{"name": "Harbour Ops"}, nil); c != 200 {
@@ -96,14 +92,13 @@ func TestBranding(t *testing.T) {
 	if pub.Name != "Unagikuma" {
 		t.Fatalf("name before registering: %q", pub.Name)
 	}
-	if c, _ := e.raw("GET", "/styles/harbour.css", nil, ""); c != 404 {
-		t.Fatalf("registered style served: %d", c)
+	for _, id := range []string{"modern", "harbour"} {
+		if c, _ := e.raw("GET", "/styles/"+id+".css", nil, ""); c != 200 {
+			t.Fatalf("style %s unregistered: %d", id, c)
+		}
 	}
-	if c, _ := e.raw("GET", "/styles/modern.css", nil, ""); c != 200 {
-		t.Fatalf("free style: %d", c)
-	}
-	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "harbour"}, nil); c != 402 {
-		t.Fatalf("registered style as default: %d", c)
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "harbour"}, nil); c != 200 {
+		t.Fatalf("style as default, unregistered: %d", c)
 	}
 	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "nope"}, nil); c != 400 {
 		t.Fatalf("unknown style: %d", c)
@@ -114,7 +109,7 @@ func TestBranding(t *testing.T) {
 		t.Fatalf("logo after registering: %d", c)
 	}
 	_ = e.do("GET", "/api/v1/brand", nil, &pub)
-	if pub.Name != "Harbour Ops" || !pub.Styles[2].Allowed {
+	if pub.Name != "Harbour Ops" {
 		t.Fatalf("after registering: %+v", pub)
 	}
 	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "harbour"}, nil); c != 200 {

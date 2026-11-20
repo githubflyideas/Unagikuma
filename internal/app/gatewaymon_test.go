@@ -3,6 +3,8 @@ package app
 import (
 	"testing"
 
+	"github.com/githubflyideas/unagikuma/internal/engine"
+
 	"github.com/githubflyideas/unagikuma/internal/config"
 )
 
@@ -53,5 +55,15 @@ func TestGatewayMonitors(t *testing.T) {
 	setExit("8.8.8.8")
 	if _, ok := record(); ok {
 		t.Fatal("added again after it was deleted")
+	}
+}
+
+// The reports leave out the gateway monitors the installation adds: the
+// engine's list must name every one of them.
+func TestReportsKnowTheGatewayMonitors(t *testing.T) {
+	for _, g := range gatewayMonitors {
+		if !engine.SystemMonitors[g.name] {
+			t.Errorf("%s is not in engine.SystemMonitors", g.name)
+		}
 	}
 }

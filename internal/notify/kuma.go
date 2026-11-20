@@ -2,8 +2,10 @@ package notify
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -132,12 +134,42 @@ func kumaData(m *Message, text string) map[string]any {
 	name := firstOf(m.Title, m.Monitor)
 	return map[string]any{
 		"monitorJSON": kumaObject{"id": m.Monitor, "name": name, "type": typ, "url": monitorURL, "hostname": host, "port": port,
-			"description": m.Detail, "tags": m.Tags},
+			"description": m.Description, "tags": kumaTags(m.Tags)},
 		"heartbeatJSON": kumaObject{"status": status, "msg": detail, "time": at.UTC().Format("2006-01-02 15:04:05.000"),
-			"localDateTime": at.Local().Format("2006-01-02 15:04:05"), "timezone": at.Local().Location().String(), "important": true},
+			"localDateTime": at.Local().Format("2006-01-02 15:04:05"), "timezone": zoneName(at.Local()), "important": true},
 		"msg": text, "name": name, "status": word, "hostnameOrURL": address,
 		"NAME": name, "STATUS": word, "HOSTNAME_OR_URL": address,
 	}
+}
+
+// kumaTags is the tag list as Kuma has it: an array, empty when there are none.
+func kumaTags(t []string) []string {
+	if t == nil {
+		return []string{}
+	}
+	return t
+}
+
+// zoneName is the name of the zone a local time is in: the IANA name when
+// the process has one (TZ, /etc/timezone), else the zone's abbreviation or
+// offset, never the word "Local".
+func zoneName(t time.Time) string {
+	if n := t.Location().String(); n != "Local" && n != "" {
+		return n
+	}
+	if tz := os.Getenv("TZ"); tz != "" && tz != "Local" {
+		return strings.TrimPrefix(tz, ":")
+	}
+	if b, err := os.ReadFile("/etc/timezone"); err == nil {
+		if n := strings.TrimSpace(string(b)); n != "" {
+			return n
+		}
+	}
+	abbr, off := t.Zone()
+	if abbr != "" && !strings.HasPrefix(abbr, "+") && !strings.HasPrefix(abbr, "-") {
+		return abbr
+	}
+	return fmt.Sprintf("UTC%+03d:%02d", off/3600, (off%3600)/60)
 }
 
 // kumaHost splits a monitor's target into the host and port Kuma reports.

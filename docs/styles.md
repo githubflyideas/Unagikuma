@@ -8,9 +8,7 @@ theme, light and dark.
    and `-`. Scope every rule under `:root[data-style="<id>"]` and use the
    theme's colour variables (`--panel`, `--border`, `--text`, `--accent`,
    the status colours …) rather than fixed colours.
-2. List it in `web/ui/styles/styles.json`. Add `"registered": true` to
-   offer it to registered installations only: unregistered, it is shown
-   as unavailable and its file is not served.
+2. List it in `web/ui/styles/styles.json`. Every style is free.
 3. Name it in every locale under `internal/i18n/locales/`, key
    `ui.style.<id>`.
 4. Check it: every theme, a phone width, right-to-left (Arabic, Urdu),

@@ -1,5 +1,20 @@
 # Changelog
 
+## v2.6.29 — 2026-11-20
+
+More of the review's findings.
+
+**Fixed**
+- A Redis-like page that lacks some INFO fields (Valkey, KeyDB, a managed service) is still Redis: the missing numbers are absent from the value, only a page without the identifying field is refused.
+- No more "critical → critical" state events, and a value already in the check's own text is not added again ("Inlet = 31 °C · 31 °C").
+- A service target written as a URL gets one clear error (host and port only; account and database go in their own options).
+- `unagikuma probe -h` prints help. SNMP port and sensor indexes are kept per community and user.
+- Kuma-style notifications: `tags` is an array, `description` is the monitor's own, `timezone` is a zone name.
+- The daily report no longer counts the gateway monitors the installation adds.
+- Incidents show as `#5` instead of the long internal id (the whole id stays as the tooltip).
+- The code for registered-only styles is gone: every style was already free.
+- Interface: the Run mode icon is drawn, the sign-in title is no longer squeezed by the language box, and a monitor's details name the common metrics (latency, HTTP status, packet loss, certificate days, clock offset) instead of showing their keys.
+
 ## v2.6.28 — 2026-11-19
 
 A review by a tester: two critical and six high findings, and most of the medium ones.

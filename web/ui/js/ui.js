@@ -330,6 +330,13 @@ export function teamLabel(name) {
   return name === 'admin' ? t('ui.team.admin') : name;
 }
 
+// An incident's number as people say it: "#5" for "unagikuma:81c7f8adec9b:5"
+// (the whole id is kept as the tooltip; it matters only between sites).
+export function shortId(gid) {
+  const n = String(gid || '').split(':').pop();
+  return n ? '#' + n : '';
+}
+
 export function regionTitle(name) {
   return name === 'global' ? t('ui.region.global') : name;
 }

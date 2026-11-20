@@ -47,6 +47,12 @@ var snmpProfiles = map[string]bool{"entity": true, "huawei": true, "h3c": true, 
 // maxLookup bounds a name lookup: GETNEXT steps through one column.
 const maxLookup = 1024
 
+// snmpView names who is asking: the same device lists its interfaces and
+// sensors differently to another community or user (a view, a context).
+func snmpView(o opts) string {
+	return o.str("version", "2c") + "/" + o.str("community", "") + "/" + o.str("user", "") + "/" + o.str("context", "")
+}
+
 // snmpIndexes remembers where a port or sensor was found, per device.
 var snmpIndexes sync.Map // key string -> string (the index)
 
@@ -227,7 +233,7 @@ func snmpLookup(ctx context.Context, c *snmpClient, column, name string) (string
 
 func snmpPort(ctx context.Context, c *snmpClient, p udpPlan, o opts) Result {
 	name := o.str("port", "")
-	key := "port|" + p.host + "|" + strconv.Itoa(p.port) + "|" + name
+	key := "port|" + snmpView(o) + "|" + p.host + "|" + strconv.Itoa(p.port) + "|" + name
 	idx, cached := "", false
 	if v, ok := snmpIndexes.Load(key); ok {
 		idx, cached = v.(string), true
@@ -324,7 +330,7 @@ func snmpSensor(ctx context.Context, c *snmpClient, p udpPlan, o opts) Result {
 	if profile == "cisco" {
 		nameCol = oidCiscoTempName
 	}
-	key := "sensor|" + profile + "|" + p.host + "|" + strconv.Itoa(p.port) + "|" + name
+	key := "sensor|" + profile + "|" + snmpView(o) + "|" + p.host + "|" + strconv.Itoa(p.port) + "|" + name
 	idx := ""
 	if v, ok := snmpIndexes.Load(key); ok {
 		idx = v.(string)

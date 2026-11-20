@@ -80,6 +80,17 @@ func (b *builder) errf(p Pos, code, format string, args ...any) {
 	b.diags = append(b.diags, Diagnostic{Pos: p, Severity: SevError, Code: code, Msg: fmt.Sprintf(format, args...)})
 }
 
+// errorCount is how many errors have been found so far.
+func (b *builder) errorCount() int {
+	n := 0
+	for _, d := range b.diags {
+		if d.Severity == SevError {
+			n++
+		}
+	}
+	return n
+}
+
 func (b *builder) warnf(p Pos, code, format string, args ...any) {
 	b.diags = append(b.diags, Diagnostic{Pos: p, Severity: SevWarning, Code: code, Msg: fmt.Sprintf(format, args...)})
 }
@@ -721,7 +732,16 @@ func (b *builder) monitor(r Record, defaults []Opt, scope *scopeDir) {
 	o.placement(scope)
 	o.flags()
 
+	errsBefore := b.errorCount()
 	b.target(m, r, explicitInterval)
+	if b.errorCount() > errsBefore {
+		// A target that does not parse is the whole story: checking the
+		// options of a monitor with no usable type adds a second, confusing error.
+		m.Refs = nil
+		m.MetaHash, m.ParamHash, m.DefHash = hashes(m)
+		b.cfg.Monitors = append(b.cfg.Monitors, m)
+		return
+	}
 	b.monitorChecks(m, r)
 	m.MetaHash, m.ParamHash, m.DefHash = hashes(m)
 	b.cfg.Monitors = append(b.cfg.Monitors, m)
@@ -1041,7 +1061,11 @@ func (b *builder) serviceTarget(m *Monitor, r Record, p Pos) {
 	}
 	n, err := strconv.Atoi(port)
 	if host == "" || strings.ContainsAny(host, "/@") || err != nil || n < 1 || n > 65535 {
-		b.errf(p, "invalid_target", "%s target must be host or host:port", m.Type)
+		hint := ""
+		if strings.Contains(r.Target, "://") || strings.ContainsAny(r.Target, "@/") {
+			hint = ": write the host and port only, the account and database go in user=, password= and database="
+		}
+		b.errf(p, "invalid_target", "%s target must be host or host:port%s", m.Type, hint)
 		return
 	}
 	m.Opts["proto"] = strings.ToLower(m.Type)

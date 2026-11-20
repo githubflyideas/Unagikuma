@@ -2,7 +2,7 @@
 import { html, useState } from '../lib.js';
 import { t, tn, dur, detailText } from '../i18n.js';
 import { get, post, del } from '../api.js';
-import { useFetch, useLive, Loading, ErrorBox, Empty, Ago, Dot, Modal, Field, toast, toastError, reasonText, enc, href, useDocTitle } from '../ui.js';
+import { useFetch, useLive, Loading, ErrorBox, Empty, Ago, Dot, Modal, Field, toast, toastError, reasonText, enc, href, useDocTitle, shortId } from '../ui.js';
 
 import { HistorySite } from './history-site.js';
 
@@ -91,7 +91,7 @@ export function IncidentList({ items, reload, compact, selectable, selected, set
         <i class=${'sev ' + (inc.system ? 'sys' : statusOf(inc))}></i>
         <div class="body">
           ${link ? html`<a class="name" href=${link}>${inc.title}</a>` : html`<span class="name">${inc.title}</span>`}
-          ${inc.global_id && html`<span class="tag ltr">${inc.global_id}</span>`}
+          ${inc.global_id && html`<span class="tag ltr" title=${inc.global_id}>${shortId(inc.global_id)}</span>`}
  ${inc.history_only && html`<span class="tag warn">${t('ui.inc.archive')}</span>`}
  ${inc.system && html` <span class="tag">${t('ui.inc.system')}</span>`}
           ${inc.site && html` <span class="tag" title=${t('ui.inc.site_hint')}>${t('ui.inc.site', { site: inc.site })}</span>`}
@@ -120,7 +120,7 @@ export function IncidentList({ items, reload, compact, selectable, selected, set
         <td style=${{ width: '18px' }}><${Dot} status=${statusOf(inc)} pulse=${open && !st.acked && !silenced} /></td>
         <td>
           <div class="row">${link ? html`<a class="name" href=${link}>${inc.title}</a>` : html`<span class="name">${inc.title}</span>`}
-            ${inc.global_id && html`<span class="tag ltr">${inc.global_id}</span>`}
+            ${inc.global_id && html`<span class="tag ltr" title=${inc.global_id}>${shortId(inc.global_id)}</span>`}
  ${inc.history_only && html`<span class="tag warn">${t('ui.inc.archive')}</span>`}
  ${inc.system && html`<span class="tag">${t('ui.inc.system')}</span>`}
             ${inc.site && html`<span class="tag" title=${t('ui.inc.site_hint')}>${t('ui.inc.site', { site: inc.site })}</span>`}
