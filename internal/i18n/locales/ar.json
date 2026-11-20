@@ -144,6 +144,7 @@
 "ui.health.gateway": "البوابة",
 "ui.health.gw_note.container": "داخل حاوية",
 "ui.health.gw_note.unresponsive": "لا ترد على ping",
+"ui.health.gw_note.no_ping": "لا يُسمح لهذا المضيف بإرسال ping",
 "ui.health.gw_note.no_route": "لا مسار",
 "ui.path.title": "مسار الفحص",
 "ui.path.host": "هذا المضيف",

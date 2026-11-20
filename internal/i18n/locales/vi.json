@@ -134,6 +134,7 @@
 "ui.health.gateway": "Gateway",
 "ui.health.gw_note.container": "trong container",
 "ui.health.gw_note.unresponsive": "không trả lời ping",
+"ui.health.gw_note.no_ping": "máy này không có quyền ping",
 "ui.health.gw_note.no_route": "không có tuyến",
 "ui.path.title": "Đường kiểm tra",
 "ui.path.host": "Máy này",

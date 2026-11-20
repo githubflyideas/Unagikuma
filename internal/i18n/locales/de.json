@@ -136,6 +136,7 @@
 "ui.health.gateway": "Gateway",
 "ui.health.gw_note.container": "in einem Container",
 "ui.health.gw_note.unresponsive": "antwortet nicht auf Ping",
+"ui.health.gw_note.no_ping": "dieser Host darf nicht pingen",
 "ui.health.gw_note.no_route": "keine Route",
 "ui.path.title": "Prüfpfad",
 "ui.path.host": "Dieser Host",

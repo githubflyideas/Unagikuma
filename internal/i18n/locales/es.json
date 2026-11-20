@@ -136,6 +136,7 @@
 "ui.health.gateway": "Puerta de enlace",
 "ui.health.gw_note.container": "dentro de un contenedor",
 "ui.health.gw_note.unresponsive": "no responde al ping",
+"ui.health.gw_note.no_ping": "este equipo no puede hacer ping",
 "ui.health.gw_note.no_route": "sin ruta",
 "ui.path.title": "Ruta de la comprobación",
 "ui.path.host": "Este equipo",

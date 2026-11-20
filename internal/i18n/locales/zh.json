@@ -330,6 +330,7 @@
 "ui.health.gateway": "网关",
 "ui.health.gw_note.container": "运行在容器中",
 "ui.health.gw_note.unresponsive": "不响应 ping",
+"ui.health.gw_note.no_ping": "本机无 ping 权限",
 "ui.health.gw_note.no_route": "无路由",
 "ui.path.title": "检查路径",
 "ui.path.host": "本机",

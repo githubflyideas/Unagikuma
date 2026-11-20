@@ -134,6 +134,7 @@
 "ui.health.gateway": "Gateway",
 "ui.health.gw_note.container": "di dalam kontainer",
 "ui.health.gw_note.unresponsive": "tidak menjawab ping",
+"ui.health.gw_note.no_ping": "host ini tidak boleh ping",
 "ui.health.gw_note.no_route": "tidak ada rute",
 "ui.path.title": "Jalur pemeriksaan",
 "ui.path.host": "Host ini",

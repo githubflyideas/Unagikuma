@@ -136,6 +136,7 @@
 "ui.health.gateway": "गेटवे",
 "ui.health.gw_note.container": "कंटेनर के अंदर",
 "ui.health.gw_note.unresponsive": "ping का जवाब नहीं देता",
+"ui.health.gw_note.no_ping": "इस होस्ट को ping की अनुमति नहीं",
 "ui.health.gw_note.no_route": "रूट नहीं",
 "ui.path.title": "जाँच पथ",
 "ui.path.host": "यह होस्ट",

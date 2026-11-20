@@ -136,6 +136,7 @@
 "ui.health.gateway": "গেটওয়ে",
 "ui.health.gw_note.container": "কন্টেইনারের ভেতরে",
 "ui.health.gw_note.unresponsive": "ping-এ সাড়া দেয় না",
+"ui.health.gw_note.no_ping": "এই হোস্টের ping করার অনুমতি নেই",
 "ui.health.gw_note.no_route": "রুট নেই",
 "ui.path.title": "পরীক্ষার পথ",
 "ui.path.host": "এই হোস্ট",

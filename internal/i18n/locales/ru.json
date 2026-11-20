@@ -140,6 +140,7 @@
 "ui.health.gateway": "Шлюз",
 "ui.health.gw_note.container": "внутри контейнера",
 "ui.health.gw_note.unresponsive": "не отвечает на ping",
+"ui.health.gw_note.no_ping": "этому узлу нельзя отправлять ping",
 "ui.health.gw_note.no_route": "нет маршрута",
 "ui.path.title": "Путь проверки",
 "ui.path.host": "Этот узел",

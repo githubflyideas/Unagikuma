@@ -424,8 +424,8 @@ func (e *Engine) checkAnchors(ctx context.Context) {
 	if err == nil {
 		for _, g := range gws {
 			fam := FamilyOf(g.Addr)
-			ok, rtt := e.pingAnchor(ctx, g.Addr.String(), timeout)
-			results = append(results, AnchorResult{At: e.now(), Kind: AnchorAutoGateway, Family: fam, Addr: g.Addr.String(), OK: ok, RTT: rtt, Container: e.deps.InContainer})
+			ok, rtt, noPing := e.pingAnchorWhy(ctx, g.Addr.String(), timeout)
+			results = append(results, AnchorResult{At: e.now(), Kind: AnchorAutoGateway, Family: fam, Addr: g.Addr.String(), OK: ok, RTT: rtt, Container: e.deps.InContainer, NoPing: noPing})
 		}
 	}
 	for _, a := range anchors {
@@ -488,7 +488,16 @@ func (e *Engine) wanTrouble() bool {
 // we do not have — a TCP connection attempt, where a refusal also proves
 // the host is there.
 func (e *Engine) pingAnchor(ctx context.Context, addr string, timeout time.Duration) (bool, time.Duration) {
+	ok, rtt, _ := e.pingAnchorWhy(ctx, addr, timeout)
+	return ok, rtt
+}
+
+// pingAnchorWhy is pingAnchor that also says when this process may not
+// ping at all (no CAP_NET_RAW, no unprivileged ping), so a silent gateway
+// is not called one that "does not answer ping".
+func (e *Engine) pingAnchorWhy(ctx context.Context, addr string, timeout time.Duration) (ok bool, rtt time.Duration, noPing bool) {
 	r := e.deps.Probe(ctx, probe.Spec{Name: "anchor", Type: "PING", Target: addr, Timeout: timeout, Opts: map[string]string{"count": "1"}})
+	noPing = r.Vote == probe.VoteAbstain && r.Reason == probe.ReasonPrivilege
 	if r.Vote == probe.VoteAbstain {
 		host := addr
 		if strings.Contains(addr, ":") {
@@ -496,5 +505,5 @@ func (e *Engine) pingAnchor(ctx context.Context, addr string, timeout time.Durat
 		}
 		r = e.deps.Probe(ctx, probe.Spec{Name: "anchor", Type: "TCP", Target: host + ":53", Timeout: timeout})
 	}
-	return probe.RemoteReachable(r), r.Latency
+	return probe.RemoteReachable(r), r.Latency, noPing
 }

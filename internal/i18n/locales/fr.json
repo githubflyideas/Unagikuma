@@ -136,6 +136,7 @@
 "ui.health.gateway": "Passerelle",
 "ui.health.gw_note.container": "dans un conteneur",
 "ui.health.gw_note.unresponsive": "ne répond pas au ping",
+"ui.health.gw_note.no_ping": "cet hôte n’a pas le droit de pinger",
 "ui.health.gw_note.no_route": "aucune route",
 "ui.path.title": "Chemin de la vérification",
 "ui.path.host": "Cet hôte",

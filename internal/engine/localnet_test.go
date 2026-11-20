@@ -643,3 +643,18 @@ func TestResolverFailuresAndAnUnusedFamily(t *testing.T) {
 		t.Fatalf("an unused family's uplink called dead: %+v", evs)
 	}
 }
+
+// A gateway this process may not ping is not said not to answer ping.
+func TestGatewayNoPingNote(t *testing.T) {
+	d, cfg := defaultLocalNet(t)
+	at := t0
+	for i := 0; i < 5; i++ {
+		at = at.Add(15 * time.Second)
+		r := gw(at, false)
+		r.NoPing = true
+		d.Anchor(r)
+	}
+	if h := d.Health(t0.Add(cfg.AnchorEnable)); h.GatewayNote != "no_ping" {
+		t.Fatalf("health note: %+v", h)
+	}
+}

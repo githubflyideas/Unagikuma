@@ -134,6 +134,7 @@
 "ui.health.gateway": "ゲートウェイ",
 "ui.health.gw_note.container": "コンテナ内",
 "ui.health.gw_note.unresponsive": "ping に応答しません",
+"ui.health.gw_note.no_ping": "このホストは ping できません",
 "ui.health.gw_note.no_route": "経路なし",
 "ui.path.title": "チェック経路",
 "ui.path.host": "このホスト",

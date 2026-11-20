@@ -153,6 +153,8 @@ type AnchorResult struct {
 	Container bool
 	// NoRoute marks "there is no default route of this family".
 	NoRoute bool
+	// NoPing marks a gateway this process may not ping (privileges).
+	NoPing bool
 }
 
 // Anomaly is an active local network anomaly.
@@ -182,6 +184,7 @@ type anchorState struct {
 	answered  bool // ever answered (enables the auto gateway)
 	container bool
 	noRoute   bool
+	noPing    bool
 	fails     int
 	oks       int
 	down      bool
@@ -374,6 +377,7 @@ func (d *LocalNet) Anchor(r AnchorResult) {
 	}
 	a.container = r.Container
 	a.noRoute = r.NoRoute
+	a.noPing = r.NoPing
 	if r.OK {
 		a.answered = true
 		a.rtt = r.RTT
@@ -848,6 +852,8 @@ func (d *LocalNet) Health(now time.Time) Health {
 			h.GatewayNote = "no_route"
 		case g.container:
 			h.GatewayNote = "container"
+		case !g.answered && g.noPing:
+			h.GatewayNote = "no_ping"
 		case !g.answered && now.Sub(d.started) >= d.cfg.AnchorEnable:
 			h.GatewayNote = "unresponsive"
 		}

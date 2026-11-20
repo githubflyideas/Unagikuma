@@ -134,6 +134,7 @@
 "ui.health.gateway": "게이트웨이",
 "ui.health.gw_note.container": "컨테이너 안",
 "ui.health.gw_note.unresponsive": "ping에 응답하지 않음",
+"ui.health.gw_note.no_ping": "이 호스트는 ping 권한이 없음",
 "ui.health.gw_note.no_route": "경로 없음",
 "ui.path.title": "검사 경로",
 "ui.path.host": "이 호스트",

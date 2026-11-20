@@ -335,6 +335,7 @@
 "ui.health.gateway": "Gateway",
 "ui.health.gw_note.container": "inside a container",
 "ui.health.gw_note.unresponsive": "does not answer ping",
+"ui.health.gw_note.no_ping": "this host may not ping",
 "ui.health.gw_note.no_route": "no route",
 "ui.path.title": "Check path",
 "ui.path.host": "This host",
