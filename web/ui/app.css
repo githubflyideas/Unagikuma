@@ -198,6 +198,8 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
 .card > .hd { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
 .card > .hd .spacer { flex: 1; }
+.card > .hd select { width: auto; flex: none; max-width: 50%; }
+.card > .hd h2 { white-space: nowrap; margin: 0; }
 .card > .bd { padding: 14px 16px; }
 .card > .bd.flush { padding: 0; }
 .grid { display: grid; gap: 16px; }

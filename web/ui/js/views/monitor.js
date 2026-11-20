@@ -1,6 +1,6 @@
 // Monitor detail: state, availability, latency chart, evidence, history.
 import { html, useState, useEffect, useRef } from '../lib.js';
-import { t, tn, dur, fmtTime, fmtNum, currentLang, detailText, axisTimes } from '../i18n.js';
+import { t, tn, dur, fmtTime, fmtNum, currentLang, detailText, axisTimes, has } from '../i18n.js';
 import { get, post, del, ifMatch } from '../api.js';
 import { useFetch, useLive, Card, Loading, ErrorBox, Empty, Pill, Dot, Beats, Ago, Copy, Seg, pct, msText, reasonText, enc, go, toast, toastError, checkNow, confirmDialog, useDocTitle, gwBad } from '../ui.js';
 import { ObservationTable } from '../observations.js';
@@ -21,6 +21,9 @@ function routeText(policy) {
 // Path draws the way from this host to the target: the gateway, then for
 // internet targets the internet exit, so a broken uplink is told apart
 // from a broken target at a glance.
+// A metric's name for people: translated when there is a text for it, else the key as the check calls it.
+const metricName = (k) => (has('metric.' + k) ? t('metric.' + k) : k);
+
 export function Path({ row, path, bare }) {
   const gw = path.gateway || {};
   const hops = [{ label: t('ui.path.host'), status: 'ok' }];
@@ -325,7 +328,7 @@ export function MonitorDetail({ name }) {
             <dt>${t('ui.mon.last_check')}</dt><dd><${Ago} at=${row.last_check} /></dd>
             <dt>${t('ui.mon.next_check')}</dt><dd><${Ago} at=${row.next_check} /></dd>
             <dt>${t('ui.mon.changed')}</dt><dd><${Ago} at=${row.last_change} /></dd>
-            ${Object.entries(row.metrics || {}).filter(([k]) => !(row.value && (k === 'value' || k.startsWith('value.')))).map(([k, v]) => html`<dt class="ltr">${k}</dt><dd>${fmtNum(Math.round(v * 100) / 100)}</dd>`)}
+            ${Object.entries(row.metrics || {}).filter(([k]) => !(row.value && (k === 'value' || k.startsWith('value.')))).map(([k, v]) => html`<dt title=${k}>${metricName(k)}</dt><dd>${fmtNum(Math.round(v * 100) / 100)}</dd>`)}
           </dl>
         <//>
         ${row.type === 'PUSH' && html`<${PushBox} name=${name} />`}
