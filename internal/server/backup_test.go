@@ -131,3 +131,19 @@ func TestRestoreIsStagedNotApplied(t *testing.T) {
 		t.Fatalf("still pending after cancel: %s", st)
 	}
 }
+
+// A file whose records this installation would refuse is not shown as
+// importable: the preview names the reason and blocks applying.
+func TestUnagikumaPreviewValidates(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	e.setup()
+	file := []byte("$FILE revision=3 master=other\nnewmon 1m IN HTTP http://192.0.2.10/ channel=ops\n")
+	code, body := e.raw("POST", "/api/v1/import/unagikuma", file, "text/plain")
+	if code != 200 || !strings.Contains(string(body), `"blocked":true`) || !strings.Contains(string(body), "unknown option channel") {
+		t.Fatalf("preview of a file that cannot be saved: %d %s", code, body)
+	}
+	good := []byte("$FILE revision=3 master=other\nnewmon 1m IN HTTP http://192.0.2.10/\n")
+	if code, body = e.raw("POST", "/api/v1/import/unagikuma", good, "text/plain"); code != 200 || strings.Contains(string(body), `"blocked":true`) {
+		t.Fatalf("preview of a good file: %d %s", code, body)
+	}
+}

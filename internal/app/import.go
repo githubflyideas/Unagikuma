@@ -53,7 +53,29 @@ type UserNote struct {
 // PreviewKuma converts an Uptime Kuma database or backup without changing
 // anything.
 func (a *App) PreviewKuma(data []byte, o KumaOptions) (*importer.Result, error) {
-	return a.convert(data, o)
+	res, err := a.convert(data, o)
+	if err != nil || o.Source != "unagikuma" || len(res.Records) == 0 || res.ActivationError() != nil {
+		return res, err
+	}
+	// The preview checks the result as saving will: an option this
+	// installation does not take must not look importable and then fail.
+	cur := a.Config()
+	if cur.File == nil {
+		return res, nil
+	}
+	f, pd := config.Parse(cur.File.Path, cur.File.Bytes())
+	if config.HasErrors(pd) || f.AppendBlock(res.Render(f.EndArea())) != nil {
+		return res, nil
+	}
+	if _, diags := a.ValidateConfig(f.Bytes()); config.HasErrors(diags) {
+		res.Blocked = true
+		for _, d := range diags {
+			if d.Severity == config.SevError {
+				res.Notes = append(res.Notes, "Importing would be refused: "+d.Msg)
+			}
+		}
+	}
+	return res, nil
 }
 
 // ImportKuma adds an Uptime Kuma database's or backup's monitors, channels,

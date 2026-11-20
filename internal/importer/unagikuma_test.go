@@ -209,3 +209,23 @@ func TestUnagikumaTrustWarnings(t *testing.T) {
 		t.Errorf("team members written:\n%s", text)
 	}
 }
+
+// A team in the file that names a channel called like one here sends its
+// alerts to the channel here: the preview says so.
+func TestUnagikumaTeamChannelHere(t *testing.T) {
+	f, cfg := loadHere(t)
+	file := "$FILE revision=7\nops IN CHANNEL webhook url=https://hooks.example.com/other\nnet IN TEAM channels=ops\nx IN HTTP https://x.example.com/ team=net\n"
+	res, err := Unagikuma([]byte(file), cfg, Options{File: "f.conf", Existing: f, Now: testNow, SecretExists: func(string) bool { return false }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, it := range res.Items {
+		if it.Kind == "team" {
+			if it.Status != StatusAttention || !strings.Contains(it.Why, "channel ops that is already here") {
+				t.Fatalf("team item: %+v", it)
+			}
+			return
+		}
+	}
+	t.Fatal("no team item")
+}

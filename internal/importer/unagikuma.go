@@ -163,6 +163,15 @@ func Unagikuma(data []byte, existing *config.Config, o Options) (*Result, error)
 			if p.kind == "monitor" && (op.Key == "team" || op.Key == "policy") && here[v].Name != "" && !used[v] {
 				it.attention("Its alerts go to the "+op.Key+" "+v+" that is already here, and to its channels and people.", "")
 			}
+			// An imported team whose channel is called like one here (the
+			// one here is kept) alerts that channel's people.
+			if p.kind == "team" && op.Key == "channels" {
+				for _, c := range strings.Split(v, ",") {
+					if c = strings.TrimSpace(c); c != "" && here[c].Name != "" && !used[c] {
+						it.attention("Its alerts go to the channel "+c+" that is already here (the file's channel of that name is not imported).", "Check that channel's addresses, or rename the channel in the file.")
+					}
+				}
+			}
 			if op.Key == "parent" && p.kind == "monitor" {
 				v = remapList(v, rename)
 			}
