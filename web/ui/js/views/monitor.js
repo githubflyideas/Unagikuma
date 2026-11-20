@@ -91,6 +91,13 @@ export function LatencyChart({ name, range }) {
       const avg = pts.map(p => p.avg);
       const mx = pts.map(p => p.max);
       const long = pts.length > 0 && pts.some(p => p.max !== p.avg);
+      // Without the pointer over the chart the legend speaks for the whole
+      // range: its time span, mean and highest value (not "–").
+      const seen = avg.filter(v => v != null);
+      const avgAll = seen.length ? seen.reduce((a, b) => a + b, 0) / seen.length : null;
+      const maxAll = mx.reduce((a, b) => (b != null && (a == null || b > a) ? b : a), null);
+      const span = xs.length ? fmtTime(new Date(xs[0] * 1000)) + ' – ' + fmtTime(new Date(xs[xs.length - 1] * 1000)) : '–';
+      const ms = (v) => v == null ? '–' : msText(v);
       const accent = css('--accent') || '#1f7a4d';
       // A failed check has no latency: a red band marks when it happened.
       const fails = (data.data.fails || []).map(f => new Date(f).getTime() / 1000);
@@ -124,9 +131,9 @@ export function LatencyChart({ name, range }) {
           { stroke: css('--muted'), grid: { stroke: css('--border') }, ticks: { stroke: css('--border') }, values: (u, v) => v.map(x => fmtNum(x) + ' ms'), size: 64 },
         ],
         series: [
-          { label: t('ui.chart.time'), value: (u, v) => v == null ? '–' : fmtTime(new Date(v * 1000)) },
-          { label: t('ui.chart.avg'), stroke: accent, width: 1.5, fill: accent + '22', points: { show: pts.length < 80 }, value: (u, v) => v == null ? '–' : msText(v) },
-          ...(long ? [{ label: t('ui.chart.max'), stroke: css('--degraded'), width: 1, dash: [4, 4], value: (u, v) => v == null ? '–' : msText(v) }] : []),
+          { label: t('ui.chart.time'), value: (u, v, si, i) => i == null ? span : v == null ? '–' : fmtTime(new Date(v * 1000)) },
+          { label: t('ui.chart.avg'), stroke: accent, width: 1.5, fill: accent + '22', points: { show: pts.length < 80 }, value: (u, v, si, i) => ms(i == null ? avgAll : v) },
+          ...(long ? [{ label: t('ui.chart.max'), stroke: css('--degraded'), width: 1, dash: [4, 4], value: (u, v, si, i) => ms(i == null ? maxAll : v) }] : []),
         ],
       };
       plot.current && plot.current.destroy();

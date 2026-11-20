@@ -192,6 +192,8 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
   .page { padding: 14px 12px 40px; }
   .top { padding: 10px 12px; }
   .hide-sm { display: none !important; }
+  /* The monitor cell takes what the other columns leave, its lines cut with … */
+  .tbl td.fill { max-width: 0 !important; width: 100%; }
 }
 
 /* ---- panels, grids ---- */
@@ -539,6 +541,7 @@ body:has(.shell) { background-color: color-mix(in srgb, var(--bg) 92%, var(--tex
 .card { border-radius: 14px; overflow: hidden; }
 .card > .hd { padding: 13px 18px; }
 .card > .hd h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+.card > .hd h2.keep-case { text-transform: none; letter-spacing: .02em; } /* a title with a name in it: names are case-sensitive */
 .card > .bd { padding: 14px 18px; }
 .tile { border-radius: 12px; }
 .tbl th { background: transparent; letter-spacing: .06em; }

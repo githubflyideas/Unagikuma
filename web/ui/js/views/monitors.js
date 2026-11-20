@@ -213,7 +213,7 @@ export function Monitors({ query }) {
             <td class="sel" onClick=${(e) => e.stopPropagation()}><input type="checkbox" checked=${sel.has(r.name)} onChange=${() => toggle(r.name)} aria-label=${r.title} /></td>
             <td class="nowrap"><${Pill} status=${r.status} soft=${r.state_type === 'soft' && r.status !== 'ok' && r.status !== 'pending'} />
               ${r.state_type === 'soft' && r.attempt > 0 && r.status !== 'ok' && html` <span class="small muted">${r.attempt}/${r.max_attempts}</span>`}</td>
-            <td style=${{ maxWidth: '420px' }}>
+            <td class="fill" style=${{ maxWidth: '420px' }}>
               <div class="row nowrap"><a class="name ellipsis" href=${'#/monitors/' + enc(r.name)} onClick=${(e) => e.stopPropagation()}>${r.title}</a>
                 ${r.flags.includes('weak') && html`<span class="tag weak" title=${t('ui.flag.weak_hint')}>${t('ui.flag.weak')}</span>`}
                 ${r.flags.includes('held') && html`<span class="tag" title=${t('ui.flag.held_hint')}>${t('ui.flag.held')}</span>`}
