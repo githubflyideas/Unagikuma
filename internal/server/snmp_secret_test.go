@@ -1,6 +1,10 @@
 package server
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
 
 // An SNMPv3 check whose passwords are secrets can be saved from the API.
 func TestSNMPv3SecretSave(t *testing.T) {
@@ -17,8 +21,9 @@ func TestSNMPv3SecretSave(t *testing.T) {
 	}
 }
 
-// An option the type does not take is refused when it is saved, also when
-// its value is a reference; a known option with a reference is kept.
+// An option the type does not take is reported when it is saved, also when
+// its value is a reference (a warning: older files with one must still
+// load); a known option with a reference is kept without one.
 func TestUnknownOptionWithReference(t *testing.T) {
 	e := newEnv(t, testBind, nil)
 	e.setup()
@@ -26,10 +31,22 @@ func TestUnknownOptionWithReference(t *testing.T) {
 	rec := func(name, typ, target string, opts map[string]string) map[string]any {
 		return map[string]any{"record": map[string]any{"name": name, "type": typ, "target": target, "opts": opts}}
 	}
-	if c := e.do("POST", "/api/v1/monitors", rec("pp", "PING", "10.0.0.9", map[string]string{"bogus": "${secret:tok}"}), nil); c != 400 {
-		t.Fatalf("unknown option with a reference saved: %d", c)
+	var out map[string]any
+	if c := e.do("POST", "/api/v1/monitors", rec("pp", "PING", "10.0.0.9", map[string]string{"bogus": "${secret:tok}"}), &out); c != 200 {
+		t.Fatalf("saving: %d", c)
 	}
-	if c := e.do("POST", "/api/v1/monitors", rec("hh", "HTTP", "http://10.0.0.9/", map[string]string{"header.Authorization": "Bearer ${secret:tok}"}), nil); c != 200 {
+	out = nil
+	e.do("GET", "/api/v1/config", nil, &out)
+	if b, _ := json.Marshal(out["diagnostics"]); !strings.Contains(string(b), "unknown option bogus") {
+		t.Fatalf("no warning: %s", b)
+	}
+	out = nil
+	if c := e.do("POST", "/api/v1/monitors", rec("hh", "HTTP", "http://10.0.0.9/", map[string]string{"header.Authorization": "Bearer ${secret:tok}"}), &out); c != 200 {
 		t.Fatalf("known option with a reference refused: %d", c)
+	}
+	out = nil
+	e.do("GET", "/api/v1/config", nil, &out)
+	if b, _ := json.Marshal(out["diagnostics"]); strings.Count(string(b), "unknown option") != 1 {
+		t.Fatalf("warning for a known option: %s", b)
 	}
 }

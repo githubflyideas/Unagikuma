@@ -26,6 +26,9 @@ type Options struct {
 	SecretKnown func(name string) bool
 	// ValidateMonitor checks type-specific options (the probe package).
 	ValidateMonitor func(m *Monitor) error
+	// MonitorWarnings reports what is wrong with a monitor that still
+	// loads (it is not called for a monitor ValidateMonitor refused).
+	MonitorWarnings func(m *Monitor) []string
 	// ValidateChannel checks channel options (the notify package).
 	ValidateChannel func(kind string, opts map[string]string) error
 	// ChannelWarnings reports what is wrong with a channel's message
@@ -946,7 +949,7 @@ func (b *builder) monitorChecks(m *Monitor, r Record) {
 		// A push carries no value yet: warn=, crit= and the other check
 		// options would look set and never be judged.
 		for k := range m.Opts {
-			if !metaOpts[k] && !paramOpts[k] && k != "period" {
+			if PushRejects(k) {
 				b.errf(r.NamePos, "invalid_option", "%s: a PUSH monitor takes no %s= (it is judged only by whether a push arrives within period= and grace=)", m.Name, k)
 			}
 		}
@@ -954,12 +957,20 @@ func (b *builder) monitorChecks(m *Monitor, r Record) {
 	if b.opt.ValidateMonitor != nil && m.Type != "PUSH" {
 		if err := b.opt.ValidateMonitor(m); err != nil {
 			b.errf(r.NamePos, "invalid_option", "%s: %v", m.Name, err)
+		} else if b.opt.MonitorWarnings != nil {
+			for _, w := range b.opt.MonitorWarnings(m) {
+				b.warnf(r.NamePos, "invalid_option", "%s", w)
+			}
 		}
 	}
 	if m.Type == "HTTP" && m.Opts["basic"] != "" && m.Opts["bearer"] != "" {
 		b.warnf(r.NamePos, "conflicting_auth", "%s sets both basic= and bearer=: a request carries one Authorization header, and bearer= is the one sent", m.Name)
 	}
 }
+
+// PushRejects reports whether a PUSH monitor refuses option k (it has no
+// value to judge).
+func PushRejects(k string) bool { return !metaOpts[k] && !paramOpts[k] && k != "period" }
 
 // target parses and normalises the monitor target.
 func (b *builder) target(m *Monitor, r Record, explicitInterval bool) {

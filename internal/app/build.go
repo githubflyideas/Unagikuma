@@ -13,6 +13,7 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -191,22 +192,9 @@ func (a *App) validators() config.Options {
 			// password option keeps the reference itself: its check only
 			// needs to know one is set (an SNMPv3 auth= without auth-pass=
 			// is an error, with ${secret:…} it is not).
-			var refOpts []string
 			for k, v := range s.Opts {
 				if strings.Contains(v, "${") && !strings.HasSuffix(k, "-pass") {
 					delete(s.Opts, k)
-					refOpts = append(refOpts, k)
-				}
-			}
-			// The name is still checked: an option this type does not take
-			// is an error whatever its value, not a check that fails later
-			// with "config_error".
-			for _, k := range refOpts {
-				t := s
-				t.Opts = maps.Clone(s.Opts)
-				t.Opts[k] = "x"
-				if err := probe.Validate(t); err != nil && strings.Contains(err.Error(), "unknown option "+k) {
-					return err
 				}
 			}
 			if strings.Contains(s.Target, "${") {
@@ -219,9 +207,40 @@ func (a *App) validators() config.Options {
 			}
 			return probe.Validate(s)
 		},
+		MonitorWarnings: unknownRefOptions,
 		ValidateChannel: ValidateChannel,
 		ChannelWarnings: notify.TemplateProblems,
 	}
+}
+
+// unknownRefOptions names the options a monitor's type does not take whose
+// value is a reference (they are left out of the static check above). A
+// warning, not an error: earlier releases loaded such a file, and an
+// upgrade must still start with it; the check itself reports config_error.
+func unknownRefOptions(m *config.Monitor) []string {
+	s, err := ProbeSpec(m, nil)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for k, v := range s.Opts {
+		if !strings.Contains(v, "${") || strings.HasSuffix(k, "-pass") {
+			continue
+		}
+		t := s
+		t.Opts = maps.Clone(s.Opts)
+		for k2, v2 := range t.Opts {
+			if k2 != k && strings.Contains(v2, "${") {
+				delete(t.Opts, k2)
+			}
+		}
+		t.Opts[k] = "x"
+		if err := probe.Validate(t); err != nil && strings.Contains(err.Error(), "unknown option "+k) {
+			out = append(out, fmt.Sprintf("%s: unknown option %s (the check will fail with config_error)", m.Name, k))
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // engineConfig translates a validated configuration for the engine.

@@ -12,7 +12,8 @@ Follow-ups to the v2.6.29 check.
 - The latency chart's legend gives the range's mean and highest value before the pointer is over it, instead of "–".
 - The edit title keeps the monitor name's case; on a phone the monitor list shows state, name and target, its lines cut with "…".
 - A `$DEFAULT` written before the first monitor kept the gateway monitors from being added (or gave them its options, such as a header on a PING); they now go above it.
-- An option a type does not take (`bogus=${secret:x}` on a PING) was saved when its value was a reference and failed later as a configuration error; it is refused on saving.
+- An option a type does not take (`bogus=${secret:x}` on a PING) was saved when its value was a reference and failed later as a configuration error without a word on saving; it is now named in the file's warnings (a warning, so a file that has one still starts).
+- Upgrading from a release before v2.6.28 with check options (`warn=`, `crit=`…) on a PUSH monitor stopped the server from starting (v2.6.28 refuses them, and the last good version had them too). They are removed once at startup, as they were ignored; the original file is kept as `monitors.conf.before-push-options`.
 - `compare=`/`for=` refuse `1d-12h`. README and manual name the Import and export page as it is.
 
 **Added**
