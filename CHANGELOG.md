@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+Follow-ups to the v2.6.29 check.
+
+**Fixed**
+- An operator could still get a secret sent to their own server by writing it in a `$DEFAULT` above a new record, or redirect an administrator's check through a `$DEFAULT` (`proxy=`, a header): what a monitor takes from a `$DEFAULT` now counts as its own.
+- Importing another Unagikuma: a team whose channel is called like one here (the one here is kept) is named in the preview; a file this installation would refuse on saving (an unknown option, say) is refused in the preview instead of failing on import.
+- The daily report gives the checks' messages in the reader's language and joins its counts the language's way; the open-incident reminder counts the notifications that were delivered.
+- A gateway this host may not ping is shown as such, not as one that "does not answer ping".
+- The latency chart's legend gives the range's mean and highest value before the pointer is over it, instead of "–".
+- The edit title keeps the monitor name's case; on a phone the monitor cell fits the screen, its lines cut with "…".
+- `compare=`/`for=` refuse `1d-12h`. README and manual name the Import and export page as it is.
+
+**Added**
+- SNMPv3 `context=` (a VRF, VLAN or instance) and the `sha224` and `sha384` authentication protocols; verified against an SNMPv3 agent with SHA/AES and SHA-384/AES.
+
 ## v2.6.29 — 2026-11-20
 
 More of the review's findings.
