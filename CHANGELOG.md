@@ -10,7 +10,9 @@ Follow-ups to the v2.6.29 check.
 - The daily report gives the checks' messages in the reader's language and joins its counts the language's way; the open-incident reminder counts the notifications that were delivered.
 - A gateway this host may not ping is shown as such, not as one that "does not answer ping".
 - The latency chart's legend gives the range's mean and highest value before the pointer is over it, instead of "–".
-- The edit title keeps the monitor name's case; on a phone the monitor cell fits the screen, its lines cut with "…".
+- The edit title keeps the monitor name's case; on a phone the monitor list shows state, name and target, its lines cut with "…".
+- A `$DEFAULT` written before the first monitor kept the gateway monitors from being added (or gave them its options, such as a header on a PING); they now go above it.
+- An option a type does not take (`bogus=${secret:x}` on a PING) was saved when its value was a reference and failed later as a configuration error; it is refused on saving.
 - `compare=`/`for=` refuse `1d-12h`. README and manual name the Import and export page as it is.
 
 **Added**
