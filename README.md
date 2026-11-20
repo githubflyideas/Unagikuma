@@ -60,7 +60,7 @@ On Windows, run `unagikuma.exe`.
 
 ## Moving from another tool
 
-In the web page, open **Config › Import and export**, pick Uptime Kuma, Nagios, Checkmate, Gatus or Unagikuma, upload the file, check the preview and add it.
+In the web page, open **Config & import › Import and export**, pick Uptime Kuma, Nagios, Checkmate, Gatus or Unagikuma, upload the file, check the preview and add it.
 
 ![Moving from Uptime Kuma, Nagios, Checkmate or Gatus in the web page](docs/images/import.png)
 

@@ -29,8 +29,10 @@ func TestUnambiguousUnits(t *testing.T) {
 			t.Errorf("span %s: %v %v", v, got, err)
 		}
 	}
-	if _, err := ParseSpan("1x"); err == nil {
-		t.Error("1x accepted")
+	for _, v := range []string{"1x", "1d-12h", "1d+1h", "d", "1.5d"} {
+		if _, err := ParseSpan(v); err == nil {
+			t.Errorf("%s accepted", v)
+		}
 	}
 	if _, err := ParseQuantity("-300", "°C"); err == nil {
 		t.Error("-300 °C accepted")

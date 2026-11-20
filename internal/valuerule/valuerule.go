@@ -436,6 +436,10 @@ func ParseSpan(v string) (time.Duration, error) {
 		if v == "" {
 			return days, nil
 		}
+		if v[0] == '-' || v[0] == '+' {
+			// 1d-12h: one sign for the whole time, not a sum of signed parts.
+			return 0, fmt.Errorf("want a time such as 90s, 5m, 2h or 1d12h, got %q", v)
+		}
 	}
 	d, err := time.ParseDuration(v)
 	if err != nil {
