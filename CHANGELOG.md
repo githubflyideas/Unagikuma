@@ -13,6 +13,7 @@ More of the review's findings.
 - The daily report no longer counts the gateway monitors the installation adds.
 - Incidents show as `#5` instead of the long internal id (the whole id stays as the tooltip).
 - The code for registered-only styles is gone: every style was already free.
+- Interface: the Run mode icon is drawn, the sign-in title is no longer squeezed by the language box, and a monitor's details name the common metrics (latency, HTTP status, packet loss, certificate days, clock offset) instead of showing their keys.
 
 ## v2.6.28 — 2026-11-19
 
