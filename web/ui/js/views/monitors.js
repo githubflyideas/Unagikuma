@@ -224,7 +224,7 @@ export function Monitors({ query }) {
             </td>
             <td class="hide-sm" style=${{ minWidth: '180px' }}><${Beats} cells=${beats.data && beats.data.items[r.name]} /></td>
             <td class="right nowrap hide-sm">${msText(r.latency_ms)}</td>
-            <td class="right nowrap" title=${r.uptime_24h == null && r.coverage_24h > 0 ? t('ui.uptime.coverage', { pct: pct(r.coverage_24h, 0) }) : ''}>${pct(r.uptime_24h)}</td>
+            <td class="right nowrap hide-xs" title=${r.uptime_24h == null && r.coverage_24h > 0 ? t('ui.uptime.coverage', { pct: pct(r.coverage_24h, 0) }) : ''}>${pct(r.uptime_24h)}</td>
             <td class="nowrap small muted hide-sm"><${Ago} at=${r.last_change} /></td>
             <td class="right nowrap"><a class="btn sm" href=${'#/monitors/' + enc(r.name) + '/edit'} onClick=${(e) => e.stopPropagation()}>${t('ui.edit')}</a></td>
           </tr>`), [visible, beats.data, sel, multiTeam]);
@@ -278,7 +278,7 @@ export function Monitors({ query }) {
           <thead><tr>
             <th class="sel"><input type="checkbox" checked=${allPicked} onChange=${toggleAll} aria-label=${t('ui.mon.select_all')} title=${t('ui.mon.select_all')} /></th>
             <${Th} k="status">${t('ui.status')}<//><${Th} k="name">${t('ui.monitor')}<//><th class="hide-sm">${t('ui.mon.last24h')}</th>
-            <${Th} k="latency" cls="right hide-sm">${t('ui.latency')}<//><${Th} k="uptime" cls="right">${t('ui.uptime24h')}<//><${Th} k="last_change" cls="hide-sm">${t('ui.mon.changed')}<//><th></th>
+            <${Th} k="latency" cls="right hide-sm">${t('ui.latency')}<//><${Th} k="uptime" cls="right hide-xs">${t('ui.uptime24h')}<//><${Th} k="last_change" cls="hide-sm">${t('ui.mon.changed')}<//><th></th>
           </tr></thead>
           <tbody>${tbody}</tbody>
         </table>${rows.length > shown ? html`<div class="row" style=${{ justifyContent: 'center', padding: '12px' }}>

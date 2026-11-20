@@ -195,6 +195,8 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
   /* The monitor cell takes what the other columns leave, its lines cut with … */
   .tbl td.fill { max-width: 0 !important; width: 100%; }
 }
+/* A phone keeps what tells monitors apart: state, name and target. */
+@media (max-width: 480px) { .hide-xs { display: none !important; } }
 
 /* ---- panels, grids ---- */
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
