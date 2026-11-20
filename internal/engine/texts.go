@@ -194,7 +194,8 @@ func outageSummary(c *textArgs) string {
 func reportServiceLine(c *textArgs) string {
 	detail := ""
 	if d, _ := c.args[5].(string); d != "" {
-		detail = " — " + d
+		// The check's own words, in the reader's language where known.
+		detail = " — " + i18n.Detail(c.lang, d)
 	}
 	return c.t("sys.report_service_line", "title", c.args[0], "status", c.t("status."+c.args[1].(string)),
 		"since", c.at(2), "duration", c.dur(c.args[3].(time.Duration)), "ack", c.ack(4)) + detail
@@ -208,5 +209,16 @@ func reportSummary(c *textArgs) string {
 			parts = append(parts, fmt.Sprintf("%s %d", c.t("status."+st), counts[st]))
 		}
 	}
-	return c.t("sys.report_summary", "hosts", c.args[0], "services", c.args[1], "states", strings.Join(parts, ", "))
+	return c.t("sys.report_summary", "hosts", c.args[0], "services", c.args[1], "states", strings.Join(parts, listSep(c.lang)))
+}
+
+// listSep joins the items of a short list in a language's way.
+func listSep(lang string) string {
+	switch {
+	case strings.HasPrefix(lang, "zh"):
+		return "，"
+	case strings.HasPrefix(lang, "ja"):
+		return "、"
+	}
+	return ", "
 }

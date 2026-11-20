@@ -46,3 +46,33 @@ func TestEveryTextRenders(t *testing.T) {
 		}
 	}
 }
+
+// The daily report gives the check's words in the reader's language and
+// joins its counts the way the language does.
+func TestReportInReadersLanguage(t *testing.T) {
+	now := time.Date(2026, 11, 11, 9, 30, 0, 0, time.UTC)
+	e := &Engine{cfg: Config{Lang: "zh", Location: time.UTC}}
+	line := e.text("report_service_line", "jok", "degraded", now, time.Hour, "", "3, limit >1")
+	if !strings.Contains(line, "3，限值 >1") {
+		t.Errorf("service line: %q", line)
+	}
+	sum := e.text("report_summary", 2, 5, map[string]int{"ok": 4, "critical": 1})
+	if strings.Contains(sum, ", ") || !strings.Contains(sum, "，") {
+		t.Errorf("summary: %q", sum)
+	}
+}
+
+// The reminder counts the notifications that reached someone.
+func TestToldCount(t *testing.T) {
+	s := IncidentState{NotifyCount: 2, Tracked: true}
+	if s.ToldCount() != 0 {
+		t.Fatalf("nothing delivered: %d", s.ToldCount())
+	}
+	s.Delivered()
+	if s.ToldCount() != 1 {
+		t.Fatalf("one delivered: %d", s.ToldCount())
+	}
+	if old := (IncidentState{NotifyCount: 2}); old.ToldCount() != 2 {
+		t.Fatalf("older incident: %d", old.ToldCount())
+	}
+}

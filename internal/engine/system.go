@@ -508,7 +508,7 @@ func (e *Engine) dailyReminder(now time.Time) {
 	}
 	sort.Slice(open, func(i, j int) bool { return open[i].State.OpenedAt.Before(open[j].State.OpenedAt) })
 	for _, inc := range open {
-		lines = append(lines, e.text("reminder_line", inc.Title, now.Sub(inc.State.OpenedAt), inc.State.AckedBy, inc.State.NotifyCount))
+		lines = append(lines, e.text("reminder_line", inc.Title, now.Sub(inc.State.OpenedAt), inc.State.AckedBy, inc.State.ToldCount()))
 	}
 	e.enqueue(&Intent{Kind: "DIGEST", Policy: e.policy("system").Name, CreatedAt: now, DueAt: now, System: true,
 		Message: notify.Message{Kind: "DIGEST", Priority: "high", Title: e.text("reminder_title", len(open)), Body: strings.Join(lines, "\n"), Time: now, Instance: e.cfg.Instance, Lang: e.cfg.Lang}})

@@ -135,6 +135,15 @@ func (s *IncidentState) told() bool {
 	return s.Told > 0
 }
 
+// ToldCount is the number of problem notifications that reached someone
+// (planned ones for an incident from before deliveries were counted).
+func (s *IncidentState) ToldCount() int {
+	if !s.Tracked {
+		return s.NotifyCount
+	}
+	return s.Told
+}
+
 // Delivered books a problem notification that reached someone.
 func (s *IncidentState) Delivered() { s.Told++; s.Undelivered, s.RetryAt = 0, time.Time{} }
 
