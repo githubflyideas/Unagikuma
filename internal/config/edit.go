@@ -380,10 +380,23 @@ func (f *File) insertPoint(r RecordSpec) (at int, prev *Stmt, scopeLine string) 
 	var groupPrev *Stmt
 	anySection := !IsMonitorType(r.Type) // only monitors belong to sections
 	first := -1
+	// A record put first must not land under a $DEFAULT or $SCOPE written
+	// before the first monitor: it would take options (or a section) that
+	// were meant for the monitors after it.
+	openDir, headerAfter := -1, false
 	for i := range f.Stmts {
 		s := &f.Stmts[i]
 		if s.isDirective() {
-			if d := s.directive(); d.Name == "SCOPE" {
+			d := s.directive()
+			switch d.Name {
+			case "SCOPE", "DEFAULT":
+				if openDir < 0 && first < 0 {
+					openDir = s.StartLine - 1
+				}
+			case "FILE", "VERSION", "QUORUM", "DIALECT":
+				headerAfter = headerAfter || openDir >= 0
+			}
+			if d.Name == "SCOPE" {
 				area = scopeSpec(d)
 			}
 			continue
@@ -406,6 +419,9 @@ func (f *File) insertPoint(r RecordSpec) (at int, prev *Stmt, scopeLine string) 
 		}
 	}
 	if r.First && IsMonitorType(r.Type) && first >= 0 {
+		if openDir >= 0 && openDir < first && !headerAfter && r.Area == "" {
+			return openDir, nil, ""
+		}
 		return first, nil, ""
 	}
 	if inGroup >= 0 {

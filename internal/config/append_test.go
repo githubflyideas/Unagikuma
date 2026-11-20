@@ -74,3 +74,31 @@ func TestUpsertFirst(t *testing.T) {
 		t.Fatalf("comment moved:\n%s", f.Bytes())
 	}
 }
+
+// A monitor put first does not land under a $DEFAULT written before the
+// first monitor: it would take options meant for the others (a header on
+// a PING, a secret).
+func TestUpsertFirstAboveDefault(t *testing.T) {
+	src := "$FILE revision=1 master=a interval=1m retry=15s timeout=5s attempts=3\n" +
+		"$DEFAULT header.Authorization=\"Bearer x\"\n" +
+		"api 15s IN HTTP http://127.0.0.1/\n" +
+		"$DEFAULT\n"
+	f, diags := Parse("t", []byte(src))
+	if HasErrors(diags) {
+		t.Fatal(diags)
+	}
+	if err := f.UpsertRecord(RecordSpec{Name: "lan-gateway", Type: "PING", Interval: "1m", Target: "10.0.0.1", First: true}); err != nil {
+		t.Fatal(err)
+	}
+	_, cfg, diags := Load("t", f.Bytes(), Options{})
+	if HasErrors(diags) {
+		t.Fatalf("%v\n%s", diags, f.Bytes())
+	}
+	m := cfg.FindMonitor("lan-gateway")
+	if m == nil || m.Opts["header.authorization"] != "" || m.Opts["header.Authorization"] != "" {
+		t.Fatalf("the gateway took the $DEFAULT:\n%s", f.Bytes())
+	}
+	if a := cfg.FindMonitor("api"); a == nil || len(a.Opts) == 0 {
+		t.Fatalf("api lost its $DEFAULT:\n%s", f.Bytes())
+	}
+}
