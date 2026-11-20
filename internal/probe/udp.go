@@ -34,7 +34,7 @@ var templateOpts = map[string]map[string]bool{
 	"dns":  {"query": true, "qtype": true, "rcode": true, "expect": true, "expect-all": true, "aa": true, "min-answers": true, "recurse": true},
 	"ntp":  {"max-offset": true, "max-stratum": true},
 	"snmp": {"version": true, "community": true, "oid": true, "expect": true, "expect-num": true,
-		"user": true, "auth": true, "auth-pass": true, "priv": true, "priv-pass": true, "port": true, "sensor": true, "profile": true,
+		"user": true, "auth": true, "auth-pass": true, "priv": true, "priv-pass": true, "context": true, "port": true, "sensor": true, "profile": true,
 		"value": true, "warn": true, "crit": true, "change": true, "compare": true, "min": true, "for": true, "direction": true},
 	"snmptrap": {"community": true, "host-check": true},
 	"time":     {"max-offset": true},

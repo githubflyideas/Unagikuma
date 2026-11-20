@@ -92,7 +92,7 @@ const OPT_EXAMPLE = {
   whois: 'whois.example.net', 'expect-num': '> 0', args: '-w 20% -c 10%', address: '10.0.0.21', period: '24h', grace: '2h',
   aa: 'yes', 'allow-metadata': 'yes', 'expect-len': '48', fallback: 'off', 'host-check': 'off', 'max-offset': '500ms', 'max-stratum': '4',
   'min-answers': '2', retransmit: '2', 'src-port': '1024', template: 'snmp',
-  auth: 'sha', 'auth-pass': '${secret:snmp_auth}', priv: 'aes', 'priv-pass': '${secret:snmp_priv}', port: 'Gi0/1', sensor: 'Inlet',
+  auth: 'sha', 'auth-pass': '${secret:snmp_auth}', priv: 'aes', 'priv-pass': '${secret:snmp_priv}', context: 'vlan-10', port: 'Gi0/1', sensor: 'Inlet',
   profile: 'huawei', value: 'util', warn: '70', crit: '90', change: '50%', compare: '24h', min: '10', for: '5m', direction: 'up',
 };
 
@@ -232,7 +232,7 @@ export function MonitorEditor({ name }) {
   return html`<div class="page">
     <div class="row"><a href=${editing ? '#/monitors/' + enc(name) : '#/monitors'} class="muted">← ${t('ui.back')}</a></div>
     <form class="card" onSubmit=${save}>
-      <div class="hd"><h2>${editing ? t('ui.mon.edit_title', { name }) : t('ui.mon.add')}</h2></div>
+      <div class="hd"><h2 class=${editing ? 'keep-case' : ''}>${editing ? t('ui.mon.edit_title', { name }) : t('ui.mon.add')}</h2></div>
       <div class="bd form">
         <${Field} label=${t('ui.type')} hint=${editing && f.type === 'PUSH' ? t('ui.mon.push_type_locked') : t('ui.mon.type_hint.' + f.type)}>
           <select value=${f.type} onChange=${(e) => setF({ ...f, type: e.target.value, port: '' })} disabled=${editing && f.type === 'PUSH'}>

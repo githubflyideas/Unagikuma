@@ -59,7 +59,7 @@ var refRe = regexp.MustCompile(`\$\{(secret|env):([A-Za-z0-9_.-]+)\}`)
 var secretKeys = map[string]bool{"access-key-secret": true, "secret-key": true, "auth-token": true, "token": true, "secret": true, "password": true, "community": true, "sendkey": true, "key": true, "apikey": true, "api-key": true, "routing-key": true, "auth": true, "auth-pass": true, "priv-pass": true}
 
 // snmpAuthNames are the values of an SNMPv3 auth= option.
-var snmpAuthNames = map[string]bool{"md5": true, "sha": true, "sha1": true, "sha256": true, "sha512": true}
+var snmpAuthNames = map[string]bool{"md5": true, "sha": true, "sha1": true, "sha224": true, "sha256": true, "sha384": true, "sha512": true}
 
 // webhookKinds embed a credential in their URL.
 var webhookKinds = map[string]bool{"feishu": true, "dingtalk": true, "wecom": true, "slack": true, "discord": true, "teams": true, "googlechat": true, "mattermost": true}

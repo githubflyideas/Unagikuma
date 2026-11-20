@@ -34,6 +34,7 @@ type mibAgent struct {
 	community string
 	user      *usmUser
 	engineID  []byte
+	context   string // the contextName it serves (v3); others get no answer
 	gets      int
 }
 
@@ -146,7 +147,10 @@ func (a *mibAgent) serveV3(req []byte, parts []berElem) []byte {
 		}
 	}
 	sp, _ := berChildren(scoped.body, 3)
-	resp := tlv(berSeq, tlv(berOctets, a.engineID), tlv(berOctets), a.answer(sp[2].tag, sp[2]))
+	if string(sp[1].body) != a.context {
+		return nil // like snmpsim: an unknown context is not answered
+	}
+	resp := tlv(berSeq, tlv(berOctets, a.engineID), tlv(berOctets, []byte(a.context)), a.answer(sp[2].tag, sp[2]))
 	var privParams []byte
 	payload := resp
 	if flags&flagPriv != 0 {
@@ -233,12 +237,16 @@ func TestSNMPPortAndSensor(t *testing.T) {
 
 func TestSNMPv3(t *testing.T) {
 	engine := []byte{0x80, 0, 0x1f, 0x88, 0x80, 1, 2, 3, 4, 5}
-	for _, c := range []struct{ auth, priv string }{{"sha", ""}, {"md5", "des"}, {"sha", "aes"}, {"sha256", "aes"}, {"sha512", "des"}} {
+	for _, c := range []struct{ auth, priv, context string }{{"sha", "", ""}, {"md5", "des", ""}, {"sha", "aes", ""}, {"sha256", "aes", ""}, {"sha512", "des", ""},
+		{"sha224", "aes", "vlan-10"}, {"sha384", "des", "vlan-10"}} {
 		agentUser := &usmUser{name: "mon", authProto: c.auth, privPro: c.priv, authPass: "auth-secret-1", privPass: "priv-secret-1", engineID: engine}
 		agentUser.localize()
-		a := &mibAgent{mib: switchMIB(), user: agentUser, engineID: engine}
+		a := &mibAgent{mib: switchMIB(), user: agentUser, engineID: engine, context: c.context}
 		addr := a.serve(t)
 		o := map[string]string{"version": "3", "user": "mon", "auth": c.auth, "auth-pass": "auth-secret-1", "port": "Gi0/2"}
+		if c.context != "" {
+			o["context"] = c.context
+		}
 		if c.priv != "" {
 			o["priv"], o["priv-pass"] = c.priv, "priv-secret-1"
 		}
@@ -270,6 +278,7 @@ func TestSNMPv3(t *testing.T) {
 		{"version": "3", "user": "u", "auth": "sha", "auth-pass": "short"},
 		{"version": "3", "user": "u", "priv": "aes", "priv-pass": "longenough"},
 		{"version": "3", "user": "u", "auth": "sha1x", "auth-pass": "longenough"},
+		{"version": "3", "user": "u", "context": strings.Repeat("c", 33)},
 		{"port": "x", "sensor": "y"},
 		{"sensor": "y", "profile": "acme"},
 		{"warn": "hot"},

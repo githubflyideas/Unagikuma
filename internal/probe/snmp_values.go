@@ -62,13 +62,16 @@ func validateSNMPValues(o opts) error {
 		if o.str("user", "") == "" {
 			return errors.New("SNMPv3 needs user=")
 		}
+		if len(o.str("context", "")) > 32 {
+			return errors.New("context= is at most 32 characters (an SNMP contextName)")
+		}
 		switch a := o.str("auth", ""); a {
-		case "", "md5", "sha", "sha1", "sha256", "sha512":
+		case "", "md5", "sha", "sha1", "sha224", "sha256", "sha384", "sha512":
 			if a != "" && len(o.str("auth-pass", "")) < 8 && !strings.HasPrefix(o.str("auth-pass", ""), "${") {
 				return errors.New("auth-pass must be at least 8 characters")
 			}
 		default:
-			return errors.New("auth must be md5, sha, sha256 or sha512")
+			return errors.New("auth must be md5, sha, sha224, sha256, sha384 or sha512")
 		}
 		switch p := o.str("priv", ""); p {
 		case "":

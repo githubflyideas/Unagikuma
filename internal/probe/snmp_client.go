@@ -57,6 +57,7 @@ type snmpClient struct {
 // usmUser is a v3 user with its keys localized to the agent's engine.
 type usmUser struct {
 	name               string
+	context            string // contextName of the scoped PDU (context=): a VRF, VLAN or instance
 	authProto, privPro string // "" when the level does not use them
 	authPass, privPass string
 	authKey, privKey   []byte
@@ -79,7 +80,7 @@ func newSNMPClient(ctx context.Context, p udpPlan, o opts) (*snmpClient, Result,
 	case "3":
 		c.version = 3
 		c.community = ""
-		c.v3 = &usmUser{name: o.str("user", ""), authProto: strings.ToLower(o.str("auth", "")), privPro: strings.ToLower(o.str("priv", "")),
+		c.v3 = &usmUser{name: o.str("user", ""), context: o.str("context", ""), authProto: strings.ToLower(o.str("auth", "")), privPro: strings.ToLower(o.str("priv", "")),
 			authPass: o.str("auth-pass", ""), privPass: o.str("priv-pass", "")}
 	default:
 		c.version = 1
@@ -223,7 +224,7 @@ func (c *snmpClient) requestV3(ctx context.Context, pdu []byte, reqID int64, ret
 	msgID := int64(binary.BigEndian.Uint32(randBytes(4)) & 0x7FFFFFFF)
 	header := tlv(berSeq, berInteger(msgID), berInteger(65507), tlv(berOctets, []byte{flags}), berInteger(3))
 	boots, etime := usr.boots, usr.etime+int64(time.Since(usr.timeAt).Seconds())
-	scoped := tlv(berSeq, tlv(berOctets, usr.engineID), tlv(berOctets), pdu)
+	scoped := tlv(berSeq, tlv(berOctets, usr.engineID), tlv(berOctets, []byte(usr.context)), pdu)
 	var privParams []byte
 	var payload []byte
 	if flags&flagPriv != 0 {
@@ -393,8 +394,12 @@ func authHash(proto string) func() hash.Hash {
 		return md5.New
 	case "sha", "sha1":
 		return sha1.New
+	case "sha224":
+		return sha256.New224
 	case "sha256":
 		return sha256.New
+	case "sha384":
+		return sha512.New384
 	case "sha512":
 		return sha512.New
 	}
@@ -406,8 +411,12 @@ func authLen(proto string) int {
 	switch proto {
 	case "md5", "sha", "sha1":
 		return 12
+	case "sha224": // RFC 7860
+		return 16
 	case "sha256":
 		return 24
+	case "sha384":
+		return 32
 	case "sha512":
 		return 48
 	}

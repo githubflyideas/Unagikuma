@@ -139,7 +139,7 @@ stock         IN HTTP https://shop.example.com/s json-path=$.n crit=<10
 - `for=5m` counts a breach only after it has lasted that long.
 - A port: `value=` is `util` (the busier direction as a share of the port speed, the default), `in` or `out` (bits per second). Counters are 64-bit where the device has them; a counter that goes back (a wrap or a restart) skips one round instead of alerting. The port fails while it is down, unless an administrator shut it; a port that renegotiates to a lower speed warns. Ports are found by name (`ifName`, then the description), once, and found again after the device renumbers them.
 - A sensor: ENTITY-SENSOR-MIB by default, or `profile=huawei`, `h3c` or `cisco` for those vendors' tables.
-- SNMPv3: `version=3 user=` with `auth=` (md5, sha, sha256, sha512) and `auth-pass=`, and for encryption `priv=` (des, aes) and `priv-pass=`. Keep the passwords in secrets; they never appear in evidence or logs.
+- SNMPv3: `version=3 user=` with `auth=` (md5, sha, sha224, sha256, sha384, sha512) and `auth-pass=`, and for encryption `priv=` (des, aes) and `priv-pass=`. `context=` names the SNMP context to read (a VRF, VLAN or instance, such as `vlan-10` on Cisco); leave it out for the default context. Keep the passwords in secrets; they never appear in evidence or logs.
 - Only GET (and GETNEXT, to find a port or sensor by name) is sent; nothing on the device is changed or walked in bulk.
 - The values behind `change=` are kept for `values.retain` (24h) and survive a restart.
 
