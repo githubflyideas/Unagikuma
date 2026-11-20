@@ -140,7 +140,40 @@ func (s *Server) execAllowed(ai *authInfo, text []byte) error {
 			}
 		}
 	}
+	// The same for what a monitor takes from a $DEFAULT written above it:
+	// a record without a secret of its own still sends one that a $DEFAULT
+	// gives it, and a $DEFAULT can change where an administrator's check
+	// sends its secret (proxy=, a header) without touching the record.
+	was := secretMonitors(s.app.EffectiveConfig())
+	for name, def := range secretMonitors(next) {
+		if was[name] != def {
+			return errSecretAdmin
+		}
+	}
 	return nil
+}
+
+// secretMonitors maps every monitor whose effective definition (its own
+// options and those of the $DEFAULT it is under) uses a secret or an
+// environment variable, or runs an SQL query, to that definition.
+func secretMonitors(cfg *config.Config) map[string]string {
+	out := map[string]string{}
+	if cfg == nil {
+		return out
+	}
+	for _, m := range cfg.Monitors {
+		uses := len(m.Refs) > 0 || usesSecret(m.Target)
+		for _, v := range m.Opts {
+			uses = uses || usesSecret(v)
+		}
+		if t := strings.ToUpper(m.Written); m.Opts["query"] != "" && (t == "POSTGRES" || t == "MYSQL" || m.Type == "POSTGRES" || m.Type == "MYSQL") {
+			uses = true
+		}
+		if uses {
+			out[m.Name] = m.DefHash // what is sent and where; timing and ownership are not
+		}
+	}
+	return out
 }
 
 var errSecretAdmin = Errorf(http.StatusForbidden, CodeForbidden, "only administrators may add or change records that use ${secret:…}, ${env:…} or run an SQL query: they act with credentials the administrator saved")

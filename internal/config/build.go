@@ -946,7 +946,7 @@ func (b *builder) monitorChecks(m *Monitor, r Record) {
 		// A push carries no value yet: warn=, crit= and the other check
 		// options would look set and never be judged.
 		for k := range m.Opts {
-			if !metaOpts[k] && !paramOpts[k] && k != "period" {
+			if PushRejects(k) {
 				b.errf(r.NamePos, "invalid_option", "%s: a PUSH monitor takes no %s= (it is judged only by whether a push arrives within period= and grace=)", m.Name, k)
 			}
 		}
@@ -960,6 +960,10 @@ func (b *builder) monitorChecks(m *Monitor, r Record) {
 		b.warnf(r.NamePos, "conflicting_auth", "%s sets both basic= and bearer=: a request carries one Authorization header, and bearer= is the one sent", m.Name)
 	}
 }
+
+// PushRejects reports whether a PUSH monitor refuses option k (it has no
+// value to judge).
+func PushRejects(k string) bool { return !metaOpts[k] && !paramOpts[k] && k != "period" }
 
 // target parses and normalises the monitor target.
 func (b *builder) target(m *Monitor, r Record, explicitInterval bool) {

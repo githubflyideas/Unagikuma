@@ -271,6 +271,12 @@ func (a *App) migrateFiles() error {
 		if err := a.migratePushReceivers(path); err != nil {
 			return err
 		}
+		if err := a.migratePushOptions(path); err != nil {
+			return err
+		}
+	}
+	if err := a.store.SetSetting(pushOptionsDone, "1"); err != nil {
+		return err
 	}
 	return a.migratePoliciesToTeams(a.opts.ConfigPath)
 }
