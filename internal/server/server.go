@@ -37,6 +37,11 @@ type routeInfo struct{ pattern, scope string }
 
 type Server struct {
 	routeList []routeInfo
+	// rawRoutes records the /api routes registered directly on the mux
+	// (they authenticate themselves, or are public). routeList and
+	// rawRoutes together are the whole API surface; openapi_test.go
+	// checks the published spec against both.
+	rawRoutes []routeInfo
 	app       *app.App
 	opts      Options
 	log       *slog.Logger
@@ -270,6 +275,15 @@ func (s *Server) handle(pattern, scope string, f apiFunc) {
 		}
 		respond(f(w, r))
 	})
+	s.mux.Handle(pattern, h)
+}
+
+// handleRaw registers an API endpoint that does not go through handle:
+// it authenticates itself (or is public, scope ""). The registration is
+// recorded in rawRoutes so the route table stays enumerable for the
+// OpenAPI drift test.
+func (s *Server) handleRaw(pattern, scope string, h http.Handler) {
+	s.rawRoutes = append(s.rawRoutes, routeInfo{pattern, scope})
 	s.mux.Handle(pattern, h)
 }
 

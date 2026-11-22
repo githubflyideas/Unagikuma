@@ -180,12 +180,13 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/restore", "admin", s.restoreStage)
 	s.handle("DELETE /api/v1/restore", "admin", s.restoreCancel)
 	s.handle("GET /api/v1/languages", "", s.languages)
-	s.mux.HandleFunc("GET /api/v1/i18n/{lang}", s.catalog)
-	s.mux.HandleFunc("GET /api/v1/brand", s.brandPublic)
-	s.mux.HandleFunc("GET /api/v1/branding/{image}/preview", s.brandImagePreview)
+	s.handleRaw("GET /api/v1/i18n/{lang}", "", http.HandlerFunc(s.catalog))
+	s.handleRaw("GET /api/v1/brand", "", http.HandlerFunc(s.brandPublic))
+	s.handleRaw("GET /api/v1/branding/{image}/preview", "", http.HandlerFunc(s.brandImagePreview))
+	s.handleRaw("GET /api/openapi.json", "", http.HandlerFunc(s.openAPISpec))
 
 	// Live stream.
-	s.mux.Handle("GET /api/v1/stream", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	s.handleRaw("GET /api/v1/stream", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ai, err := s.authenticate(r)
 		if err != nil {
 			writeError(w, err)
@@ -217,10 +218,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST "+cluster.RetirePath, s.agentRetire)
 	s.mux.HandleFunc("POST "+cluster.RejoinOfferPath, s.agentRejoinOffer)
 	s.mux.HandleFunc("POST "+cluster.JoinPath, s.agentJoin)
-	s.mux.HandleFunc("GET /api/v1/status/{name}", s.statusPageJSON)
-	s.mux.HandleFunc("POST /api/v1/status/{name}/subscribe", s.subscribe)
-	s.mux.HandleFunc("POST /api/v1/status/{name}/confirm", s.subscription)
-	s.mux.HandleFunc("POST /api/v1/status/{name}/unsubscribe", s.subscription)
+	s.handleRaw("GET /api/v1/status/{name}", "", http.HandlerFunc(s.statusPageJSON))
+	s.handleRaw("POST /api/v1/status/{name}/subscribe", "", http.HandlerFunc(s.subscribe))
+	s.handleRaw("POST /api/v1/status/{name}/confirm", "", http.HandlerFunc(s.subscription))
+	s.handleRaw("POST /api/v1/status/{name}/unsubscribe", "", http.HandlerFunc(s.subscription))
 	s.mux.HandleFunc("GET /status/{name}/feed.atom", s.feed)
 	s.mux.HandleFunc("GET /badge/{monitor}/{kind}", s.badge)
 	for _, p := range []string{"/api/push/{token}", "/push/{token}"} {
