@@ -51,8 +51,9 @@ var brandUI = fstest.MapFS{
 	"styles/harbour.css": {Data: []byte(":root[data-style=harbour] {}")},
 }
 
-// A brand can be filled in before registration but shows only after it;
-// every style is free.
+// Branding changes need a registered installation: an unregistered
+// write is refused with the registration error and nothing is kept.
+// Every style is free: choosing the default style is not branding.
 func TestBranding(t *testing.T) {
 	e := newEnv(t, testBind, brandUI)
 	e.setup()
@@ -65,28 +66,40 @@ func TestBranding(t *testing.T) {
 	if c := e.do("GET", "/api/v1/brand", nil, &pub); c != 200 || pub.Name != "Unagikuma" || pub.Style != "classic" || len(pub.Styles) != 3 {
 		t.Fatalf("public: %d %+v", c, pub)
 	}
-	if c := e.do("PUT", "/api/v1/branding", map[string]string{"name": "Harbour Ops"}, nil); c != 200 {
-		t.Fatalf("name: %d", c)
+
+	// Unregistered: the name and the images are refused, with the same
+	// error the other registered-only features serve.
+	var er struct{ Code string }
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"name": "Harbour Ops"}, &er); c != 402 || er.Code != CodeRegistration {
+		t.Fatalf("name unregistered: %d %+v", c, er)
 	}
-	if c := e.do("PUT", "/api/v1/branding", map[string]string{"name": "<b>x</b>"}, nil); c != 400 {
-		t.Fatalf("markup in the name: %d", c)
+	// A name bundled with a style is refused as a whole: the style in
+	// it is not applied either.
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"name": "Harbour Ops", "style": "harbour"}, nil); c != 402 {
+		t.Fatalf("name and style unregistered: %d", c)
+	}
+	var bg struct {
+		Name    string
+		Logo    bool
+		Allowed bool
+		Style   string
+	}
+	if c := e.do("GET", "/api/v1/branding", nil, &bg); c != 200 || bg.Style != "classic" {
+		t.Fatalf("after the refused write: %d %+v", c, bg)
 	}
 	logo := pngOf(t, 64, 64)
-	if c, b := e.raw("PUT", "/api/v1/branding/logo", logo, "image/png"); c != 200 {
-		t.Fatalf("logo: %d %s", c, b)
+	if c, b := e.raw("PUT", "/api/v1/branding/logo", logo, "image/png"); c != 402 || !strings.Contains(string(b), CodeRegistration) {
+		t.Fatalf("logo unregistered: %d %s", c, b)
 	}
-	if c, _ := e.raw("PUT", "/api/v1/branding/logo", []byte(`<svg onload="alert(1)"/>`), "image/svg+xml"); c != 400 {
-		t.Fatalf("svg: %d", c)
+	if c, _ := e.raw("PUT", "/api/v1/branding/icon", pngOf(t, 64, 64), "image/png"); c != 402 {
+		t.Fatalf("icon unregistered: %d", c)
 	}
-	if c, _ := e.raw("PUT", "/api/v1/branding/icon", pngOf(t, 4, 4), "image/png"); c != 400 {
-		t.Fatalf("tiny icon: %d", c)
+	if c, _ := e.raw("DELETE", "/api/v1/branding/logo", nil, ""); c != 402 {
+		t.Fatalf("remove unregistered: %d", c)
 	}
-	// Not registered: the product's name, logo and styles stay.
+	// The product's name, logo and styles stay.
 	if c, b := e.raw("GET", "/logo.png", nil, ""); c != 200 || string(b) != "product logo" {
 		t.Fatalf("logo before registering: %d %q", c, b)
-	}
-	if c, b := e.raw("GET", "/api/v1/branding/logo/preview", nil, ""); c != 200 || !bytes.Equal(b, logo) {
-		t.Fatalf("preview: %d", c)
 	}
 	_ = e.do("GET", "/api/v1/brand", nil, &pub)
 	if pub.Name != "Unagikuma" {
@@ -105,8 +118,35 @@ func TestBranding(t *testing.T) {
 	}
 
 	e.register()
+	// Nothing of the refused writes survived registration.
+	if c := e.do("GET", "/api/v1/branding", nil, &bg); c != 200 || bg.Name != "" || bg.Logo || !bg.Allowed {
+		t.Fatalf("registered, before any write: %d %+v", c, bg)
+	}
+	if c, b := e.raw("GET", "/logo.png", nil, ""); c != 200 || string(b) != "product logo" {
+		t.Fatalf("logo after registering, before any write: %d %q", c, b)
+	}
+
+	// Registered: the writes go through and show.
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"name": "Harbour Ops"}, nil); c != 200 {
+		t.Fatalf("name: %d", c)
+	}
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"name": "<b>x</b>"}, nil); c != 400 {
+		t.Fatalf("markup in the name: %d", c)
+	}
+	if c, b := e.raw("PUT", "/api/v1/branding/logo", logo, "image/png"); c != 200 {
+		t.Fatalf("logo: %d %s", c, b)
+	}
+	if c, _ := e.raw("PUT", "/api/v1/branding/logo", []byte(`<svg onload="alert(1)"/>`), "image/svg+xml"); c != 400 {
+		t.Fatalf("svg: %d", c)
+	}
+	if c, _ := e.raw("PUT", "/api/v1/branding/icon", pngOf(t, 4, 4), "image/png"); c != 400 {
+		t.Fatalf("tiny icon: %d", c)
+	}
 	if c, b := e.raw("GET", "/logo.png", nil, ""); c != 200 || !bytes.Equal(b, logo) {
 		t.Fatalf("logo after registering: %d", c)
+	}
+	if c, b := e.raw("GET", "/api/v1/branding/logo/preview", nil, ""); c != 200 || !bytes.Equal(b, logo) {
+		t.Fatalf("preview: %d", c)
 	}
 	_ = e.do("GET", "/api/v1/brand", nil, &pub)
 	if pub.Name != "Harbour Ops" {

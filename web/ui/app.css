@@ -631,6 +631,10 @@ tr.risk-high td:first-child { box-shadow: inset 3px 0 0 var(--degraded); }
 .pill.soft.critical { color: color-mix(in srgb, var(--critical) 75%, var(--text)); }
 .pill.soft.unknown { color: color-mix(in srgb, var(--unknown) 75%, var(--text)); }
 .pill.soft.maintenance { color: color-mix(in srgb, var(--maint) 75%, var(--text)); }
+/* Calm's amber is the palest degraded of the themes: at the shared 55%
+   mix its soft label computes to 4.37:1 on the panel, under the 4.5:1
+   the solid blocks keep, so calm mixes in a little more text (4.52:1). */
+:root[data-theme="calm"] .pill.soft.degraded { color: color-mix(in srgb, var(--degraded) 53%, var(--text)); }
 .tbl th { background: var(--panel-2); border-bottom: 1px solid var(--border-strong); }
 .tbl tbody tr:nth-child(even) td { background: var(--stripe); }
 .tbl tr.critical td { background: color-mix(in srgb, var(--critical) 6%, transparent); }

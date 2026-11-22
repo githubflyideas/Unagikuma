@@ -95,6 +95,11 @@ func (s *Server) brandPut(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := decodeJSON(r, 4<<10, &req); err != nil {
 		return nil, err
 	}
+	// The name is the brand itself: writing it needs a registered
+	// installation, like the images. The default style stays free.
+	if req.Name != nil && !s.app.License().State().Registered {
+		return nil, registrationError(s)
+	}
 	if req.Style != nil {
 		v := *req.Style
 		if v != styleClassic && !s.styleAllowed(v) {

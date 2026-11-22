@@ -11,13 +11,19 @@ import (
 // CodeRegistration means the feature needs a registered installation.
 const CodeRegistration = "registration_required"
 
+// registrationError is the refusal a registered-only feature serves.
+func registrationError(s *Server) error {
+	st := s.app.License().State()
+	e := Errorf(http.StatusPaymentRequired, CodeRegistration, "this feature needs a registered installation (Settings › Registration)")
+	e.Extra = map[string]any{"installation_id": st.InstallationID}
+	return e
+}
+
 // requireRegistered serves a registered-only feature, or says what is needed.
 func requireRegistered(s *Server, f apiFunc) apiFunc {
 	return func(w http.ResponseWriter, r *http.Request) (any, error) {
-		if st := s.app.License().State(); !st.Registered {
-			e := Errorf(http.StatusPaymentRequired, CodeRegistration, "this feature needs a registered installation (Settings › Registration)")
-			e.Extra = map[string]any{"installation_id": st.InstallationID}
-			return nil, e
+		if !s.app.License().State().Registered {
+			return nil, registrationError(s)
 		}
 		return f(w, r)
 	}

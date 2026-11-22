@@ -260,6 +260,7 @@ func (s *Server) monitors(w http.ResponseWriter, r *http.Request) (any, error) {
 	qv := r.URL.Query()
 	if qv.Get("limit") == "" && qv.Get("cursor") == "" {
 		sortRows(out, qv.Get("sort"), qv.Get("order") == "desc")
+		out = s.pinGatewayMonitors(out)
 		return map[string]any{"items": out, "total": len(out), "next_cursor": nil}, nil
 	}
 	// Pages are in id order, which neither renames nor status changes
@@ -290,6 +291,32 @@ func (s *Server) monitors(w http.ResponseWriter, r *http.Request) (any, error) {
 		next = strconv.FormatInt(page[len(page)-1].ID, 10)
 	}
 	return map[string]any{"items": page, "total": total, "next_cursor": next}, nil
+}
+
+// pinGatewayMonitors moves the seeded gateway monitors to the head of
+// the list, the LAN gateway before the internet gateway. Their place
+// is fixed — ahead of whatever order the caller asked for — because
+// the path of every other check runs through one of the two gateways:
+// a sort is a way of looking at the rest of the list, not a way to
+// move them. (Paged walks keep their documented id order instead:
+// a cursor walk has to see every monitor exactly once.)
+func (s *Server) pinGatewayMonitors(out []rowJSON) []rowJSON {
+	head := make([]rowJSON, 0, 2)
+	rest := make([]rowJSON, 0, len(out))
+	for _, rj := range out {
+		if s.app.GatewayRank(rj.Name) >= 0 {
+			head = append(head, rj)
+		} else {
+			rest = append(rest, rj)
+		}
+	}
+	if len(head) == 0 {
+		return out
+	}
+	sort.SliceStable(head, func(i, j int) bool {
+		return s.app.GatewayRank(head[i].Name) < s.app.GatewayRank(head[j].Name)
+	})
+	return append(head, rest...)
 }
 
 var statusRank = map[string]int{"critical": 0, "unknown": 1, "unreachable": 2, "degraded": 3, "pending": 4, "ok": 5, "maintenance": 6, "paused": 7}

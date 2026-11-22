@@ -213,6 +213,7 @@ func (s *Store) Event(ev engine.Event) {
 var systemAudited = map[string]bool{
 	"system_opened": true, "system_resolved": true, "hold_released": true, "outage_summary": true,
 	"outage_backdated": true, "restarted": true, "abnormal_exit": true, "clock_changed": true,
+	"gateway_monitor_added": true,
 }
 
 func (s *Store) auditSystem(ev engine.Event) {

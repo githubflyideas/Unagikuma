@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/config"
+	"github.com/githubflyideas/unagikuma/internal/engine"
 	"github.com/githubflyideas/unagikuma/internal/i18n"
 	"github.com/githubflyideas/unagikuma/internal/netscope"
 )
@@ -108,5 +110,40 @@ func (a *App) ensureGatewayMonitors() {
 			continue
 		}
 		_ = a.store.SetSetting(g.setting, addr)
+		if before == "" {
+			// The monitor is new here (not a gateway that moved):
+			// say so where the user will see it.
+			a.noteGatewayMonitorAdded(g, addr)
+		}
 	}
+}
+
+// noteGatewayMonitorAdded records that a gateway monitor appeared, as a
+// system event — which also lands it in the audit log. An installation
+// that grows two monitors it did not create is told about them, not
+// left to find them in the configuration history.
+func (a *App) noteGatewayMonitorAdded(g gatewayMonitor, addr string) {
+	ev := engine.Event{At: a.now(), Type: engine.EventSystem, Severity: "info", Monitor: g.name,
+		Message: fmt.Sprintf("gateway monitor added: %s (%s)", g.name, addr),
+		Data:    map[string]any{"msg": "gateway_monitor_added", "monitor": g.name, "target": addr}}
+	a.store.Event(ev)
+	a.emit("event", ev)
+}
+
+// GatewayRank is a monitor's fixed place at the head of the monitor
+// list: 0 for the LAN gateway, 1 for the internet gateway, -1 for any
+// other monitor. A record counts as one of the gateway monitors when
+// the seeding has claimed it — its address marker is stored — which is
+// the same test the seeding itself makes. A record that merely carries
+// the name, never seeded or adopted, ranks as the user's own.
+func (a *App) GatewayRank(name string) int {
+	for i, g := range gatewayMonitors {
+		if g.name != name {
+			continue
+		}
+		if addr, _ := a.store.Setting(g.setting); addr != "" {
+			return i
+		}
+	}
+	return -1
 }
