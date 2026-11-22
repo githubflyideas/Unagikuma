@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.6.33 — 2026-11-22
+
+**Changed**
+- In cluster alerts, the per-node summary now marks each node with a symbol that works without colour: ✓ for normal, ✗ for not normal and ⊘ for unreachable. The old circle/cross/tilde marks are gone, and the summary no longer appends the up-count fraction or the gateway/uplink reading — a delivered alert could only ever show those as fine, so they carried no information.
+- The daily report's title now labels its host count as "down or unreachable" instead of folding unreachable hosts into "down".
+- A notification delayed by less than a minute now shows the delay in seconds (for example "[delayed 30 s]") instead of "0 min".
+- Removed data fields that were defined but never populated: the notification quorum value, the monitor votes/quorum data and the node witnesses count. The `{{.Quorum}}` and `{{.AckURL}}` notification template variables are removed with them — a template that still names one is refused at configuration-check time, so remove the name to save that channel.
+
+**Fixed**
+- When the server restarts after an abnormal exit and the previous shutdown left no heartbeat to measure from, the notice now says the downtime is unknown instead of reporting a made-up "0s". The event data no longer carries a downtime value in that case either.
+- A public status page no longer claims an overall "ok" before anything has been judged: with no monitors, or only monitors that have never produced a verdict, the overall status is "unknown". It turns "ok" only once a monitor actually holds an ok verdict.
+- A monitor that has never been measured no longer shows a latency of "0 ms". The interface shows "n/a", and the API's `latency_ms` is null until the first measurement, the same way `uptime_24h` already behaves.
+
 ## v2.6.32 — 2026-11-22
 
 **Fixed**
