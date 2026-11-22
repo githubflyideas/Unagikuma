@@ -2,7 +2,6 @@
 package observation
 
 import (
-	"fmt"
 	"strings"
 	"time"
 )
@@ -39,21 +38,19 @@ type Snapshot struct {
 
 func (s Snapshot) Summary() string {
 	var parts []string
-	up := 0
 	for _, r := range s.Rows {
 		mark := "?"
 		if !r.Stale {
 			switch r.Status {
 			case "up":
-				mark = "○"
-				up++
+				mark = "✓"
 			case "down":
-				mark = "×"
+				mark = "✗"
 			}
 		} else {
-			mark = "~"
+			mark = "⊘"
 		}
 		parts = append(parts, r.NodeID+" "+mark)
 	}
-	return strings.Join(parts, ", ") + fmt.Sprintf(", %d/%d", up, len(s.Rows))
+	return strings.Join(parts, ", ")
 }

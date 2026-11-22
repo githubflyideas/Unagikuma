@@ -4,7 +4,7 @@ import { t, fmtTime } from './i18n.js';
 import { Card, Dot, msText, reasonText } from './ui.js';
 export function observationSummary(snapshot) {
  const rows = snapshot?.rows || [];
- return rows.map(r => r.node_id + ' ' + (r.stale ? '~' : r.status === 'up' ? '○' : r.status === 'down' ? '×' : '?')).join(', ') + ', ' + rows.filter(r => !r.stale && r.status === 'up').length + '/' + rows.length;
+ return rows.map(r => r.node_id + ' ' + (r.stale ? '⊘' : r.status === 'up' ? '✓' : r.status === 'down' ? '✗' : '?')).join(', ');
 }
 export function ObservationCell({ value: r }) {
  if (!r) return html`<span class="muted">?</span>`;
