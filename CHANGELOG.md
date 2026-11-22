@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.6.31 — 2026-11-22
+
+**Added**
+- The /api/v1 API now has a machine-readable OpenAPI spec. The server serves it at /api/openapi.json, and every release archive ships it as docs/openapi.json. A test compares the spec with the real routes on every run, so the two cannot quietly drift apart.
+- Releases now include a CycloneDX SBOM (unagikuma-v2.6.31-sbom.cdx.json) listing the exact modules in the build.
+- Release checksums are signed. SHA256SUMS.sig and SHA256SUMS.pem are published with each release, and the README's "Verifying downloads" section shows how to check them with cosign before trusting a download.
+
 ## v2.6.30 — 2026-11-20
 
 **Fixed**

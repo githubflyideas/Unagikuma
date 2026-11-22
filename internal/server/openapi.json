@@ -1756,7 +1756,7 @@
   "info": {
     "description": "The REST API of the Unagikuma monitoring server. Authenticate with the session cookie (unagikuma_session, from POST /api/v1/session) or an API token sent as a Bearer token. Tokens carry scopes: read, ack, write, admin (write implies ack implies read); each operation lists the scope it needs in x-token-scope. Session-authenticated writes must send the session's CSRF token in the X-Unagikuma-CSRF header. Every failure uses the same JSON error body (see the Error schema); error codes are stable strings.",
     "title": "Unagikuma API",
-    "version": "2.6.30"
+    "version": "2.6.31"
   },
   "openapi": "3.1.0",
   "paths": {
