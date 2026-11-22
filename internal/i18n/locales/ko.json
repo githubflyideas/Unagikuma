@@ -1911,7 +1911,7 @@
 "ui.ch.from_sendmail_hint": "비워 두어도 됩니다. 그러면 메일 시스템이 이 서버 이름으로 보냅니다(Nagios와 같음).",
 "ui.obs.stale": "오래된 정보",
 "ui.obs.local": "이 사이트",
-"msg.observations": "사이트 관측: {table}; 게이트웨이: {gateway}; 업링크: {uplink}",
+"msg.observations": "사이트 관측: {table}",
 "ui.inc.archive": "기록 스냅샷입니다. 작업은 원본 사이트로 전송됩니다",
 "detail.push_site": "PUSH 수신 사이트는 하나만 지정해야 합니다",
 "detail.config_read_only": "이 사이트의 공유 설정은 읽기 전용입니다",

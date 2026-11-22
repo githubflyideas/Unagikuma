@@ -1956,7 +1956,7 @@
 "ui.ch.from_sendmail_hint": "يمكن تركه فارغًا: عندها يرسل نظام البريد باسم هذا الجهاز، كما يفعل مع Nagios.",
 "ui.obs.stale": "قديم",
 "ui.obs.local": "هذا الموقع",
-"msg.observations": "الملاحظات: {table}؛ البوابة: {gateway}؛ الوصلة: {uplink}",
+"msg.observations": "الملاحظات: {table}",
 "ui.inc.archive": "لقطة تاريخية؛ تُرسل الإجراءات إلى الموقع المصدر",
 "detail.push_site": "يتطلب PUSH موقع استقبال واحدًا فقط",
 "detail.config_read_only": "الإعدادات المشتركة للقراءة فقط في هذا الموقع",

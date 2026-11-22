@@ -1911,7 +1911,7 @@
 "ui.ch.from_sendmail_hint": "空のままで構いません。その場合はメールシステムがこのマシンとして送信します（Nagios と同じ）。",
 "ui.obs.stale": "古い情報",
 "ui.obs.local": "この拠点",
-"msg.observations": "拠点別観測：{table}；ゲートウェイ：{gateway}；上位回線：{uplink}",
+"msg.observations": "拠点別観測：{table}",
 "ui.inc.archive": "履歴スナップショット。操作は発生元サイトに送信されます",
 "detail.push_site": "PUSH の受信サイトは1つだけ指定してください",
 "detail.config_read_only": "このサイトの共有設定は読み取り専用です",

@@ -148,7 +148,7 @@ func renderMonitor(m *Message, icon, head string) (title, body string) {
 		lines = append(lines, problemLines(m)...)
 	}
 	if m.Observations != nil {
-		lines = append(lines, i18n.T(lang, "msg.observations", "table", m.Observations.Summary(), "gateway", m.Observations.Gateway, "uplink", m.Observations.Uplink))
+		lines = append(lines, i18n.T(lang, "msg.observations", "table", m.Observations.Summary()))
 	}
 	if u := m.DetailURL; u != "" {
 		lines = append(lines, i18n.T(lang, "msg.details", "url", u))

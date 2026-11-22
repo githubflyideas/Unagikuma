@@ -1920,7 +1920,7 @@
 "ui.ch.from_sendmail_hint": "خالی چھوڑا جا سکتا ہے: تب میل سسٹم اس مشین کے نام سے بھیجتا ہے، جیسے Nagios کے لیے۔",
 "ui.obs.stale": "پرانی معلومات",
 "ui.obs.local": "یہ سائٹ",
-"msg.observations": "مشاہدات: {table}؛ گیٹ وے: {gateway}؛ اپ لنک: {uplink}",
+"msg.observations": "مشاہدات: {table}",
 "ui.inc.archive": "تاریخی عکس؛ کارروائیاں اصل سائٹ کو بھیجی جاتی ہیں",
 "detail.push_site": "PUSH کے لیے صرف ایک وصول کنندہ سائٹ ضروری ہے",
 "detail.config_read_only": "اس سائٹ پر مشترکہ ترتیب صرف پڑھی جا سکتی ہے",

@@ -1920,7 +1920,7 @@
 "ui.ch.from_sendmail_hint": "May stay empty: the mail system then sends as this machine, as it does for Nagios.",
 "ui.obs.stale": "Stale",
 "ui.obs.local": "This site",
-"msg.observations": "Observations: {table}; gateway: {gateway}; uplink: {uplink}",
+"msg.observations": "Observations: {table}",
 "ui.inc.archive": "Historical snapshot; actions are sent to the source site",
 "detail.push_site": "PUSH requires exactly one receiving site",
 "detail.config_read_only": "configuration is read-only on this site",

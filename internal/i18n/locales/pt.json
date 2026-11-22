@@ -1920,7 +1920,7 @@
 "ui.ch.from_sendmail_hint": "Pode ficar vazio: o sistema de e-mail envia então como esta máquina, como faz para o Nagios.",
 "ui.obs.stale": "Desatualizado",
 "ui.obs.local": "Este local",
-"msg.observations": "Observações: {table}; gateway: {gateway}; conexão: {uplink}",
+"msg.observations": "Observações: {table}",
 "ui.inc.archive": "Registro histórico; ações são enviadas ao local de origem",
 "detail.push_site": "PUSH exige exatamente um local receptor",
 "detail.config_read_only": "A configuração compartilhada é somente leitura neste local",

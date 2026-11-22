@@ -1920,7 +1920,7 @@
 "ui.ch.from_sendmail_hint": "Darf leer bleiben: Das Mailsystem sendet dann als dieser Rechner, wie bei Nagios.",
 "ui.obs.stale": "Veraltet",
 "ui.obs.local": "Dieser Standort",
-"msg.observations": "Beobachtungen: {table}; Gateway: {gateway}; Uplink: {uplink}",
+"msg.observations": "Beobachtungen: {table}",
 "ui.inc.archive": "Historischer Stand; Aktionen gehen an den Ursprungsstandort",
 "detail.push_site": "PUSH benötigt genau einen Empfangsstandort",
 "detail.config_read_only": "Die gemeinsame Konfiguration ist hier schreibgeschützt",

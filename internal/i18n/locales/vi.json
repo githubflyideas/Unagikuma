@@ -1911,7 +1911,7 @@
 "ui.ch.from_sendmail_hint": "Có thể để trống: khi đó hệ thống thư gửi dưới tên máy này, giống như với Nagios.",
 "ui.obs.stale": "Đã cũ",
 "ui.obs.local": "Địa điểm này",
-"msg.observations": "Quan sát: {table}; cổng: {gateway}; đường lên: {uplink}",
+"msg.observations": "Quan sát: {table}",
 "ui.inc.archive": "Ảnh chụp lịch sử; thao tác được gửi về điểm nguồn",
 "detail.push_site": "PUSH cần đúng một điểm nhận",
 "detail.config_read_only": "Cấu hình dùng chung tại điểm này chỉ có thể đọc",

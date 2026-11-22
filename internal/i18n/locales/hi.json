@@ -1920,7 +1920,7 @@
 "ui.ch.from_sendmail_hint": "खाली छोड़ सकते हैं: तब मेल सिस्टम इस मशीन के नाम से भेजता है, जैसा Nagios के लिए करता है।",
 "ui.obs.stale": "पुराना",
 "ui.obs.local": "यह साइट",
-"msg.observations": "अवलोकन: {table}; गेटवे: {gateway}; अपलिंक: {uplink}",
+"msg.observations": "अवलोकन: {table}",
 "ui.inc.archive": "ऐतिहासिक स्नैपशॉट; कार्रवाइयाँ स्रोत साइट पर भेजी जाती हैं",
 "detail.push_site": "PUSH के लिए ठीक एक प्राप्तकर्ता साइट चाहिए",
 "detail.config_read_only": "इस साइट पर साझा कॉन्फ़िगरेशन केवल पढ़ने के लिए है",
