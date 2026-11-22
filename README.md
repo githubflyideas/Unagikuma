@@ -44,6 +44,30 @@ On Windows, run `unagikuma.exe`.
 
 > Opening it from another computer? Use `http://<server-address>:8077` and enter the **Setup token** that the program printed when it first started.
 
+## Verifying downloads
+
+Every release publishes `SHA256SUMS` next to the archives, and the
+checksums file itself is signed with [cosign](https://docs.sigstore.dev)
+keyless signing (the signer's identity is the release workflow on
+GitHub — there is no private key to lose). To check a download:
+
+```sh
+# 1. The signature on SHA256SUMS is genuine:
+cosign verify-blob SHA256SUMS \
+  --signature SHA256SUMS.sig \
+  --certificate SHA256SUMS.pem \
+  --certificate-identity-regexp 'https://github.com/githubflyideas/Unagikuma/.github/workflows/release\.yml@.*' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+
+# 2. The archive you downloaded matches the signed checksums:
+sha256sum -c SHA256SUMS
+```
+
+Releases also ship a software bill of materials
+(`unagikuma-<version>-sbom.cdx.json`, CycloneDX 1.6) listing the Go
+modules the binary was built from; its checksum is part of the signed
+`SHA256SUMS`.
+
 ## One machine, two machines, a cluster
 
 - **One machine:** run the file, add a monitor, done. No database, no agents.
