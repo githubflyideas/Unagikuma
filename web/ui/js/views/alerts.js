@@ -56,7 +56,7 @@ function kindSections(kinds, sort, query, current) {
 }
 
 // The names a message template can use, in the order offered.
-const TEMPLATE_NAMES = ['Icon', 'KindText', 'Name', 'StatusText', 'ReasonText', 'Detail', 'Target', 'DurationText', 'Started', 'Site', 'Instance', 'DetailURL', 'AckURL'];
+const TEMPLATE_NAMES = ['Icon', 'KindText', 'Name', 'StatusText', 'ReasonText', 'Detail', 'Target', 'DurationText', 'Started', 'Site', 'Instance', 'DetailURL'];
 // Ready-made templates; the empty one is the built-in text.
 const TEMPLATES = {
   short: '{{.Icon}} {{.Name}} {{.StatusText}}\n{{.ReasonText}}',

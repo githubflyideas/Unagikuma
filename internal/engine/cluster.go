@@ -72,8 +72,7 @@ type NodeStatus struct {
 	// Gateway is how this node's last notifications went out, per channel.
 	Gateway []GatewayState `json:"gateway,omitempty"`
 	// Verdict is this site's local peer-path status, never a global verdict.
-	Verdict   string `json:"verdict,omitempty"`
-	Witnesses int    `json:"witnesses,omitempty"` // nodes that cannot reach it
+	Verdict string `json:"verdict,omitempty"`
 }
 
 // GatewayState is the outcome of a node's last notification on a channel:
@@ -86,23 +85,13 @@ type GatewayState struct {
 	Error   string    `json:"error,omitempty"`
 }
 
-// Node verdicts.
+// Node verdicts: this site's local peer-path status. A node here is
+// either on a working path from this site (ok) or not (unreachable);
+// there is no majority verdict of a node.
 const (
 	NodeOK          = "ok"
 	NodeUnreachable = "unreachable"
-	NodeDown        = "down"
-	NodeUnknown     = "unknown"
 )
-
-// VoteView is one node's latest vote on a monitor, for the UI.
-type VoteView struct {
-	Node      string  `json:"node"`
-	Vote      string  `json:"vote"` // ok | fail | abstain | absent | offline
-	Reason    string  `json:"reason,omitempty"`
-	Detail    string  `json:"detail,omitempty"`
-	LatencyMS float64 `json:"latency_ms,omitempty"`
-	Excluded  bool    `json:"excluded,omitempty"`
-}
 
 // nodeRuntime is the engine's view of one agent.
 type nodeRuntime struct {
@@ -155,7 +144,7 @@ func (e *Engine) onNodeState(s NodeStatus) {
 	now := e.now()
 	was := nr.status.Online
 	// The verdict is the engine's judgement, not the report's.
-	s.Verdict, s.Witnesses = nr.status.Verdict, nr.status.Witnesses
+	s.Verdict = nr.status.Verdict
 	nr.status = s
 	switch {
 	case s.Online && !was:
@@ -212,7 +201,6 @@ func (e *Engine) checkNodes(now time.Time) {
 		if nr == nil {
 			continue
 		}
-		nr.status.Witnesses = 0
 		if nr.status.Online || nr.offlineSince.IsZero() {
 			nr.status.Verdict = NodeOK
 			continue

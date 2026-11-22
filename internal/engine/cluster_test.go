@@ -162,7 +162,7 @@ func (c *clusterEnv) waitRow(name string, what string, cond func(MonitorRow) boo
 			return r
 		}
 		if time.Now().After(deadline) {
-			c.t.Fatalf("%s: last row %+v votes %+v", what, r, r.Votes)
+			c.t.Fatalf("%s: last row %+v", what, r)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -189,7 +189,7 @@ func TestSitesDoNotVote(t *testing.T) {
 	c.online("a", "b")
 	c.fc.set("m", probe.VoteFail)
 	r := c.waitRow("web", "local failure despite healthy peers", func(r MonitorRow) bool { return r.Status == StatusCritical })
-	if r.Partial || r.RegionalID != 0 || r.Quorum != nil {
+	if r.Partial || r.RegionalID != 0 {
 		t.Fatalf("legacy judgement: %+v", r)
 	}
 	if _, ok := c.sink.open(IncidentNormal, "web"); !ok {
@@ -287,10 +287,7 @@ func TestSingleNodeUnchanged(t *testing.T) {
 	m := clusterMonitor()
 	c := newClusterEnv(t, Config{Monitors: []MonitorSpec{m}})
 	c.fc.set("", probe.VoteFail)
-	r := c.waitRow("web", "single-node failure", func(r MonitorRow) bool { return r.Status == StatusCritical })
-	if len(r.Votes) != 0 || r.Quorum != nil {
-		t.Fatalf("single node rows carry no votes: %+v", r)
-	}
+	c.waitRow("web", "single-node failure", func(r MonitorRow) bool { return r.Status == StatusCritical })
 	c.fc.mu.Lock()
 	asked := len(c.fc.asked)
 	c.fc.mu.Unlock()

@@ -40,11 +40,11 @@ type nodeView struct {
 	Platform string         `json:"platform,omitempty"`
 	Addr     string         `json:"addr,omitempty"`
 	Health   *engine.Health `json:"health,omitempty"`
-	// Majority judgement, the node's own view and its notification uplink.
-	Verdict   string                `json:"verdict,omitempty"`
-	Witnesses int                   `json:"witnesses,omitempty"`
-	Reach     map[string]bool       `json:"reach,omitempty"`
-	Gateway   []engine.GatewayState `json:"gateway,omitempty"`
+	// The local peer-path verdict, the node's own view and its
+	// notification uplink.
+	Verdict string                `json:"verdict,omitempty"`
+	Reach   map[string]bool       `json:"reach,omitempty"`
+	Gateway []engine.GatewayState `json:"gateway,omitempty"`
 
 	Token *store.AgentToken `json:"token"`
 }
@@ -76,7 +76,7 @@ func (s *Server) nodeViews() []nodeView {
 		if st, ok := status[n.Name]; ok {
 			v.Online, v.Serial, v.Version, v.Platform, v.Addr, v.Health = st.Online, st.Serial, st.Version, st.Platform, st.Addr, st.Health
 			v.Unsupported = st.Unsupported
-			v.Verdict, v.Witnesses, v.Reach, v.Gateway = st.Verdict, st.Witnesses, st.Reach, st.Gateway
+			v.Verdict, v.Reach, v.Gateway = st.Verdict, st.Reach, st.Gateway
 			v.Since, v.LastSeen = tp(st.Since), tp(st.LastSeen)
 			v.RTTMS, v.SkewMS = float64(st.RTT)/1e6, float64(st.Skew)/1e6
 			v.Synced = st.Online && st.Serial == cfg.Serial

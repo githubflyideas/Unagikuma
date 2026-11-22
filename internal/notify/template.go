@@ -33,9 +33,9 @@ func messageData(m *Message, o map[string]string) map[string]any {
 	d := map[string]any{
 		"Title": title, "Body": body, "Text": strings.TrimRight(title+"\n"+body, "\n"), "Kind": m.Kind, "Priority": m.Priority,
 		"Monitor": m.Monitor, "Name": m.Title, "Type": m.Type, "Target": m.Target, "Depth": m.Depth,
-		"Status": m.Status, "Reason": m.Reason, "Detail": sanitize(m.Detail, detailCap), "Quorum": m.Quorum,
+		"Status": m.Status, "Reason": m.Reason, "Detail": sanitize(m.Detail, detailCap),
 		"Count": m.Count, "Max": m.Max, "IncidentID": m.IncidentID, "GlobalIncidentID": m.GlobalIncidentID, "Duration": m.Duration, "DetailURL": m.DetailURL,
-		"AckURL": firstOf(m.AckURL, m.DetailURL), "Tags": m.Tags, "Time": m.Time, "Delayed": m.Delayed, "DryRun": m.DryRun,
+		"Tags": m.Tags, "Time": m.Time, "Delayed": m.Delayed, "DryRun": m.DryRun,
 		"Instance": m.Instance, "Site": m.Site, "DeliveryID": m.DeliveryID, "Class": m.Class, "Lang": m.Lang,
 		// The same values in words, in the message language.
 		"StatusText": statusText(m), "KindText": i18n.T(m.Lang, "msg.kind."+m.Kind), "ReasonText": reason,

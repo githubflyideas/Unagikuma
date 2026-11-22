@@ -47,9 +47,6 @@ type MonitorRow struct {
 	Paused        bool
 	Scope         string
 	Metrics       map[string]float64
-	// Cluster monitors: the last round's votes and how they were counted.
-	Votes  []VoteView
-	Quorum *Verdict
 	// Regional: a lasting partial failure opened a low-priority incident.
 	RegionalID int64
 	// Parents this monitor depends on; Unreachable when one of them is down.
@@ -105,11 +102,6 @@ func (e *Engine) row(name string, now time.Time) (MonitorRow, bool) {
 	}
 	if due, ok := e.sched.Due(name); ok {
 		r.NextCheck = due
-	}
-	if len(rt.LastVotes) > 0 {
-		r.Votes = rt.LastVotes
-		v := rt.LastVerdict
-		r.Quorum = &v
 	}
 	if inc := e.regional[name]; inc != nil && inc.State.Open() {
 		r.RegionalID = inc.ID

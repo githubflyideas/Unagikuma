@@ -96,7 +96,6 @@ func (e *Engine) judge(m *MonitorSpec, rt *monRuntime, nv NodeVote, res probe.Re
 	if v.Kind == VerdictOK {
 		rt.LastReason = ""
 	}
-	rt.LastVotes = nil
 	if t.Changed() {
 		rt.LastChange = now
 	}

@@ -113,14 +113,14 @@ func TestNodesAPIAndAgent(t *testing.T) {
 	var det struct {
 		Row rowJSON `json:"row"`
 	}
-	if e.do("GET", "/api/v1/monitors/web", nil, &det) != 200 || len(det.Row.Votes) != 0 || det.Row.Quorum != nil {
-		t.Fatalf("row votes: %+v %+v", det.Row.Votes, det.Row.Quorum)
+	if e.do("GET", "/api/v1/monitors/web", nil, &det) != 200 {
+		t.Fatalf("monitor detail: %+v", det)
 	}
 	var push struct {
 		Row rowJSON `json:"row"`
 	}
-	if e.do("GET", "/api/v1/monitors/backup", nil, &push) != 200 || push.Row.Votes != nil || push.Row.Quorum != nil {
-		t.Fatalf("push monitor has no votes: %+v", push.Row)
+	if e.do("GET", "/api/v1/monitors/backup", nil, &push) != 200 {
+		t.Fatalf("push monitor detail: %+v", push.Row)
 	}
 
 	// A new token ends the session made with the old one.

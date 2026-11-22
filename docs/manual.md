@@ -262,7 +262,7 @@ ops-im IN CHANNEL feishu url=${secret:feishu_ops} at=all template="{{.Icon}} {{.
 | `{{.Type}}`, `{{.Target}}`, `{{.Depth}}` | the check |
 | `{{.Started}}`, `{{.DurationText}}`, `{{seconds .Duration}}`, `{{rfc3339 .Time}}` | since when and for how long |
 | `{{.Count}}`, `{{.Max}}` | this is notification number … of … |
-| `{{.DetailURL}}`, `{{.AckURL}}` | links to the console (set its address under **Settings**) |
+| `{{.DetailURL}}` | link to the console (set its address under **Settings**) |
 | `{{.Tags}}`, `{{.Priority}}`, `{{.Class}}`, `{{.IncidentID}}`, `{{.Instance}}`, `{{.Site}}`, `{{.DeliveryID}}`, `{{.Icon}}` | the rest |
 | `{{.Title}}`, `{{.Body}}`, `{{.Text}}` | the built-in text, to add a line to it instead of replacing it |
 | `{{.owner}}`, `{{index . "my-key"}}` | the channel's own options |

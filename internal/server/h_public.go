@@ -101,11 +101,24 @@ func (s *Server) statusPageBody(sp *config.StatusPage) []byte {
 		Cells  []store.Cell        `json:"cells"`
 	}
 	var mons []mon
-	worst := "ok"
+	// The overall status must be earned: it is "ok" only when at least
+	// one monitor on the page actually holds an ok verdict and nothing
+	// is worse. A page whose monitors were never judged (all unknown or
+	// pending), or with no monitors at all, reports "unknown" — absence
+	// of bad news is not evidence of health.
+	worst := "unknown"
+	seenOK := false
 	for _, rj := range s.published(sp) {
 		m := mon{Title: rj.Title, Group: rj.Group, Status: rj.Status, Uptime: map[string]*float64{}}
-		if m.Status == "critical" || (m.Status == "degraded" && worst == "ok") {
-			worst = m.Status
+		switch m.Status {
+		case "critical":
+			worst = "critical"
+		case "degraded":
+			if worst != "critical" {
+				worst = "degraded"
+			}
+		case "ok":
+			seenOK = true
 		}
 		for _, wnd := range sp.Windows {
 			if d, ok := ranges[wnd]; ok {
@@ -115,6 +128,9 @@ func (s *Server) statusPageBody(sp *config.StatusPage) []byte {
 		}
 		m.Cells, _ = s.app.Store().Cells(rj.Name, now.Add(-90*24*time.Hour), now, 90)
 		mons = append(mons, m)
+	}
+	if worst == "unknown" && seenOK {
+		worst = "ok"
 	}
 	if mons == nil {
 		mons = []mon{}
@@ -198,7 +214,12 @@ func (s *Server) badge(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	case "latency":
-		value, color = fmt.Sprintf("%.0f ms", row.LatencyMS), BadgeColor("ok")
+		// No measurement yet: say so, like the uptime badge, instead of
+		// printing a measured-looking "0 ms".
+		value, color = "n/a", BadgeColor("unknown")
+		if row.LatencyMS != nil {
+			value, color = fmt.Sprintf("%.0f ms", *row.LatencyMS), BadgeColor("ok")
+		}
 	default:
 		writeError(w, notFound("badge"))
 		return

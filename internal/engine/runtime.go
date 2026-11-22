@@ -297,7 +297,6 @@ type monRuntime struct {
 	LastChange  time.Time
 	LastResult  probe.Result
 	LastVerdict Verdict
-	LastVotes   []VoteView // per-node votes of the last cluster round
 	// PartialKey/PartialSince: the failing nodes of a running partial
 	// failure and since when (for the regional escalation).
 	PartialKey   string

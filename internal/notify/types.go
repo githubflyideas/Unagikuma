@@ -27,13 +27,11 @@ type Message struct {
 	Status           string                `json:"status"`
 	Reason           string                `json:"reason"`
 	Detail           string                `json:"detail"`
-	Quorum           string                `json:"quorum,omitempty"`
 	Count            int                   `json:"count"`
 	Max              int                   `json:"max"`
 	IncidentID       int64                 `json:"incident_id"`
 	Duration         time.Duration         `json:"duration"`
 	DetailURL        string                `json:"detail_url,omitempty"`
-	AckURL           string                `json:"ack_url,omitempty"`
 	Tags             []string              `json:"tags,omitempty"`
 	Time             time.Time             `json:"time"`
 	Delayed          time.Duration         `json:"delayed,omitempty"` // >0 when delivered late

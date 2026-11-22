@@ -74,7 +74,6 @@ var plainTexts = map[string]struct {
 	"backstop_body":          {"sys.backstop_body", []string{"n", "monitors", "names"}},
 	"node_offline_title":     {"sys.node_offline", []string{"node"}},
 	"maint_end":              {"sys.maint_end", []string{"title"}},
-	"node_witnesses":         {"sys.node_witnesses", []string{"n", "total"}},
 	"peer_unreachable_title": {"sys.peer_unreachable_title", []string{"node"}},
 	"peer_unreachable":       {"sys.peer_unreachable", []string{"node"}},
 	"minority_title":         {"sys.minority_title", nil},
@@ -126,6 +125,9 @@ var customTexts = map[string]func(c *textArgs) string{
 	"hold_note": func(c *textArgs) string { return c.t("sys.hold_note", "time", c.hm(0)) },
 	"abnormal_exit": func(c *textArgs) string {
 		return c.t("sys.abnormal_exit", "time", c.at(0), "duration", c.dur(c.args[1].(time.Duration)))
+	},
+	"abnormal_exit_unknown": func(c *textArgs) string {
+		return c.t("sys.abnormal_exit_unknown", "time", c.at(0))
 	},
 	"overload": func(c *textArgs) string {
 		return c.t("sys.overload", "percent", fmt.Sprintf("%.0f", c.args[0].(float64)*100), "rounds", c.args[1])

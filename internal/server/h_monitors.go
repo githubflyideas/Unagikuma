@@ -45,7 +45,7 @@ type rowJSON struct {
 	Unknown     string             `json:"unknown_reason,omitempty"`
 	Attempt     int                `json:"attempt"`
 	MaxAttempts int                `json:"max_attempts"`
-	LatencyMS   float64            `json:"latency_ms"`
+	LatencyMS   *float64           `json:"latency_ms"` // null until the monitor has actually been measured
 	Uptime24h   *float64           `json:"uptime_24h"` // null while less than uptime.min-coverage of the day was watched
 	Coverage24h float64            `json:"coverage_24h"`
 	LastCheck   *time.Time         `json:"last_check"`
@@ -65,24 +65,6 @@ type rowJSON struct {
 	Region  string   `json:"region,omitempty"`
 	Mute    bool     `json:"mute,omitempty"`
 	SysChan bool     `json:"system_channel,omitempty"`
-	// Votes and Quorum appear only for monitors judged by several nodes.
-	Votes  []engine.VoteView `json:"votes,omitempty"`
-	Quorum *quorumJSON       `json:"quorum,omitempty"`
-}
-
-// quorumJSON is how the last round was decided.
-type quorumJSON struct {
-	Verdict  string   `json:"verdict"`
-	Fail     int      `json:"fail"`
-	OK       int      `json:"ok"`
-	N        int      `json:"n"`
-	Healthy  int      `json:"healthy"`
-	Q        int      `json:"q"`
-	QEff     int      `json:"q_eff"`
-	Degraded bool     `json:"degraded"`
-	Unknown  string   `json:"unknown_reason,omitempty"`
-	Failing  []string `json:"failing_nodes,omitempty"`
-	Summary  string   `json:"summary"`
 }
 
 type tagJSON struct {
@@ -177,19 +159,17 @@ func (s *Server) rowBase(r engine.MonitorRow, cfg *config.Config, incs map[int64
 	out := rowJSON{
 		ID: s.app.Store().MonitorID(r.Name), ETag: s.recordETags()[r.Name], Name: r.Name, Title: r.Title, Type: r.Type, Written: r.Type, Target: r.Target, Depth: r.Depth, Scope: r.Scope, Group: r.Group,
 		Tags: []tagJSON{}, Status: r.Status, StateType: "soft", Flags: []string{}, Reason: r.Reason, Detail: r.Detail,
-		Unknown: r.UnknownReason, Attempt: r.Attempt, MaxAttempts: r.Attempts, LatencyMS: r.LatencyMS,
+		Unknown: r.UnknownReason, Attempt: r.Attempt, MaxAttempts: r.Attempts,
 		LastCheck: tp(r.LastCheck), LastChange: tp(r.LastChange), NextCheck: tp(r.NextCheck), Disabled: r.Paused, Metrics: r.Metrics,
 		Value: r.Value,
 	}
+	// Latency is only claimed once a check has actually measured it; a
+	// monitor that never ran has none (null), not a measured-looking 0.
+	if !r.LastCheck.IsZero() {
+		out.LatencyMS = &r.LatencyMS
+	}
 	if r.Hard {
 		out.StateType = "hard"
-	}
-	if len(r.Votes) > 0 {
-		out.Votes = r.Votes
-	}
-	if v := r.Quorum; v != nil && v.N > 1 {
-		out.Quorum = &quorumJSON{Verdict: string(v.Kind), Fail: v.Fail, OK: v.OK, N: v.N, Healthy: v.Healthy, Q: v.Q, QEff: v.QEff,
-			Degraded: v.Degraded, Unknown: v.UnknownReason, Failing: v.FailingNodes, Summary: v.Summary()}
 	}
 	if r.Partial {
 		out.Flags = append(out.Flags, "partial")
@@ -329,7 +309,7 @@ func sortRows(rows []rowJSON, by string, desc bool) {
 		case "last_change":
 			return ptime(a.LastChange).After(ptime(b.LastChange))
 		case "latency":
-			return a.LatencyMS > b.LatencyMS
+			return lf(a.LatencyMS) > lf(b.LatencyMS)
 		case "uptime":
 			return pf(a.Uptime24h) < pf(b.Uptime24h)
 		case "interval":
@@ -358,6 +338,15 @@ func ptime(t *time.Time) time.Time {
 func pf(f *float64) float64 {
 	if f == nil {
 		return 2
+	}
+	return *f
+}
+
+// lf dereferences a latency for sorting: unmeasured (null) sorts as 0,
+// as it did when the field was a plain number.
+func lf(f *float64) float64 {
+	if f == nil {
+		return 0
 	}
 	return *f
 }

@@ -3,6 +3,7 @@ package notify
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/githubflyideas/unagikuma/internal/i18n"
@@ -80,7 +81,13 @@ func kindIcon(m *Message) string {
 func messagePrefix(m *Message) []string {
 	var prefix []string
 	if m.Delayed > 0 {
-		prefix = append(prefix, i18n.T(m.Lang, "msg.delayed", "minutes", int(m.Delayed.Minutes())))
+		// A real delay under a minute must not truncate to "0 min":
+		// it is stated in seconds.
+		if m.Delayed < time.Minute {
+			prefix = append(prefix, i18n.T(m.Lang, "msg.delayed_s", "seconds", int(m.Delayed.Seconds())))
+		} else {
+			prefix = append(prefix, i18n.T(m.Lang, "msg.delayed", "minutes", int(m.Delayed.Minutes())))
+		}
 	}
 	if m.DryRun {
 		prefix = append(prefix, i18n.T(m.Lang, "msg.drill"))
@@ -170,9 +177,6 @@ func problemLines(m *Message) []string {
 		reason += " — " + d // not "timeout — timeout"
 	}
 	lines := []string{i18n.T(lang, "msg.reason", "reason", reason)}
-	if m.Quorum != "" {
-		lines = append(lines, i18n.T(lang, "msg.quorum", "quorum", m.Quorum))
-	}
 	start := m.Time.Add(-m.Duration)
 	lines = append(lines, i18n.T(lang, "msg.started", "time", start.Format("2006-01-02 15:04:05"), "duration", i18n.Duration(m.Duration, lang)))
 	if m.Body != "" {

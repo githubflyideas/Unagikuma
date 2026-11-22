@@ -405,12 +405,19 @@ func (e *Engine) StartupNotice(clean bool, lastBeat time.Time) {
 			}
 			return
 		}
-		down := time.Duration(0)
-		if !lastBeat.IsZero() {
-			down = now.Sub(lastBeat)
+		data := map[string]any{"msg": "abnormal_exit"}
+		var msg string
+		if lastBeat.IsZero() {
+			// No heartbeat was ever persisted: how long the previous run
+			// was down is unknown, and the message must not invent a
+			// duration (it used to report a fabricated "0s").
+			msg = e.text("abnormal_exit_unknown", lastBeat)
+		} else {
+			down := now.Sub(lastBeat)
+			msg = e.text("abnormal_exit", lastBeat, down)
+			data["down_s"] = int(down.Seconds())
 		}
-		msg := e.text("abnormal_exit", lastBeat, down)
-		e.event(Event{Type: EventSystem, Severity: "critical", Message: msg, Data: map[string]any{"msg": "abnormal_exit", "down_s": int(down.Seconds())}})
+		e.event(Event{Type: EventSystem, Severity: "critical", Message: msg, Data: data})
 		e.systemNotice(now, msg)
 	}
 	if !e.started.Load() {

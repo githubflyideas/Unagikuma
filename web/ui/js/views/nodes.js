@@ -188,7 +188,7 @@ function Membership({ state, d, reload }) {
         const ln = (d.local_nodes || []).find(x => x.node === p.name);
         return html`<tr><td class="mono">${p.name}</td><td class="mono ltr small">${p.addr}</td>
           <td><${Dot} status=${p.ok ? 'ok' : 'critical'} /> ${p.ok ? t('ui.rep.reachable') : t('ui.rep.unreachable')}</td>
-          <td>${ln && ln.verdict && html`<${Verdict} v=${ln.verdict} w=${ln.witnesses} />`}</td></tr>`;
+          <td>${ln && ln.verdict && html`<${Verdict} v=${ln.verdict} />`}</td></tr>`;
       })}</tbody></table>`}
     ${copy && copy.size > 0 && html`<div class="row" style=${{ marginTop: '12px' }}><p class="small muted spacer" style=${{ margin: 0 }}>${t('ui.ha.promote_hint')}</p>
       <button class="btn danger" onClick=${promote}>${t('ui.ha.promote')}</button></div>`}
@@ -262,7 +262,7 @@ function NodeRow({ n, onRevoke, onRemove, onEdit, onHandover }) {
       <${Dot} status=${n.online ? 'ok' : (n.last_seen ? 'critical' : 'unknown')} />
       ${' '}${n.self ? t('ui.node.online') : n.online ? t('ui.node.online') : n.last_seen ? t('ui.node.offline') : t('ui.node.never')}
       ${!n.self && n.since && html`<div class="sub"><${Ago} at=${n.since} /></div>`}
-      ${!n.self && n.verdict && n.verdict !== 'ok' && html`<div class="sub"><${Verdict} v=${n.verdict} w=${n.witnesses} /></div>`}
+      ${!n.self && n.verdict && n.verdict !== 'ok' && html`<div class="sub"><${Verdict} v=${n.verdict} /></div>`}
       ${n.gateway && n.gateway.length > 0 && html`<div class="sub"><${Gateway} g=${n.gateway} /></div>`}
     </td>
     <td class="nowrap">
@@ -283,10 +283,11 @@ function NodeRow({ n, onRevoke, onRemove, onEdit, onHandover }) {
   </tr>`;
 }
 
-// Verdict is the majority judgement of a node that cannot be reached.
-function Verdict({ v, w }) {
+// Verdict is this site's local peer-path judgement of a node it cannot
+// reach: a statement about the path from here, not a majority verdict.
+function Verdict({ v }) {
   const cls = v === 'down' ? 'tag err' : v === 'unknown' ? 'tag weak' : 'tag warn';
-  return html`<span class=${cls} title=${t('ui.verdict.' + v + '_hint')}>${t('ui.verdict.' + v)}</span>${v === 'down' && w > 0 ? html` <span class="small muted">${t('ui.verdict.witnesses', { n: w })}</span>` : ''}`;
+  return html`<span class=${cls} title=${t('ui.verdict.' + v + '_hint')}>${t('ui.verdict.' + v)}</span>`;
 }
 
 // Gateway shows whether the node's last notifications went out.
