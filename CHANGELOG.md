@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.6.32 — 2026-11-22
+
+**Fixed**
+- Branding changes (instance name, logo and icon) now require registration, like the other registered features. Styles are unchanged and stay free for everyone.
+- When an upgrade adds the two gateway monitors to an existing installation, the addition is now recorded in the event stream and the audit log instead of happening silently.
+- The two gateway monitors are pinned to the top of the monitor list, in that order, whichever sorting the list uses.
+- The degraded status pill in the calm theme now meets the 4.5:1 contrast minimum.
+
 ## v2.6.31 — 2026-11-22
 
 **Added**
