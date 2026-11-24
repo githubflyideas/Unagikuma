@@ -45,7 +45,6 @@ func newClusterEnvSink(t *testing.T, cfg Config, sink *intentRecorder) *clusterE
 	return &clusterEnv{t: t, e: e, sink: sink.memSink, fc: fc}
 }
 
-
 // intentRecorder records every intent the engine persists.
 type intentRecorder struct {
 	*memSink
