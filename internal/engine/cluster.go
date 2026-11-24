@@ -224,7 +224,11 @@ func (e *Engine) checkNodes(now time.Time) {
 		if pol == "" {
 			pol = "system"
 		}
-		e.openSystemAs(key, pol, e.text("peer_unreachable_title", e.nodeLabel(n.Name)), e.text("peer_unreachable", e.nodeLabel(n.Name)), now)
+		// The notice says since when this site has been unable to reach
+		// the node (its last contact), not just that it is unreachable.
+		detail := e.text("peer_unreachable", e.nodeLabel(n.Name)) + "\n" +
+			e.text("node_offline_detail", nr.offlineSince)
+		e.openSystemAs(key, pol, e.text("peer_unreachable_title", e.nodeLabel(n.Name)), detail, now)
 	}
 }
 
