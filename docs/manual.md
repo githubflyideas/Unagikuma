@@ -272,7 +272,7 @@ Functions: `upper`, `lower`, `trunc 20 .Name`, `join ", " .Tags`, `json .Tags`, 
 - Summaries, reports and system notices keep their own text. **Test** shows the template filled with an example.
 - A template that does not parse, or uses a name that does not exist, is refused when the channel is saved in the console. In a file it is a warning (`template_problem`): the built-in text is sent, and a name that does not exist is empty.
 - `at=` on a `dingtalk`, `wecom` or `feishu` channel mentions people on problems: `at=all`, or phone numbers separated by commas (Feishu: user ids). Recoveries and reports mention nobody.
-- A `webhook` channel sends all of the above as JSON; `body=` replaces it with your own template (`content-type=json|form|text`, `header.Name=value` for headers), and the `url=` may hold names too, which is all a `method=GET` hook can carry.
+- A `webhook` channel sends all of the above as JSON; `body=` replaces it with your own template (`content-type=json|form|text`, `header.Name=value` for headers), and the `url=` may hold names too, which is all a `method=GET` hook can carry. In a `form` body the values are URL-escaped for you, exactly as JSON bodies escape their values, so a name holding `&` or `=` stays one field's value; `{{raw .X}}` sends a value unescaped, and `{{urlquery .X}}` needs no second escaping.
 - SMS providers in China only send approved templates: `params="{{.Name}}|{{.StatusText}}|{{.ReasonText}}"` fills the template's variables in order.
 
 ### Limits, retries and falling back
