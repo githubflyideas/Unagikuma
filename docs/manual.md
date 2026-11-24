@@ -602,6 +602,8 @@ unagikuma version
 
 Main server flags: `--data DIR` (or `UNAGIKUMA_DATA`), `--listen ADDR` (or `UNAGIKUMA_LISTEN`, default `:8077`), `--tls-cert`/`--tls-key`, `--base-url` for links in notifications, `--heartbeat-url` for an external dead man's switch (for example healthchecks.io), `--trusted-proxy CIDR,...` when running behind a reverse proxy, `--audit-retention 730d` for how long the audit log is kept at least. The port answers plain HTTP and TLS; with `--tls-cert` the UI uses your certificate and plain requests are redirected to https.
 
+Behind a reverse proxy that serves the app under a path prefix (for example `https://ops.example.com/uk/` → `http://127.0.0.1:8077/`), have the proxy strip the prefix and send `X-Forwarded-Prefix: /uk` with each request, and list the proxy in `--trusted-proxy`. The console, the public status pages and the session cookie then stay inside the prefix; without the header the same proxy setup serves a console whose assets and API calls escape to the root. Links in notifications and status-page feeds come from `--base-url`, so include the prefix there as well.
+
 ## Data and backups
 
 The data directory holds `monitors.conf`, `core.db` (users, incidents, notification log, configuration history, encrypted secrets), `history.db` (check results and uptime) and `unagikuma.key`, the key that encrypts the secrets. `cluster-ca.*` and `cluster.*` are the certificate authority the other machines of a cluster pin; keep them with the key so they keep trusting a restored master.

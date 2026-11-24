@@ -40,7 +40,7 @@ export async function api(method, path, body, headers) {
   if (method !== 'GET' && csrf) opt.headers['X-Unagikuma-CSRF'] = csrf;
   let r;
   try {
-    r = await fetch('/api/v1' + path, opt);
+    r = await fetch('api/v1' + path, opt);
   } catch (e) {
     throw new ApiError(0, { code: 'network', message: e.message });
   }

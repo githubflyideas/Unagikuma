@@ -34,7 +34,7 @@ export function applyStyle(id) {
     if (link) link.remove();
     return;
   }
-  const href = '/styles/' + id + '.css';
+  const href = 'styles/' + id + '.css';
   if (!link) {
     link = document.createElement('link');
     link.id = 'ui-style';

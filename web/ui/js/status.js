@@ -4,7 +4,7 @@ import { t, setLang, detectLang, loadLanguages, fmtTime } from './i18n.js';
 import { Beats, pct, useInterval } from './ui.js';
 
 const SEV = { info: 'info', minor: 'warning', major: 'error', maintenance: 'info' };
-const api = (name, what) => '/api/v1/status/' + encodeURIComponent(name) + (what ? '/' + what : '');
+const api = (name, what) => 'api/v1/status/' + encodeURIComponent(name) + (what ? '/' + what : '');
 const postJSON = async (url, body) => {
   const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).message || m; } catch { /* not JSON */ } throw new Error(m); }
@@ -116,9 +116,13 @@ function Page({ name }) {
 (async () => {
   await loadLanguages();
   await setLang(detectLang(), false);
-  // On its own host name the page is served at "/" and named "-".
-  const own = !location.pathname.startsWith('/status/');
-  const name = own ? '-' : decodeURIComponent(location.pathname.replace(/^\/status\//, '').replace(/\/$/, '')) || 'default';
+  // The page path is read relative to the document base, so the same
+  // code works at the root and behind a path-prefix reverse proxy.
+  // On its own host name the page is served at the base and named "-".
+  const basePath = new URL(document.baseURI).pathname;
+  const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : '';
+  const own = !rel.startsWith('status/');
+  const name = own ? '-' : decodeURIComponent(rel.replace(/^status\//, '').replace(/\/$/, '')) || 'default';
   const app = document.getElementById('app');
   app.textContent = ''; // the server's first screen
   render(html`<${Page} name=${name} />`, app);

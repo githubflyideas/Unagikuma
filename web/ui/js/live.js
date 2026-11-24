@@ -33,7 +33,7 @@ function report(v) {
 
 export function startLive() {
   if (es) return;
-  es = new EventSource('/api/v1/stream');
+  es = new EventSource('api/v1/stream');
   es.onopen = () => setConnected(true);
   es.onerror = () => setConnected(false);
   for (const type of ['state', 'incident', 'event', 'heartbeat', 'reset', 'serial', 'banner']) {

@@ -60,18 +60,18 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) (any, error) {
 		_ = s.app.Store().SetPrefs(id, string(prefs))
 	}
 	auditOf(r).actor = req.Username
-	res, tag, err := s.startSession(w, id, req.Username)
+	res, tag, err := s.startSession(w, r, id, req.Username)
 	auditOf(r).session = tag
 	return res, err
 }
 
 // startSession signs userID in; tag names the new session in the audit log.
-func (s *Server) startSession(w http.ResponseWriter, userID int64, name string) (res any, tag string, err error) {
+func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID int64, name string) (res any, tag string, err error) {
 	sid, csrf, err := s.app.Store().CreateSession(userID, sessionTTL)
 	if err != nil {
 		return nil, "", err
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: sid, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode,
+	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: sid, Path: s.urlPrefix(r) + "/", HttpOnly: true, SameSite: http.SameSiteStrictMode,
 		Secure: s.opts.SecureCookies, MaxAge: int(sessionTTL.Seconds())})
 	return map[string]any{"user": name, "csrf": csrf}, sessionTag(sid), nil
 }
@@ -116,7 +116,7 @@ func (s *Server) sessionLogin(w http.ResponseWriter, r *http.Request) (any, erro
 		_ = s.app.Store().Audit(store.AuditEntry{Actor: req.Username, Action: "session.login_failed", Addr: s.ip(r), Detail: withClient(nil, s.client(r, nil))})
 		return nil, Errorf(http.StatusUnauthorized, CodeUnauthorized, "wrong username or password")
 	}
-	res, tag, err := s.startSession(w, u.ID, u.Username)
+	res, tag, err := s.startSession(w, r, u.ID, u.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (s *Server) sessionLogout(w http.ResponseWriter, r *http.Request) (any, err
 	if ai := authOf(r); ai != nil {
 		_ = s.app.Store().Audit(store.AuditEntry{Actor: ai.user, Action: "session.logout", Addr: s.ip(r), Detail: withClient(nil, s.client(r, ai))})
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
+	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: s.urlPrefix(r) + "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 	return nil, nil
 }
 
@@ -156,7 +156,7 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) (any, er
 	if err := s.app.Store().SetPassword(ai.userID, req.New); err != nil {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 	}
-	res, _, err := s.startSession(w, ai.userID, ai.user)
+	res, _, err := s.startSession(w, r, ai.userID, ai.user)
 	return res, err
 }
 
