@@ -168,3 +168,75 @@ func TestBranding(t *testing.T) {
 		t.Fatalf("logo after removing: %q", b)
 	}
 }
+
+var packUI = fstest.MapFS{
+	"index.html":            {Data: []byte("<html></html>")},
+	"logo.png":              {Data: []byte("product logo")},
+	"favicon.png":           {Data: []byte("product icon")},
+	"wall.html":             {Data: []byte("<html lang=\"en\" data-theme=\"ink\">\n<head>\n<link rel=\"stylesheet\" href=\"/app.css\">\n</head>\n<body class=\"wallpage\"></body>\n</html>")},
+	"styles/styles.json":    {Data: []byte(`[{"id": "modern"}, {"id": "datacenter", "registered": true}]`)},
+	"styles/modern.css":     {Data: []byte(":root[data-style=modern] {}")},
+	"styles/datacenter.css": {Data: []byte(":root[data-style=datacenter] {}")},
+}
+
+// The scenario styles are registered: an unregistered installation
+// lists them as not allowed, cannot load their sheets and cannot set
+// them as the default; a registered one can, and the wall shell then
+// carries the style. Free styles are unaffected throughout.
+func TestRegisteredStyles(t *testing.T) {
+	e := newEnv(t, testBind, packUI)
+	e.setup()
+
+	var pub struct {
+		Style  string
+		Styles []struct {
+			ID      string
+			Allowed bool
+		}
+	}
+	if c := e.do("GET", "/api/v1/brand", nil, &pub); c != 200 || len(pub.Styles) != 3 {
+		t.Fatalf("public: %d %+v", c, pub)
+	}
+	allowed := map[string]bool{}
+	for _, st := range pub.Styles {
+		allowed[st.ID] = st.Allowed
+	}
+	if !allowed["classic"] || !allowed["modern"] || allowed["datacenter"] {
+		t.Fatalf("allowed before registering: %v", allowed)
+	}
+	if c, _ := e.raw("GET", "/styles/datacenter.css", nil, ""); c != 404 {
+		t.Fatalf("registered sheet unregistered: %d", c)
+	}
+	if c, _ := e.raw("GET", "/styles/modern.css", nil, ""); c != 200 {
+		t.Fatalf("free sheet unregistered: %d", c)
+	}
+	var er struct{ Code string }
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "datacenter"}, &er); c != 402 || er.Code != CodeRegistration {
+		t.Fatalf("registered style as default, unregistered: %d %+v", c, er)
+	}
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "modern"}, nil); c != 200 {
+		t.Fatalf("free style as default, unregistered: %d", c)
+	}
+	if c, b := e.raw("GET", "/wall", nil, ""); c != 200 || !strings.Contains(string(b), `data-style="modern"`) || !strings.Contains(string(b), "styles/modern.css") {
+		t.Fatalf("wall shell with a free default: %d %s", c, b)
+	}
+
+	e.register()
+	_ = e.do("GET", "/api/v1/brand", nil, &pub)
+	allowed = map[string]bool{}
+	for _, st := range pub.Styles {
+		allowed[st.ID] = st.Allowed
+	}
+	if !allowed["datacenter"] {
+		t.Fatalf("allowed after registering: %v", allowed)
+	}
+	if c, _ := e.raw("GET", "/styles/datacenter.css", nil, ""); c != 200 {
+		t.Fatalf("registered sheet registered: %d", c)
+	}
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "datacenter"}, nil); c != 200 {
+		t.Fatalf("registered style as default, registered: %d", c)
+	}
+	if c, b := e.raw("GET", "/wall", nil, ""); c != 200 || !strings.Contains(string(b), `data-style="datacenter"`) || !strings.Contains(string(b), "styles/datacenter.css") {
+		t.Fatalf("wall shell with a registered default: %d %s", c, b)
+	}
+}

@@ -251,6 +251,10 @@ func (s *Server) routes() {
 				// The wall screen and the managers' summary; they read the
 				// API with a token from the URL fragment, which never
 				// reaches this server.
+				w.Header().Set("Referrer-Policy", "no-referrer")
+				if s.serveStyledShell(w, strings.Trim(p, "/")+".html") {
+					return
+				}
 				r2 := r.Clone(r.Context())
 				r2.URL.Path = "/" + strings.Trim(p, "/") + ".html"
 				w.Header().Set("Cache-Control", "no-cache")

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -14,7 +15,11 @@ import (
 // Styles are built-in layouts of the console: how pages are laid out
 // (cards, tables, spacing, type), independent of the colour theme. They
 // are listed in styles/styles.json of the web files; every style but
-// "classic" has its own styles/<id>.css. Every style is free.
+// "classic" has its own styles/<id>.css. The four scenario styles
+// (office, datacenter, retail, noc) are registered: an unregistered
+// installation lists them but cannot use them — their sheets are not
+// served and they cannot be picked or set as the default. Every other
+// style is free.
 
 const (
 	styleClassic    = "classic"
@@ -22,7 +27,8 @@ const (
 )
 
 type styleInfo struct {
-	ID string `json:"id"`
+	ID         string `json:"id"`
+	Registered bool   `json:"registered,omitempty"`
 }
 
 func (s *Server) styles() []styleInfo {
@@ -58,8 +64,16 @@ func validStyleID(id string) bool {
 	return true
 }
 
-// styleAllowed reports whether the style exists: every style is free.
-func (s *Server) styleAllowed(id string) bool { return s.styleKnown(id) }
+// styleAllowed reports whether the style can be used here: it must
+// exist, and a registered style needs a registered installation.
+func (s *Server) styleAllowed(id string) bool {
+	for _, st := range s.styles() {
+		if st.ID == id {
+			return !st.Registered || s.app.License().State().Registered
+		}
+	}
+	return false
+}
 
 // defaultStyle is the style for everyone who has not chosen one, and for
 // the public status pages.
@@ -76,7 +90,7 @@ func (s *Server) defaultStyle() string {
 func (s *Server) brandPublic(w http.ResponseWriter, r *http.Request) {
 	list := []map[string]any{}
 	for _, st := range s.styles() {
-		list = append(list, map[string]any{"id": st.ID})
+		list = append(list, map[string]any{"id": st.ID, "allowed": s.styleAllowed(st.ID)})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"name": s.app.BrandName(), "style": s.defaultStyle(), "styles": list})
 }
@@ -96,14 +110,18 @@ func (s *Server) brandPut(w http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, err
 	}
 	// The name is the brand itself: writing it needs a registered
-	// installation, like the images. The default style stays free.
+	// installation, like the images. The default style stays free,
+	// unless the style picked is itself a registered one.
 	if req.Name != nil && !s.app.License().State().Registered {
 		return nil, registrationError(s)
 	}
 	if req.Style != nil {
 		v := *req.Style
-		if v != styleClassic && !s.styleAllowed(v) {
+		if v != styleClassic && !s.styleKnown(v) {
 			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "no style %q", v)
+		}
+		if !s.styleAllowed(v) {
+			return nil, registrationError(s)
 		}
 		if err := s.app.Store().SetSetting(styleDefaultKey, v); err != nil {
 			return nil, err
@@ -118,6 +136,46 @@ func (s *Server) brandPut(w http.ResponseWriter, r *http.Request) (any, error) {
 	}
 	auditOf(r).target = "branding"
 	return s.brandGet(w, r)
+}
+
+// serveStyledShell serves one of the shells whose script does not load
+// a style itself (the wall screen, the managers' summary) with the
+// installation's default style added: the data-style attribute and the
+// style sheet, as serveStatusHTML does for the public status pages. A
+// classic default leaves the shell unchanged, and so does a style this
+// installation may not use (defaultStyle already falls back then).
+// False means the file is not there and the caller should fall back to
+// plain file serving.
+func (s *Server) serveStyledShell(w http.ResponseWriter, name string) bool {
+	page, err := fs.ReadFile(s.opts.Web, name)
+	if err != nil {
+		return false
+	}
+	if st := s.defaultStyle(); st != styleClassic {
+		// The shells do not all spell the app.css link the same way:
+		// the wall and the summary use the absolute form.
+		for _, link := range []string{`<link rel="stylesheet" href="app.css">`, `<link rel="stylesheet" href="/app.css">`} {
+			if bytes.Contains(page, []byte(link)) {
+				sheet := strings.Replace(link, "app.css", "styles/"+st+".css", 1)
+				page = bytes.Replace(page, []byte(link), []byte(link+"\n"+sheet), 1)
+				break
+			}
+		}
+		if i := bytes.Index(page, []byte("<html")); i >= 0 {
+			if j := bytes.IndexByte(page[i:], '>'); j >= 0 {
+				attr := []byte(` data-style="` + st + `"`)
+				out := make([]byte, 0, len(page)+len(attr))
+				out = append(out, page[:i+j]...)
+				out = append(out, attr...)
+				out = append(out, page[i+j:]...)
+				page = out
+			}
+		}
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	_, _ = w.Write(page)
+	return true
 }
 
 func (s *Server) styleKnown(id string) bool {
