@@ -1,0 +1,79 @@
+/* Datacenter: the machine-room scenario style. An industrial control
+   panel, not an app: near-black surfaces divided by hairline grid
+   lines, square corners everywhere, monospace type, all-caps micro
+   labels, and readings in amber and cyan. On the wall screen it reads
+   as one big instrument. It brings its own colours, so the theme
+   choice is set aside while it is in use. Status colours keep their
+   meaning. Registered: this style needs a registered installation. */
+:root[data-style="datacenter"] {
+  --bg: #0a0c0a; --side: #0a0c0a; --panel: #10130f; --panel-2: #151915; --border: #262b26; --border-strong: #3d443c;
+  --text: #d9ded2; --muted: #a2ab99; --faint: #939c89;
+  --accent: #ffb000; --accent-soft: #2b2108; --accent-text: #0a0c0a; --link: #4dd8fa;
+  --ok: #2fe3a0; --ok-soft: #0c271d; --degraded: #ffb547; --degraded-soft: #2e230e;
+  --critical: #ff5147; --critical-soft: #38120e; --unknown: #a98bff; --unknown-soft: #201a38;
+  --pending: #98a291; --pending-soft: #171b16; --maint: #5fa8ff; --maint-soft: #102037;
+  --on-status: #0a0c0a; --on-degraded: #0a0c0a;
+  --empty: #1a1f1a; --stripe: transparent;
+  --shadow: none; --radius: 0px; --bg-image: none;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --side-text: #c9cfc0; --side-muted: #939c89; --side-hover: rgba(255, 176, 0, .08); --side-on: #1a1f1a; --side-on-text: #ffb000; --side-mark: #ffb000;
+  color-scheme: dark;
+}
+:root[data-style="datacenter"] .themes { display: none; }
+:root[data-style="datacenter"] body { background-color: var(--bg); background-image: none; font-family: var(--mono); }
+:root[data-style="datacenter"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="datacenter"] .side { background: var(--side); border-inline-end: 1px solid var(--border-strong); }
+:root[data-style="datacenter"] .side .nav a { border-radius: 0; box-shadow: none; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+:root[data-style="datacenter"] .side .nav a.on { font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
+:root[data-style="datacenter"] .brand { text-transform: uppercase; letter-spacing: .14em; font-size: 13px; color: var(--accent); }
+:root[data-style="datacenter"] .top { background: var(--bg); border-bottom: 1px solid var(--border-strong); }
+:root[data-style="datacenter"] .page { gap: 0; padding: 0 0 40px; }
+:root[data-style="datacenter"] .card, :root[data-style="datacenter"] .tile, :root[data-style="datacenter"] .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 0; box-shadow: none; }
+:root[data-style="datacenter"] .card > .hd { border-bottom: 1px solid var(--border); padding: 10px 14px; background: var(--panel-2); }
+:root[data-style="datacenter"] .card > .hd h2, :root[data-style="datacenter"] .card > .hd h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+:root[data-style="datacenter"] .card > .bd { padding: 12px 14px; }
+:root[data-style="datacenter"] .card > .bd.flush { padding: 0; }
+:root[data-style="datacenter"] .tile { border-top: 2px solid var(--border-strong); }
+:root[data-style="datacenter"] .tile.ok { border-top-color: var(--ok); } :root[data-style="datacenter"] .tile.critical { border-top-color: var(--critical); } :root[data-style="datacenter"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="datacenter"] .tile b { font-size: 30px; color: var(--accent); font-variant-numeric: tabular-nums; }
+:root[data-style="datacenter"] .btn { border-radius: 0; background: var(--panel-2); border-color: var(--border-strong); text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+:root[data-style="datacenter"] .btn:hover { background: var(--panel); }
+:root[data-style="datacenter"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 700; }
+:root[data-style="datacenter"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="datacenter"] input[type=text], :root[data-style="datacenter"] input[type=password], :root[data-style="datacenter"] input[type=number], :root[data-style="datacenter"] input[type=url], :root[data-style="datacenter"] input[type=email], :root[data-style="datacenter"] select, :root[data-style="datacenter"] textarea { background: var(--panel-2); border-radius: 0; border-color: var(--border-strong); }
+:root[data-style="datacenter"] .search, :root[data-style="datacenter"] .chip, :root[data-style="datacenter"] .seg { border-radius: 0; background: var(--panel-2); }
+:root[data-style="datacenter"] .banner { border-radius: 0; }
+:root[data-style="datacenter"] .pill, :root[data-style="datacenter"] .pill.ok, :root[data-style="datacenter"] .pill.degraded, :root[data-style="datacenter"] .pill.critical, :root[data-style="datacenter"] .pill.unknown, :root[data-style="datacenter"] .pill.maintenance { border-radius: 0; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
+:root[data-style="datacenter"] .pill.ok { background: var(--ok); color: var(--on-status); }
+:root[data-style="datacenter"] .pill.degraded { background: var(--degraded); color: var(--on-degraded); }
+:root[data-style="datacenter"] .pill.critical { background: var(--critical); color: var(--on-status); }
+:root[data-style="datacenter"] .pill.unknown { background: var(--unknown); color: var(--on-status); }
+:root[data-style="datacenter"] .pill.maintenance { background: var(--maint); color: var(--on-status); }
+:root[data-style="datacenter"] .tbl th { background: var(--panel-2); text-transform: uppercase; letter-spacing: .1em; font-size: 11px; border-bottom: 1px solid var(--border-strong); }
+:root[data-style="datacenter"] .tbl td { border-bottom: 1px solid var(--border); }
+:root[data-style="datacenter"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="datacenter"] .tbl tr.click:hover td { background: rgba(255, 176, 0, .06); }
+:root[data-style="datacenter"] .crumbs { text-transform: uppercase; letter-spacing: .1em; font-size: 11px; }
+:root[data-style="datacenter"] .ob-step, :root[data-style="datacenter"] .ob-n { border-radius: 0; }
+:root[data-style="datacenter"] .pub .overall { border-radius: 0; text-transform: uppercase; letter-spacing: .12em; }
+/* The wall screen as one instrument: square panels on the same grid,
+   counts in amber, the clock in cyan, a fault as a solid red block. */
+:root[data-style="datacenter"] body.wallpage {
+  --w-bg: #0a0c0a; --w-bar: #10130f; --w-line: #262b26; --w-text: #d9ded2; --w-muted: #939c89;
+  --w-ok: #0e1510; --w-ok-edge: #1d3021; --w-ok-text: #b9d8c8; --w-ok-num: #ffb000;
+  --w-crit: #d92c22; --w-crit-2: #8e1b1b; --w-crit-num: #ff5147;
+  --w-warn: #ffb000; --w-warn-2: #b37400; --w-warn-text: #0a0c0a; --w-warn-num: #ffb000;
+  --w-unk: #5b4bb7; --w-unk-2: #3f3290; --w-unk-num: #a594f9;
+  --w-maint: #12283f; --w-maint-text: #a9c8ef;
+  --w-off: #12150f; --w-off-text: #77816e;
+  background: var(--w-bg);
+  font-family: var(--mono);
+}
+:root[data-style="datacenter"] .wall-top, :root[data-style="datacenter"] .wall-ticker { border-radius: 0; }
+:root[data-style="datacenter"] .wall-top .overall { border-radius: 0; text-transform: uppercase; letter-spacing: .12em; }
+:root[data-style="datacenter"] .wall-top .clock { color: var(--link); }
+:root[data-style="datacenter"] .wall-top .cnt.zero { opacity: .92; }
+:root[data-style="datacenter"] .wall-stale { border-radius: 0; }
+:root[data-style="datacenter"] .kpi, :root[data-style="datacenter"] .sum-now { border-radius: 0; }
+:root[data-style="datacenter"] .kpi .big { color: var(--accent); }

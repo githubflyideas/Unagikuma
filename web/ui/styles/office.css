@@ -1,0 +1,56 @@
+/* Office: the small-business scenario style. A friendly software-as-a-
+   service look — white surfaces, big rounded corners, soft shadows and
+   a clear blue for actions — made for people who did not choose to run
+   a monitoring tool. It brings its own colours, so the theme choice is
+   set aside while it is in use. Status colours keep their meaning.
+   Registered: this style needs a registered installation. */
+:root[data-style="office"] {
+  --bg: #f3f5f9; --side: #ffffff; --panel: #ffffff; --panel-2: #f2f5fa; --border: #e3e8f0; --border-strong: #c6d0de;
+  --text: #1f2329; --muted: #5b6472; --faint: #5f6b7a;
+  --accent: #2563eb; --accent-soft: #e3ecfd; --accent-text: #ffffff; --link: #1d4ed8;
+  --ok: #17804a; --ok-soft: #e1f5e8; --degraded: #b45309; --degraded-soft: #fdf0dc;
+  --critical: #c42f2f; --critical-soft: #fde4e4; --unknown: #7246d8; --unknown-soft: #efe8fe;
+  --pending: #68727f; --pending-soft: #e8ecf1; --maint: #2766c8; --maint-soft: #e0ebfd;
+  --on-status: #ffffff; --on-degraded: #2a1700;
+  --empty: #e6eaf0; --stripe: transparent;
+  --shadow: 0 8px 30px rgba(31, 35, 41, .08), 0 1px 3px rgba(31, 35, 41, .05); --radius: 16px; --bg-image: none;
+  --side-text: #1f2329; --side-muted: #5b6472; --side-hover: rgba(37, 99, 235, .07); --side-on: #e3ecfd; --side-on-text: #1d4ed8; --side-mark: #2563eb;
+  color-scheme: light;
+}
+:root[data-style="office"] .themes { display: none; }
+:root[data-style="office"] body { background-color: var(--bg); background-image: none; }
+:root[data-style="office"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="office"] .side { background: var(--side); border-inline-end: 1px solid var(--border); }
+:root[data-style="office"] .brand { color: var(--accent); }
+:root[data-style="office"] .side .nav a { border-radius: 12px; box-shadow: none; }
+:root[data-style="office"] .side .nav a.on { font-weight: 650; }
+:root[data-style="office"] .top { background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom-color: var(--border); }
+:root[data-style="office"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="office"] .card, :root[data-style="office"] .tile, :root[data-style="office"] .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); }
+:root[data-style="office"] .card > .hd { border-bottom-color: var(--border); padding: 16px 22px; }
+:root[data-style="office"] .card > .hd h2, :root[data-style="office"] .card > .hd h3 { font-size: 15px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="office"] .card > .bd { padding: 18px 22px; }
+:root[data-style="office"] .card > .bd.flush { padding: 0; }
+:root[data-style="office"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="office"] .tile.ok { border-top-color: var(--ok); } :root[data-style="office"] .tile.critical { border-top-color: var(--critical); } :root[data-style="office"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="office"] .tile b { font-size: 28px; }
+:root[data-style="office"] .btn { border-radius: 12px; background: var(--panel); border-color: var(--border-strong); }
+:root[data-style="office"] .btn:hover { background: var(--panel-2); }
+:root[data-style="office"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="office"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="office"] input[type=text], :root[data-style="office"] input[type=password], :root[data-style="office"] input[type=number], :root[data-style="office"] input[type=url], :root[data-style="office"] input[type=email], :root[data-style="office"] select, :root[data-style="office"] textarea { background: var(--panel); border-radius: 12px; }
+:root[data-style="office"] .search, :root[data-style="office"] .chip, :root[data-style="office"] .seg { border-radius: 12px; background: var(--panel); }
+:root[data-style="office"] .banner { border-radius: 14px; }
+:root[data-style="office"] .pill, :root[data-style="office"] .pill.ok, :root[data-style="office"] .pill.degraded, :root[data-style="office"] .pill.critical, :root[data-style="office"] .pill.unknown, :root[data-style="office"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="office"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="office"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 78%, var(--text)); }
+:root[data-style="office"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 72%, var(--text)); }
+:root[data-style="office"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 80%, var(--text)); }
+:root[data-style="office"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 78%, var(--text)); }
+:root[data-style="office"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 78%, var(--text)); }
+:root[data-style="office"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="office"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="office"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="office"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+:root[data-style="office"] .pub .overall { border-radius: 16px; }
+:root[data-style="office"] .kpi, :root[data-style="office"] .sum-now { border-radius: 20px; }

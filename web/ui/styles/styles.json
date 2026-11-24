@@ -1,17 +1,1 @@
-[
-  {"id": "modern"},
-  {"id": "relic"},
-  {"id": "legend"},
-  {"id": "starship"},
-  {"id": "rune"},
-  {"id": "aurora"},
-  {"id": "nebula"},
-  {"id": "ocean"},
-  {"id": "sunset"},
-  {"id": "forest"},
-  {"id": "sakura"},
-  {"id": "dune"},
-  {"id": "neon"},
-  {"id": "glacier"},
-  {"id": "ink"}
-]
+[{"id":"modern"},{"id":"relic"},{"id":"legend"},{"id":"starship"},{"id":"rune"},{"id":"aurora"},{"id":"nebula"},{"id":"ocean"},{"id":"sunset"},{"id":"forest"},{"id":"sakura"},{"id":"dune"},{"id":"neon"},{"id":"glacier"},{"id":"ink"},{"id":"office","registered":true},{"id":"datacenter","registered":true},{"id":"retail","registered":true},{"id":"noc","registered":true}]

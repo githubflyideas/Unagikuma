@@ -14,7 +14,7 @@ function styleName(id) {
 }
 
 function styleOptions(selected) {
-  return brand.styles.map(s => html`<option value=${s.id}>${styleName(s.id)}</option>`);
+  return brand.styles.map(s => html`<option value=${s.id} disabled=${!s.allowed}>${styleName(s.id)}</option>`);
 }
 
 // MyStyle lets anyone pick the style they see; it follows their account.

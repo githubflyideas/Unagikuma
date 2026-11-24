@@ -1,0 +1,57 @@
+/* Noc: the ISP scenario style. A classic network-operations page in
+   the Smokeping/MRTG tradition: light grey, square corners, no
+   shadows, dense small monospace type and tables that carry as much
+   as fits. An operator's working tool, zero decoration. It brings its
+   own colours, so the theme choice is set aside while it is in use.
+   Status colours keep their meaning. Registered: this style needs a
+   registered installation. */
+:root[data-style="noc"] {
+  --bg: #e8e8e8; --side: #dcdcdc; --panel: #ffffff; --panel-2: #ececec; --border: #b5b5b5; --border-strong: #8f8f8f;
+  --text: #222222; --muted: #4d4d4d; --faint: #545454;
+  --accent: #2050a0; --accent-soft: #dbe6f5; --accent-text: #ffffff; --link: #2050a0;
+  --ok: #177245; --ok-soft: #e0f2e7; --degraded: #b45309; --degraded-soft: #fdf0dc;
+  --critical: #c42f2f; --critical-soft: #fde4e4; --unknown: #7246d8; --unknown-soft: #efe8fe;
+  --pending: #68727f; --pending-soft: #e6e6e6; --maint: #2766c8; --maint-soft: #e0ebfd;
+  --on-status: #ffffff; --on-degraded: #ffffff;
+  --empty: #d9d9d9; --stripe: transparent;
+  --shadow: none; --radius: 0px; --bg-image: none;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+  --sans: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+  --side-text: #222222; --side-muted: #4d4d4d; --side-hover: rgba(32, 80, 160, .10); --side-on: #2050a0; --side-on-text: #ffffff; --side-mark: #2050a0;
+  color-scheme: light;
+}
+:root[data-style="noc"] .themes { display: none; }
+:root[data-style="noc"] body { background-color: var(--bg); background-image: none; font-family: var(--mono); font-size: 12.5px; line-height: 1.45; }
+:root[data-style="noc"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="noc"] .side { background: var(--side); border-inline-end: 1px solid var(--border-strong); }
+:root[data-style="noc"] .side .nav a { border-radius: 0; box-shadow: none; font-size: 12px; padding: 5px 8px; }
+:root[data-style="noc"] .side .nav a.on { font-weight: 700; }
+:root[data-style="noc"] .top { background: var(--panel-2); border-bottom: 1px solid var(--border-strong); }
+:root[data-style="noc"] .page { gap: 10px; padding: 12px 14px 32px; }
+:root[data-style="noc"] .card, :root[data-style="noc"] .tile, :root[data-style="noc"] .modal { background: var(--panel); border: 1px solid var(--border-strong); border-radius: 0; box-shadow: none; }
+:root[data-style="noc"] .card > .hd { border-bottom: 1px solid var(--border); padding: 7px 10px; background: var(--panel-2); }
+:root[data-style="noc"] .card > .hd h2, :root[data-style="noc"] .card > .hd h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text); }
+:root[data-style="noc"] .card > .bd { padding: 10px 12px; }
+:root[data-style="noc"] .card > .bd.flush { padding: 0; }
+:root[data-style="noc"] .tile b { font-size: 22px; font-variant-numeric: tabular-nums; }
+:root[data-style="noc"] .btn { border-radius: 0; background: var(--panel-2); border-color: var(--border-strong); font-size: 12px; }
+:root[data-style="noc"] .btn:hover { background: var(--panel); }
+:root[data-style="noc"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 700; }
+:root[data-style="noc"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="noc"] input[type=text], :root[data-style="noc"] input[type=password], :root[data-style="noc"] input[type=number], :root[data-style="noc"] input[type=url], :root[data-style="noc"] input[type=email], :root[data-style="noc"] select, :root[data-style="noc"] textarea { background: var(--panel); border-radius: 0; border-color: var(--border-strong); font-size: 12.5px; }
+:root[data-style="noc"] .search, :root[data-style="noc"] .chip, :root[data-style="noc"] .seg { border-radius: 0; background: var(--panel); }
+:root[data-style="noc"] .banner { border-radius: 0; }
+:root[data-style="noc"] .pill, :root[data-style="noc"] .pill.ok, :root[data-style="noc"] .pill.degraded, :root[data-style="noc"] .pill.critical, :root[data-style="noc"] .pill.unknown, :root[data-style="noc"] .pill.maintenance { border-radius: 0; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+:root[data-style="noc"] .pill.ok { background: var(--ok); color: var(--on-status); }
+:root[data-style="noc"] .pill.degraded { background: var(--degraded); color: var(--on-degraded); }
+:root[data-style="noc"] .pill.critical { background: var(--critical); color: var(--on-status); }
+:root[data-style="noc"] .pill.unknown { background: var(--unknown); color: var(--on-status); }
+:root[data-style="noc"] .pill.maintenance { background: var(--maint); color: var(--on-status); }
+:root[data-style="noc"] .tbl th { background: var(--panel-2); text-transform: uppercase; letter-spacing: .05em; font-size: 11px; border-bottom: 1px solid var(--border-strong); padding: 4px 8px; }
+:root[data-style="noc"] .tbl td { padding: 4px 8px; font-size: 12px; border-bottom: 1px solid var(--border); }
+:root[data-style="noc"] .tbl tbody tr:nth-child(even) td { background: #f6f6f6; }
+:root[data-style="noc"] .tbl tr.click:hover td { background: var(--accent-soft); }
+:root[data-style="noc"] .pub .overall { border-radius: 0; text-transform: uppercase; letter-spacing: .06em; }
+:root[data-style="noc"] .ob-step, :root[data-style="noc"] .ob-n { border-radius: 0; }
+:root[data-style="noc"] .kpi, :root[data-style="noc"] .sum-now { border-radius: 0; }
+:root[data-style="noc"] .sum-tbl td { padding: 5px 0; }

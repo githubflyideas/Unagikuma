@@ -1,0 +1,70 @@
+/* Retail: the chain-store scenario style. A business-intelligence
+   board: a bright indigo-tinted page, a deep violet sidebar, saturated
+   KPI colours and chart-forward cards, made to be read as numbers
+   first. The map a chain's wall shows is a view, not a style; this
+   sheet carries everything a style can — the colour system, the KPI
+   cards and the summary meters in saturated bands. It brings its own
+   colours, so the theme choice is set aside while it is in use.
+   Status colours keep their meaning. Registered: this style needs a
+   registered installation. */
+:root[data-style="retail"] {
+  --bg: #eef1fe; --side: #232a5e; --panel: #ffffff; --panel-2: #eef1fe; --border: #ccd4f6; --border-strong: #a3b0ee;
+  --text: #141a2e; --muted: #4a5470; --faint: #525d78;
+  --accent: #4f46e5; --accent-soft: #e4e1fd; --accent-text: #ffffff; --link: #4338ca;
+  --ok: #0a7c46; --ok-soft: #dcf5e7; --degraded: #b45309; --degraded-soft: #fdeed3;
+  --critical: #c62828; --critical-soft: #fde3e3; --unknown: #7c3aed; --unknown-soft: #eee7fd;
+  --pending: #64748b; --pending-soft: #e6eaf2; --maint: #0284c7; --maint-soft: #ddf0fb;
+  --on-status: #ffffff; --on-degraded: #291300;
+  --empty: #dde3f8; --stripe: transparent;
+  --shadow: 0 4px 16px rgba(55, 48, 163, .10), 0 1px 3px rgba(55, 48, 163, .06); --radius: 10px; --bg-image: none;
+  --side-text: #eef1fe; --side-muted: #b3bce4; --side-hover: rgba(255, 255, 255, .09); --side-on: rgba(255, 255, 255, .16); --side-on-text: #ffffff; --side-mark: #f59e0b;
+  color-scheme: light;
+}
+:root[data-style="retail"] .themes { display: none; }
+:root[data-style="retail"] body { background-color: var(--bg); background-image: none; }
+:root[data-style="retail"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="retail"] .side { background: var(--side); border-inline-end: none; }
+:root[data-style="retail"] .side .nav a { border-radius: 8px; box-shadow: none; }
+:root[data-style="retail"] .side .btn { color: var(--side-text); }
+:root[data-style="retail"] .side .btn:hover { background: var(--side-hover); }
+:root[data-style="retail"] .side .nav a.on { font-weight: 650; }
+:root[data-style="retail"] .top { background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(8px); border-bottom-color: var(--border); }
+:root[data-style="retail"] .page { gap: 20px; padding: 20px 24px 48px; }
+:root[data-style="retail"] .card, :root[data-style="retail"] .tile, :root[data-style="retail"] .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+:root[data-style="retail"] .card > .hd { border-bottom-color: var(--border); padding: 14px 18px; }
+:root[data-style="retail"] .card > .hd h2, :root[data-style="retail"] .card > .hd h3 { font-size: 14px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="retail"] .card > .bd { padding: 16px 18px; }
+:root[data-style="retail"] .card > .bd.flush { padding: 0; }
+:root[data-style="retail"] .tile { border-top: 4px solid var(--accent); }
+:root[data-style="retail"] .tile.ok { border-top-color: var(--ok); } :root[data-style="retail"] .tile.critical { border-top-color: var(--critical); } :root[data-style="retail"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="retail"] .tile b { font-size: 30px; color: var(--accent); font-variant-numeric: tabular-nums; }
+:root[data-style="retail"] .btn { border-radius: 8px; background: var(--panel); border-color: var(--border-strong); }
+:root[data-style="retail"] .btn:hover { background: var(--panel-2); }
+:root[data-style="retail"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="retail"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="retail"] input[type=text], :root[data-style="retail"] input[type=password], :root[data-style="retail"] input[type=number], :root[data-style="retail"] input[type=url], :root[data-style="retail"] input[type=email], :root[data-style="retail"] select, :root[data-style="retail"] textarea { background: var(--panel); border-radius: 8px; }
+:root[data-style="retail"] .search, :root[data-style="retail"] .chip, :root[data-style="retail"] .seg { border-radius: 8px; background: var(--panel-2); }
+:root[data-style="retail"] .banner { border-radius: 10px; }
+:root[data-style="retail"] .pill, :root[data-style="retail"] .pill.ok, :root[data-style="retail"] .pill.degraded, :root[data-style="retail"] .pill.critical, :root[data-style="retail"] .pill.unknown, :root[data-style="retail"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="retail"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="retail"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 72%, var(--text)); }
+:root[data-style="retail"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 68%, var(--text)); }
+:root[data-style="retail"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 82%, var(--text)); }
+:root[data-style="retail"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 80%, var(--text)); }
+:root[data-style="retail"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 78%, var(--text)); }
+:root[data-style="retail"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom: 2px solid var(--border-strong); }
+:root[data-style="retail"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="retail"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="retail"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+:root[data-style="retail"] .pub .overall { border-radius: 12px; }
+/* The managers' summary as a KPI wall: the four key figures take the
+   four saturated bands of the board (indigo, cyan, orange, violet);
+   the figures themselves keep their status colours. */
+:root[data-style="retail"] .sum-kpis .kpi { border-top: 5px solid var(--accent); border-radius: 12px; }
+:root[data-style="retail"] .sum-kpis .kpi:nth-child(2) { border-top-color: #0284c7; }
+:root[data-style="retail"] .sum-kpis .kpi:nth-child(3) { border-top-color: #d97706; }
+:root[data-style="retail"] .sum-kpis .kpi:nth-child(4) { border-top-color: #7c3aed; }
+:root[data-style="retail"] .kpi .big { font-size: 38px; }
+:root[data-style="retail"] .sum-tbl .meter span { height: 8px; border-radius: 4px; }
+:root[data-style="retail"] .sum-now { border-radius: 12px; }
+:root[data-style="retail"] .trend .bar.good { fill: var(--ok); }
