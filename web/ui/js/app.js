@@ -233,7 +233,7 @@ function Shell({ user, onLogout, onLang }) {
     case 'alerts': view = OLD_ALERT_TABS[p[1]] || p[1] === 'changes' ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]] || 'pages'} />` : html`<${Alerts} tab=${['contacts', 'periods'].includes(p[1]) ? p[1] : 'channels'} />`; break; // policies went to the teams
     // Change notices moved to Alerts and notifications; the old address opens them there.
     case 'notices': view = html`<${Notices} tab=${p[1] === 'changes' ? 'pages' : p[1] || 'pages'} />`; break;
-    case 'config': view = html`<${ConfigView} tab=${p[1] || 'edit'} />`; break;
+    case 'config': view = html`<${ConfigView} tab=${p[1] || 'import'} />`; break;
     // Nodes used to be a Settings tab; its old address opens Run mode.
     case 'settings': view = p[1] === 'nodes' ? html`<div class="page"><${Nodes} /></div>`
       : p[1] === 'users' ? html`<${Alerts} tab="contacts" />` // logins are in the user list now
@@ -355,7 +355,7 @@ export function ConfigBanner({ banner }) {
     <div class="spacer">${msg === k ? banner.message : msg}
       ${banner.diagnostics && banner.diagnostics.length > 0 && html`<ul class="small">${banner.diagnostics.slice(0, 5).map(d => html`<li class="ltr">${d.pos.line}:${d.pos.col} ${detailText(d.message)}</li>`)}</ul>`}
     </div>
-    <a class="btn sm" href="#/config">${t('ui.banner.open')}</a>
+    <a class="btn sm" href="#/config/edit">${t('ui.banner.open')}</a>
   </div>`;
 }
 
