@@ -1,4 +1,4 @@
-// Styles and branding: the console's layout (classic, modern, ...), the
+// Styles and branding: the console's layout (classic, office, ...), the
 // installation's default for it, each account's own choice, and the
 // product name to show.
 import { get, put } from './api.js';

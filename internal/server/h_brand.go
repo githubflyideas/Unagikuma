@@ -15,11 +15,13 @@ import (
 // Styles are built-in layouts of the console: how pages are laid out
 // (cards, tables, spacing, type), independent of the colour theme. They
 // are listed in styles/styles.json of the web files; every style but
-// "classic" has its own styles/<id>.css. The four scenario styles
-// (office, datacenter, retail, noc) are registered: an unregistered
-// installation lists them but cannot use them — their sheets are not
-// served and they cannot be picked or set as the default. Every other
-// style is free.
+// "classic" has its own styles/<id>.css. The only styles are the four
+// scenario styles (office, datacenter, retail, noc), and they are
+// registered: an unregistered installation lists them but cannot use
+// them — their sheets are not served and they cannot be picked or set
+// as the default. A stored choice naming a style that is not there
+// (an older style, a registered one on an unregistered installation)
+// falls back to "classic" everywhere it is applied.
 
 const (
 	styleClassic    = "classic"

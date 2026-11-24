@@ -46,14 +46,15 @@ var brandUI = fstest.MapFS{
 	"index.html":         {Data: []byte("<html></html>")},
 	"logo.png":           {Data: []byte("product logo")},
 	"favicon.png":        {Data: []byte("product icon")},
-	"styles/styles.json": {Data: []byte(`[{"id": "modern"}, {"id": "harbour"}]`)},
-	"styles/modern.css":  {Data: []byte(":root[data-style=modern] {}")},
+	"styles/styles.json": {Data: []byte(`[{"id": "plain"}, {"id": "harbour"}]`)},
+	"styles/plain.css":   {Data: []byte(":root[data-style=plain] {}")},
 	"styles/harbour.css": {Data: []byte(":root[data-style=harbour] {}")},
 }
 
 // Branding changes need a registered installation: an unregistered
 // write is refused with the registration error and nothing is kept.
-// Every style is free: choosing the default style is not branding.
+// The fixture's styles are free: choosing the default style is not
+// branding.
 func TestBranding(t *testing.T) {
 	e := newEnv(t, testBind, brandUI)
 	e.setup()
@@ -105,7 +106,7 @@ func TestBranding(t *testing.T) {
 	if pub.Name != "Unagikuma" {
 		t.Fatalf("name before registering: %q", pub.Name)
 	}
-	for _, id := range []string{"modern", "harbour"} {
+	for _, id := range []string{"plain", "harbour"} {
 		if c, _ := e.raw("GET", "/styles/"+id+".css", nil, ""); c != 200 {
 			t.Fatalf("style %s unregistered: %d", id, c)
 		}
@@ -169,13 +170,75 @@ func TestBranding(t *testing.T) {
 	}
 }
 
+var finalUI = fstest.MapFS{
+	"index.html":            {Data: []byte("<html></html>")},
+	"logo.png":              {Data: []byte("product logo")},
+	"favicon.png":           {Data: []byte("product icon")},
+	"status.html":           {Data: []byte("<!doctype html>\n<html lang=\"en\">\n<head><title>Status</title>\n<link rel=\"stylesheet\" href=\"/app.css\">\n</head>\n<body class=\"public\">\n<div id=\"app\"><div class=\"boot\"></div></div>\n</body>\n</html>")},
+	"wall.html":             {Data: []byte("<html lang=\"en\" data-theme=\"ink\">\n<head>\n<link rel=\"stylesheet\" href=\"/app.css\">\n</head>\n<body class=\"wallpage\"></body>\n</html>")},
+	"styles/styles.json":    {Data: []byte(`[{"id": "datacenter", "registered": true}]`)},
+	"styles/datacenter.css": {Data: []byte(":root[data-style=datacenter] {}")},
+}
+
+// A stored style that is not shipped any more — an installation or an
+// account still set to a style from an older release — falls back to
+// classic everywhere: the brand answer, the public status page and the
+// styled shells carry no trace of it, its sheet is not served, and
+// setting it as the default is the unknown-style error.
+func TestDeletedStyleFallsBack(t *testing.T) {
+	e := newEnv(t, testBind, finalUI)
+	e.setup()
+
+	if err := e.app.Store().SetSetting(styleDefaultKey, "sakura"); err != nil {
+		t.Fatal(err)
+	}
+	var pub struct {
+		Style  string
+		Styles []struct {
+			ID      string
+			Allowed bool
+		}
+	}
+	if c := e.do("GET", "/api/v1/brand", nil, &pub); c != 200 || pub.Style != "classic" || len(pub.Styles) != 2 {
+		t.Fatalf("public with a deleted default: %d %+v", c, pub)
+	}
+	for _, st := range pub.Styles {
+		if st.ID == "sakura" {
+			t.Fatalf("deleted style still listed: %+v", pub.Styles)
+		}
+	}
+	if c, b := e.raw("GET", "/status/main", nil, ""); c != 200 || strings.Contains(string(b), "sakura") {
+		t.Fatalf("status page with a deleted default: %d %s", c, b)
+	}
+	if c, b := e.raw("GET", "/wall", nil, ""); c != 200 || strings.Contains(string(b), "sakura") {
+		t.Fatalf("wall with a deleted default: %d %s", c, b)
+	}
+	var er struct{ Code string }
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "sakura"}, &er); c != 400 || er.Code != CodeInvalid {
+		t.Fatalf("deleted style as default: %d %+v", c, er)
+	}
+	if c, _ := e.raw("GET", "/styles/sakura.css", nil, ""); c != 404 {
+		t.Fatalf("deleted sheet: %d", c)
+	}
+	// An account's stored choice is kept verbatim, but the brand list
+	// it is applied against has no such style, so the console falls
+	// back to classic (styles.js currentStyle).
+	if c := e.do("PUT", "/api/v1/preferences", map[string]string{"style": "sakura"}, nil); c != 200 {
+		t.Fatalf("account choice stored: %d", c)
+	}
+	var prefs struct{ Style string }
+	if c := e.do("GET", "/api/v1/preferences", nil, &prefs); c != 200 || prefs.Style != "sakura" {
+		t.Fatalf("account choice read back: %d %+v", c, prefs)
+	}
+}
+
 var packUI = fstest.MapFS{
 	"index.html":            {Data: []byte("<html></html>")},
 	"logo.png":              {Data: []byte("product logo")},
 	"favicon.png":           {Data: []byte("product icon")},
 	"wall.html":             {Data: []byte("<html lang=\"en\" data-theme=\"ink\">\n<head>\n<link rel=\"stylesheet\" href=\"/app.css\">\n</head>\n<body class=\"wallpage\"></body>\n</html>")},
-	"styles/styles.json":    {Data: []byte(`[{"id": "modern"}, {"id": "datacenter", "registered": true}]`)},
-	"styles/modern.css":     {Data: []byte(":root[data-style=modern] {}")},
+	"styles/styles.json":    {Data: []byte(`[{"id": "plain"}, {"id": "datacenter", "registered": true}]`)},
+	"styles/plain.css":      {Data: []byte(":root[data-style=plain] {}")},
 	"styles/datacenter.css": {Data: []byte(":root[data-style=datacenter] {}")},
 }
 
@@ -201,23 +264,23 @@ func TestRegisteredStyles(t *testing.T) {
 	for _, st := range pub.Styles {
 		allowed[st.ID] = st.Allowed
 	}
-	if !allowed["classic"] || !allowed["modern"] || allowed["datacenter"] {
+	if !allowed["classic"] || !allowed["plain"] || allowed["datacenter"] {
 		t.Fatalf("allowed before registering: %v", allowed)
 	}
 	if c, _ := e.raw("GET", "/styles/datacenter.css", nil, ""); c != 404 {
 		t.Fatalf("registered sheet unregistered: %d", c)
 	}
-	if c, _ := e.raw("GET", "/styles/modern.css", nil, ""); c != 200 {
+	if c, _ := e.raw("GET", "/styles/plain.css", nil, ""); c != 200 {
 		t.Fatalf("free sheet unregistered: %d", c)
 	}
 	var er struct{ Code string }
 	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "datacenter"}, &er); c != 402 || er.Code != CodeRegistration {
 		t.Fatalf("registered style as default, unregistered: %d %+v", c, er)
 	}
-	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "modern"}, nil); c != 200 {
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "plain"}, nil); c != 200 {
 		t.Fatalf("free style as default, unregistered: %d", c)
 	}
-	if c, b := e.raw("GET", "/wall", nil, ""); c != 200 || !strings.Contains(string(b), `data-style="modern"`) || !strings.Contains(string(b), "styles/modern.css") {
+	if c, b := e.raw("GET", "/wall", nil, ""); c != 200 || !strings.Contains(string(b), `data-style="plain"`) || !strings.Contains(string(b), "styles/plain.css") {
 		t.Fatalf("wall shell with a free default: %d %s", c, b)
 	}
 
