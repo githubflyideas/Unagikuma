@@ -140,6 +140,7 @@ type kumaMonitor struct {
 	Port             int             `json:"port"`
 	Interval         int             `json:"interval"`
 	RetryInterval    int             `json:"retryInterval"`
+	ResendInterval   int             `json:"resendInterval"`
 	MaxRetries       int             `json:"maxretries"`
 	Timeout          float64         `json:"timeout"`
 	Active           flag            `json:"active"`
@@ -199,6 +200,9 @@ type kumaImport struct {
 	secrets map[string]bool
 	byID    map[int64]*kumaMonitor
 	monName map[int64]string // Kuma id → record name
+	// defInterval is the interval a record without one inherits from
+	// the configuration it is added to, for the report.
+	defInterval string
 }
 
 // Kuma converts an Uptime Kuma database (kuma.db) or JSON backup
@@ -232,8 +236,12 @@ func KumaWithWAL(data, wal []byte, existing *config.Config, o Options) (*Result,
 		source += " " + bk.Version
 	}
 	res := &Result{Secrets: map[string]string{}, Area: o.Area, Users: users, Source: source, File: o.File, When: o.now(), PushTokens: map[string]string{}}
+	defInterval := "1m" // the built-in default of a new configuration file
+	if existing != nil && existing.Defaults.Interval > 0 {
+		defInterval = humanDur(int(existing.Defaults.Interval.Seconds()))
+	}
 	k := &kumaImport{bk: &bk, o: o, res: res, names: newNamer(existing), have: existingChecks(existing), secrets: map[string]bool{},
-		byID: map[int64]*kumaMonitor{}, monName: map[int64]string{}}
+		byID: map[int64]*kumaMonitor{}, monName: map[int64]string{}, defInterval: defInterval}
 	for i := range bk.MonitorList {
 		k.byID[bk.MonitorList[i].ID] = &bk.MonitorList[i]
 	}
@@ -955,17 +963,30 @@ func (b *kumaSpec) common() {
 	}
 	if m.Interval > 0 {
 		b.spec.Interval = humanDur(m.Interval)
+	} else {
+		// No interval in Uptime Kuma: the record would silently run at
+		// whatever default the file it lands in has. Say which one.
+		b.it.attention("It has no check interval in Uptime Kuma, so it will run at the default interval of the configuration it is added to ("+b.k.defInterval+").", "Set the interval on the record if that is not what you want.")
 	}
-	if m.RetryInterval > 0 && m.RetryInterval != m.Interval {
+	// The retry interval is carried as written, also when it equals the
+	// check interval: leaving it out would silently fall back to the
+	// default retry (15s), which is usually much shorter than Kuma's.
+	if m.RetryInterval > 0 {
 		b.add("retry", humanDur(m.RetryInterval))
 	}
 	b.add("attempts", strconv.Itoa(m.MaxRetries+1))
+	// The timeout is carried as written, also when it is not shorter
+	// than the interval: the configuration only warns about that, it
+	// does not forbid it, so there is nothing to rewrite it to.
 	if m.Timeout > 0 {
-		t := m.Timeout
-		if m.Interval > 0 && t >= float64(m.Interval) {
-			t = float64(m.Interval) * 0.8
-		}
-		b.add("timeout", strconv.FormatFloat(t, 'f', -1, 64)+"s")
+		b.add("timeout", strconv.FormatFloat(m.Timeout, 'f', -1, 64)+"s")
+	}
+	if m.ResendInterval > 0 {
+		// Kuma resends the notification after that many more failed
+		// checks. There is no per-monitor equivalent here (a policy's
+		// repeat= is time-based), so say it is not carried over.
+		b.it.attention(fmt.Sprintf("Uptime Kuma would send its notification again after %d more failed checks (resendInterval); that setting has no equivalent and was not carried over.", m.ResendInterval),
+			"To be reminded while it stays down, set repeat= on its policy.")
 	}
 }
 
