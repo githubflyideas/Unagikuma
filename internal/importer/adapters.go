@@ -93,20 +93,26 @@ func adapterResult(source string, monitors []adapterMonitor, existing *config.Co
 		if m.sourceType != "" && !strings.EqualFold(m.sourceType, "http") && m.typ == "" && cleanLabel(m.sourceType) {
 			it.Type = m.sourceType
 		}
-		name := newNamer(nil).take(m.name, "endpoint")
-		if used[name] || existing != nil && (existing.HasName(name) || existing.MName == name) {
-			// Imported before: the same check under the same name is
-			// already here, so a second run leaves it as it is.
-			if em := existingMonitor(existing, name); em != nil && !used[name] && em.Type == recType && em.Target == m.target {
-				used[name] = true
-				it.Name, it.Target, it.Status, it.Todo = name, m.target, StatusSkipped, ""
-				r.add(it)
-				continue
-			}
-			m.block("record name collision; rename the source monitor explicitly")
-		}
-		used[name] = true
 		keys := m.check()
+		name := ""
+		if !m.blocked() {
+			// Only a monitor that will be emitted needs a name; naming
+			// a blocked one would pile a spurious collision reason on
+			// top of the reasons that already keep it out.
+			name = newNamer(nil).take(m.name, "endpoint")
+			if used[name] || existing != nil && (existing.HasName(name) || existing.MName == name) {
+				// Imported before: the same check under the same name is
+				// already here, so a second run leaves it as it is.
+				if em := existingMonitor(existing, name); em != nil && !used[name] && em.Type == recType && em.Target == m.target {
+					used[name] = true
+					it.Name, it.Target, it.Status, it.Todo = name, m.target, StatusSkipped, ""
+					r.add(it)
+					continue
+				}
+				m.block("record name collision; rename the source monitor explicitly")
+			}
+			used[name] = true
+		}
 		if m.blocked() {
 			it.Why = joinReasons(m.whys)
 			r.add(it)
