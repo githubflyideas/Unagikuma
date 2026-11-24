@@ -87,6 +87,7 @@
 "ui.login.forgot": "نسيت كلمة المرور؟ نفّذ على الخادم",
 "ui.banner.open": "عرض الإعدادات",
 "ui.banner.invalid": "في monitors.conf أخطاء؛ تستمر آخر نسخة سليمة في العمل.",
+"ui.banner.invalid_first": "يحتوي monitors.conf على أخطاء ولا توجد نسخة صالحة سابقة، لذا لا تتم مراقبة أي شيء بعد — صحّح الإعدادات للبدء.",
 "ui.banner.serial_not_bumped": "عُدِّل monitors.conf لكن رقم المراجعة لم يُزَد، لذا لم يُطبَّق التغيير بعد.",
 "ui.banner.serial_lower": "رقم المراجعة في monitors.conf ({serial}) أقل من الإصدار العامل؛ تم تجاهل التغيير.",
 "ui.banner.applied": "طُبّقت الإعدادات {serial}.",

@@ -87,6 +87,7 @@
 "ui.login.forgot": "Quên mật khẩu? Trên máy chủ hãy chạy",
 "ui.banner.open": "Xem cấu hình",
 "ui.banner.invalid": "monitors.conf có lỗi; phiên bản đúng gần nhất vẫn đang chạy.",
+"ui.banner.invalid_first": "monitors.conf có lỗi và không có phiên bản tốt trước đó, nên chưa có gì được giám sát — hãy sửa cấu hình để bắt đầu.",
 "ui.banner.serial_not_bumped": "monitors.conf đã được sửa nhưng số phiên bản chưa được tăng, nên thay đổi chưa được áp dụng.",
 "ui.banner.serial_lower": "Số phiên bản trong monitors.conf ({serial}) thấp hơn bản đang chạy; thay đổi bị bỏ qua.",
 "ui.banner.applied": "Đã áp dụng cấu hình {serial}.",

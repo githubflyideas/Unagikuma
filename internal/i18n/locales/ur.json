@@ -87,6 +87,7 @@
 "ui.login.forgot": "پاس ورڈ بھول گئے؟ سرور پر چلائیں",
 "ui.banner.open": "کنفیگریشن دیکھیں",
 "ui.banner.invalid": "monitors.conf میں خرابیاں ہیں؛ آخری درست ورژن چل رہا ہے۔",
+"ui.banner.invalid_first": "monitors.conf میں غلطیاں ہیں اور کوئی پرانا درست ورژن موجود نہیں، اس لیے ابھی کسی چیز کی نگرانی نہیں ہو رہی — شروع کرنے کے لیے کنفیگریشن درست کریں۔",
 "ui.banner.serial_not_bumped": "monitors.conf میں ترمیم ہوئی لیکن اس کا نظرِ ثانی نمبر نہیں بڑھایا گیا، اس لیے تبدیلی ابھی نافذ نہیں ہوئی۔",
 "ui.banner.serial_lower": "monitors.conf کا نظرِ ثانی نمبر ({serial}) چل رہے نمبر سے کم ہے؛ تبدیلی نظرانداز کر دی گئی۔",
 "ui.banner.applied": "کنفیگریشن {serial} نافذ ہو گئی۔",

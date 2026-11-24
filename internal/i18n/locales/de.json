@@ -87,6 +87,7 @@
 "ui.login.forgot": "Passwort vergessen? Auf dem Server ausführen:",
 "ui.banner.open": "Konfiguration ansehen",
 "ui.banner.invalid": "monitors.conf enthält Fehler; die letzte gültige Version läuft weiter.",
+"ui.banner.invalid_first": "monitors.conf enthält Fehler und es gibt keine frühere gültige Version; es wird noch nichts überwacht – korrigieren Sie die Konfiguration, um zu starten.",
 "ui.banner.serial_not_bumped": "monitors.conf wurde bearbeitet, aber die Revision nicht erhöht; die Änderung ist noch nicht übernommen.",
 "ui.banner.serial_lower": "Die Revision in monitors.conf ({serial}) ist niedriger als die laufende; die Änderung wird ignoriert.",
 "ui.banner.applied": "Konfiguration {serial} übernommen.",

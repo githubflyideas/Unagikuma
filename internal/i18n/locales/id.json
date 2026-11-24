@@ -87,6 +87,7 @@
 "ui.login.forgot": "Lupa kata sandi? Di server jalankan",
 "ui.banner.open": "Lihat konfigurasi",
 "ui.banner.invalid": "monitors.conf berisi kesalahan; versi baik terakhir tetap berjalan.",
+"ui.banner.invalid_first": "monitors.conf mengandung kesalahan dan tidak ada versi baik sebelumnya, jadi belum ada yang dipantau — perbaiki konfigurasi untuk memulai.",
 "ui.banner.serial_not_bumped": "monitors.conf diubah tetapi revisinya tidak dinaikkan, jadi perubahan belum diterapkan.",
 "ui.banner.serial_lower": "Revisi di monitors.conf ({serial}) lebih rendah dari yang berjalan; perubahan diabaikan.",
 "ui.banner.applied": "Konfigurasi {serial} diterapkan.",

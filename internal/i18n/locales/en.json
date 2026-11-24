@@ -287,6 +287,7 @@
 "ui.login.forgot": "Forgot the password? On the server run",
 "ui.banner.open": "View configuration",
 "ui.banner.invalid": "monitors.conf has errors; the last good version keeps running.",
+"ui.banner.invalid_first": "monitors.conf has errors and there is no earlier good version, so nothing is being monitored yet — fix the configuration to start.",
 "ui.banner.serial_not_bumped": "monitors.conf was edited but its revision was not increased, so the change is not applied yet.",
 "ui.banner.serial_lower": "The revision in monitors.conf ({serial}) is lower than the running one; the change is ignored.",
 "ui.banner.applied": "Configuration {serial} applied.",

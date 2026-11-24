@@ -87,6 +87,7 @@
 "ui.login.forgot": "Esqueceu a senha? No servidor, execute",
 "ui.banner.open": "Ver configuração",
 "ui.banner.invalid": "monitors.conf tem erros; a última versão válida continua em execução.",
+"ui.banner.invalid_first": "O monitors.conf tem erros e não há uma versão válida anterior, por isso ainda nada está sendo monitorado — corrija a configuração para começar.",
 "ui.banner.serial_not_bumped": "monitors.conf foi editado, mas a revisão não foi aumentada; a alteração ainda não foi aplicada.",
 "ui.banner.serial_lower": "A revisão em monitors.conf ({serial}) é menor que a em execução; a alteração é ignorada.",
 "ui.banner.applied": "Configuração {serial} aplicada.",

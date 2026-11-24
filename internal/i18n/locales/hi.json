@@ -87,6 +87,7 @@
 "ui.login.forgot": "पासवर्ड भूल गए? सर्वर पर चलाएँ",
 "ui.banner.open": "कॉन्फ़िगरेशन देखें",
 "ui.banner.invalid": "monitors.conf में त्रुटियाँ हैं; पिछला सही संस्करण चलता रहेगा।",
+"ui.banner.invalid_first": "monitors.conf में त्रुटियाँ हैं और कोई पुराना सही संस्करण नहीं है, इसलिए अभी कुछ भी मॉनिटर नहीं हो रहा है — शुरू करने के लिए कॉन्फ़िगरेशन ठीक करें।",
 "ui.banner.serial_not_bumped": "monitors.conf बदला गया लेकिन उसका संशोधन संख्या नहीं बढ़ाई गई, इसलिए बदलाव अभी लागू नहीं हुआ।",
 "ui.banner.serial_lower": "monitors.conf की संशोधन संख्या ({serial}) चल रही संख्या से कम है; बदलाव अनदेखा किया गया।",
 "ui.banner.applied": "कॉन्फ़िगरेशन {serial} लागू हुआ।",

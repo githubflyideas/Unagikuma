@@ -257,9 +257,20 @@ func TestSecretsResolution(t *testing.T) {
 	text = strings.Replace(text, "default IN POLICY chain=logc", "default IN POLICY chain=logc,hook", 1)
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "monitors.conf"), []byte(text), 0o600)
-	if _, err := New(Options{DataDir: dir, Probe: (&fakeProbes{fail: map[string]bool{}}).run}); err == nil {
-		t.Fatal("unknown secret must fail validation on first start")
+	// An unknown secret fails validation; on a first start that now
+	// means repair mode — the configuration does not run — rather
+	// than a refused start.
+	a0, err := New(Options{DataDir: dir, Probe: (&fakeProbes{fail: map[string]bool{}}).run})
+	if err != nil {
+		t.Fatal(err)
 	}
+	if b := a0.Banner(); b == nil || b.Code != "invalid_first" {
+		t.Fatalf("banner = %+v, want invalid_first (unknown secret must not run)", b)
+	}
+	if _, ok := a0.engineConfig(a0.Config().Config).Channels["hook"]; ok {
+		t.Fatal("the unresolved-secret channel is running")
+	}
+	a0.Store().Close()
 	// With the secret present, the reference validates and resolves.
 	st, _ := store.Open(dir, store.Options{})
 	kek, _ := store.LoadOrCreateKey(dir)

@@ -87,6 +87,7 @@
 "ui.login.forgot": "비밀번호를 잊었나요? 서버에서 실행:",
 "ui.banner.open": "구성 보기",
 "ui.banner.invalid": "monitors.conf에 오류가 있습니다. 마지막으로 정상이던 버전으로 실행 중입니다.",
+"ui.banner.invalid_first": "monitors.conf에 오류가 있고 이전의 정상 버전도 없어 아직 아무것도 모니터링하지 않습니다. 설정을 수정하면 시작됩니다.",
 "ui.banner.serial_not_bumped": "monitors.conf가 수정되었지만 리비전이 올라가지 않아 아직 적용되지 않았습니다.",
 "ui.banner.serial_lower": "monitors.conf의 리비전({serial})이 실행 중인 것보다 낮아 변경이 무시되었습니다.",
 "ui.banner.applied": "설정 {serial}이(가) 적용되었습니다.",

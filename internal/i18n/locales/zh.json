@@ -284,6 +284,7 @@
 "ui.login.forgot": "忘记密码？在服务器上运行",
 "ui.banner.open": "查看配置",
 "ui.banner.invalid": "monitors.conf 有错误，仍在运行上一个正确的版本。",
+"ui.banner.invalid_first": "monitors.conf 有错误，且没有更早的正确版本，因此目前尚未监控任何目标——请修正配置后开始。",
 "ui.banner.serial_not_bumped": "monitors.conf 已修改但版本号没有增加，修改尚未生效。",
 "ui.banner.serial_lower": "monitors.conf 的版本号（{serial}）低于正在运行的版本，修改被忽略。",
 "ui.banner.applied": "配置 {serial} 已生效。",

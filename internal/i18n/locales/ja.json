@@ -87,6 +87,7 @@
 "ui.login.forgot": "パスワードを忘れた場合はサーバーで次を実行:",
 "ui.banner.open": "設定を表示",
 "ui.banner.invalid": "monitors.conf にエラーがあります。最後に正常だった版で動作しています。",
+"ui.banner.invalid_first": "monitors.conf にエラーがあり、以前の正常なバージョンもないため、まだ何も監視していません。設定を修正すると開始します。",
 "ui.banner.serial_not_bumped": "monitors.conf が編集されましたがリビジョンが増えていないため、まだ反映されていません。",
 "ui.banner.serial_lower": "monitors.conf のリビジョン（{serial}）が実行中の版より小さいため、変更は無視されました。",
 "ui.banner.applied": "設定 {serial} を適用しました。",

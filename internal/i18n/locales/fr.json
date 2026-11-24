@@ -87,6 +87,7 @@
 "ui.login.forgot": "Mot de passe oublié ? Sur le serveur, lancez",
 "ui.banner.open": "Voir la configuration",
 "ui.banner.invalid": "monitors.conf contient des erreurs ; la dernière version correcte reste active.",
+"ui.banner.invalid_first": "monitors.conf contient des erreurs et il n'existe aucune version valide antérieure : rien n'est encore surveillé — corrigez la configuration pour démarrer.",
 "ui.banner.serial_not_bumped": "monitors.conf a été modifié mais sa révision n’a pas été augmentée : la modification n’est pas encore appliquée.",
 "ui.banner.serial_lower": "La révision de monitors.conf ({serial}) est inférieure à celle en service ; la modification est ignorée.",
 "ui.banner.applied": "Configuration {serial} appliquée.",
