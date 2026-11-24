@@ -519,9 +519,9 @@ Pick a theme with the coloured dots under the product name: Perfume, Country, In
 
 ## Registration and quotas
 
-Without a licence everything works, with two limits: up to 5 accounts, and the last 3 days of the audit log (no export, no integrity check). Nodes are never limited, and every interface style is free. Install the `license.json` you received under **Settings › Registration**; a trial licence is issued for the installation number shown there.
+Without a licence everything works, with two limits: up to 5 accounts, and the last 3 days of the audit log (no export, no integrity check). Nodes are never limited. The interface styles are free, except the four scenario styles — Small business, Data centre, Retail chain and ISP — which are registered. Install the `license.json` you received under **Settings › Registration**; a trial licence is issued for the installation number shown there.
 
-A licence adds the whole audit log (with export and the integrity check) and the product's own name, logo and status page footer; there is nothing to pick, a registered installation has all of it. It states its own number of accounts (none stated: no limit) and never gives fewer than the free 5. Beyond the limit, adding a new or imported account is refused with a message saying so. Nothing already in use is switched off, for example when a licence is removed; the registration page shows the usage against the limit.
+A licence adds the whole audit log (with export and the integrity check), the product's own name, logo and status page footer, and the four scenario styles; there is nothing to pick, a registered installation has all of it. It states its own number of accounts (none stated: no limit) and never gives fewer than the free 5. Beyond the limit, adding a new or imported account is refused with a message saying so. Nothing already in use is switched off, for example when a licence is removed; the registration page shows the usage against the limit.
 
 ## Moving from Uptime Kuma, Nagios, Checkmate or Gatus
 
