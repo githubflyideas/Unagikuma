@@ -26,9 +26,12 @@ Usage:
   unagikuma import checkmate [flags] monitors.json
   unagikuma import gatus [flags] config.yaml
 
-  checkmate  bluewave-labs/Checkmate Settings export (HTTP subset).
-  gatus      Gatus endpoints YAML (literal HTTP status condition subset).
-             Unsupported items block apply; see docs/import-adapters.md.
+  checkmate  bluewave-labs/Checkmate Settings export (HTTP, port and
+             ping monitors; the vendor defaults import, approximations
+             are stated in the report).
+  gatus      Gatus endpoints YAML (HTTP, ping, TCP and DNS endpoints;
+             what cannot be carried is listed in the report and left
+             out, the rest still imports).
 
   kuma     Uptime Kuma's database (data/kuma.db; stop Uptime Kuma first)
            or a backup exported from Uptime Kuma 1.x (Settings › Backup).
