@@ -254,8 +254,8 @@ func TestRegisteredStyles(t *testing.T) {
 	e.setup()
 
 	var pub struct {
-		Style      string
-		Styles     []struct {
+		Style  string
+		Styles []struct {
 			ID      string
 			Allowed bool
 		}

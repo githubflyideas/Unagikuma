@@ -55,16 +55,16 @@ func (e *InvalidError) Error() string {
 }
 
 type configManager struct {
-	app    *App
-	path   string
-	mu     sync.Mutex
-	cur    ConfigState
+	app  *App
+	path string
+	mu   sync.Mutex
+	cur  ConfigState
 	// capExempt > 0 while a change the monitor limit does not govern
 	// applies: an import (the import ceiling governs it) or the gateway
 	// seeding (its monitors never count).
 	capExempt atomic.Int32
-	banner *Banner
-	stat   fileStamp
+	banner    *Banner
+	stat      fileStamp
 }
 
 type fileStamp struct {

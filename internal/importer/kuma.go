@@ -33,16 +33,16 @@ type Result struct {
 	Monitors int                 `json:"monitors"`
 	// TotalAfter is the installation's counted monitor total once
 	// this import is applied, when a ceiling was in force.
-	TotalAfter int `json:"total_after,omitempty"`
-	Channels int                 `json:"channels"`
-	Notes    []string            `json:"notes"` // everything not imported as it was, in one line each
-	Area     string              `json:"area"`  // $SCOPE section the monitors go to
-	Users    []KumaUser          `json:"users"` // accounts found in kuma.db
-	Items    []Item              `json:"items"` // the report, item by item
-	Info     []string            `json:"info"`  // general remarks for the report
-	Source   string              `json:"source"`
-	File     string              `json:"file"`
-	When     time.Time           `json:"-"`
+	TotalAfter int        `json:"total_after,omitempty"`
+	Channels   int        `json:"channels"`
+	Notes      []string   `json:"notes"` // everything not imported as it was, in one line each
+	Area       string     `json:"area"`  // $SCOPE section the monitors go to
+	Users      []KumaUser `json:"users"` // accounts found in kuma.db
+	Items      []Item     `json:"items"` // the report, item by item
+	Info       []string   `json:"info"`  // general remarks for the report
+	Source     string     `json:"source"`
+	File       string     `json:"file"`
+	When       time.Time  `json:"-"`
 	// PushTokens are Uptime Kuma push tokens by monitor name: set them
 	// once the monitors exist and senders keep working unchanged.
 	PushTokens map[string]string `json:"-"`
