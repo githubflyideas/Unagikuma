@@ -2081,5 +2081,6 @@
 "ui.sys.listen": "监听地址",
 "ui.sys.ui_plaintext": "当前 UI 请求走的是明文 HTTP。请用反向代理终结 TLS，或启动时加 --tls-cert/--tls-key。同端口上的 Agent 流量已是钉扎 TLS。请把监听地址放在内网。",
 "ui.ha.master_alive": "主服务器 {master} 仍在运行,现在接管会出现两个主服务器。要转移主角色,请在主服务器上执行交接(设置 › 节点)。只有在主服务器已经坏掉时才强制接管。",
-"ui.ha.promote_force": "仍然强制接管"
+"ui.ha.promote_force": "仍然强制接管",
+"ui.banner.invalid_first": "monitors.conf 有错误，且没有更早的正确版本，因此目前尚未监控任何目标——请修正配置后开始。"
 }

@@ -35,7 +35,7 @@ func (s *Server) serveStatusHTML(w http.ResponseWriter, r *http.Request, name st
 	w.Header().Set("Cache-Control", "no-cache")
 	if sp == nil {
 		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write(shell) // the script says it does not exist
+		_, _ = w.Write(injectBase(shell, s.urlPrefix(r))) // the script says it does not exist
 		return true
 	}
 	body := s.pageCache.get(sp.Name, s.now(), func() []byte { return s.statusPageBody(sp) })
@@ -45,14 +45,14 @@ func (s *Server) serveStatusHTML(w http.ResponseWriter, r *http.Request, name st
 	if st := s.defaultStyle(); st != styleClassic {
 		// The public pages follow the installation's default style.
 		style = ` data-style="` + st + `"`
-		page = strings.Replace(page, `<link rel="stylesheet" href="/app.css">`, `<link rel="stylesheet" href="/app.css">`+"\n"+`<link rel="stylesheet" href="/styles/`+st+`.css">`, 1)
+		page = strings.Replace(page, `<link rel="stylesheet" href="app.css">`, `<link rel="stylesheet" href="app.css">`+"\n"+`<link rel="stylesheet" href="styles/`+st+`.css">`, 1)
 	}
 	page = strings.Replace(page, `<html lang="en">`, `<html lang="`+lang+`"`+dirAttr(lang)+style+`>`, 1)
 	page = strings.Replace(page, "<title>Status</title>", "<title>"+html.EscapeString(sp.Title)+"</title>", 1)
 	// JSON in a non-executed script element; "</" cannot end it early.
 	data := `<script type="application/json" id="page-data">` + strings.ReplaceAll(string(body), "</", `<\/`) + `</script>`
 	page = strings.Replace(page, `<div id="app"><div class="boot"></div></div>`, `<div id="app">`+statusFirstScreen(body, lang)+`</div>`+data, 1)
-	_, _ = w.Write([]byte(page))
+	_, _ = w.Write(injectBase([]byte(page), s.urlPrefix(r)))
 	return true
 }
 

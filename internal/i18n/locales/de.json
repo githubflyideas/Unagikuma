@@ -2090,5 +2090,6 @@
 "ui.sys.listen": "Listen",
 "ui.sys.ui_plaintext": "Diese UI-Anfrage nutzte HTTP ohne TLS. Bevorzugen Sie einen TLS-Reverse-Proxy oder --tls-cert/--tls-key. Agent-Verkehr nutzt bereits gepinntes TLS auf demselben Port. Listen-Adresse im privaten Netz belassen.",
 "ui.ha.master_alive": "Der Master {master} läuft noch. Eine Übernahme jetzt ergibt zwei Master. Um die Master-Rolle zu verschieben, übergeben Sie vom Master aus (Einstellungen › Knoten). Erzwingen Sie die Übernahme nur, wenn dieser Master defekt ist.",
-"ui.ha.promote_force": "Trotzdem übernehmen"
+"ui.ha.promote_force": "Trotzdem übernehmen",
+"ui.banner.invalid_first": "monitors.conf enthält Fehler und es gibt keine frühere gültige Version; es wird noch nichts überwacht – korrigieren Sie die Konfiguration, um zu starten."
 }

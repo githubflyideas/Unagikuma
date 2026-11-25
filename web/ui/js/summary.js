@@ -8,7 +8,7 @@ import { t, setLang, detectLang, loadLanguages, fmtNum, fmtTime, dur, ago, curre
 // The installation's own name when it has one.
 let PRODUCT = 'Unagikuma';
 try {
-  const b = await (await fetch('/api/v1/brand')).json();
+  const b = await (await fetch('api/v1/brand')).json();
   if (b && b.name) PRODUCT = b.name;
 } catch { /* keep the product's */ }
 
@@ -18,7 +18,7 @@ const token = (() => {
 })();
 
 async function api(path) {
-  const r = await fetch('/api/v1' + path, {
+  const r = await fetch('api/v1' + path, {
     credentials: token ? 'omit' : 'same-origin',
     headers: token ? { Authorization: 'Bearer ' + token } : {},
   });

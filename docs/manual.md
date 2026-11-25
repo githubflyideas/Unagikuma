@@ -99,7 +99,7 @@ company  IN DOMAIN example.com days=45 critical-days=10
 main     IN STATUSPAGE "Service status" select="group:public"
 ```
 
-- After editing the file by hand, **increase the revision** on the `$FILE` line; Unagikuma then validates and applies it. Saving a monitor, channel or team in the web UI raises it for you. Files from earlier releases start with an `@ IN SOA … ( serial interval retry timeout attempts )` line instead; it still works the same way, and its first number is the revision. **Config & import › monitors.conf** shows the file read-only, with a copy button; edit it on the server. A file with errors is never applied: the last good version keeps running and the UI shows what is wrong.
+- After editing the file by hand, **increase the revision** on the `$FILE` line; Unagikuma then validates and applies it. Saving a monitor, channel or team in the web UI raises it for you. Files from earlier releases start with an `@ IN SOA … ( serial interval retry timeout attempts )` line instead; it still works the same way, and its first number is the revision. **Config & import › monitors.conf** shows the file read-only, with a copy button; edit it on the server. A file with errors is never applied: the last good version keeps running and the UI shows what is wrong. On a first start there is no last good version yet; instead of refusing to start, Unagikuma starts in a repair mode — the web UI runs, the banner shows the errors, and nothing is monitored until the configuration is fixed and saved, which starts normal operation without a restart.
 - Credentials never need to be in the file: store them under **Advanced › Secrets** and refer to them as `${secret:name}`. A secret the configuration still uses cannot be deleted: the refusal names the records that use it. Values from the environment can be used as `${env:NAME}` when the server is started with `--allow-env NAME`.
 - Monitors are grouped into hosts by the address they check; `device=core-sw1` groups monitors of several addresses under one name. A host with a PING monitor is UP or DOWN by that ping.
 - `parent=gw` (or `parent=sw1,gw`) declares a dependency: while a parent is down, a failing child is shown as UNREACHABLE and not notified. If the child is still down once its parents are back, it is notified as usual.
@@ -272,7 +272,7 @@ Functions: `upper`, `lower`, `trunc 20 .Name`, `join ", " .Tags`, `json .Tags`, 
 - Summaries, reports and system notices keep their own text. **Test** shows the template filled with an example.
 - A template that does not parse, or uses a name that does not exist, is refused when the channel is saved in the console. In a file it is a warning (`template_problem`): the built-in text is sent, and a name that does not exist is empty.
 - `at=` on a `dingtalk`, `wecom` or `feishu` channel mentions people on problems: `at=all`, or phone numbers separated by commas (Feishu: user ids). Recoveries and reports mention nobody.
-- A `webhook` channel sends all of the above as JSON; `body=` replaces it with your own template (`content-type=json|form|text`, `header.Name=value` for headers), and the `url=` may hold names too, which is all a `method=GET` hook can carry.
+- A `webhook` channel sends all of the above as JSON; `body=` replaces it with your own template (`content-type=json|form|text`, `header.Name=value` for headers), and the `url=` may hold names too, which is all a `method=GET` hook can carry. In a `form` body the values are URL-escaped for you, exactly as JSON bodies escape their values, so a name holding `&` or `=` stays one field's value; `{{raw .X}}` sends a value unescaped, and `{{urlquery .X}}` needs no second escaping.
 - SMS providers in China only send approved templates: `params="{{.Name}}|{{.StatusText}}|{{.ReasonText}}"` fills the template's variables in order.
 
 ### Limits, retries and falling back
@@ -607,6 +607,8 @@ unagikuma version
 `unagikuma probe` exits 0 when the check is up, 1 when it is down and 2 for a warning (a certificate inside its warning days, loss above the threshold). It uses the default thresholds, not the server's `$SET` lines; pass `cert-days=` or `cert-critical-days=` for others.
 
 Main server flags: `--data DIR` (or `UNAGIKUMA_DATA`), `--listen ADDR` (or `UNAGIKUMA_LISTEN`, default `:8077`), `--tls-cert`/`--tls-key`, `--base-url` for links in notifications, `--heartbeat-url` for an external dead man's switch (for example healthchecks.io), `--trusted-proxy CIDR,...` when running behind a reverse proxy, `--audit-retention 730d` for how long the audit log is kept at least. The port answers plain HTTP and TLS; with `--tls-cert` the UI uses your certificate and plain requests are redirected to https.
+
+Behind a reverse proxy that serves the app under a path prefix (for example `https://ops.example.com/uk/` → `http://127.0.0.1:8077/`), have the proxy strip the prefix and send `X-Forwarded-Prefix: /uk` with each request, and list the proxy in `--trusted-proxy`. The console, the public status pages and the session cookie then stay inside the prefix; without the header the same proxy setup serves a console whose assets and API calls escape to the root. Links in notifications and status-page feeds come from `--base-url`, so include the prefix there as well.
 
 ## Data and backups
 

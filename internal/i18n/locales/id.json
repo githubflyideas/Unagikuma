@@ -2081,5 +2081,6 @@
 "ui.sys.listen": "Listen",
 "ui.sys.ui_plaintext": "Permintaan UI ini memakai HTTP polos. Lebih baik reverse proxy TLS atau --tls-cert/--tls-key. Lalu lintas agen sudah memakai TLS terpasang di port yang sama. Simpan alamat listen di jaringan privat.",
 "ui.ha.master_alive": "Master {master} masih berjalan. Mengambil alih sekarang membuat dua master. Untuk memindahkan peran master, lakukan serah terima dari master (Pengaturan › Node). Paksa hanya jika master itu rusak.",
-"ui.ha.promote_force": "Tetap ambil alih"
+"ui.ha.promote_force": "Tetap ambil alih",
+"ui.banner.invalid_first": "monitors.conf mengandung kesalahan dan tidak ada versi baik sebelumnya, jadi belum ada yang dipantau — perbaiki konfigurasi untuk memulai."
 }

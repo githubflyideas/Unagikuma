@@ -2090,5 +2090,6 @@
 "ui.sys.listen": "Listen",
 "ui.sys.ui_plaintext": "This UI request used plain HTTP. Prefer a TLS reverse proxy or --tls-cert/--tls-key. Agent traffic already uses pinned TLS on the same port. Keep the listen address on a private network.",
 "ui.ha.master_alive": "The master {master} is still running. Taking over now makes two masters. To move the master role, hand over from the master (Settings › Nodes). Promote anyway only if that master is broken.",
-"ui.ha.promote_force": "Promote anyway"
+"ui.ha.promote_force": "Promote anyway",
+"ui.banner.invalid_first": "monitors.conf has errors and there is no earlier good version, so nothing is being monitored yet — fix the configuration to start."
 }

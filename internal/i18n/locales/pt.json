@@ -2090,5 +2090,6 @@
 "ui.sys.listen": "Escuta",
 "ui.sys.ui_plaintext": "Este pedido da UI usou HTTP em claro. Prefira um proxy reverso TLS ou --tls-cert/--tls-key. O tráfego de agentes já usa TLS fixado na mesma porta. Mantenha o endereço de escuta numa rede privada.",
 "ui.ha.master_alive": "O mestre {master} ainda está em execução. Assumir agora cria dois mestres. Para mover o papel de mestre, faça a passagem a partir do mestre (Configurações › Nós). Force apenas se esse mestre estiver com defeito.",
-"ui.ha.promote_force": "Assumir mesmo assim"
+"ui.ha.promote_force": "Assumir mesmo assim",
+"ui.banner.invalid_first": "O monitors.conf tem erros e não há uma versão válida anterior, por isso ainda nada está sendo monitorado — corrija a configuração para começar."
 }

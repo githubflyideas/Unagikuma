@@ -90,6 +90,33 @@ func escapeForJSON(d map[string]any) {
 	}
 }
 
+// templateDataForm is templateData with every string value URL-query
+// escaped, for a body template sent as application/x-www-form-urlencoded:
+// a substituted value is one field's value, so an & or = inside it must
+// not split fields. {{raw .X}} undoes the escaping (see renderTemplateForm).
+func templateDataForm(m *Message, o map[string]string) map[string]any {
+	d := templateData(m, o, false)
+	escapeForForm(d)
+	return d
+}
+
+// escapeForForm URL-query-escapes every string, the form counterpart of
+// escapeForJSON.
+func escapeForForm(d map[string]any) {
+	for k, v := range d {
+		switch x := v.(type) {
+		case string:
+			d[k] = url.QueryEscape(x)
+		case map[string]any:
+			escapeForForm(x)
+		case kumaObject: // Kuma's monitorJSON and heartbeatJSON
+			raw := x.String()
+			escapeForForm(map[string]any(x))
+			x[kumaRaw] = raw
+		}
+	}
+}
+
 // textOf is the title and body a channel sends for m: the built-in text,
 // or what the channel's template= makes of a message about a monitor.
 // The first line of a template's result is the title. A template that
@@ -221,7 +248,34 @@ var funcs = template.FuncMap{
 }
 
 func renderTemplate(src string, data map[string]any) (string, error) {
-	t, err := template.New("t").Funcs(funcs).Option("missingkey=zero").Parse(kumaToGo(src))
+	return renderTemplateFuncs(src, data, funcs)
+}
+
+// renderTemplateForm renders a form body template: the data is expected
+// to come from templateDataForm (values already URL-query escaped), and
+// the escaping idioms adjust to match: {{raw .X}} undoes the form
+// escaping instead of the JSON unquoting the plain raw performs, and
+// {{urlquery .X}} is a no-op — the value it would escape is already
+// escaped, so templates written with explicit urlquery (the preset
+// idiom) do not escape twice.
+func renderTemplateForm(src string, data map[string]any) (string, error) {
+	f := make(template.FuncMap, len(funcs))
+	for k, v := range funcs {
+		f[k] = v
+	}
+	f["raw"] = func(s any) string {
+		str := fmt.Sprint(s)
+		if u, err := url.QueryUnescape(str); err == nil {
+			return u
+		}
+		return str
+	}
+	f["urlquery"] = func(s string) string { return s }
+	return renderTemplateFuncs(src, data, f)
+}
+
+func renderTemplateFuncs(src string, data map[string]any, f template.FuncMap) (string, error) {
+	t, err := template.New("t").Funcs(f).Option("missingkey=zero").Parse(kumaToGo(src))
 	if err != nil {
 		return "", fmt.Errorf("template: %v", err)
 	}

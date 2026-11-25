@@ -114,7 +114,12 @@ func (cm *configManager) load() error {
 	if config.HasErrors(diags) {
 		snaps, _ := cm.app.store.Snapshots(1)
 		if len(snaps) == 0 {
-			return &InvalidError{Diags: diags}
+			// No earlier good version exists: the configuration has
+			// never loaded, so this is a first start with a broken
+			// file. Refusing to start would leave a new user with a
+			// dead binary and no way to fix the file from the UI, so
+			// start in repair mode instead (see repair).
+			return cm.repair(text, diags)
 		}
 		sn, _ := cm.app.store.SnapshotText(snaps[0].Serial)
 		f2, cfg2, d2 := config.Load(cm.path, []byte(sn.Text), cm.app.validators())
@@ -129,6 +134,37 @@ func (cm *configManager) load() error {
 	cm.cur = ConfigState{Text: string(text), SHA: shaOf(text), Serial: cfg.Serial, File: f, Config: cfg}
 	cm.touchStamp()
 	return cm.snapshot("startup", "", "")
+}
+
+// repair starts the app in repair mode after a first start whose
+// monitors.conf has errors: the running configuration is the starter
+// (valid, and with no monitors, so nothing is probed and no alert can
+// fire), while the editor keeps showing the user's own text with the
+// diagnostics on the banner. Saving a fixed configuration — from the
+// editor, or by editing the file with a higher revision — applies it
+// like any other change and ends repair mode. Nothing is snapshotted:
+// the configuration has still never loaded, so a restart before the
+// fix lands here again. The running serial is the broken file's own,
+// so the serial rules treat the fix like any other edit.
+func (cm *configManager) repair(text []byte, diags []config.Diagnostic) error {
+	sf, scfg, d := config.Load(cm.path, starter(cm.app.now()), cm.app.validators())
+	if config.HasErrors(d) {
+		return &InvalidError{Diags: diags} // cannot happen: the starter is valid
+	}
+	serial := scfg.Serial
+	if bf, _ := config.Parse(cm.path, text); bf != nil {
+		if s, err := bf.Serial(); err == nil {
+			serial = s
+		}
+	}
+	cm.cur = ConfigState{Text: string(text), SHA: shaOf(text), Serial: serial, File: sf, Config: scfg}
+	cm.banner = &Banner{Kind: "error", Code: "invalid_first", Message: "monitors.conf has errors and there is no earlier good version, so nothing is being monitored yet — fix the configuration to start", Diags: diags}
+	cm.app.log.Error("REPAIR MODE: monitors.conf has errors and there is no earlier good version; the web UI is running so the configuration can be fixed, and nothing is being monitored until it is")
+	for _, dg := range diags {
+		cm.app.log.Error("monitors.conf: " + dg.Error())
+	}
+	cm.touchStamp()
+	return nil
 }
 
 func (cm *configManager) touchStamp() {
@@ -281,7 +317,14 @@ func (cm *configManager) check() {
 	f, cfg, diags := config.Load(cm.path, text, cm.app.validators())
 	switch {
 	case config.HasErrors(diags):
-		cm.setBanner(&Banner{Kind: "error", Code: "invalid", Message: "monitors.conf has errors; the previous version keeps running", Diags: diags})
+		if cm.banner != nil && cm.banner.Code == "invalid_first" {
+			// Still in repair mode: there is no previous version that
+			// keeps running, so the banner keeps saying so, with the
+			// new file's diagnostics.
+			cm.setBanner(&Banner{Kind: "error", Code: "invalid_first", Message: cm.banner.Message, Diags: diags})
+		} else {
+			cm.setBanner(&Banner{Kind: "error", Code: "invalid", Message: "monitors.conf has errors; the previous version keeps running", Diags: diags})
+		}
 	case cfg.Serial == cm.cur.Serial:
 		cm.setBanner(&Banner{Kind: "warning", Code: "serial_not_bumped", Message: "monitors.conf changed but the revision was not increased", Serial: cfg.Serial})
 	case config.CheckSerial(cfg.Serial, cm.cur.Serial) != nil:

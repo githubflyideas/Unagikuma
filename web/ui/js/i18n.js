@@ -25,7 +25,7 @@ export function detectLang() {
 
 export async function loadLanguages() {
   try {
-    const r = await fetch('/api/v1/languages');
+    const r = await fetch('api/v1/languages');
     if (r.ok) languages = await r.json();
   } catch { /* offline: keep defaults */ }
   if (!languages.length) languages = [{ code: 'en', name: 'English' }];
@@ -33,7 +33,7 @@ export async function loadLanguages() {
 }
 
 export async function setLang(code, remember) {
-  const r = await fetch('/api/v1/i18n/' + encodeURIComponent(code));
+  const r = await fetch('api/v1/i18n/' + encodeURIComponent(code));
   if (!r.ok) {
     if (code !== 'en') return setLang('en', false);
     cat = {};

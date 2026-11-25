@@ -252,13 +252,11 @@ func (s *Server) routes() {
 				// API with a token from the URL fragment, which never
 				// reaches this server.
 				w.Header().Set("Referrer-Policy", "no-referrer")
-				if s.serveStyledShell(w, strings.Trim(p, "/")+".html") {
+				if s.serveStyledShell(w, r, strings.Trim(p, "/")+".html") {
 					return
 				}
 				r2 := r.Clone(r.Context())
 				r2.URL.Path = "/" + strings.Trim(p, "/") + ".html"
-				w.Header().Set("Cache-Control", "no-cache")
-				w.Header().Set("Referrer-Policy", "no-referrer")
 				files.ServeHTTP(w, r2)
 				return
 			}
@@ -266,6 +264,9 @@ func (s *Server) routes() {
 				return
 			}
 			if p == "" || p == "index.html" {
+				if s.serveShell(w, r, "index.html") {
+					return
+				}
 				w.Header().Set("Cache-Control", "no-cache")
 			} else if _, err := fs.Stat(s.opts.Web, p); err != nil {
 				writeError(w, notFound("page"))

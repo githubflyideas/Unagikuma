@@ -2081,5 +2081,6 @@
 "ui.sys.listen": "Nghe",
 "ui.sys.ui_plaintext": "Yêu cầu UI này dùng HTTP thuần. Nên dùng reverse proxy TLS hoặc --tls-cert/--tls-key. Lưu lượng agent đã dùng TLS ghim trên cùng cổng. Giữ địa chỉ listen trong mạng nội bộ.",
 "ui.ha.master_alive": "Máy chủ chính {master} vẫn đang chạy. Tiếp quản lúc này sẽ tạo ra hai máy chủ chính. Để chuyển vai trò máy chủ chính, hãy bàn giao từ máy chủ chính (Cài đặt › Nút). Chỉ ép tiếp quản khi máy chủ chính đó đã hỏng.",
-"ui.ha.promote_force": "Vẫn tiếp quản"
+"ui.ha.promote_force": "Vẫn tiếp quản",
+"ui.banner.invalid_first": "monitors.conf có lỗi và không có phiên bản tốt trước đó, nên chưa có gì được giám sát — hãy sửa cấu hình để bắt đầu."
 }

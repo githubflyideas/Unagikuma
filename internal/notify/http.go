@@ -238,7 +238,15 @@ func (s *Sender) buildWebhook(ctx context.Context, o map[string]string, m *Messa
 	if body != nil {
 		// a message about no monitor, through a Kuma template: done above
 	} else if tpl != "" {
-		out, err := renderTemplate(tpl, templateData(m, o, ct == "json"))
+		var out string
+		var err error
+		if ct == "form" {
+			// Form values are escaped like JSON ones, so a value holding
+			// &, = or % arrives as one field's value.
+			out, err = renderTemplateForm(tpl, templateDataForm(m, o))
+		} else {
+			out, err = renderTemplate(tpl, templateData(m, o, ct == "json"))
+		}
 		if err != nil {
 			return nil, nil, err
 		}

@@ -186,9 +186,11 @@ func (s *Server) brandPut(w http.ResponseWriter, r *http.Request) (any, error) {
 // style sheet, as serveStatusHTML does for the public status pages. A
 // classic default leaves the shell unchanged, and so does a style this
 // installation may not use (defaultStyle already falls back then).
+// Like serveShell it also injects the <base> for the request's honoured
+// path prefix, so the shells work behind a prefix proxy too.
 // False means the file is not there and the caller should fall back to
 // plain file serving.
-func (s *Server) serveStyledShell(w http.ResponseWriter, name string) bool {
+func (s *Server) serveStyledShell(w http.ResponseWriter, r *http.Request, name string) bool {
 	page, err := fs.ReadFile(s.opts.Web, name)
 	if err != nil {
 		return false
@@ -216,7 +218,7 @@ func (s *Server) serveStyledShell(w http.ResponseWriter, name string) bool {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
-	_, _ = w.Write(page)
+	_, _ = w.Write(injectBase(page, s.urlPrefix(r)))
 	return true
 }
 

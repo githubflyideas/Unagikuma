@@ -2090,5 +2090,6 @@
 "ui.sys.listen": "Escucha",
 "ui.sys.ui_plaintext": "Esta solicitud de UI usó HTTP en claro. Prefiera un proxy inverso TLS o --tls-cert/--tls-key. El tráfico de agentes ya usa TLS anclado en el mismo puerto. Mantenga la dirección de escucha en una red privada.",
 "ui.ha.master_alive": "El maestro {master} sigue en marcha. Tomar el control ahora crea dos maestros. Para mover el rol de maestro, haz el traspaso desde el maestro (Ajustes › Nodos). Fuérzalo solo si ese maestro está averiado.",
-"ui.ha.promote_force": "Tomar el control igualmente"
+"ui.ha.promote_force": "Tomar el control igualmente",
+"ui.banner.invalid_first": "monitors.conf tiene errores y no hay una versión anterior válida, por lo que aún no se supervisa nada: corrija la configuración para empezar."
 }

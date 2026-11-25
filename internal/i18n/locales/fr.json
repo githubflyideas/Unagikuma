@@ -2090,5 +2090,6 @@
 "ui.sys.listen": "Écoute",
 "ui.sys.ui_plaintext": "Cette requête UI utilise HTTP en clair. Préférez un reverse proxy TLS ou --tls-cert/--tls-key. Le trafic agent utilise déjà du TLS épinglé sur le même port. Gardez l'adresse d'écoute sur un réseau privé.",
 "ui.ha.master_alive": "Le maître {master} fonctionne encore. Le remplacer maintenant crée deux maîtres. Pour déplacer le rôle de maître, faites la passation depuis le maître (Réglages › Nœuds). Ne forcez que si ce maître est en panne.",
-"ui.ha.promote_force": "Prendre la main quand même"
+"ui.ha.promote_force": "Prendre la main quand même",
+"ui.banner.invalid_first": "monitors.conf contient des erreurs et il n'existe aucune version valide antérieure : rien n'est encore surveillé — corrigez la configuration pour démarrer."
 }
