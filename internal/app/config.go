@@ -65,6 +65,12 @@ type configManager struct {
 	capExempt atomic.Int32
 	banner    *Banner
 	stat      fileStamp
+	// inRepair is true while a first start's broken configuration has
+	// never been replaced by a successfully applied one. The banner
+	// alone cannot carry this: an intervening banner (say the monitor
+	// limit refusing a valid but over-limit fix) must not make a later
+	// broken edit look like it has a previous version to fall back on.
+	inRepair bool
 }
 
 type fileStamp struct {
@@ -158,6 +164,7 @@ func (cm *configManager) repair(text []byte, diags []config.Diagnostic) error {
 		}
 	}
 	cm.cur = ConfigState{Text: string(text), SHA: shaOf(text), Serial: serial, File: sf, Config: scfg}
+	cm.inRepair = true
 	cm.banner = &Banner{Kind: "error", Code: "invalid_first", Message: "monitors.conf has errors and there is no earlier good version, so nothing is being monitored yet — fix the configuration to start", Diags: diags}
 	cm.app.log.Error("REPAIR MODE: monitors.conf has errors and there is no earlier good version; the web UI is running so the configuration can be fixed, and nothing is being monitored until it is")
 	for _, dg := range diags {
@@ -213,6 +220,7 @@ func (cm *configManager) apply(text []byte, f *config.File, cfg *config.Config, 
 		cm.audit(old, cm.cur, changes, source, author, message, client)
 	}
 	cm.banner = nil
+	cm.inRepair = false
 	cm.app.emit("serial", map[string]any{"serial": cfg.Serial, "source": source, "message": message,
 		"summary": map[string]int{"added": summary.Added, "removed": summary.Removed, "changed": summary.Changed}})
 	cm.app.emit("banner", nil)
@@ -317,11 +325,16 @@ func (cm *configManager) check() {
 	f, cfg, diags := config.Load(cm.path, text, cm.app.validators())
 	switch {
 	case config.HasErrors(diags):
-		if cm.banner != nil && cm.banner.Code == "invalid_first" {
+		if cm.inRepair {
 			// Still in repair mode: there is no previous version that
 			// keeps running, so the banner keeps saying so, with the
-			// new file's diagnostics.
-			cm.setBanner(&Banner{Kind: "error", Code: "invalid_first", Message: cm.banner.Message, Diags: diags})
+			// new file's diagnostics — even when another banner (the
+			// monitor limit, say) replaced the repair banner meanwhile.
+			msg := "monitors.conf has errors and there is no earlier good version, so nothing is being monitored yet — fix the configuration to start"
+			if cm.banner != nil && cm.banner.Code == "invalid_first" {
+				msg = cm.banner.Message
+			}
+			cm.setBanner(&Banner{Kind: "error", Code: "invalid_first", Message: msg, Diags: diags})
 		} else {
 			cm.setBanner(&Banner{Kind: "error", Code: "invalid", Message: "monitors.conf has errors; the previous version keeps running", Diags: diags})
 		}

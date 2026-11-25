@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -83,5 +84,52 @@ func TestInvalidConfigWithHistoryKeepsLastGood(t *testing.T) {
 	}
 	if !strings.Contains(a2.Config().Text, "IN HTTP") {
 		t.Fatalf("running text = %q, want the last good version", a2.Config().Text)
+	}
+}
+
+// While a first start is still in repair mode, an intervening banner
+// must not rewrite history: a valid but over-limit fix attempt raises
+// the monitor-limit banner, and a broken edit after it must go back to
+// saying there is no earlier good version (invalid_first) — not claim
+// a previous version keeps running when none has ever loaded.
+func TestRepairBannerSurvivesMonitorLimitInterlude(t *testing.T) {
+	dir := t.TempDir()
+	conf := filepath.Join(dir, "monitors.conf")
+	if err := os.WriteFile(conf, []byte(brokenConfig), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a, err := New(Options{DataDir: dir, Probe: (&fakeProbes{fail: map[string]bool{}}).run})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Store().Close()
+	if b := a.Banner(); b == nil || b.Code != "invalid_first" {
+		t.Fatalf("banner = %+v, want invalid_first", b)
+	}
+	// A valid configuration past the free monitor limit: refused by
+	// the ratchet, repair mode continues under the limit's banner.
+	var sb strings.Builder
+	sb.WriteString("@ IN SOA unagikuma. admin.localhost. ( 2026102302 1s 500ms 300ms 2 )\n")
+	for i := 1; i <= 105; i++ {
+		sb.WriteString("bulk" + strconv.Itoa(i) + " IN PING 192.0.2.1\n")
+	}
+	if err := os.WriteFile(conf, []byte(sb.String()), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a.cfg.check()
+	if b := a.Banner(); b == nil || b.Code != "monitor_limit" {
+		t.Fatalf("banner after over-limit fix = %+v, want monitor_limit", b)
+	}
+	if n := len(a.Config().Config.Monitors); n != 0 {
+		t.Fatalf("over-limit fix applied %d monitors, want 0", n)
+	}
+	// A broken edit now: still no earlier good version exists.
+	broken2 := strings.Replace(brokenConfig, "2026102301", "2026102303", 1)
+	if err := os.WriteFile(conf, []byte(broken2), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a.cfg.check()
+	if b := a.Banner(); b == nil || b.Code != "invalid_first" {
+		t.Fatalf("banner after second broken edit = %+v, want invalid_first (no previous version has ever run)", b)
 	}
 }
