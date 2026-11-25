@@ -160,6 +160,9 @@ function HistoryTab() {
 
 // ImportTab converts another tool's monitors: an Uptime Kuma backup, Nagios object files, a Checkmate export, a Gatus file
 // or another Unagikuma's monitors.conf: preview first, then add.
+// Export and restore are this installation's own ways out and back in,
+// so they are part of the Unagikuma source only; the other sources are
+// import-only and never show them.
 function ImportTab() {
   const [source, setSource] = useState('kuma');
   const [file, setFile] = useState(null);
@@ -244,6 +247,7 @@ function ImportTab() {
           <span class="ltr"> ${userList.map(u => u.username + (u.active ? '' : ' ✕')).join(', ')}</span></p>`}
         <pre class="code" tabindex="0">${prev.text}</pre>
       </div></div>`}
+    ${source === 'unagikuma' && html`<${ExportCards} /><${RestoreCard} />`}
   </div>`;
 }
 
@@ -259,9 +263,11 @@ async function download(req) {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
-// ExportCards are the two ways out: the configuration alone, which another
-// Unagikuma imports on this page, and everything, which unagikuma restore
-// brings back whole.
+// ExportCards is the Export card: the two ways out, the configuration
+// alone, which another Unagikuma imports on this page, and everything,
+// which unagikuma restore brings back whole. One card with the section
+// title in its header, like every other section of the console; the two
+// ways out are its two columns.
 function ExportCards() {
   const [pass, setPass] = useState('');
   const [busy, setBusy] = useState('');
@@ -277,22 +283,22 @@ function ExportCards() {
     return run('all', () => download(fetch('/api/v1/backup', { method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-Unagikuma-CSRF': getCSRF() }, body: JSON.stringify({ passphrase: pass, history: true }) })));
   };
-  return html`<div class="grid g2">
-    <${Card} title=${t('ui.export.config_title')}>
+  return html`<${Card} title=${t('ui.export.title')}>
+    <div class="grid g2">
       <div class="form">
+        <h3 style=${{ margin: '0 0 6px' }}>${t('ui.export.config_title')}</h3>
         <p class="small muted" style=${{ margin: 0 }}>${t('ui.export.config_hint')}</p>
         <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!!busy} onClick=${config}>${busy === 'config' ? html`<span class="spin"></span>` : t('ui.export.config_btn')}</button></div>
       </div>
-    <//>
-    <${Card} title=${t('ui.export.all_title')}>
       <form class="form" onSubmit=${everything}>
+        <h3 style=${{ margin: '0 0 6px' }}>${t('ui.export.all_title')}</h3>
         <p class="small muted" style=${{ margin: 0 }}>${t('ui.export.all_hint')}</p>
         <${Field} label=${t('ui.export.pass')} hint=${t('ui.export.pass_hint')}>
           <input type="password" autocomplete="new-password" value=${pass} onInput=${(e) => setPass(e.target.value)} /><//>
         <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!!busy}>${busy === 'all' ? html`<span class="spin"></span>` : t('ui.export.all_btn')}</button></div>
       </form>
-    <//>
-  </div>`;
+    </div>
+  <//>`;
 }
 
 // RestoreCard puts a backup back. The running program cannot swap its own
@@ -348,10 +354,10 @@ export function ConfigView({ tab }) {
   useDocTitle(t('ui.nav.config'));
   return html`<div class="page">
     <div class="tabs">
+      <a href="#/config/import" class=${tab === 'import' ? 'on' : ''}>${t('ui.import.tab')}</a>
       <a href="#/config/edit" class=${tab === 'edit' ? 'on' : ''}>monitors.conf</a>
       <a href="#/config/history" class=${tab === 'history' ? 'on' : ''}>${t('ui.config.history')}</a>
-      <a href="#/config/import" class=${tab === 'import' ? 'on' : ''}>${t('ui.import.tab')}</a>
     </div>
-    ${tab === 'history' ? html`<${HistoryTab} />` : tab === 'import' ? html`<div class="col" style=${{ gap: '12px' }}><${ImportTab} /><h3 class="muted" style=${{ margin: '8px 0 0' }}>${t('ui.export.title')}</h3><${ExportCards} /><h3 class="muted" style=${{ margin: '8px 0 0' }}>${t('ui.restore.heading')}</h3><${RestoreCard} /></div>` : html`<${EditTab} />`}
+    ${tab === 'history' ? html`<${HistoryTab} />` : tab === 'import' ? html`<${ImportTab} />` : html`<${EditTab} />`}
   </div>`;
 }
