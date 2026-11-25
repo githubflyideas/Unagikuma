@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.6.36 — 2026-11-25
+
+**Added**
+- Licences can now carry a monitor limit of their own, next to the account limit; a licence without one allows any number of monitors.
+- The four registered styles can be tried free for 7 days before a licence is needed; the style picker shows how many trial days are left.
+
+**Changed**
+- A free (unregistered) installation now allows 5 accounts and 100 monitors; the two gateway monitors Unagikuma adds by itself do not count towards the 100. Adding a monitor beyond the limit is refused — in the web UI, through the API and in a hand-edited configuration alike — while everything already there keeps running. Importing from another tool, or restoring, may bring the total up to 300 instead, and the import report says how many monitors there are afterwards; an installation above its limit shows a notice until it is back under it or registered.
+- The audit trail — viewing it, exporting it and checking its integrity — is now registered-only. It is still recorded either way.
+
 ## v2.6.35 — 2026-11-25
 
 **Changed**
