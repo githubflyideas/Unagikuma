@@ -81,6 +81,8 @@ export function Branding() {
         <${Field} label=${t('ui.brand.style_default')} hint=${t('ui.brand.style_hint')}>
           <select value=${b.style} onChange=${(e) => setDefault(e.target.value)}>${styleOptions(b.style)}</select><//>
         <${MyStyle} label=${t('ui.brand.style_mine')} />
+        ${b.style_trial && b.style_trial.state === 'active' && html`<p class="small muted" style=${{ margin: 0 }}>${t('ui.style.trial', { days: b.style_trial.days_left })}</p>`}
+        ${b.style_trial && b.style_trial.state === 'ended' && html`<p class="small warn-text" style=${{ margin: 0 }}>${t('ui.style.trial_ended')} ${t('ui.reg.contact')}</p>`}
       </div>
     <//>
     <${Card} title=${t('ui.brand.title')}>

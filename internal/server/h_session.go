@@ -192,6 +192,12 @@ func (s *Server) prefsPut(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := s.app.Store().SetPrefs(authOf(r).userID, string(b)); err != nil {
 		return nil, err
 	}
+	// Picking a registered style for the account switches it on, which
+	// starts its free trial (the choice itself is only stored; whether
+	// it applies is decided where styles are served).
+	if v, _ := m["style"].(string); s.styleRegistered(v) && !s.app.License().State().Registered {
+		s.app.StartStyleTrial()
+	}
 	return m, nil
 }
 

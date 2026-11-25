@@ -289,6 +289,9 @@ function Shell({ user, onLogout, onLang }) {
           ${ov.data.storage.error && html`<div class="small ltr">${ov.data.storage.error}</div>`}</div></div></div>`}
       ${ov.data && ov.data.superseded && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner error"><div class="spacer">
         ${t('ui.ha.superseded', { term: ov.data.superseded.term, by: ov.data.superseded.by || '?', at: fmtTime(ov.data.superseded.at) })}</div></div></div>`}
+      ${ov.data && ov.data.monitor_over && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner warning">
+        <div class="spacer">${t('ui.cap.over', { used: ov.data.monitor_over.used, limit: ov.data.monitor_over.limit })} ${t('ui.reg.contact')}</div>
+        <a class="btn sm" href="#/settings/registration">${t('ui.set.tab.registration')}</a></div></div>`}
       ${view}
     </div>
   </div>`;

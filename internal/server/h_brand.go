@@ -17,11 +17,13 @@ import (
 // are listed in styles/styles.json of the web files; every style but
 // "classic" has its own styles/<id>.css. The only styles are the four
 // scenario styles (office, datacenter, retail, noc), and they are
-// registered: an unregistered installation lists them but cannot use
-// them — their sheets are not served and they cannot be picked or set
-// as the default. A stored choice naming a style that is not there
-// (an older style, a registered one on an unregistered installation)
-// falls back to "classic" everywhere it is applied.
+// registered — with a free trial: an unregistered installation may use
+// them for seven days from the first time one is switched on (see
+// app.StyleTrial); while the trial runs or has not started they can be
+// picked and set as the default, and once it has ended a stored choice
+// of one falls back to "classic" everywhere it is applied and setting
+// one is refused. A stored choice naming a style that is not there
+// (an older style) falls back to "classic" the same way.
 
 const (
 	styleClassic    = "classic"
@@ -66,22 +68,56 @@ func validStyleID(id string) bool {
 	return true
 }
 
-// styleAllowed reports whether the style can be used here: it must
-// exist, and a registered style needs a registered installation.
+// styleAllowed reports whether the style can be picked here: it must
+// exist, and a registered style needs a registered installation or a
+// trial that has not ended.
 func (s *Server) styleAllowed(id string) bool {
 	for _, st := range s.styles() {
 		if st.ID == id {
-			return !st.Registered || s.app.License().State().Registered
+			if !st.Registered || s.app.License().State().Registered {
+				return true
+			}
+			return !s.app.StyleTrial().Ended
 		}
 	}
 	return false
+}
+
+// styleApplies reports whether the style takes effect here: a
+// registered style needs a registered installation or a trial that is
+// running (a trial that was never started applies nothing).
+func (s *Server) styleApplies(id string) bool {
+	for _, st := range s.styles() {
+		if st.ID == id {
+			if !st.Registered || s.app.License().State().Registered {
+				return true
+			}
+			return s.app.StyleTrial().Active
+		}
+	}
+	return false
+}
+
+// styleTrialJSON is the style trial as the console shows it.
+func (s *Server) styleTrialJSON() map[string]any {
+	if s.app.License().State().Registered {
+		return map[string]any{"state": "registered"}
+	}
+	switch t := s.app.StyleTrial(); {
+	case t.Active:
+		return map[string]any{"state": "active", "days_left": t.DaysLeft}
+	case t.Ended:
+		return map[string]any{"state": "ended"}
+	default:
+		return map[string]any{"state": "available"}
+	}
 }
 
 // defaultStyle is the style for everyone who has not chosen one, and for
 // the public status pages.
 func (s *Server) defaultStyle() string {
 	v, _ := s.app.Store().Setting(styleDefaultKey)
-	if v == "" || !s.styleAllowed(v) {
+	if v == "" || !s.styleApplies(v) {
 		return styleClassic
 	}
 	return v
@@ -94,13 +130,13 @@ func (s *Server) brandPublic(w http.ResponseWriter, r *http.Request) {
 	for _, st := range s.styles() {
 		list = append(list, map[string]any{"id": st.ID, "allowed": s.styleAllowed(st.ID)})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"name": s.app.BrandName(), "style": s.defaultStyle(), "styles": list})
+	writeJSON(w, http.StatusOK, map[string]any{"name": s.app.BrandName(), "style": s.defaultStyle(), "styles": list, "style_trial": s.styleTrialJSON()})
 }
 
 func (s *Server) brandGet(w http.ResponseWriter, r *http.Request) (any, error) {
 	b := s.app.BrandSettings()
 	return map[string]any{"name": b.Name, "logo": b.Logo, "icon": b.Icon, "allowed": b.Allowed,
-		"style": s.defaultStyle(), "product": app.ProductName}, nil
+		"style": s.defaultStyle(), "product": app.ProductName, "style_trial": s.styleTrialJSON()}, nil
 }
 
 func (s *Server) brandPut(w http.ResponseWriter, r *http.Request) (any, error) {
@@ -124,6 +160,10 @@ func (s *Server) brandPut(w http.ResponseWriter, r *http.Request) (any, error) {
 		}
 		if !s.styleAllowed(v) {
 			return nil, registrationError(s)
+		}
+		if s.styleRegistered(v) && !s.app.License().State().Registered {
+			// Switching a registered style on starts its free trial.
+			s.app.StartStyleTrial()
 		}
 		if err := s.app.Store().SetSetting(styleDefaultKey, v); err != nil {
 			return nil, err
@@ -178,6 +218,17 @@ func (s *Server) serveStyledShell(w http.ResponseWriter, name string) bool {
 	w.Header().Set("Cache-Control", "no-cache")
 	_, _ = w.Write(page)
 	return true
+}
+
+// styleRegistered reports whether the style is one of the registered
+// ones.
+func (s *Server) styleRegistered(id string) bool {
+	for _, st := range s.styles() {
+		if st.ID == id {
+			return st.Registered
+		}
+	}
+	return false
 }
 
 func (s *Server) styleKnown(id string) bool {
@@ -282,7 +333,7 @@ func (s *Server) serveBranded(w http.ResponseWriter, r *http.Request, p string) 
 		}
 	}
 	if id, ok := strings.CutPrefix(p, "styles/"); ok && strings.HasSuffix(id, ".css") {
-		if !s.styleAllowed(strings.TrimSuffix(id, ".css")) {
+		if !s.styleApplies(strings.TrimSuffix(id, ".css")) {
 			writeError(w, notFound("style"))
 			return true
 		}

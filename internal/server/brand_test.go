@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 )
 
 func pngOf(t *testing.T, w, h int) []byte {
@@ -242,20 +243,26 @@ var packUI = fstest.MapFS{
 	"styles/datacenter.css": {Data: []byte(":root[data-style=datacenter] {}")},
 }
 
-// The scenario styles are registered: an unregistered installation
-// lists them as not allowed, cannot load their sheets and cannot set
-// them as the default; a registered one can, and the wall shell then
-// carries the style. Free styles are unaffected throughout.
+// The scenario styles are registered, with a seven-day free trial: an
+// unregistered installation may pick one (that starts the trial), its
+// sheet is served while the trial runs, and when the trial has ended
+// the stored choice falls back to classic and setting one is refused.
+// A registered installation has them without a trial. Free styles are
+// unaffected throughout.
 func TestRegisteredStyles(t *testing.T) {
 	e := newEnv(t, testBind, packUI)
 	e.setup()
 
 	var pub struct {
-		Style  string
-		Styles []struct {
+		Style      string
+		Styles     []struct {
 			ID      string
 			Allowed bool
 		}
+		StyleTrial struct {
+			State    string `json:"state"`
+			DaysLeft int    `json:"days_left"`
+		} `json:"style_trial"`
 	}
 	if c := e.do("GET", "/api/v1/brand", nil, &pub); c != 200 || len(pub.Styles) != 3 {
 		t.Fatalf("public: %d %+v", c, pub)
@@ -264,24 +271,61 @@ func TestRegisteredStyles(t *testing.T) {
 	for _, st := range pub.Styles {
 		allowed[st.ID] = st.Allowed
 	}
-	if !allowed["classic"] || !allowed["plain"] || allowed["datacenter"] {
-		t.Fatalf("allowed before registering: %v", allowed)
+	if !allowed["classic"] || !allowed["plain"] || !allowed["datacenter"] {
+		t.Fatalf("allowed before registering (the trial is on offer): %v", allowed)
 	}
+	if pub.StyleTrial.State != "available" {
+		t.Fatalf("trial before activation: %+v", pub.StyleTrial)
+	}
+	// Not switched on yet: the sheet is not served.
 	if c, _ := e.raw("GET", "/styles/datacenter.css", nil, ""); c != 404 {
-		t.Fatalf("registered sheet unregistered: %d", c)
+		t.Fatalf("registered sheet before the trial starts: %d", c)
 	}
 	if c, _ := e.raw("GET", "/styles/plain.css", nil, ""); c != 200 {
 		t.Fatalf("free sheet unregistered: %d", c)
 	}
-	var er struct{ Code string }
-	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "datacenter"}, &er); c != 402 || er.Code != CodeRegistration {
-		t.Fatalf("registered style as default, unregistered: %d %+v", c, er)
+	// Switching it on starts the trial; then it applies everywhere.
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "datacenter"}, nil); c != 200 {
+		t.Fatalf("registered style as default starts the trial: %d", c)
+	}
+	_ = e.do("GET", "/api/v1/brand", nil, &pub)
+	if pub.StyleTrial.State != "active" || pub.StyleTrial.DaysLeft != 7 {
+		t.Fatalf("trial after activation: %+v", pub.StyleTrial)
+	}
+	if c, _ := e.raw("GET", "/styles/datacenter.css", nil, ""); c != 200 {
+		t.Fatalf("registered sheet during the trial: %d", c)
+	}
+	if c, b := e.raw("GET", "/wall", nil, ""); c != 200 || !strings.Contains(string(b), `data-style="datacenter"`) || !strings.Contains(string(b), "styles/datacenter.css") {
+		t.Fatalf("wall shell during the trial: %d %s", c, b)
 	}
 	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "plain"}, nil); c != 200 {
 		t.Fatalf("free style as default, unregistered: %d", c)
 	}
 	if c, b := e.raw("GET", "/wall", nil, ""); c != 200 || !strings.Contains(string(b), `data-style="plain"`) || !strings.Contains(string(b), "styles/plain.css") {
 		t.Fatalf("wall shell with a free default: %d %s", c, b)
+	}
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "datacenter"}, nil); c != 200 {
+		t.Fatalf("back to the trial style: %d", c)
+	}
+	// Day 8: the trial is over. The stored default falls back to
+	// classic, the sheet stops, and setting the style is refused.
+	past := time.Now().AddDate(0, 0, -8).UTC().Format(time.RFC3339)
+	if err := e.app.Store().SetSetting("style.trial_start", past); err != nil {
+		t.Fatal(err)
+	}
+	_ = e.do("GET", "/api/v1/brand", nil, &pub)
+	if pub.StyleTrial.State != "ended" || pub.Style != "classic" {
+		t.Fatalf("after the trial: %+v style=%s", pub.StyleTrial, pub.Style)
+	}
+	if c, _ := e.raw("GET", "/styles/datacenter.css", nil, ""); c != 404 {
+		t.Fatalf("registered sheet after the trial: %d", c)
+	}
+	var er struct{ Code string }
+	if c := e.do("PUT", "/api/v1/branding", map[string]string{"style": "datacenter"}, &er); c != 402 || er.Code != CodeRegistration {
+		t.Fatalf("registered style as default after the trial: %d %+v", c, er)
+	}
+	if c, b := e.raw("GET", "/wall", nil, ""); c != 200 || strings.Contains(string(b), "datacenter") {
+		t.Fatalf("wall shell after the trial: %d %s", c, b)
 	}
 
 	e.register()

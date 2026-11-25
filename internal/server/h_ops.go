@@ -180,14 +180,21 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) (any, error) {
 			paths = append(paths, pathOf(v, v.Health))
 		}
 	}
-	return map[string]any{
+	out := map[string]any{
 		"instance": s.app.Instance(), "serial": ov.Serial, "layout": layout, "counts": counts, "unhandled": ov.Unhandled,
 		"degraded": ov.Degraded, "value_week": week, "health": health, "channels": chans, "expiring": expiring,
 		"open_system": ov.OpenSystem, "pending_notifications": ov.PendingIntents, "banner": s.app.Banner(),
 		"alerting_configured": alerting, "dns": dnsInUse(), "nodes": nodes, "paths": paths, "tactical": s.tactical(r), "script_problems": s.scriptCount(),
 		"superseded": s.app.SupersededBy(), "term": s.app.Term(), "contact_issues": len(s.app.ChannelIssues()),
 		"people": len(s.app.Directory().People()), "status_pages": len(cfg.StatusPages), "storage": s.app.Store().WriteHealth(),
-	}, nil
+	}
+	// Over the monitor limit (an import can take an installation past
+	// it): the console says so until the count is back within it or a
+	// licence raises it. Nothing is switched off.
+	if mc := s.app.MonitorCap(); mc.Over {
+		out["monitor_over"] = mc
+	}
+	return out, nil
 }
 
 // ---- incidents ----
