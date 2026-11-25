@@ -1,0 +1,26 @@
+{
+  "id": "redis", "title": "Redis", "reader": "text", "transport": "redis", "port": 6379,
+  "docs": "https://redis.io/docs/latest/commands/info/",
+  "needs": "A user allowed to run INFO (the default user is).",
+  "verified": "Redis 7.0.15",
+  "primary": "connected_clients",
+  "summary": ["connected_clients", "used_memory", "ops_per_sec", "evicted_keys"],
+  "fields": [
+    {"key": "connected_clients", "label": "Connected clients", "label_zh": "已连接的客户端", "type": "quantity", "line": "connected_clients"},
+    {"key": "blocked_clients", "label": "Blocked clients", "label_zh": "被阻塞的客户端", "type": "quantity", "line": "blocked_clients"},
+    {"key": "used_memory", "label": "Memory used (bytes)", "label_zh": "已用内存（字节）", "type": "quantity", "unit": "B", "line": "used_memory"},
+    {"key": "used_memory_rss", "label": "Memory resident (bytes)", "label_zh": "常驻内存（字节）", "type": "quantity", "unit": "B", "line": "used_memory_rss"},
+    {"key": "mem_fragmentation_ratio", "label": "Memory fragmentation ratio", "label_zh": "内存碎片率", "type": "quantity", "line": "mem_fragmentation_ratio", "optional": true},
+    {"key": "ops_per_sec", "label": "Operations per second (instantaneous)", "label_zh": "每秒操作数（瞬时）", "type": "quantity", "line": "instantaneous_ops_per_sec"},
+    {"key": "commands", "label": "Commands processed", "label_zh": "已处理的命令数", "type": "counter", "line": "total_commands_processed"},
+    {"key": "connections", "label": "Connections received", "label_zh": "已接收的连接数", "type": "counter", "line": "total_connections_received"},
+    {"key": "rejected_connections", "label": "Connections rejected", "label_zh": "被拒绝的连接数", "type": "counter", "line": "rejected_connections"},
+    {"key": "expired_keys", "label": "Keys expired", "label_zh": "已过期的键", "type": "counter", "line": "expired_keys"},
+    {"key": "evicted_keys", "label": "Keys evicted", "label_zh": "已被淘汰的键", "type": "counter", "line": "evicted_keys"},
+    {"key": "keyspace_hits", "label": "Keyspace hits", "label_zh": "键空间命中", "type": "counter", "line": "keyspace_hits"},
+    {"key": "keyspace_misses", "label": "Keyspace misses", "label_zh": "键空间未命中", "type": "counter", "line": "keyspace_misses"},
+    {"key": "uptime", "label": "Uptime (s)", "label_zh": "运行时间（秒）", "type": "quantity", "unit": "s", "line": "uptime_in_seconds"},
+    {"key": "replicas", "label": "Connected replicas", "label_zh": "已连接的副本", "type": "quantity", "line": "connected_slaves"},
+    {"key": "unsaved_changes", "label": "Changes since the last save", "label_zh": "上次保存后的改动数", "type": "quantity", "line": "rdb_changes_since_last_save"}
+  ]
+}

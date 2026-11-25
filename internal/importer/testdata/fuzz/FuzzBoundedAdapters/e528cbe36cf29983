@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("endpoints:\n  - name: \xff\n    url: http://0\n    conditions:\n    - \"[STATUS]==100\"")

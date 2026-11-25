@@ -1,0 +1,179 @@
+// Notices and status: announced changes, the status pages and the daily
+// status report: what is told to people, apart from the alerts themselves.
+import { html, useState } from '../lib.js';
+import { t, tn } from '../i18n.js';
+import { get, post, put, me, ifMatch } from '../api.js';
+import { NoticesTab } from './notices.js';
+import { useFetch, Loading, ErrorBox, toast, toastError, useDocTitle, Copy, Field } from '../ui.js';
+
+// viaText names where a report goes: a team's channels or the system ones
+// (a policy name only for a file written before teams had channels).
+function viaText(policy) {
+  if (!policy || policy === 'system' || policy === 'default') return t('ui.report.via_system');
+  if (policy.startsWith('team:')) return t('ui.report.via_team', { team: policy.slice(5) });
+  return policy;
+}
+
+// Report times offered when more reports a day are chosen.
+const SPREAD = { 1: ['10:00'], 2: ['09:00', '17:00'], 3: ['08:00', '13:00', '18:00'], 4: ['08:00', '12:00', '16:00', '20:00'] };
+const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+// WeeklySettings switches the weekly report on, sets its day and time, and
+// previews it.
+function WeeklySettings() {
+  const tun = useFetch(() => get('/tunables'), []);
+  const wk = useFetch(() => get('/reports/weekly'), []);
+  const [busy, setBusy] = useState(false);
+  if (!tun.data || !wk.data) return null;
+  const val = (k) => (tun.data.find(x => x.key === k) || {}).value || '';
+  const setTun = async (set) => {
+    try { await put('/tunables', { set, unset: [] }); tun.reload(); wk.reload(); } catch (e) { toastError(e); }
+  };
+  const [day, at] = (val('notify.weekly-report-at') || 'mon 09:00').split(' ');
+  const send = async () => {
+    setBusy(true);
+    try { await post('/reports/weekly/send'); toast(t('ui.report.sent')); } catch (e) { toastError(e); }
+    setBusy(false);
+  };
+  return html`<div class="card"><div class="hd"><h3>${t('ui.report.weekly')}</h3><div class="spacer"></div>
+      <button class="btn sm" onClick=${send} disabled=${busy}>${t('ui.report.weekly_send')}</button></div>
+    <div class="bd form">
+      <div class="row" style=${{ gap: '16px', flexWrap: 'wrap' }}>
+        <label class="switch"><input type="checkbox" checked=${val('notify.weekly-report') === 'on'} onChange=${(e) => setTun({ 'notify.weekly-report': e.target.checked ? 'on' : 'off' })} /> ${t('ui.report.weekly_enabled')}</label>
+        <select value=${day} onChange=${(e) => setTun({ 'notify.weekly-report-at': e.target.value + ' ' + at })} aria-label=${t('ui.report.weekly_day')} style=${{ width: 'auto' }}>
+          ${WEEKDAYS.map(d => html`<option value=${d}>${t('ui.per.day.' + d)}</option>`)}</select>
+        <input type="time" value=${at} onChange=${(e) => e.target.value && setTun({ 'notify.weekly-report-at': day + ' ' + e.target.value })} aria-label=${t('ui.report.at')} style=${{ width: 'auto' }} />
+      </div>
+      <p class="small muted" style=${{ margin: 0 }}>${t('ui.report.weekly_hint')}</p>
+      ${wk.data.title && html`<div class="card"><div class="hd"><h3>${wk.data.title}</h3></div><div class="bd"><pre class="report">${wk.data.body}</pre></div></div>`}
+    </div></div>`;
+}
+
+// ReportSettings sets when the report goes out, to which teams, and
+// through which of a team's channels; a person can still switch it off for
+// themselves in the user list.
+function ReportSettings({ r, onChange }) {
+  const tun = useFetch(() => get('/tunables'), []);
+  const tms = useFetch(() => get('/teams'), []);
+  const chs = useFetch(() => get('/channels'), []);
+  if (!tun.data || !tms.data || !chs.data) return null;
+  const val = (k) => (tun.data.find(x => x.key === k) || {}).value || '';
+  const setTun = async (set) => {
+    try { await put('/tunables', { set, unset: [] }); tun.reload(); onChange(); } catch (e) { toastError(e); }
+  };
+  // One to four report times a day; a new count spreads them over the day.
+  const times = (val('notify.daily-report-at') || '10:00').split(',').map(x => x.trim()).filter(Boolean);
+  const setTimes = (list) => setTun({ 'notify.daily-report-at': [...new Set(list)].sort().join(',') });
+  const spread = (n) => n <= times.length ? times.slice(0, n) : [...times, ...SPREAD[n].filter(x => !times.includes(x))].slice(0, n);
+  const teams = r.teams || [];
+  const receives = teams.filter(x => x.receives).map(x => x.name);
+  const setReceives = (name, on) => setTun({ 'notify.daily-report-teams': teams.filter(x => (x.name === name ? on : x.receives)).map(x => x.name).join(',') });
+  const team = (tms.data.items || []).find(x => x.name === r.team);
+  const chans = ((team && team.channels) || []).map(n => chs.data.find(c => c.name === n)).filter(Boolean);
+  const takes = (c) => /-(sms|voice)$/.test(c.kind) ? c.opts.report === 'yes' : c.opts.report !== 'no';
+  const setTakes = async (c, on) => {
+    const opts = { ...c.opts };
+    if (/-(sms|voice)$/.test(c.kind)) { if (on) opts.report = 'yes'; else delete opts.report; } else if (on) delete opts.report; else opts.report = 'no';
+    try {
+      await post('/channels', { name: c.name, kind: c.opts.preset ? 'webhook:' + c.opts.preset : c.kind, opts }, ifMatch(c.etag));
+      chs.reload(); onChange();
+    } catch (e) { toastError(e); }
+  };
+  return html`<div class="card"><div class="hd"><h3>${t('ui.report.settings')}</h3></div><div class="bd form">
+    <div class="row" style=${{ gap: '16px', flexWrap: 'wrap' }}>
+      <label class="switch"><input type="checkbox" checked=${val('notify.daily-report') !== 'off'} onChange=${(e) => setTun({ 'notify.daily-report': e.target.checked ? 'on' : 'off' })} /> ${t('ui.report.enabled')}</label>
+      <label class="small">${t('ui.report.times')} <select value=${String(times.length)} onChange=${(e) => setTimes(spread(Number(e.target.value)))} style=${{ width: 'auto' }}>
+        ${[1, 2, 3, 4].map(n => html`<option value=${String(n)}>${tn('ui.report.times_n', n)}</option>`)}</select></label>
+      ${times.map((tm, i) => html`<input type="time" value=${tm} aria-label=${t('ui.report.at')} style=${{ width: 'auto' }}
+        onChange=${(e) => e.target.value && setTimes(times.map((x, j) => j === i ? e.target.value : x))} />`)}
+    </div>
+    <${Field} label=${t('ui.report.teams')}>
+      <div class="row" style=${{ gap: '14px', flexWrap: 'wrap' }}>${teams.map(x => html`<label class="switch"><input type="checkbox" checked=${receives.includes(x.name)} onChange=${(e) => setReceives(x.name, e.target.checked)} /> ${x.title}</label>`)}</div><//>
+    <${Field} label=${t('ui.report.channels', { team: (teams.find(x => x.name === r.team) || {}).title || r.team })} hint=${chans.length ? t('ui.report.channels_hint') : ''}>
+      ${chans.length ? html`<div class="row" style=${{ gap: '14px', flexWrap: 'wrap' }}>${chans.map(c => html`<label class="switch"><input type="checkbox" checked=${takes(c)} onChange=${(e) => setTakes(c, e.target.checked)} /> <span class="ltr">${c.name}</span></label>`)}</div>`
+        : html`<span class="small muted">${t('ui.report.channels_none')}</span>`}<//>
+  </div></div>`;
+}
+
+// ReportTab previews each team's daily status report. Admins choose which
+// teams receive one (the admin team's covers every monitor); people and
+// channels can switch it off for themselves (Contacts, the channel form).
+function ReportTab() {
+  const [team, setTeam] = useState('admin');
+  const rep = useFetch(() => get('/reports/daily?team=' + encodeURIComponent(team)), [team]);
+  const [busy, setBusy] = useState(false);
+  const send = async () => {
+    setBusy(true);
+    try { await post('/reports/daily/send', { team }); toast(t('ui.report.sent')); } catch (e) { toastError(e); }
+    setBusy(false);
+  };
+  if (!rep.data) return rep.error ? html`<${ErrorBox} error=${rep.error} />` : html`<${Loading} />`;
+  const r = rep.data;
+  const teams = r.teams || [];
+  const receives = teams.filter(x => x.receives).map(x => x.name);
+  const setReceives = async (name, on) => {
+    const next = teams.filter(x => (x.name === name ? on : x.receives)).map(x => x.name);
+    try { await put('/tunables', { set: { 'notify.daily-report-teams': next.join(',') }, unset: [] }); rep.reload(); } catch (e) { toastError(e); }
+  };
+  const mine = teams.find(x => x.name === r.team);
+  return html`<div class="col" style=${{ gap: '12px' }}>
+    <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${r.enabled
+      ? t('ui.report.intro', { at: r.at.split(',').join(', '), via: viaText(r.policy) })
+      : html`<span class="warn-text">${t('ui.report.off', { where: t('ui.nav.advanced') + ' › ' + t('ui.set.tab.tunables') })}</span>`}</p>
+      <button class="btn" onClick=${rep.reload}>${t('ui.report.refresh')}</button>
+      <button class="btn primary" onClick=${send} disabled=${busy || !(mine && mine.receives)}>${t('ui.report.send')}</button></div>
+    ${teams.length > 1 && html`<div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }}>
+      <label class="small">${t('ui.report.team')} <select value=${team} onChange=${(e) => setTeam(e.target.value)}>
+        ${teams.map(x => html`<option value=${x.name}>${x.title}</option>`)}</select></label>
+      ${me.role === 'admin' && mine && html`<label class="switch"><input type="checkbox" checked=${mine.receives} onChange=${(e) => setReceives(mine.name, e.target.checked)} /> ${t('ui.report.team_receives')}</label>`}
+      <span class="small muted spacer">${receives.length ? t('ui.report.receiving', { teams: teams.filter(x => x.receives).map(x => x.title).join(', ') }) : t('ui.report.receiving_none')}</span>
+    </div>`}
+    ${me.role === 'admin' && html`<${ReportSettings} r=${r} onChange=${rep.reload} />`}
+    <p class="small muted" style=${{ margin: 0 }}>${t('ui.report.opt_out_hint')}</p>
+    <div class="card"><div class="hd"><h3 class=${r.ok ? '' : 'crit-text'}>${r.title}</h3></div>
+      <div class="bd"><pre class="report">${r.body}</pre></div></div>
+    ${me.role === 'admin' && html`<${WeeklySettings} />`}
+  </div>`;
+}
+
+// ScreensTab opens or shares the on-duty wall screen, then opens the
+// managers' summary, which is a page of the console (/summary) and not
+// something to cast.
+function ScreensTab() {
+  return html`<div class="links2"><${LinkCard} page="wall" k="wall" /><${LinkCard} page="summary" k="sum" share=${false} /></div>`;
+}
+
+// Change notices went to Alerts and notifications; this page is about
+// what the public and the duty room see.
+export const NOTICE_TABS = [['pages', 'ui.notice.tab'], ['report', 'ui.report.tab'], ['screens', 'ui.notice.screens_tab']];
+
+export function Notices({ tab }) {
+  useDocTitle(t('ui.nav.notices'));
+  return html`<div class="page">
+    <div class="tabs">${NOTICE_TABS.map(([k, label]) => html`<a href=${'#/notices/' + k} class=${tab === k ? 'on' : ''}>${t(label)}</a>`)}</div>
+    ${tab === 'report' ? html`<${ReportTab} />` : tab === 'screens' ? html`<${ScreensTab} />` : html`<${NoticesTab} />`}
+  </div>`;
+}
+
+// LinkCard opens a read-only page (the wall screen or the managers'
+// summary) here, or, with share, makes a link with a read-only token for
+// someone or something that does not sign in.
+export function LinkCard({ page, k, share = true }) {
+  const [link, setLink] = useState('');
+  const make = async () => {
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      const r = await post('/tokens', { name: t('ui.look.' + k + '_token', { date: day }), scopes: ['read'] });
+      setLink(location.origin + '/' + page + '#token=' + encodeURIComponent(r.token));
+    } catch (err) { toastError(err); }
+  };
+  return html`<div class="card"><div class="hd"><h2>${t('ui.look.' + k)}</h2></div><div class="bd col" style=${{ gap: '10px' }}>
+    <p class="small muted" style=${{ margin: 0 }}>${t('ui.look.' + k + '_hint')}</p>
+    <div class="row">
+      <a class="btn" href=${'/' + page} target="_blank" rel="noopener">${t('ui.look.' + k + '_open')}</a>
+      ${share && html`<button class="btn" onClick=${make}>${t('ui.look.' + k + '_link')}</button>`}
+    </div>
+    ${link && html`<div class="banner ok"><div class="spacer col" style=${{ gap: '6px' }}>
+      <span>${t('ui.look.' + k + '_link_done')}</span><code class="ltr small" style=${{ wordBreak: 'break-all' }}>${link}</code></div><${Copy} text=${link} /></div>`}
+  </div></div>`;
+}

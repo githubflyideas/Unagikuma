@@ -1,0 +1,102 @@
+/* Office (small business): a friendly workspace app. A floating icon rail
+   opens on hover, a big gradient title, pastel tiles, rows as rounded
+   cards. Brings its own colours. Registered. */
+:root[data-style="office"] {
+  --bg: #f3f5fb; --side: #ffffff; --panel: #ffffff; --panel-2: #f3f4ff; --border: #e5e8f3; --border-strong: #c7cde6;
+  --text: #1f2330; --muted: #566074; --faint: #5f6a7e;
+  --accent: #5b5bf0; --accent-soft: #e8e9ff; --accent-text: #ffffff; --link: #4338ca;
+  --ok: #17804a; --ok-soft: #e1f5e8; --degraded: #b45309; --degraded-soft: #fdf0dc;
+  --critical: #c42f2f; --critical-soft: #fde4e4; --unknown: #7246d8; --unknown-soft: #efe8fe;
+  --pending: #68727f; --pending-soft: #e8ecf1; --maint: #2766c8; --maint-soft: #e0ebfd;
+  --on-status: #ffffff; --on-degraded: #2a1700;
+  --empty: #e6e9f3; --stripe: transparent;
+  --shadow: 0 14px 40px rgba(80, 70, 180, .12); --radius: 24px; --bg-image: none;
+  --side-text: #374151; --side-muted: #6b7280; --side-hover: #eef0ff; --side-on: #6366f1; --side-on-text: #ffffff; --side-mark: #6366f1;
+  color-scheme: light;
+}
+:root[data-style="office"] .themes { display: none; }
+:root[data-style="office"] body { background-color: var(--bg); background-image: none; }
+:root[data-style="office"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="office"] .side { background: var(--side); border-inline-end: 1px solid var(--border); }
+:root[data-style="office"] .brand { color: var(--accent); }
+:root[data-style="office"] .side .nav a { border-radius: 12px; box-shadow: none; }
+:root[data-style="office"] .side .nav a.on { font-weight: 650; }
+:root[data-style="office"] .top { background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom-color: var(--border); }
+:root[data-style="office"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="office"] .card, :root[data-style="office"] .tile, :root[data-style="office"] .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); }
+:root[data-style="office"] .card > .hd { border-bottom-color: var(--border); padding: 16px 22px; }
+:root[data-style="office"] .card > .hd h2, :root[data-style="office"] .card > .hd h3 { font-size: 15px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="office"] .card > .bd { padding: 18px 22px; }
+:root[data-style="office"] .card > .bd.flush { padding: 0; }
+:root[data-style="office"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="office"] .tile.ok { border-top-color: var(--ok); } :root[data-style="office"] .tile.critical { border-top-color: var(--critical); } :root[data-style="office"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="office"] .tile b { font-size: 28px; }
+:root[data-style="office"] .btn { border-radius: 12px; background: var(--panel); border-color: var(--border-strong); }
+:root[data-style="office"] .btn:hover { background: var(--panel-2); }
+:root[data-style="office"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="office"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="office"] input[type=text], :root[data-style="office"] input[type=password], :root[data-style="office"] input[type=number], :root[data-style="office"] input[type=url], :root[data-style="office"] input[type=email], :root[data-style="office"] select, :root[data-style="office"] textarea { background: var(--panel); border-radius: 12px; }
+:root[data-style="office"] .search, :root[data-style="office"] .chip, :root[data-style="office"] .seg { border-radius: 12px; background: var(--panel); }
+:root[data-style="office"] .banner { border-radius: 14px; }
+:root[data-style="office"] .pill, :root[data-style="office"] .pill.ok, :root[data-style="office"] .pill.degraded, :root[data-style="office"] .pill.critical, :root[data-style="office"] .pill.unknown, :root[data-style="office"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="office"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="office"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 78%, var(--text)); }
+:root[data-style="office"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 72%, var(--text)); }
+:root[data-style="office"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 80%, var(--text)); }
+:root[data-style="office"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 78%, var(--text)); }
+:root[data-style="office"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 78%, var(--text)); }
+:root[data-style="office"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="office"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="office"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="office"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+:root[data-style="office"] .pub .overall { border-radius: 16px; }
+:root[data-style="office"] .kpi, :root[data-style="office"] .sum-now { border-radius: 20px; }
+
+/* ===== Workspace layout: a floating icon rail that opens on hover, a big
+   gradient title and pastel tiles. ===== */
+:root[data-style="office"] body { background: linear-gradient(135deg, #eaf0ff 0%, #f8eefc 48%, #fff3e4 100%) fixed; }
+:root[data-style="office"] .shell, :root[data-style="office"] .shell.mini { display: block; max-width: none; background: transparent; box-shadow: none; }
+:root[data-style="office"] .side { display: contents; }
+:root[data-style="office"] .themes { display: none; }
+:root[data-style="office"] .brand { position: fixed; z-index: 60; inset-block-start: 16px; inset-inline-start: 16px; padding: 0; }
+:root[data-style="office"] .brand > div { display: none; }
+:root[data-style="office"] .brand img { width: 48px; height: 48px; border-radius: 16px; background: #fff; padding: 4px; box-shadow: 0 6px 18px rgba(91, 91, 240, .25); }
+:root[data-style="office"] .nav { position: fixed; z-index: 60; inset-block-start: 84px; inset-inline-start: 16px; width: 56px; padding: 8px; display: flex; flex-direction: column; gap: 4px; border-radius: 28px; background: rgba(255, 255, 255, .92); backdrop-filter: blur(10px); box-shadow: 0 10px 40px rgba(80, 70, 180, .18); overflow: hidden; transition: width .18s ease; }
+:root[data-style="office"] .nav:hover, :root[data-style="office"] .nav:focus-within { width: 212px; }
+:root[data-style="office"] .side .nav a, :root[data-style="office"] .shell.mini .nav a { height: 40px; padding: 0 0 0 10px; border-radius: 20px; gap: 14px; white-space: nowrap; overflow: hidden; color: #4b5563; font-weight: 600; }
+:root[data-style="office"] .nav .ico { width: 20px; flex: none; font-size: 17px; opacity: 1; }
+:root[data-style="office"] .shell.mini .nav .lbl { display: revert; }
+:root[data-style="office"] .side .nav a:hover { background: #eef0ff; }
+:root[data-style="office"] .side .nav a.on { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; box-shadow: 0 6px 16px rgba(99, 102, 241, .4); }
+:root[data-style="office"] .nav .count { margin-inline-start: auto; margin-inline-end: 12px; }
+:root[data-style="office"] .nav .rdot { margin: 0 14px 0 auto !important; }
+:root[data-style="office"] .side .foot { position: fixed; z-index: 60; inset-block-end: 16px; inset-inline-end: 16px; margin: 0; padding: 8px 12px; flex-direction: row; align-items: center; gap: 8px; border-radius: 22px; background: rgba(255, 255, 255, .92); box-shadow: 0 8px 30px rgba(80, 70, 180, .18); color: #374151; }
+:root[data-style="office"] .side .foot .host { display: none; }
+:root[data-style="office"] .side .foot .row { flex-wrap: nowrap; }
+:root[data-style="office"] .side .foot select { width: auto; max-width: 96px; border-radius: 14px; padding: 3px 6px; font-size: 12px; background: #f3f4ff; }
+:root[data-style="office"] .side .foot button.linkish, :root[data-style="office"] .side .foot a { color: #4f46e5; }
+:root[data-style="office"] .top { position: static; margin: 0 24px 0 96px; padding: 22px 8px 4px; background: transparent; border: 0; backdrop-filter: none; box-shadow: none; }
+:root[data-style="office"] .top > .btn.sm:first-child { display: none; }
+:root[data-style="office"] .top .crumbs { font-size: 34px; font-weight: 800; letter-spacing: -.02em; background: linear-gradient(90deg, #4f46e5, #db2777); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: 4px; }
+:root[data-style="office"] .page { margin: 0 24px 0 96px; width: auto; max-width: 1240px; padding: 14px 8px 80px; gap: 24px; }
+:root[data-style="office"] .card, :root[data-style="office"] .modal { border-radius: 28px; border: 0; box-shadow: 0 14px 40px rgba(80, 70, 180, .12); background: #fff; }
+:root[data-style="office"] .card > .hd { border-bottom: 0; padding: 20px 26px 6px; }
+:root[data-style="office"] .card > .hd h2, :root[data-style="office"] .card > .hd h3 { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+:root[data-style="office"] .card > .hd h2::before, :root[data-style="office"] .card > .hd h3::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline-end: 9px; background: linear-gradient(135deg, #6366f1, #ec4899); }
+:root[data-style="office"] .card > .bd { padding: 10px 26px 24px; }
+:root[data-style="office"] .tile { border: 0; border-radius: 28px; padding: 22px 18px; background: linear-gradient(160deg, #e9edff, #f6f0ff); box-shadow: none; }
+:root[data-style="office"] .tile.ok { background: linear-gradient(160deg, #dcf7e6, #eefbf2); } :root[data-style="office"] .tile.critical { background: linear-gradient(160deg, #ffe0e0, #fff0f0); } :root[data-style="office"] .tile.degraded { background: linear-gradient(160deg, #ffefd2, #fff8ea); }
+:root[data-style="office"] .tile b { font-size: 40px; font-weight: 800; letter-spacing: -.03em; }
+:root[data-style="office"] .btn, :root[data-style="office"] .search, :root[data-style="office"] .chip, :root[data-style="office"] .seg, :root[data-style="office"] input[type=text], :root[data-style="office"] input[type=password], :root[data-style="office"] input[type=number], :root[data-style="office"] input[type=url], :root[data-style="office"] input[type=email], :root[data-style="office"] select { border-radius: 999px; }
+:root[data-style="office"] .btn.primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); border: 0; box-shadow: 0 8px 20px rgba(99, 102, 241, .4); }
+:root[data-style="office"] .tbl { border-collapse: separate; border-spacing: 0 6px; }
+:root[data-style="office"] .tbl th { background: transparent; border-bottom: 0; color: #6b7280; font-weight: 700; }
+:root[data-style="office"] .tbl td { background: #f7f8ff; border: 0; padding-block: 11px; }
+:root[data-style="office"] .tbl td:first-child { border-start-start-radius: 18px; border-end-start-radius: 18px; box-shadow: none; } :root[data-style="office"] .tbl td:last-child { border-start-end-radius: 18px; border-end-end-radius: 18px; }
+:root[data-style="office"] .tbl tbody tr:nth-child(even) td { background: #f7f8ff; } :root[data-style="office"] .tbl tr.critical td { background: #fff0f0; } :root[data-style="office"] .tbl tr.click:hover td { background: #eceeff; }
+:root[data-style="office"] .card.scroll { background: transparent; box-shadow: none; } :root[data-style="office"] .page.list .card.scroll thead th { background: transparent; }
+:root[data-style="office"]media (max-width: 860px) {
+  :root[data-style="office"] .brand { position: static; } :root[data-style="office"] .side { display: flex; background: #fff; } :root[data-style="office"] .nav { position: static; width: auto; border-radius: 0; box-shadow: none; }
+  :root[data-style="office"] .nav:hover { width: auto; } :root[data-style="office"] .side .foot { position: static; } :root[data-style="office"] .top, :root[data-style="office"] .page { margin: 0; }
+}
+

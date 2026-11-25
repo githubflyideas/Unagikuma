@@ -1,0 +1,13 @@
+{
+  "id": "caddy", "title": "Caddy", "reader": "metrics", "path": "/metrics", "port": 2019,
+  "docs": "https://caddyserver.com/docs/metrics",
+  "needs": "Enable metrics in the global options (servers { metrics }); they are served by the admin endpoint, port 2019 by default.",
+  "verified": "Caddy 2.6.2",
+  "primary": "in_flight",
+  "summary": ["in_flight", "requests"],
+  "fields": [
+    {"key": "in_flight", "label": "Requests in flight", "label_zh": "正在处理的请求", "type": "quantity", "metric": "caddy_http_requests_in_flight"},
+    {"key": "requests", "label": "HTTP requests", "label_zh": "HTTP 请求数", "type": "counter", "metric": "caddy_http_requests_total"},
+    {"key": "request_errors", "label": "Request errors", "label_zh": "请求错误数", "type": "counter", "metric": "caddy_http_request_errors_total", "optional": true}
+  ]
+}

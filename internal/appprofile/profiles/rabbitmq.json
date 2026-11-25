@@ -1,0 +1,21 @@
+{
+  "id": "rabbitmq", "title": "RabbitMQ", "reader": "metrics", "path": "/metrics", "port": 15692,
+  "docs": "https://www.rabbitmq.com/docs/prometheus",
+  "needs": "Enable the rabbitmq_prometheus plugin (rabbitmq-plugins enable rabbitmq_prometheus); it serves port 15692.",
+  "verified": "RabbitMQ 3.12.1",
+  "primary": "messages_ready",
+  "summary": ["messages_ready", "messages_unacked", "connections", "consumers"],
+  "fields": [
+    {"key": "messages_ready", "label": "Messages ready", "label_zh": "待消费的消息", "type": "quantity", "metric": "rabbitmq_queue_messages_ready"},
+    {"key": "messages_unacked", "label": "Messages unacknowledged", "label_zh": "未确认的消息", "type": "quantity", "metric": "rabbitmq_queue_messages_unacked"},
+    {"key": "connections", "label": "Connections", "label_zh": "连接数", "type": "quantity", "metric": "rabbitmq_connections"},
+    {"key": "channels", "label": "Channels", "label_zh": "通道数", "type": "quantity", "metric": "rabbitmq_channels"},
+    {"key": "consumers", "label": "Consumers", "label_zh": "消费者数", "type": "quantity", "metric": "rabbitmq_consumers"},
+    {"key": "alarm_memory", "label": "Memory alarm (1 raised)", "label_zh": "内存告警（1 已触发）", "type": "quantity", "metric": "rabbitmq_alarms_memory_used_watermark"},
+    {"key": "alarm_disk", "label": "Disk alarm (1 raised)", "label_zh": "磁盘告警（1 已触发）", "type": "quantity", "metric": "rabbitmq_alarms_free_disk_space_watermark"},
+    {"key": "alarm_fd", "label": "File descriptor alarm (1 raised)", "label_zh": "文件描述符告警（1 已触发）", "type": "quantity", "metric": "rabbitmq_alarms_file_descriptor_limit"},
+    {"key": "memory_used", "label": "Memory used (bytes)", "label_zh": "已用内存（字节）", "type": "quantity", "unit": "B", "metric": "rabbitmq_process_resident_memory_bytes"},
+    {"key": "disk_free", "label": "Disk free (bytes)", "label_zh": "磁盘剩余（字节）", "type": "quantity", "unit": "B", "metric": "rabbitmq_disk_space_available_bytes"},
+    {"key": "published", "label": "Messages published", "label_zh": "已发布的消息", "type": "counter", "metric": "rabbitmq_channel_messages_published_total"}
+  ]
+}

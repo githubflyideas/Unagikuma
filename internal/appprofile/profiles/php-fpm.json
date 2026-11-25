@@ -1,0 +1,17 @@
+{
+  "id": "php-fpm", "title": "PHP-FPM", "reader": "text", "path": "/status", "port": 80,
+  "docs": "https://www.php.net/manual/en/install.fpm.configuration.php#pm.status-path",
+  "needs": "Set pm.status_path in the pool and route that path to PHP-FPM; allow only the monitoring host.",
+  "verified": "PHP-FPM 8.3.6",
+  "primary": "active",
+  "summary": ["active", "idle", "queue", "max_children"],
+  "fields": [
+    {"key": "active", "label": "Active processes", "label_zh": "活动进程", "type": "quantity", "line": "active processes"},
+    {"key": "idle", "label": "Idle processes", "label_zh": "空闲进程", "type": "quantity", "line": "idle processes"},
+    {"key": "total", "label": "Total processes", "label_zh": "进程总数", "type": "quantity", "line": "total processes"},
+    {"key": "queue", "label": "Listen queue", "label_zh": "监听队列", "type": "quantity", "line": "listen queue"},
+    {"key": "max_children", "label": "Times max children was reached", "label_zh": "达到最大子进程数的次数", "type": "counter", "line": "max children reached"},
+    {"key": "slow", "label": "Slow requests", "label_zh": "慢请求", "type": "counter", "line": "slow requests"},
+    {"key": "accepted", "label": "Accepted connections", "label_zh": "已接受的连接", "type": "counter", "line": "accepted conn"}
+  ]
+}

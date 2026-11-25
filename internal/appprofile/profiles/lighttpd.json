@@ -1,0 +1,14 @@
+{
+  "id": "lighttpd", "title": "Lighttpd", "reader": "text", "path": "/server-status?auto", "port": 80,
+  "docs": "https://redmine.lighttpd.net/projects/lighttpd/wiki/Docs_ModStatus",
+  "needs": "Load mod_status and set status.status-url to /server-status; allow only the monitoring host.",
+  "verified": "Lighttpd 1.4.74",
+  "primary": "busy",
+  "summary": ["busy", "idle"],
+  "fields": [
+    {"key": "busy", "label": "Busy servers", "label_zh": "忙碌的服务器", "type": "quantity", "line": "BusyServers"},
+    {"key": "idle", "label": "Idle servers", "label_zh": "空闲的服务器", "type": "quantity", "line": "IdleServers"},
+    {"key": "accesses", "label": "Total accesses", "label_zh": "累计访问数", "type": "counter", "line": "Total Accesses"},
+    {"key": "uptime", "label": "Uptime (s)", "label_zh": "运行时间（秒）", "type": "quantity", "unit": "s", "line": "Uptime"}
+  ]
+}

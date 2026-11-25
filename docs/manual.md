@@ -1,0 +1,652 @@
+# Unagikuma user manual
+
+How to install, configure and run Unagikuma. The [README](../README.md) has the short version.
+**Contents**
+
+- [Quick start](#quick-start)
+- [monitors.conf](#monitorsconf)
+- [Alerting](#alerting)
+- [Status pages](#status-pages)
+- [Two machines and clusters](#two-machines-and-clusters)
+- [Users](#users)
+- [Registration and quotas](#registration-and-quotas)
+- [Moving from Uptime Kuma or Nagios](#moving-from-uptime-kuma-or-nagios)
+- [Forgot your password?](#forgot-your-password)
+- [Command line](#command-line)
+- [Data and backups](#data-and-backups)
+- [API](#api)
+- [Troubleshooting](#troubleshooting)
+
+## Quick start
+
+Download the archive for your platform from the [releases](../../releases), unpack it and run:
+
+```sh
+./unagikuma            # listens on :8077, keeps its data in ./data
+```
+
+Open `http://<host>:8077/` and create the admin account. When you open the UI from another machine, Unagikuma asks for the one-time setup token it printed to its log at first start.
+
+On macOS the binaries are not notarized yet, so the first start is blocked: run `xattr -d com.apple.quarantine ./unagikuma` once (or right-click it in Finder and choose *Open*).
+
+Add a monitor in the UI, use **Quick add monitors** to paste a list of targets, or edit `data/monitors.conf`.
+
+### As a service (Linux, systemd)
+
+```ini
+# /etc/systemd/system/unagikuma.service
+[Unit]
+Description=unagikuma monitoring
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/unagikuma server --data /var/lib/unagikuma
+Restart=on-failure
+DynamicUser=yes
+StateDirectory=unagikuma
+AmbientCapabilities=CAP_NET_RAW
+
+[Install]
+WantedBy=multi-user.target
+```
+
+`CAP_NET_RAW` is only needed for ICMP ping on systems where unprivileged ping sockets are disabled (`net.ipv4.ping_group_range`). Without either (as on a stock Debian or Ubuntu), a ping check knocks on TCP ports 443, 80 and 22 instead: a host that accepts or refuses the connection is up, and the result says it was checked over TCP. If all three ports stay silent, the check reports that this host lacks the privilege rather than marking the target down. `fallback=off` turns the TCP knock off.
+
+### As a service (Windows)
+
+In an Administrator PowerShell, in the folder of `unagikuma.exe`:
+
+```powershell
+.\unagikuma.exe service install -- server --data C:\ProgramData\unagikuma --log-file C:\ProgramData\unagikuma\unagikuma.log
+.\unagikuma.exe service uninstall
+```
+
+The service starts automatically and is restarted if it stops.
+
+Windows is supported, with some checks possibly unsupported:
+
+- ICMP ping needs the service to run as Administrator (or LocalSystem); otherwise ping checks knock on TCP ports instead.
+- A weak UDP check (L1) may report that this platform cannot see a closed port, and stays UNKNOWN instead of OK or down.
+- A fixed source port (`src-port=`) held by another program may not be detected.
+
+## monitors.conf
+
+Releases before 2.6 called this file `monitors.bind`. The server renames it when it starts, and the command-line tools still find the old name.
+
+```text
+; revision, then the defaults for every monitor
+$FILE revision=2026102301 interval=1m retry=15s timeout=5s attempts=3
+
+$SET notify.repeat=30m
+
+; notification channels, and the admin team that uses them
+ops      IN CHANNEL feishu url=${secret:ops_webhook}
+mail     IN CHANNEL email host=smtp.example.com port=587 tls=starttls username=alerts@example.com password=${secret:smtp} from=alerts@example.com to=oncall@example.com system=yes
+admin    IN TEAM channels=ops,mail
+
+; monitors: name [interval] IN TYPE target key=value...
+www      IN HTTP https://www.example.com/ title="Website" keyword="Welcome" cert-days=62 group=public
+api  30s IN HTTP https://api.example.com/health json-path=$.status json-expect=ok
+db       IN TCP  10.0.0.5:5432 title="Postgres"
+gw       IN PING 192.168.1.1
+time     IN UDP  10.0.0.1:ntp authorized=yes
+switch   IN UDP  10.0.0.2:snmp community=${secret:snmp_ro}
+backup   IN PUSH period=24h grace=2h
+company  IN DOMAIN example.com days=45 critical-days=10
+
+; a public status page at /status/main
+main     IN STATUSPAGE "Service status" select="group:public"
+```
+
+- After editing the file by hand, **increase the revision** on the `$FILE` line; Unagikuma then validates and applies it. Saving a monitor, channel or team in the web UI raises it for you. Files from earlier releases start with an `@ IN SOA … ( serial interval retry timeout attempts )` line instead; it still works the same way, and its first number is the revision. **Config & import › monitors.conf** shows the file read-only, with a copy button; edit it on the server. A file with errors is never applied: the last good version keeps running and the UI shows what is wrong. On a first start there is no last good version yet; instead of refusing to start, Unagikuma starts in a repair mode — the web UI runs, the banner shows the errors, and nothing is monitored until the configuration is fixed and saved, which starts normal operation without a restart.
+- Credentials never need to be in the file: store them under **Advanced › Secrets** and refer to them as `${secret:name}`. A secret the configuration still uses cannot be deleted: the refusal names the records that use it. Values from the environment can be used as `${env:NAME}` when the server is started with `--allow-env NAME`.
+- Monitors are grouped into hosts by the address they check; `device=core-sw1` groups monitors of several addresses under one name. A host with a PING monitor is UP or DOWN by that ping.
+- `parent=gw` (or `parent=sw1,gw`) declares a dependency: while a parent is down, a failing child is shown as UNREACHABLE and not notified. If the child is still down once its parents are back, it is notified as usual.
+- Maintenance windows hold notifications for the monitors they select; that time does not count against uptime, and a monitor still down when the window closes is notified then:
+
+  ```text
+  sunday  IN MAINT "Server room work" select="tag:site:bj" every=sun start=02:00 duration=2h notify=yes
+  upgrade IN MAINT "Core switch upgrade" select="cidr:10.0.0.0/24" at="2026-11-01 22:00" duration=3h
+  backups IN MAINT "Nightly backup" select="group:db" cron="30 2 * * 1-5" duration=40m
+  ```
+
+  `select=` takes fields that only depend on the configuration: `name`, `title`, `type`, `svc`, `port`, `host`, `cidr`, `tag`, `group`, `policy`, `node`, `area`, plus free text; terms are AND-ed, commas mean "any of", `-` negates, `/…/` is a regular expression.
+- HTTPS checks and TCP checks with `tls=yes` watch their certificate: inside `probe.cert-warn-days` (62) they are degraded, inside `probe.cert-critical-days` (7) they fail, and an expired certificate always fails — also with `insecure=yes`. `cert-days=` and `cert-critical-days=` on a monitor set its own thresholds (0 turns one off).
+- A PING check sends 3 echo requests and fails when more than `probe.ping-loss` (50%) of them go unanswered; less loss marks it degraded. `loss=` on a monitor sets its own threshold (`loss=0` fails only when every request is lost).
+- A UDP check that only shows the port is not closed (L1, marked *weak*: `SYSLOG`, `snmptrap`, unknown ports) counts silence as "probably open" only while the host itself answers a ping (or a TCP knock). If the host does not answer either, the check is UNKNOWN instead of OK; if it is reported unreachable, the check fails. `host-check=off` accepts silence alone, for hosts that answer nothing at all.
+- Pings and weak UDP checks of the same address start at least `probe.same-target-gap` (1s) apart on each node, because devices limit how many ICMP replies they send and a burst can look like packet loss or an open port. Checks that share a fixed source port (`src-port=`) take turns; if the port stays busy, or another program holds it, the check is UNKNOWN for that round instead of down.
+- Two monitors that check exactly the same thing (same type, target, options, timeout and nodes — typically one service watched by two teams) send every request twice. `unagikuma check` and the monitor form point this out; `share=yes` on one of them makes it use the result of the other's check from the last `probe.share-window` (10s) instead of checking again. Each monitor keeps its own thresholds, incidents and notifications.
+- `DOMAIN` watches when a domain's registration expires, asking the registry over RDAP (or WHOIS where there is no RDAP), every 6 hours by default and at most hourly. Inside `days=` (30) it is degraded, inside `critical-days=` (7) it fails; if no registry answers it is UNKNOWN, never down. **Monitors › Expiry dates** lists every domain and TLS certificate, soonest first.
+- `unagikuma keywords` lists the UDP keywords and what each check proves.
+- Every day at 10:00 (`notify.daily-report-at`) a status report lists the hosts that are DOWN and UP and every service that is not OK; **Notices & status › Daily report** previews it and sends it on demand. Each team chosen there (the admin team by default, `notify.daily-report-teams`) gets a report on its own monitors through its channels; the admin team's covers every monitor. A person can be switched off in **Contacts**, a channel with `report=no`.
+
+### Values: limits and sudden changes
+
+Some checks read a number: the value at `json-path=` of an HTTP check, the OID an SNMP check reads, a network port's traffic (`port=`) or a temperature sensor (`sensor=`). The same rules judge any of them:
+
+A limit's unit has to measure the value: `value=util` takes `70` or `70%`, `value=in` takes `500Mbps`, a temperature takes `35` or `35°C`; `500Mbps` as a limit on a percentage is refused. On one side `crit` lies further out than `warn`, and `>=` / `<=` include the limit itself. An OID that is a counter (Counter32, Counter64) is judged by its rate per second, not its ever-growing total. `expect=` on an SNMP number must be that number exactly; use `expect-num=` to compare. On a DNS A, AAAA, CNAME, NS or PTR answer `expect=` must be the same address or name; on MX or TXT it may be part of the answer. Every option's type and what it may be judged by is in [value-types](value-types.md).
+
+```text
+sw1-g0-1   1m IN SNMP 10.0.0.2 port=Gi0/1 community=${secret:ro} value=util warn=70 crit=90 change=50% compare=24h min=5
+room-temp     IN SNMP 10.0.0.3 sensor="Inlet" version=3 user=mon auth=sha auth-pass=${secret:a} priv=aes priv-pass=${secret:p} warn=35 crit=40 for=5m
+api-queue     IN HTTP https://api.example.com/q json-path=$.data.depth warn=500 crit=1000
+stock         IN HTTP https://shop.example.com/s json-path=$.n crit=<10
+```
+
+- `warn=` makes the monitor degraded above the value, `crit=` fails it (`<10` means below 10). Units can be written: `80%`, `500Mbps`, `1.5GB`, `35`. A capital B is bytes and bps a rate; a small b (`1Gb`) is refused as ambiguous. On a time, `m` is minutes: `5m`, `500ms`, `2h`, `1d12h`.
+- `change=50%` warns when the value moves more than that from its reference: the check before (`compare=previous`, the default) or the median of the values within `values.median-window` (10m) around the same time a day or a week earlier (`compare=24h`, `7d`). Until there is such a reference the monitor page says it is learning and nothing is judged. `min=` ignores changes while both values are below it; `direction=up` or `down` looks one way only; a value that falls to 0 from above `min=` warns too.
+- `for=5m` counts a breach only after it has lasted that long.
+- A port: `value=` is `util` (the busier direction as a share of the port speed, the default), `in` or `out` (bits per second). Counters are 64-bit where the device has them; a counter that goes back (a wrap or a restart) skips one round instead of alerting. The port fails while it is down, unless an administrator shut it; a port that renegotiates to a lower speed warns. Ports are found by name (`ifName`, then the description), once, and found again after the device renumbers them.
+- A sensor: ENTITY-SENSOR-MIB by default, or `profile=huawei`, `h3c` or `cisco` for those vendors' tables.
+- SNMPv3: `version=3 user=` with `auth=` (md5, sha, sha256, sha512) and `auth-pass=`, and for encryption `priv=` (des, aes) and `priv-pass=`. Keep the passwords in secrets; they never appear in evidence or logs.
+- Only GET (and GETNEXT, to find a port or sensor by name) is sent; nothing on the device is changed or walked in bulk.
+- The values behind `change=` are kept for `values.retain` (24h) and survive a restart.
+
+### Script checks
+
+> Experimental.
+
+`EXEC` runs a check script using the Nagios plugin conventions: exit status 0 is OK, 1 WARNING (shown as DEGRADED), 2 CRITICAL, 3 UNKNOWN; the first output line is the status text and performance data after `|` is kept as metrics. Existing plugins and in-house scripts work unchanged:
+
+```text
+disk-db1  IN EXEC check_disk args="-w 20% -c 10% -p /data" device=db1
+load-db1  IN EXEC check_load args="-w 5,4,3 -c 10,8,6" device=db1
+nrpe-web  IN EXEC "check_nrpe -H $HOSTADDRESS$ -c check_users" address=10.0.0.21
+```
+
+- Scripts are looked up only in the check-scripts directory of the machine that runs the check: `<data>/check-scripts`, or `--script-dir dir1,dir2`. The directory is created on first start with a README and an example (`check_example`). The configuration names a file there, never a path, and nothing goes through a shell.
+- In a cluster each machine runs its own copy, so copy scripts to every machine that runs the check (scp, Ansible…); Unagikuma does not upload them. New script checks start **paused**: enabling one checks that every node running it has the script, and refuses with the list of nodes that lack it. **Settings › Check scripts** shows each check's script on each node (present, missing, not executable, another version) and the sidebar shows a red count while an enabled script check cannot run somewhere.
+- Plugins get a minimal environment (`PATH`, `UNAGIKUMA_MONITOR`, `UNAGIKUMA_ADDRESS`, `UNAGIKUMA_TIMEOUT`), not the server's. `$HOSTADDRESS$`, `$SERVICEDESC$` and `$TIMEOUT$` are replaced in arguments. At the timeout the plugin and everything it started are killed and the check is CRITICAL.
+- Only administrators can add EXEC checks or change what they run. `probe.exec-concurrency` limits plugins running at once per node.
+
+
+### Application status pages (APP)
+
+A well-known application has a status page of its own, and an APP monitor reads it: `app=` names the application, and its profile says where the page is and what each number on it is. The address may be a URL, `host` or `host:port`; the profile's page and port fill in what it leaves out. `field=` names the number the limits judge (the profile's main one when it is not given); a total that only grows, such as requests, is judged by its rate per second. A reply that is not that application's page fails and says what is missing. `warn=` and `crit=` may also join two to four comparisons of the page's fields, all with `and` or all with `or`, such as `crit="busy>50 and queue>100"` (every comparison must hold) or `warn="free_bytes<100GB or drives_offline>0"` (any one); the same works on a REDIS monitor with `field=`. The units follow each field, a total that only grows is compared by its rate, and `and` and `or` are not mixed in one condition.
+
+```
+web1  30s IN APP 10.0.0.5 app=nginx warn=800 crit=1500
+web2  30s IN APP 10.0.0.5 app=nginx field=requests warn=2000
+apa   30s IN APP 10.0.0.6 app=apache field=busy crit=45
+lb    30s IN APP 10.0.0.7:8404 app=haproxy select=proxy=www field=sessions warn=500
+```
+
+| `app=` | Page | Reader | Needs in the application |
+|---|---|---|---|
+| `nginx` | `/nginx_status` | text | `stub_status` in a location block |
+| `apache` | `/server-status?auto` | text | `mod_status` |
+| `lighttpd` | `/server-status?auto` | text | `mod_status`, `status.status-url` |
+| `php-fpm` | `/status` | text | `pm.status_path` in the pool |
+| `haproxy` | `/metrics` (port 8404) | metrics | the built-in Prometheus exporter |
+| `prometheus` | `/metrics` (port 9090) | metrics | nothing |
+| `etcd` | `/metrics` (port 2379) | metrics | nothing |
+| `caddy` | `/metrics` (admin port 2019) | metrics | `servers { metrics }` |
+| `rabbitmq` | `/metrics` (port 15692) | metrics | the `rabbitmq_prometheus` plugin |
+| `grafana` | `/metrics` (port 3000) | metrics | nothing |
+| `traefik` | `/metrics` (port 8082) | metrics | `metrics.prometheus` on its own entry point |
+| `minio` | `/minio/v2/metrics/cluster` (port 9000) | metrics | `MINIO_PROMETHEUS_AUTH_TYPE=public` |
+
+A REDIS monitor reads Redis the same way: `field=` names a number of `INFO` (connected clients, memory used, keys evicted, and so on, listed in the monitor form) and the limits judge it, with a counter such as commands processed judged by its rate:
+
+```
+cache IN REDIS 10.0.0.20 password=${secret:redis} field=used_memory warn=1GB crit=2GB
+```
+
+A POSTGRES or MYSQL monitor can judge a number a query returns: `query=` is one `SELECT` whose first column of the first row is the number, and `warn=`, `crit=` and the other rules judge it. The check logs in with `user=` to run it. It is meant to change nothing, and does its best to: the statement must be a single `SELECT` (no `;` inside it, no `INTO`, no locking read such as `FOR UPDATE`, so a literal containing `;` or `INTO` is refused too), the session is made read-only before it runs (a startup parameter in PostgreSQL, `SET SESSION TRANSACTION READ ONLY` in MySQL), the server is asked to stop the statement when the check gives up (`statement_timeout` in PostgreSQL, `max_execution_time` or `max_statement_time` in MySQL and MariaDB), and the account should be one that can only read: a read-only session does not stop every function with a side effect (`pg_terminate_backend()`, `dblink_exec()`, `GET_LOCK()`), which an account without those rights cannot call. Only administrators may add a check that runs a query.
+
+```
+orders IN POSTGRES db1 user=monitor password=${secret:pg} database=shop query="SELECT count(*) FROM orders WHERE created_at > now() - interval '5 minutes'" crit=<1
+conn   IN MYSQL    db2 user=monitor password=${secret:my} query="SELECT COUNT(*) FROM information_schema.processlist" warn=150
+```
+
+Open the page only to the monitoring host. `select=label=value` narrows a metrics page to one proxy, topic or the like. The profiles are data files (`internal/appprofile/profiles/`). Each says the version of the application it was last run against (shown in the monitor form); `scripts/live/start.sh` starts those applications and `go test -tags live ./internal/probe` runs every profile against them. To add an application, see [value-types](value-types.md) for the types a field may have.
+## Alerting
+
+Notifications go through **channels** (where a message is sent). Each team has an ordered list of them (see [Teams](#teams)); channels are records in `monitors.conf` with forms under **Alerting**, and a team's list is set under **Advanced › Teams**.
+
+```text
+ops-im    IN CHANNEL feishu url=${secret:feishu_ops}
+oncall    IN CHANNEL aliyun-sms access-key-id=LTAI… access-key-secret=${secret:ali} sign-name=Ops template-code=SMS_123 phones=13800000000
+manager   IN CHANNEL email host=smtp.example.com from=alerts@example.com to=boss@example.com
+office    IN PERIOD "mon-fri 09:00-18:00; sat 10:00-12:00"
+team      IN CHANNEL group members=ops-im,oncall
+night-sms IN CHANNEL aliyun-sms … period=!office
+admin     IN TEAM channels=team,night-sms mode=all
+```
+
+### Channel kinds
+
+| Where | Kind | What it needs |
+|-------|------|---------------|
+| Feishu / Lark, DingTalk, WeCom | `feishu`, `dingtalk`, `wecom` | the group robot's webhook `url=`; `secret=` when the robot signs (Feishu, DingTalk) |
+| Telegram | `telegram` | `token=` of the bot and `chat=` |
+| Slack, Discord | `slack`, `discord` | the incoming webhook `url=` |
+| Microsoft Teams, Mattermost, Google Chat | `webhook preset=teams`, `mattermost`, `googlechat` | the webhook `url=` |
+| LINE | `webhook preset=line` | the channel access `token=` of a Messaging API channel and `to=` (a user, group or room id) |
+| Matrix | `webhook preset=matrix` | `homeserver=`, `token=`, `room=` |
+| E-mail | `email` | an SMTP server or the local `sendmail` (below) |
+| SMS and calls | `aliyun-sms`, `aliyun-voice`, `tencent-sms`, `tencent-voice`, `twilio-sms`, `twilio-voice`, `webhook preset=clicksend` | the provider's keys, and for Aliyun and Tencent Cloud an approved template |
+| PagerDuty, Opsgenie, Datadog | `webhook preset=pagerduty`, `opsgenie`, `datadog` | `routing-key=`, `api-key=` (Datadog: also `site=`) |
+| ntfy, Gotify, Bark, Pushover, Pushbullet, ServerChan, PushPlus | `webhook preset=ntfy`, `gotify`, `bark`, `pushover`, `pushbullet`, `serverchan`, `pushplus` | the server and topic, or the token or key of the app |
+| Apprise | `webhook preset=apprise` | `server=` of an Apprise API and the `key=` of a configuration saved there (`tag=` picks some of its services) |
+| Team chat | `webhook preset=rocketchat`, `zohocliq`, `pumble`, `stackfield`, `webex`, `zulip`, `nextcloudtalk`, `clickup`, `signal`, `threema` | the incoming webhook `url=`, or the bot token and the room, stream or channel |
+| China, Japan, Korea | `webhook preset=kook`, `onebot`, `milky` (QQ), `wxpusher`, `pushdeer`, `wpush`, `spug`, `yzj`, `flashduty`, `chatwork`, `kakaowork`, `dooray`, `jandi`, `onechat` | the bot token or webhook `url=`, and the room or group |
+| Russia, Iran | `webhook preset=vkteams`, `vk`, `max`, `bitrix24`, `bale` | the bot token and `chat=` |
+| Incident and on-call | `webhook preset=alerta`, `alertnow`, `goalert`, `grafanaoncall`, `pagertree`, `signl4`, `splunk`, `squadcast`, `heii`, `ilert`, `incidentio`, `newrelic`, `halopsa`, `flowtriq`, `gitlab` | the integration `url=` or key. Recoveries resolve the alert they opened, keyed by the incident |
+| Issues | `webhook preset=github`, `gitea` | `token=`, `repo=owner/name`; each alert opens an issue |
+| Automation | `webhook preset=zapier`, `n8n`, `ifttt` | the catch-hook `url=`, or the IFTTT `key=` and `event=` |
+| WhatsApp | `webhook preset=whatsapp` (Meta Cloud API), `zapi`, `zenvia`, `waha`, `evolution`, `openwa`, `whapi`, `callmebot`, `onesender`, `360messenger` | the token, the instance or phone number id, and `to=` |
+| SMS | `webhook preset=infobip`, `plivo`, `telnyx`, `vonage`, `messagebird`, `sevenio`, `46elks`, `octopush`, `freemobile`, `smsc`, `smseagle`, `smsgateway`, `unifonic`, `taqnyat`, `ooredoo`, `zenvia`, `serwersms`, `smspartner`, `promosms`, `smsmanager`, `smsplanet`, `cellsynt`, `gtx`, `bearsms`, `egosms` | the provider's keys, `from=` and `to=` (several numbers separated by commas where the service takes them) |
+| E-mail APIs | `webhook preset=sendgrid`, `brevo`, `resend`, `turbosmtp` | `api-key=`, `from=`, `to=` |
+| Other push apps | `webhook preset=homeassistant`, `gorush`, `lunasea`, `techulus`, `pushy`, `notifery`, `notifyapp`, `signalgrid` | the server or the app's key |
+| Anything else | `webhook` | `url=`; the message as JSON, or your own `body=` |
+| Your own SMS or voice gateway | `custom-sms`, `custom-voice` | `url=` and `phones=`; one request per number, `{{.Phone}}` and `{{.Title}}` in the address, `header.Name=value` and `body=` (default `{"phone":"{{.Phone}}","message":"{{.Title}}"}`), `success-match=` |
+
+**Alerts & notifications › Channels** has a form for each, and **Test** sends a message through it. Two services accept any key and only refuse it later, so their test cannot tell a wrong key: PagerDuty and Datadog.
+
+### What is sent, and changing it
+
+Every message has a title and a body in the language set under **Settings**. A channel can replace the text of problems and recoveries with `template=` (the **Message template** field). The first line of the result is the title:
+
+```text
+ops-im IN CHANNEL feishu url=${secret:feishu_ops} at=all template="{{.Icon}} {{.KindText}}: {{.Name}} {{.StatusText}}\n{{.ReasonText}} — {{.Detail}}\nfor {{.DurationText}} · {{.DetailURL}}"
+```
+
+| Name | What it is |
+|------|------------|
+| `{{.Name}}`, `{{.Monitor}}` | the monitor's title and its name in the file |
+| `{{.Kind}}`, `{{.KindText}}` | `PROBLEM`, `REPEAT`, `REOPEN`, `ESCALATE`, `RECOVERY`; and in words |
+| `{{.Status}}`, `{{.StatusText}}` | `critical`, `degraded`, `ok`…; and in words |
+| `{{.Reason}}`, `{{.ReasonText}}`, `{{.Detail}}` | why it fails: the code, in words, and what the check saw |
+| `{{.Type}}`, `{{.Target}}`, `{{.Depth}}` | the check |
+| `{{.Started}}`, `{{.DurationText}}`, `{{seconds .Duration}}`, `{{rfc3339 .Time}}` | since when and for how long |
+| `{{.Count}}`, `{{.Max}}` | this is notification number … of … |
+| `{{.DetailURL}}` | link to the console (set its address under **Settings**) |
+| `{{.Tags}}`, `{{.Priority}}`, `{{.Class}}`, `{{.IncidentID}}`, `{{.Instance}}`, `{{.Site}}`, `{{.DeliveryID}}`, `{{.Icon}}` | the rest |
+| `{{.Title}}`, `{{.Body}}`, `{{.Text}}` | the built-in text, to add a line to it instead of replacing it |
+| `{{.owner}}`, `{{index . "my-key"}}` | the channel's own options |
+
+Functions: `upper`, `lower`, `trunc 20 .Name`, `join ", " .Tags`, `json .Tags`, `urlquery`, `pathescape`, `seconds`, `rfc3339`.
+
+- Summaries, reports and system notices keep their own text. **Test** shows the template filled with an example.
+- A template that does not parse, or uses a name that does not exist, is refused when the channel is saved in the console. In a file it is a warning (`template_problem`): the built-in text is sent, and a name that does not exist is empty.
+- `at=` on a `dingtalk`, `wecom` or `feishu` channel mentions people on problems: `at=all`, or phone numbers separated by commas (Feishu: user ids). Recoveries and reports mention nobody.
+- A `webhook` channel sends all of the above as JSON; `body=` replaces it with your own template (`content-type=json|form|text`, `header.Name=value` for headers), and the `url=` may hold names too, which is all a `method=GET` hook can carry. In a `form` body the values are URL-escaped for you, exactly as JSON bodies escape their values, so a name holding `&` or `=` stays one field's value; `{{raw .X}}` sends a value unescaped, and `{{urlquery .X}}` needs no second escaping.
+- SMS providers in China only send approved templates: `params="{{.Name}}|{{.StatusText}}|{{.ReasonText}}"` fills the template's variables in order.
+
+### Limits, retries and falling back
+
+- **Length.** Each service takes messages up to a size (WeCom 2048 bytes, Telegram 4096 characters, Discord 2000, Pushover 1024, …). A longer message, usually the daily report, is cut at a line and its last line says how many lines are left out.
+- **Rate.** A channel sends at most `notify.channel-rate` (20 a minute; `rate=6/m` on a channel changes it), and never more than its service takes from one robot in a minute (`notify.service-limits`: DingTalk, WeCom and Telegram 20, Discord 30, Slack 60, Feishu 100). What cannot go yet waits, and a long queue becomes one summary.
+- **Retries.** A failed delivery is tried again twice (`notify.channel-retries`, `retries=` on a channel, `retries=0` for none), after 2 and 5 seconds. A failure that will repeat (a wrong token, a refused message) is not tried again. A service that asks to wait (HTTP 429 with `Retry-After`, or its own "too fast" answer) is asked again after that long; if it asks for more than `notify.retry-after-max` (30s) the next channel of the team takes the alert.
+- **When every channel fails.** The alert does not count towards `notify.max` and is sent again after `notify.failed-retry` (2 minutes, then 4, 8, … up to the repeat interval) until someone gets it or the problem is over. The system channels and the team's administrators are told once that the team's channels failed.
+- **Daily report.** SMS and voice channels take it only with `report=yes`; every other channel takes it unless `report=no`.
+
+- **E-mail.** An `email` channel sends either to an SMTP server (`host=`, `port=`, `tls=starttls|tls|none`, `username=`, `password=`, `from=`) or, with `via=sendmail`, through this machine's own mail system, the way Nagios and cron do:
+
+  ```text
+  ops-mail  IN CHANNEL email via=sendmail to=ops@example.com,dba@example.com
+  ```
+
+  Nothing else is needed: whatever mail system the machine runs (postfix, sendmail, exim, OpenSMTPD, msmtp, ssmtp, nullmailer, dma) installs a `sendmail` command, and that is used, with its own relay, queue and retries. It is looked for in `/usr/sbin`, `/usr/lib`, `/usr/bin`, `/usr/local/sbin` and `/usr/local/bin`; `program=` names another place (only a mail system's own command, such as `/usr/bin/msmtp`, is accepted). Without `from=` the mail system chooses the sender, as it does for Nagios. The message counts as sent once the mail system has accepted it; whether it then reaches the mailbox depends on that mail system, so try **Test** once after setting it up. Not available on Windows.
+- **How often.** `notify.repeat`, `notify.max` and the other `notify.*` tunables (**Advanced › Tunables**) set how often a problem is repeated and how many notices it sends.
+- **Time periods.** `PERIOD` records are weekly rules (`mon-fri 09:00-18:00`, ranges past midnight such as `22:00-07:00`, `24:00` for end of day). `period=office` on a channel uses it only inside the period, `period=!office` only outside it. A skipped channel is not a failure: the next one in a fallback chain is tried.
+- **Contact groups.** A `group` channel notifies all its `members=` at once; it succeeds if any member does. Members keep their own time periods.
+- **Summaries say what kind of problem it is.** When many notices queue up at once (`notify.coalesce-queue`, `notify.coalesce-wait`) they are replaced by a summary, and the summary tells services from the network:
+  - services that fail on their own come first, as "please act now", for their owners;
+  - `notify.group-min` (3) or more monitors of one IP segment failing at the network level together are reported as a fault of that segment, its switch or uplink; monitors failing to resolve their names together, as a DNS fault — "please contact the network team".
+
+- **When this host loses its network** it cannot notify anyone, so nothing is sent while it lasts and nothing queued meanwhile is sent afterwards. Failures that began just before the outage was recognised (`localnet.backdate`) and that nobody was told about are taken back. When the network is back every monitor is re-checked, and one message says how long the host was blind and what is still failing; outages shorter than `localnet.notify-after` (5 minutes) are only recorded. A recovery is sent only for problems someone actually received. To be told *while* the host is offline, use an external heartbeat (`--heartbeat-url`) or a second node.
+
+  How the host recognises its own outage: its gateway stops answering; or internet targets in at least `localnet.min-domains` (3) different networks (an IPv4 /24, an IPv6 /48 or a registered domain) fail together while none of them answers; or every WAN anchor fails (**Run mode › Edit** on this machine, **Anchors** `wan:IP,IP`). Before an internet failure becomes an alert, the host also asks a few **reference points** on the internet (`localnet.references`: 223.5.5.5, 1.1.1.1 and 8.8.8.8, on TCP 443). If any of them answers, its own network works and the target is alerted as usual, even when all your targets fail at once; if none answers, they count towards the three networks, so a machine watching only one or two sites still recognises its own outage and sends the summary afterwards. Where your network blocks these addresses, set ones it can reach under **Advanced › Tunables**.
+- **SMS and voice calls.** `aliyun-sms`, `aliyun-voice`, `tencent-sms`, `tencent-voice`, `twilio-sms` and `twilio-voice` channels. Template parameters default to the monitor name and the status; `params="{{.Monitor}}|{{.StatusText}}"` changes them. Keys are stored as secrets when saved from the UI.
+- **Event handlers.** `handler="restart-web $SERVICESTATE$ $SERVICESTATETYPE$"` on a monitor runs a script from the check-scripts directory on each state change, Nagios style, with `UNAGIKUMA_MONITOR`, `UNAGIKUMA_STATE`, `UNAGIKUMA_STATE_TYPE`, `UNAGIKUMA_ATTEMPT`, `UNAGIKUMA_ADDRESS` and `UNAGIKUMA_REASON` in its environment. It runs on the master, one at a time per monitor, for at most `engine.handler-timeout`; the result is in the event log. Only administrators may set it.
+- **Contacts.** **Alerts & notifications › Contacts** lists everyone who may receive alerts, with their e-mail addresses, phone numbers and status: **active**, **on leave**, **transferred** or **left**. E-mail, SMS and voice channels send only to active people in it (chat and webhook channels are not checked):
+  - an address of someone on leave, transferred or gone is not sent to; leaving also stops their linked login and API tokens;
+  - an address refused as nonexistent (unknown mailbox, invalid number) `contacts.bounce-threshold` times (3) is no longer sent to;
+  - an address that is not in the directory is not sent to.
+
+  One left-out recipient never stops a message to the others. Each one is logged when the channel sends, and the channel, the teams using it and the **Alerting** menu get a red dot saying why. With **Tell the team's administrators** (`contacts.notify-admins`) on, they also get a message, once a day per channel.
+
+  On the first start of 2.6, the addresses your channels already use are added to the directory as active, so nothing stops after the upgrade.
+
+  Write `to=@li` or `phones=@li,@oncall` to use a person's addresses instead of typing them. Saving a channel with new addresses offers to add them to the directory, and so does an import that brings new ones; **Import them** adds every address your channels already use. `unagikuma check` reports the same problems when it can read the data directory.
+
+  Every contact can be reached: they need at least one valid e-mail address or phone number, and **Notify via** names the e-mail, SMS or voice channels through which the system reaches them directly (as a team administrator, for example), each matching an address they have. Contacts added from a channel are reached through it. A contact with no way chosen, or whose channel is gone or lacks their kind of address, has a red dot in the list.
+- **Every alert says what kind of failure it is.** A problem notice carries one line: a service failing on its own ("the service itself"), several monitors of one IP segment failing together ("probably that segment, its switch or uplink"), a single network-level failure that cannot be told apart yet ("uncertain"), or this host's own network. Webhooks get the same as `"class"`: `business`, `network`, `uncertain`, `channel_down` or `system`.
+- **No flood of messages.** Nobody is sent more than `notify.backstop-max` (20) alerts in `notify.backstop-window` (1 minute). A person is someone in the contact directory — their phone and e-mail are one person — or an address the directory does not know; a chat room or webhook is one recipient for everyone in it. An alert goes to everyone it is for at once: when anyone it goes to has had their share, the whole alert is held, and the held alerts go out together as one summary through the same channels a minute after the first of them, listing every one with its target, ordered by address, so nothing is left out and a run of neighbouring addresses shows a switch or a link. Problems, reminders, escalations and recoveries all count, each alert once per person however many channels carry it. Messages about the system itself always go out. `notify.backstop-max=0` turns this off.
+- **Why was I (not) notified?** The monitor drawer's **Notifications** section says it in words: maintenance, a parent is down, this host's own outage, only some nodes failing, still SOFT, acknowledged, silenced, muted, or the notification limit.
+
+### Incident reports
+
+Every decision about an alert is recorded: queued, sent or failed (and on which channel), held during a local outage and released, merged into a summary, dropped, suppressed by maintenance, acknowledged. From that record each incident gets a report, a postmortem you can hand on:
+
+- **What led up to it** — configuration changes and system events of the day before;
+- **Detection** — the first failing check, how it was confirmed, and the evidence;
+- **Notification** — who was told, when, on which channel, what was held or merged and why, how long until someone was told and until it was acknowledged;
+- **Recovery** — when it was fine again and how long it lasted;
+- whether this host was watching all along (gaps in the checks, restarts, local outages), so a quiet stretch is not mistaken for an all-clear.
+
+Open it from the incident's **Report** link on the Problems page and download it as Markdown, HTML or JSON, or write it from the command line:
+
+```text
+unagikuma report incident 42 --format md|html|json [--lang zh] [-o report.md]
+```
+
+`GET /api/v1/incidents/ID/report?format=md|json|html` serves the same to anyone who may read it. The report uses only what was recorded; history pruned after its retention is gone from it too.
+
+### Announced changes
+
+**Notices & status › Changes** announces planned work — a switch upgrade, a database migration — to the people it concerns:
+
+- The announcement goes out at once through a policy (or straight to chosen channels), with reminders before the start (`changes.reminders`, `24h,1h`; only those that come after the announcement), a notice when it starts and one if it runs past its end without being closed.
+- The monitors matched by its filter (`group:core`, `tag:site:bj`, …) are in maintenance during the window: failures are not notified and not counted against uptime. No `MAINT` record is needed.
+- It can put a maintenance notice on a status page, which is closed with the outcome.
+- It ends with a receipt: **Done** or **Rolled back** with a note, or **Cancelled** before it starts. Moving the window tells everyone the new time and starts the reminders again.
+- The history can be searched and exported as CSV. The notices are templates you can change; the built-in ones are in English and Chinese.
+
+### How things are counted
+
+- **Unhandled problems** are open incidents of any kind — including regional and low-priority ones — that nobody has acknowledged or silenced. The sidebar, the overview, the problems page and `/metrics` (`unagikuma_unhandled_problems`) all use this one definition. A monitor that cannot be judged (UNKNOWN) has no incident; it is counted under its status.
+- **Uptime** is up time ÷ (up + down time). DEGRADED (slow) counts as up, and its share is reported separately. Maintenance windows and gaps without checks count as neither. Time spent confirming a failure (SOFT) is held back: it counts as down if the failure is confirmed and as up if the check recovers first, so a monitor that fails from the start shows 0%.
+- **Coverage.** A window's uptime is shown only once the monitor was watched for at least `uptime.min-coverage` (10%) of it; until then the UI shows “—” and how much was watched, so a monitor added an hour ago does not claim a 30-day figure.
+- **Changing a check** that is failing — a timeout, an expected keyword, even the target — keeps its open incident and checks again right away. If it still fails, nobody is paged a second time; if it passes, the usual recovery is sent. A check with no open problem starts over as PENDING.
+- **Acknowledgements** are kept as a history: acknowledging again adds an entry with its note instead of replacing the first one, and the time of the first acknowledgement is kept.
+
+## Status pages
+
+```text
+public IN STATUSPAGE "Example Inc. status" select="group:public" subscribe=mailer domain=status.example.com
+```
+
+- A page shows the selected monitors with their uptime over `windows=` (24h, 7d, 30d, 90d), at `/status/NAME`. Targets and reasons are never shown.
+- **Announcements** are written under **Notices & status › Status pages**: a title, a message and a severity (notice, minor, major, maintenance); open ones are shown on top, resolved ones under *Past notices* for `statuspage.resolved-shown` (7 days). Maintenance windows of the page's monitors within the next week are listed too.
+- **Subscriptions.** With `subscribe=CHANNEL` (an e-mail channel) visitors can subscribe by e-mail. They confirm with a link first, and every message has an unsubscribe link. When you publish or update an announcement, tick *E-mail subscribers*. Requests are limited per address (`statuspage.subscribe-rate`) and unconfirmed subscriptions are capped (`statuspage.max-pending`). Every page also has an Atom feed at `/status/NAME/feed.atom`.
+- **Own host name.** With `domain=status.example.com`, requests for that name get the page at `/` (and `/feed.atom`); the console and its API are not reachable under it. Point the name at the server and put a TLS proxy in front, or give the server a certificate for it.
+- Badges: `/badge/MONITOR/status.svg`, `uptime.svg` and `latency.svg` for monitors on a public page.
+
+## Two machines and clusters
+
+A single machine is a complete setup. Add a second machine, or more, when monitoring has to keep working while one machine or one site's network is down, or to see your targets from several places.
+
+**Every machine is a complete server that checks and alerts on its own.** The machines of a cluster share one configuration and show each other what they see, but they never vote on whether a target is down and never hold back each other's alerts. When two machines see a problem, you get two messages. This is deliberate: a problem is never missed because another machine was expected to report it.
+
+### Joining a machine
+
+1. Install Unagikuma on the second machine and run it as usual, with its own data directory and admin account.
+2. On the first machine, the **master**, open **Run mode › Join code** and generate a code. It works once, for `cluster.join-code-ttl` (1 hour).
+3. On the second machine, open **Run mode › Join cluster** and paste the code. Its own monitors are deleted, or, if you choose, imported to the master paused, in a section named after it, to review and resume there.
+
+The joining machine connects out to the master's port (8077 by default) over TLS, so it can sit behind NAT. If something has to sit in between, use a TCP proxy, not an HTTP one.
+
+> Before 2.2 a node could also be a probe-only agent (`unagikuma agent`). Agents are gone: every member is a full server, and `unagikuma agent` only prints an error. To move an old agent over, see [upgrading a cluster to 2.2](per-site-upgrade.md).
+
+### What every machine does
+
+- **Checks** every monitor of the shared configuration, except monitors limited to other sites (below), with its own schedule, history and incidents.
+- **Alerts** through the shared channels, on its own. Every message names the site that sent it by its node name, the master's too (`[b]` in the title, `site` in webhook payloads) and lists the latest result of every site, for example `Observations: b ×, unagikuma ×, 0/2`; a result that is out of date is marked `~`. These results are context only: they never hold back or trigger an alert.
+- **Judges its own network.** Each machine recognises its own outage and holds its own alerts while it lasts, as described under [Alerting](#alerting). A machine whose network is down cannot send anything, which is what the other machines are for.
+- **Keeps its own acknowledgements and silences.** Acknowledging or silencing an alert affects the incident of the site that sent it, also when done on a node. Maintenance windows in the shared configuration apply at every site.
+- **Pauses and resumes on this site only.** Pausing or resuming a monitor stops or starts checks and alerts on the machine where you do it; other sites keep their own pause state. It works while the master is unreachable, and does not change the shared configuration. (`disabled=yes` in the configuration file remains a shared setting.)
+- **Sends its records to the master** every minute while connected, and everything it recorded on its own as soon as the link is back, tagged with the site that wrote it. The master's history and incident list show every site; each site keeps its own audit chain.
+
+What that looks like with two machines, the master `unagikuma` and `b`:
+
+| What happens | Messages |
+|---|---|
+| The shop is down for everyone | two: one from each machine, each listing both results |
+| The shop is unreachable from b's office only | one, from b |
+| The master is down | b says once that its peer is unreachable, and goes on checking and alerting alone |
+| The master comes back | the master says how long it was down; b says it is back online |
+
+### When the master is down
+
+The other machines keep checking and alerting with the last copy of the configuration they received. While the master is down the configuration cannot be changed: every other machine refuses edits with "configuration is read-only on this site". Edit again once the master is back, or move the master role to another machine (below).
+
+### Monitors for some sites only
+
+By default every machine checks every monitor. Targets that only exist at one site go in a section:
+
+```text
+bj  IN NODE "Beijing office" region=north
+$SCOPE region:north                    ; checked by north sites only
+bj-core IN PING 10.10.0.1
+$SCOPE *                               ; back to every site
+```
+
+Only the sites named check these monitors. `nodes=bj,sh` (or `nodes=region:north`) on a single monitor does the same and wins over the section.
+
+`quorum=` and `partial-escalate=` are still accepted so that older files load, but they no longer do anything: no site waits for the others before alerting.
+
+### Site-local configuration
+
+Under **Nodes › Site-local configuration** (`<data>/local.monitors.conf`, same format as `monitors.conf`; the `$FILE` line is added when you save, and a short form such as `ping 8.8.8.8` is answered with the full line to write). On a single machine the section is hidden until the file holds something. Each machine can have monitors and channels of its own — a router in that office, say. They are checked and alerted on there in every role, never sent to other machines, and never overwritten by the master's copy, a join or a promotion. A name the shared configuration already uses keeps the shared definition.
+
+### Node status
+
+**Run mode** shows every machine. Each one checks the others every `cluster.peer-interval` (10 seconds) and reports what it reaches, its own health and how its last notifications went out. A machine is reported **down** only when more than half of the cluster cannot reach it, and only by a machine that itself reaches more than half; a machine in the minority says it cannot judge. With two machines neither side can confirm the other is down, so each only reports its peer as unreachable. With three, one lost machine is confirmed by the two others. This status is about the machines only; it does not change how targets are judged.
+
+`unagikuma node list` lists the machines and `unagikuma node revoke NAME` disconnects one within one ping interval. Machines are added with a join code only; `node add` and `node token`, which served the old agents, now say so and stop.
+
+### Moving the master role
+
+There is no election: which machine is the master is your decision, and moving it is one click.
+
+1. Give the machine that should be able to take over a **standby address** under **Nodes › Edit** (`bj IN NODE standby=https://10.0.0.2:8077`). It then keeps a copy of the master's state — databases, `monitors.conf`, the secret key and the cluster CA — refreshed every `cluster.standby-sync` (5 minutes) and after each configuration change. Every machine learns the standby's address.
+2. **Planned** (maintenance, new hardware): **Nodes › Make master** on the standby. It takes the current state and restarts as master; the other machines move over by themselves. Users, tokens, secrets and the CA come along, so nothing has to be joined again.
+3. **Master lost**: on the standby, **Run mode › Take over as master** (or stop it and run `unagikuma promote`). While the master still answers, taking over is refused, since it would make two masters: move the role with a handover from the master instead. Only for a master that runs but is broken can the take-over be forced. A member cut off from the master by the network cannot tell that it still runs, so treat the administrator accounts of members like the master's own. The other machines move to it once the old master is unreachable.
+
+Every handover raises a **term**. Machines follow the highest term they have seen. A replaced master that comes back is told so by the new one (with a notice signed by the cluster CA) or by the first machine that reaches it; it then rejoins as an ordinary member under its own site name and keeps checking, and only the new master accepts configuration changes. Taking over after a loss is always done by a person: without a quorum, an automatic takeover would split the cluster whenever the network splits.
+
+## Users
+
+**Settings › Users** manages accounts. There are three roles:
+
+- **Administrator**: everything — all teams, users, contacts, channels, regions and nodes; creates and deletes teams.
+- **Operator**: adds, changes, pauses, resumes and deletes the monitors of their own teams, acknowledges and silences their problems, and sets maintenance windows over them.
+- **Viewer**: reads their own teams.
+
+An operator can also be limited to some `$SCOPE` sections (`region:north`, `bj`): they then change only what is written in those sections.
+
+### Teams
+
+Every monitor belongs to one team. The built-in **admin** team (shown as “Default team”) always exists, cannot be renamed or deleted, and owns every monitor without `team=`. While it is the only team, everyone is in it and works as before.
+
+**Advanced › Teams** (administrators) adds teams and their members. Teams are `TEAM` records in monitors.conf, so they reach every node with the rest of the configuration:
+
+```text
+web   IN TEAM title="Web team" members=li,wang,zhang
+shop  IN HTTP https://shop.example.com/ team=web
+```
+
+- With more than one team, a new user's teams are chosen when the account is created (one or more); administrators move people between teams and change roles later.
+- A new monitor goes into the user's team when they have one, and they choose when they have several; an administrator who chooses nothing puts it in admin.
+- A team is deleted only once its monitors are moved to another team.
+- Older files with `managers=`, `operators=` and `viewers=` still load: all of them count as members, and what each person may do now follows their account role.
+
+Teams are isolated from each other. A member who is not an administrator:
+
+- sees only their teams' monitors, with their incidents, events, reports, hosts, expiry dates and maintenance windows; the live updates leave out the rest. A monitor of another team answers as if it did not exist; only the state of a monitor their own ones depend on (`parent=`) is shown, next to the dependant.
+- has the menu Overview, Monitors, Problems and Events. Teams, channels, contacts, regions, status pages and settings stay with administrators. An incident report lists only the configuration changes that touched that monitor.
+- API tokens are made by administrators and are not limited to a team.
+
+Names are unique across the whole file, so a name another team uses cannot be taken again.
+
+### Regions
+
+A region is a group of nodes (`region=` on `NODE` records). A monitor is checked by the nodes of its region (`region=north`); **global**, the default, is every node. **Advanced › Regions** (administrators) adds regions from nodes, changes their nodes, and deletes them: a deleted region's monitors move to global. Select monitors in the list and use **Move** to change their team or region in one change (administrators; it is in the audit log).
+
+The monitor list filters by team, region and tag; the search accepts `team:web`, `region:north` and `tag:db` as well.
+
+Notifications follow the teams too:
+
+- Each team has an ordered list of channels (`channels=` on its `TEAM` record; administrators set it under **Advanced › Teams**). They are tried in order until one succeeds, or all are sent to with `mode=all`. Every monitor of the team uses them.
+- A monitor may have one of two exceptions: `mute=yes` (problems are recorded, nothing is sent) or `system-channel=yes` (it goes to the system channels instead).
+- **System channels** are channels with `system=yes`. They receive the system's own notices, the problems of a team with no channels, and the problems a team's channels failed to deliver. In both cases the team's administrators are told as well (the administrators in the team, or every administrator when it has none).
+- When a monitor of the shared infrastructure fails, the administrators of the teams it affects are told too: the teams with monitors that depend on it (`parent=`, directly or further up), or every team when none does. Each is reached at their own address through the channels chosen under **Notify via** in their contact entry, which must be linked to their login. This is sent right away, capped and logged, and not once the problem is acknowledged; they hear of the recovery too. **Advanced › Teams** names administrators who cannot be reached.
+
+Releases before 2.6 used `POLICY` records. When the server starts, a policy that only lists channels (`chain=`, `mode=`) becomes the channels of the teams that used it: the `default` policy those of the admin team and of teams without a policy, and the channels of the `system` policy (or, without one, of `default`) get `system=yes`. `policy=system` on a monitor becomes `system-channel=yes`. The file is kept as `monitors.conf.before-teams` and the change is in the audit log. Policies with other options (`repeat=`, `escalate=`, …) stay and keep working for whatever names them; edit them in the file. In a cluster, upgrade the other machines before the master, because older releases do not read the new options.
+
+**Settings › Audit** lists every change to accounts, roles and sections (before and after), tokens, secrets (names only), nodes and the configuration, with the person or token, the section, and the source address; configuration edits made in the file on disk are listed too (each record as it was and as it is now), and so are sign-ins and failed logins, backups, restores, imports, password resets, and what the system did by itself (holds during a local outage and their release, restarts, crashes, clock jumps, upgrades). High-risk entries are highlighted and can be filtered by risk, person, source address, sign-in and time. `GET /api/v1/audit?actor=&action=&area=&session=` serves the same to administrators.
+
+Every entry made through the web UI or the API also says which sign-in and which browser or program it came from (`detail.client`: `session` and `ua`; the CSV export has them as its last two columns). The sign-in is a short tag, the same for every change made in one sign-in and different for every sign-in, so people who share one account, even behind one office address, can still be told apart; click a tag to list that sign-in's changes. An API token's tag is its prefix. Giving each person their own account under **Settings › Users** still says more than a tag can.
+
+Entries are kept for two years. Only the server's `--audit-retention` (or `UNAGIKUMA_AUDIT_RETENTION`), 30d to 3660d, can shorten that: `retention.audit` in the configuration, which the web UI can reach, only ever makes it longer, and the web UI shows it without letting anyone change it, so nobody can clear the log from the web.
+
+The log cannot be changed quietly: each entry carries the hash of the one before it. The page's **Check integrity** button and `unagikuma audit verify` say whether an entry was changed, inserted or removed, and which. `verify` prints the newest entry's hash; keep it elsewhere and pass it later with `--head HASH` to prove nothing was cut off the end. `unagikuma audit export --format csv|json [--since 30d] [--high]` (or the page's export buttons) writes the log out.
+
+The log is recorded whether or not the installation is registered, but reading it — the page, the export and the integrity check — needs a registration; an unregistered installation is told so, and everything recorded before registering is there once it does. See [Registration and quotas](#registration-and-quotas).
+
+## Wall screen
+
+For a TV in the operations room: every monitor as a large hexagon, problems first and lit (critical ones pulse until someone acknowledges them), with the counts, a clock and the latest problems along the bottom. It is read-only and refreshes every 10 seconds; if no new data arrives for a minute, a red banner says so, so a frozen screen is never mistaken for a quiet one.
+
+- Signed in, open `/wall` (or **Status pages › Wall screen**).
+- For a TV that should not sign in, use **Create a link for a TV**. The link looks like `https://monitor.example.com/wall#token=uka_…`: it carries a read-only API token after the `#`, which browsers do not send to the server or in the Referer header. Anyone with the link can see monitor names and states, so treat it like a password; revoke it under **Advanced › API tokens**.
+
+The wall uses the Industrial theme.
+
+## Summary for managers
+
+`/summary` is one page for people who do not run the monitoring: whether everything is running right now, availability over 7, 30 or 90 days compared with the period before, the number of incidents, the average time to recover and the total downtime, daily availability as a chart, the services that need attention and the latest incidents. It is read-only, refreshes every minute and prints on A4.
+
+Open it signed in (**Status pages › Daily report › Summary for managers**), or create a link there for someone who does not sign in; like the wall screen's, it carries a read-only API token after `#` and can be revoked under **Advanced › API tokens**. Readers see only the monitors their account or token may see. The figures come from `GET /api/v1/reports/summary?range=7d|30d|90d`.
+
+## Themes
+
+Pick a theme with the coloured dots under the product name: Perfume, Country, Industrial, Calm, Sport or Passion (Calm until one is picked). The choice is kept per browser. Status colours mean the same in every theme.
+
+## Registration and quotas
+
+Without a licence everything works, with two limits: up to 5 accounts and up to 100 monitors, and the audit log is registered-only (it is recorded either way; reading, exporting and verifying it needs a registration). To register, contact the author with the installation number shown under **Settings › Registration**; a trial licence is issued for that number. Install the `license.json` you receive there.
+
+The monitor count is what runs on the master: the monitors every node checks plus the ones placed on the master itself (its region's, or named to it). The two gateway monitors the installation adds for itself do not count; a paused monitor does. Nodes are never limited. The limit only ever refuses growth: a change that would take the count past the limit *and* past what is already running is refused — in the web UI, through the API and in a hand-edited `monitors.conf` alike, where the running configuration stays as it was and a notice names the limit. Editing or deleting monitors is never refused, so an installation over its limit (an import can put it there, see below) works normally and shrinks back under the limit by deleting; while it is over, the console shows a standing notice with the count against the limit.
+
+An import — from Uptime Kuma, Nagios, Checkmate, Gatus or another Unagikuma — may take the count to at most 200, whatever the licence says: monitors past that are not imported and are listed in the report with the limit as the reason, and the report states the monitor count after the import.
+
+The classic interface style is free. The other styles each change the whole layout, not only the colours: Small business (a floating icon rail), Data centre (a green terminal with a function-key bar), Retail chain (big touch tiles and coupon cards), ISP (a wallboard with a hidden drawer at the left edge), Modern dashboard (a navigation bar across the top), Starship bridge (a dock at the bottom over a starfield) and Atelier (index tabs on the right edge, ledger pages). They are registered, with a free trial: the first time one of them is switched on (as the default, or for an account) starts seven days in which they work fully; the style page shows the days left. When the trial ends, a stored scenario style falls back to classic and choosing one asks for a registration. An installation or account still set to a style from an older release falls back to classic.
+
+A licence adds the audit log (with export and the integrity check), the product's own name, logo and status page footer, and all of these styles without a trial; there is nothing to pick, a registered installation has all of it. It states its own number of accounts and its own number of monitors (none stated: no limit) and never gives fewer than the free 5 and 100. Beyond a limit, adding a new or imported account, or a monitor past the rule above, is refused with a message saying so. Nothing already in use is switched off, for example when a licence is removed; the registration page shows the usage against the limits.
+
+## Moving from Uptime Kuma, Nagios, Checkmate or Gatus
+
+The import adds what Unagikuma can run and lists everything else with the reason and what to do instead. It never changes or deletes monitors that are already here, so running it twice is safe: what came over the first time is listed as already here. Always look first with `--dry-run`. On a new machine you can import before the first start: the import creates the data directory.
+
+**From another Unagikuma.** Under **Config & import › Import and export** choose Unagikuma and upload another installation's `monitors.conf` (its *Configuration only* export, below). The preview lists every record before anything is added:
+
+- a record already here, in effect (the same check, with its file's defaults filled in), is left alone, so importing the same file twice adds nothing;
+- a monitor whose name is taken by a different one is added under a free name (`web-2`), and the `parent=` of the monitors imported with it follows;
+- a channel, period, team or status page whose name is taken stays as it is here, because monitors name them;
+- a monitor keeps the timing it had: the interval, retry, timeout and attempts from the other file's header are written into it when they differ from this file's;
+- the gateway monitors every installation adds for itself are left out; sections (`$SCOPE`) are not kept, the monitors go to the section you choose;
+- secret values are not in the file. A `${secret:NAME}` that does not exist here blocks the import until you add it under **Advanced › Secrets**, because a configuration naming a missing secret is refused;
+- `$INCLUDE` is refused, and `$SET`, `$DEFAULT`, `$TAG`, `$QUORUM` and `$DIALECT` are named in the preview as not carried over.
+
+The same is available as `POST /api/v1/import/unagikuma` (add `?apply=1` to apply).
+
+**From Uptime Kuma** (1.23 and 2.x). Stop Uptime Kuma, then:
+
+```sh
+unagikuma import kuma --dry-run /path/to/uptime-kuma/data/kuma.db
+unagikuma import kuma /path/to/uptime-kuma/data/kuma.db
+```
+
+A JSON backup from Uptime Kuma 1.x works too, but has no accounts, maintenance windows or status pages. What comes over: HTTP, keyword, JSON query, TCP port, ping, DNS, push (the push URLs keep working: only the server address changes), Docker, gRPC, Redis, PostgreSQL and MySQL monitors with their intervals, retries, groups (nested groups become `Parent / Child`), tags and paused state; notifications (Feishu, DingTalk, WeCom, Telegram, Slack, Discord, webhook, SMTP, ntfy, Gotify, Pushover, Teams, PagerDuty, Matrix, Mattermost, Google Chat, Bark, ServerChan, PushPlus, Opsgenie) as channels with their credentials stored as secrets; weekly, monthly, cron and one-time maintenance windows; status pages; and accounts with their passwords (on a new installation the first one becomes the administrator). Monitors Unagikuma cannot run (MQTT, MongoDB, SQL Server, RADIUS, game servers, upside-down mode, …) are listed with a suggested replacement.
+
+**From Nagios** (and Icinga 1, Naemon). Point it at `nagios.cfg`, so the files it names (`cfg_file=`, `cfg_dir=`, `resource_file=`) are read the way Nagios reads them:
+
+```sh
+unagikuma import nagios --dry-run /etc/nagios4/nagios.cfg
+unagikuma import nagios /etc/nagios4/nagios.cfg
+```
+
+A folder or single `.cfg` files work too. Templates are resolved; hosts become ping checks that their services depend on (`parent=`); if the files carry services for hosts they do not define (installations that generate their host definitions when they deploy), a ping check on the host's name is made up for each such host and the report marks it as made up, so the services still import; `check_http`, `check_tcp`, `check_ssh`, `check_dns`, `check_dig`, `check_ntp`, `check_snmp` (uptime), `check_mysql`, `check_pgsql` and similar plugins become built-in checks; other plugins become script checks that start paused until you copy the plugin into the check-scripts directory. `$USERn$` values from `resource.cfg` become secrets, passive-only services become push monitors, contacts with an e-mail address become e-mail channels (sent through this machine's sendmail command, as Nagios sent them; on a machine without one, to its SMTP port on localhost, which the report points out), contact groups become group channels, and time periods become `PERIOD` records.
+
+**From Checkmate** (bluewave-labs/Checkmate: **Settings › Export monitors**, the `monitors.json` file) **or Gatus** (its YAML configuration file):
+
+```sh
+unagikuma import checkmate --dry-run monitors.json
+unagikuma import gatus --dry-run config.yaml
+```
+
+HTTP checks come over: name, group, address (a query string is fine), method, interval, paused state and the expected status codes, plus TLS and redirect settings, headers, request body and Checkmate's bearer token, which are stored as secrets. Checkmate's port monitors become TCP checks and its ping monitors ping checks; its status window becomes `attempts=` (the report says how it was mapped), and a monitor that inherited Checkmate's proxy settings is imported without a proxy, which the report also says. For Gatus, `icmp://` endpoints become ping checks, `tcp://` endpoints TCP checks and endpoints with a `dns` block DNS checks; `[STATUS]` conditions combine into the expected status codes, `[BODY]` and `[BODY].path` conditions become keyword and JSON-path checks, and a certificate-expiration condition in whole days becomes `cert-days=`. What cannot be carried — an inverted check, an address that is still an environment placeholder, credentials in an address, another check type — is listed in the report with its reasons, and only that monitor is left out: the rest still import, and the report names anything that was not carried over (alerting, response-time conditions, settings with no equivalent). A name that is already used here for a different check leaves that monitor out; rename the source monitor. No accounts or notification channels are created. The file may be up to 1 MiB.
+
+**The report.** All of them print a summary (imported / needs a look / not imported), a table of what was imported, and for each item that needs a look or was not imported the reason and what to do. The same report is saved as text and Markdown in `<data>/import-reports/`. The new records go in one block at the end of `monitors.conf`, in sections headed by where they came from; `title=` keeps the original names. The web UI does the same under **Config & import › Import**. Options: `--area SECTION` puts the monitors in a section, `--role` sets the role of imported accounts, `--report DIR` saves the report elsewhere. Exit status: 0 done (or nothing new), 1 failed (nothing changed), 2 wrong usage.
+
+Over the API, `POST /api/v1/import/{kuma|nagios|checkmate|gatus|unagikuma}` with the file as the body answers with the preview and changes nothing; send the same body to `…?apply=1` to import. `area=` and `role=` work as the options above.
+
+## Forgot your password?
+
+On the machine where Unagikuma runs (it may keep running):
+
+```sh
+unagikuma reset-password --data /path/to/data admin
+```
+
+Type the new password twice (it is not shown), or use `--generate` to get a random one printed once. Everyone signed in as that user is signed out. API tokens keep working; add `--revoke-tokens` to revoke that user's tokens too. If the user name is wrong, the command lists the existing users.
+
+## Command line
+
+```text
+unagikuma [server] [flags]       run the monitor and its web UI (default)
+unagikuma node list|revoke       list the machines of a cluster, or disconnect one
+unagikuma check [file]           validate a monitors.conf file
+unagikuma serial [bump] [file]   print or increase the revision
+unagikuma probe <target> [k=v]   run one check now, e.g. "udp 10.0.0.1:ntp"
+unagikuma keywords [dialect]     list the UDP keywords
+unagikuma backup [--passphrase-file F] [--history]
+                                write a backup archive
+unagikuma restore ARCHIVE        restore a backup
+unagikuma reset-password [user]  set a new password (--generate makes one)
+unagikuma audit verify|export   check the audit log for tampering, or export it
+unagikuma report incident ID     write an incident's report (Markdown, HTML or JSON)
+unagikuma version
+```
+
+`unagikuma probe` exits 0 when the check is up, 1 when it is down and 2 for a warning (a certificate inside its warning days, loss above the threshold). It uses the default thresholds, not the server's `$SET` lines; pass `cert-days=` or `cert-critical-days=` for others.
+
+Main server flags: `--data DIR` (or `UNAGIKUMA_DATA`), `--listen ADDR` (or `UNAGIKUMA_LISTEN`, default `:8077`), `--tls-cert`/`--tls-key`, `--base-url` for links in notifications, `--heartbeat-url` for an external dead man's switch (for example healthchecks.io), `--trusted-proxy CIDR,...` when running behind a reverse proxy, `--audit-retention 730d` for how long the audit log is kept at least. The port answers plain HTTP and TLS; with `--tls-cert` the UI uses your certificate and plain requests are redirected to https.
+
+Behind a reverse proxy that serves the app under a path prefix (for example `https://ops.example.com/uk/` → `http://127.0.0.1:8077/`), have the proxy strip the prefix and send `X-Forwarded-Prefix: /uk` with each request, and list the proxy in `--trusted-proxy`. The console, the public status pages and the session cookie then stay inside the prefix; without the header the same proxy setup serves a console whose assets and API calls escape to the root. Links in notifications and status-page feeds come from `--base-url`, so include the prefix there as well.
+
+## Data and backups
+
+The data directory holds `monitors.conf`, `core.db` (users, incidents, notification log, configuration history, encrypted secrets), `history.db` (check results and uptime) and `unagikuma.key`, the key that encrypts the secrets. `cluster-ca.*` and `cluster.*` are the certificate authority the other machines of a cluster pin; keep them with the key so they keep trusting a restored master.
+
+Under **Config & import › Import and export**, with the **Unagikuma** source chosen (export and restore belong to that source; the other sources only import), there are two ways out:
+
+- **Configuration only** downloads `monitors.conf`: the monitors, channels, teams, periods and status pages. No accounts, no secret values, no history. Another Unagikuma imports it (see above).
+- **Everything** downloads one archive, encrypted with a passphrase of at least 8 characters: accounts, secrets with their key, the cluster CA, settings and the check history. Restore it from the same page or with `unagikuma restore`.
+
+To restore from the page, open **Config & import › Import and export**, choose the **Unagikuma** source, then choose the archive under *Restore from a backup* (and give the passphrase if it is encrypted) and confirm. A running program cannot swap its own databases, so the archive is only checked and kept: a damaged file, a wrong passphrase or an archive without a database is refused and nothing is left behind. Stop the program and start it again and the backup is put in place; the files it replaces (databases, `monitors.conf`, keys) are moved to a `restore-before-<date>` folder in the data directory, and everyone signs in again with the accounts of the backup. The page shows a restore that is waiting and can cancel it. If putting it in place fails, everything is put back as it was and the staged restore is set aside in a `restore-failed-<date>` folder.
+
+The same archive comes from the command line, while the server runs:
+
+```sh
+unagikuma backup --history                         # databases and monitors.conf
+unagikuma backup --passphrase-file pass.txt        # encrypted, also the key and the cluster CA
+unagikuma restore --passphrase-file pass.txt unagikuma-20261101-0300.ukbackup
+```
+
+With a passphrase the archive is encrypted (argon2id, AES-256-GCM) and a restored master keeps its secrets and its cluster. Without one, keep `unagikuma.key` (or `UNAGIKUMA_SECRET_KEY`) separately. Restore into a stopped installation; `--force` replaces an existing one.
+
+## API
+
+Everything the UI does goes through a REST API under `/api/v1`. Create a token under **Advanced › API tokens** and send it as `Authorization: Bearer uk_…`; tokens are scoped to read, ack, write or admin.
+
+- **Concurrent edits.** Every monitor, channel, policy, node and maintenance window the API returns carries an `etag`. Send it back as `If-Match` when changing or deleting the record: if someone changed that record in the meantime the request fails with `412` and code `record_changed`, and nothing is overwritten. Changes to other records never conflict. Without `If-Match` the last write wins.
+- **Safe retries.** A `POST` with an `Idempotency-Key` header (any unique string, at most 255 characters) is applied once; repeating it within `api.idempotency-ttl` (24 hours) returns the first answer with `Idempotent-Replayed: true`. Failed requests are not remembered, so they can be retried with the same key.
+- **Pages.** `GET /api/v1/monitors?limit=100` returns monitors in id order with a `next_cursor`; pass it as `cursor=` for the next page until it is `null`. Without `limit` the whole list comes back sorted for display.
+- **Stable ids.** Every monitor has an `id` that survives renames; `/api/v1/monitors/id:42` addresses it wherever a name is accepted.
+- The file format itself is specified in [monitors.conf syntax](spec/monitors-conf.md).
+
+## Troubleshooting
+
+- **Everything turned red at once.** Look at *Where it breaks* on the overview: if this host's gateway or uplink fails, the problem is on this side, and alerts for the targets are held until it is back. The Internet gateway under the internet targets (`localnet.exit-target`, 8.8.8.8) is pinged only once an internet target fails, to tell a broken site from a broken way out; while they all answer it shows as not checked. It is shown only; whether this host or the target is to blame is decided with the reference points (`localnet.references`). Change its address under **Settings › General** (empty turns it off).
+- **A monitor is down but nobody was told.** Open it and read *Notifications* in the drawer; the event log shows each delivery with its error, and **Alerts & notifications › Channels › Test** sends a test message.
+- **Ping checks say "checked over TCP" or "privilege".** This host does not allow ping for Unagikuma. Allow unprivileged ping (`sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"`) or give the binary `CAP_NET_RAW`; see Quick start.
+- **A script check stays paused.** Enabling it lists the nodes that lack the script; **Settings › Check scripts** shows each node's copy.
+- **"Monitoring data cannot be written".** The data directory refuses writes (full disk, read-only file system) for longer than `storage.write-alert` (1 minute). Results and events are kept in memory and written once space is back; a red banner in the UI and `/healthz` (`"status": "degraded"`) say so meanwhile. Free disk space; the incident resolves itself.
+- **An edit to monitors.conf is ignored.** Increase the revision; a file with errors is never applied, and the UI shows the error with its line.
+- **The standby has no copy.** **Run mode** shows when it last fetched the master's state and the last error; it retries after `cluster.standby-retry` and on every configuration change.

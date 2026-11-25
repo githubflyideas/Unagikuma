@@ -1,0 +1,96 @@
+/* ISP / NOC: a wallboard. No chrome — the navigation is a drawer at the left
+   edge, rows are solid blocks of their status and the numbers are huge.
+   Brings its own (dark) colours. Registered. */
+:root[data-style="noc"] {
+  --bg: #04070b; --side: #0a111a; --panel: #0a111a; --panel-2: #0f1a27; --border: #1d2a3a; --border-strong: #2a3b50;
+  --text: #e3eef9; --muted: #9db3c8; --faint: #8fa6bc;
+  --accent: #4fc3ff; --accent-soft: #0e2a3f; --accent-text: #03121c; --link: #7fd4ff;
+  --ok: #46f2a0; --ok-soft: #0b3d27; --degraded: #ffd04a; --degraded-soft: #3d2f00;
+  --critical: #ff5470; --critical-soft: #3a0f19; --unknown: #bba2ff; --unknown-soft: #1f1840;
+  --pending: #93a9c0; --pending-soft: #142033; --maint: #62adff; --maint-soft: #102340;
+  --on-status: #03121c; --on-degraded: #1d1600;
+  --empty: #14213a; --stripe: transparent;
+  --shadow: none; --radius: 0px; --bg-image: none;
+  --side-text: #cfe3f5; --side-muted: #9db3c8; --side-hover: #12304a; --side-on: #12304a; --side-on-text: #4fc3ff; --side-mark: #4fc3ff;
+  color-scheme: dark;
+}
+:root[data-style="noc"] .themes { display: none; }
+:root[data-style="noc"] body { background-color: var(--bg); background-image: none; }
+:root[data-style="noc"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="noc"] .side { background: var(--side); border-inline-end: 1px solid var(--border); }
+:root[data-style="noc"] .brand { color: var(--accent); }
+:root[data-style="noc"] .side .nav a { border-radius: 12px; box-shadow: none; }
+:root[data-style="noc"] .side .nav a.on { font-weight: 650; }
+:root[data-style="noc"] .top { background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom-color: var(--border); }
+:root[data-style="noc"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="noc"] .card, :root[data-style="noc"] .tile, :root[data-style="noc"] .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); }
+:root[data-style="noc"] .card > .hd { border-bottom-color: var(--border); padding: 16px 22px; }
+:root[data-style="noc"] .card > .hd h2, :root[data-style="noc"] .card > .hd h3 { font-size: 15px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="noc"] .card > .bd { padding: 18px 22px; }
+:root[data-style="noc"] .card > .bd.flush { padding: 0; }
+:root[data-style="noc"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="noc"] .tile.ok { border-top-color: var(--ok); } :root[data-style="noc"] .tile.critical { border-top-color: var(--critical); } :root[data-style="noc"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="noc"] .tile b { font-size: 28px; }
+:root[data-style="noc"] .btn { border-radius: 12px; background: var(--panel); border-color: var(--border-strong); }
+:root[data-style="noc"] .btn:hover { background: var(--panel-2); }
+:root[data-style="noc"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="noc"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="noc"] input[type=text], :root[data-style="noc"] input[type=password], :root[data-style="noc"] input[type=number], :root[data-style="noc"] input[type=url], :root[data-style="noc"] input[type=email], :root[data-style="noc"] select, :root[data-style="noc"] textarea { background: var(--panel); border-radius: 12px; }
+:root[data-style="noc"] .search, :root[data-style="noc"] .chip, :root[data-style="noc"] .seg { border-radius: 12px; background: var(--panel); }
+:root[data-style="noc"] .banner { border-radius: 14px; }
+:root[data-style="noc"] .pill, :root[data-style="noc"] .pill.ok, :root[data-style="noc"] .pill.degraded, :root[data-style="noc"] .pill.critical, :root[data-style="noc"] .pill.unknown, :root[data-style="noc"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="noc"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="noc"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 78%, var(--text)); }
+:root[data-style="noc"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 72%, var(--text)); }
+:root[data-style="noc"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 80%, var(--text)); }
+:root[data-style="noc"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 78%, var(--text)); }
+:root[data-style="noc"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 78%, var(--text)); }
+:root[data-style="noc"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="noc"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="noc"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="noc"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+:root[data-style="noc"] .pub .overall { border-radius: 16px; }
+:root[data-style="noc"] .kpi, :root[data-style="noc"] .sum-now { border-radius: 20px; }
+
+/* ===== Wallboard layout: no chrome. The navigation is a drawer that slides
+   out of the left edge when the pointer or keyboard reaches it; the page is
+   full width, rows are solid blocks of their status and numbers are huge. ===== */
+:root[data-style="noc"] body { background: #04070b; font-size: 14px; }
+:root[data-style="noc"] .shell, :root[data-style="noc"] .shell.mini { display: block; max-width: none; background: transparent; box-shadow: none; }
+:root[data-style="noc"] .side { display: contents; }
+:root[data-style="noc"] .themes { display: none; }
+:root[data-style="noc"] .brand { position: fixed; z-index: 60; inset-block-start: 0; inset-inline-start: 14px; height: 46px; flex-direction: row; gap: 10px; padding: 0; align-items: center; font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: #cfe3f5; }
+:root[data-style="noc"] .brand img { width: 28px; height: 28px; filter: grayscale(1) brightness(1.4); } :root[data-style="noc"] .brand .edition { display: none; }
+:root[data-style="noc"] .nav { position: fixed; z-index: 70; inset-block: 0; inset-inline-start: 0; width: 7px; padding-block: 56px 20px; overflow: hidden; background: linear-gradient(to bottom, #4fc3ff, #1b6fa8); transition: width .16s ease; display: flex; flex-direction: column; gap: 2px; }
+:root[data-style="noc"] .nav:hover, :root[data-style="noc"] .nav:focus-within { width: 250px; background: #0a111a; box-shadow: 10px 0 40px rgba(0, 0, 0, .7), inset -2px 0 0 #4fc3ff; padding-inline: 8px; }
+:root[data-style="noc"] .side .nav a, :root[data-style="noc"] .shell.mini .nav a { white-space: nowrap; padding: 11px 14px; border-radius: 0; font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: #cfe3f5; box-shadow: none; }
+:root[data-style="noc"] .side .nav a.on { background: #12304a; color: #4fc3ff; box-shadow: inset 4px 0 0 #4fc3ff; }
+:root[data-style="noc"] .shell.mini .nav .lbl { display: revert; } :root[data-style="noc"] .nav .rdot { margin-inline-start: auto; }
+:root[data-style="noc"] .side .foot { position: fixed; z-index: 60; inset-block-end: 6px; inset-inline-end: 8px; margin: 0; padding: 4px 8px; flex-direction: row; align-items: center; gap: 8px; background: rgba(10, 17, 26, .85); border: 1px solid #1d2a3a; font-size: 12px; }
+:root[data-style="noc"] .side .foot .host { display: none; } :root[data-style="noc"] .side .foot .row { flex-wrap: nowrap; } :root[data-style="noc"] .side .foot select { width: auto; max-width: 80px; font-size: 11px; padding: 1px 2px; border-radius: 0; }
+:root[data-style="noc"] .top { position: static; margin: 0; padding: 0 16px 0 250px; height: 46px; background: #070d14; border-bottom: 2px solid #4fc3ff; backdrop-filter: none; box-shadow: none; }
+:root[data-style="noc"] .top > .btn.sm:first-child { display: none; }
+:root[data-style="noc"] .top .crumbs { font-size: 18px; font-weight: 800; letter-spacing: .26em; text-transform: uppercase; color: #fff; }
+:root[data-style="noc"] .page { padding: 16px 20px 40px; gap: 14px; max-width: none; margin: 0; }
+:root[data-style="noc"] .card, :root[data-style="noc"] .modal, :root[data-style="noc"] .kpi, :root[data-style="noc"] .sum-now { border-radius: 0; border: 1px solid #1d2a3a; background: #0a111a; box-shadow: none; }
+:root[data-style="noc"] .card > .hd { padding: 8px 14px; background: #0f1a27; border-bottom: 1px solid #1d2a3a; }
+:root[data-style="noc"] .card > .hd h2, :root[data-style="noc"] .card > .hd h3 { font-size: 12px; letter-spacing: .24em; text-transform: uppercase; color: #7fd4ff; }
+:root[data-style="noc"] .tile { border-radius: 0; border: 0; padding: 12px 14px; background: #0f1a27; text-align: start; }
+:root[data-style="noc"] .tile b { font-size: 68px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.03em; color: #e8f4ff; }
+:root[data-style="noc"] .tile.ok { background: #0b3d27; } :root[data-style="noc"] .tile.ok b { color: #46f2a0; } :root[data-style="noc"] .tile.critical { background: #c4182f; } :root[data-style="noc"] .tile.critical b { color: #fff; } :root[data-style="noc"] .tile.degraded { background: #5a4200; } :root[data-style="noc"] .tile.degraded b { color: #ffd04a; }
+/* rows are solid blocks of their status */
+:root[data-style="noc"] .tbl tr.critical td { background: #c4182f; color: #fff; border-color: #a30f24; } :root[data-style="noc"] .tbl tr.critical td a, :root[data-style="noc"] .tbl tr.critical td .muted, :root[data-style="noc"] .tbl tr.critical td .err-text, :root[data-style="noc"] .tbl tr.critical td .tag { color: #fff; }
+:root[data-style="noc"] .tbl tr.critical .pill { background: #fff; color: #a30f24; }
+:root[data-style="noc"] .tbl tr.degraded td { background: #5a4200; } :root[data-style="noc"] .tbl tr.ok td { background: #08130f; }
+:root[data-style="noc"] .tbl tr.click:hover td { filter: brightness(1.25); }
+:root[data-style="noc"] .tbl td { padding-block: 10px; border-bottom: 1px solid #1d2a3a; } :root[data-style="noc"] .tbl th { background: #0f1a27; color: #7fd4ff; text-transform: uppercase; letter-spacing: .2em; font-size: 11px; border-bottom: 1px solid #1d2a3a; }
+:root[data-style="noc"] .pill, :root[data-style="noc"] .pill.ok, :root[data-style="noc"] .pill.degraded, :root[data-style="noc"] .pill.critical, :root[data-style="noc"] .pill.unknown, :root[data-style="noc"] .pill.maintenance { border-radius: 0; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: 11px; padding: 2px 9px; }
+:root[data-style="noc"] .pill.ok { background: #0e5a38; color: #46f2a0; } :root[data-style="noc"] .pill.degraded { background: #6b4e00; color: #ffd04a; } :root[data-style="noc"] .pill.critical { background: #8f1020; color: #fff; }
+:root[data-style="noc"] .btn, :root[data-style="noc"] .search, :root[data-style="noc"] .chip, :root[data-style="noc"] .seg, :root[data-style="noc"] input[type=text], :root[data-style="noc"] input[type=password], :root[data-style="noc"] input[type=number], :root[data-style="noc"] input[type=url], :root[data-style="noc"] input[type=email], :root[data-style="noc"] select, :root[data-style="noc"] textarea { border-radius: 0; background: #0f1a27; border: 1px solid #2a3b50; color: #e8f4ff; }
+:root[data-style="noc"] .btn.primary { background: #4fc3ff; border-color: #4fc3ff; color: #03121c; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+:root[data-style="noc"] .banner { border-radius: 0; }
+:root[data-style="noc"]media (max-width: 860px) {
+  :root[data-style="noc"] .brand { position: static; } :root[data-style="noc"] .nav { position: static; width: auto; padding: 8px; background: #0a111a; } :root[data-style="noc"] .nav:hover { width: auto; } :root[data-style="noc"] .side { display: flex; flex-direction: column; background: #0a111a; }
+  :root[data-style="noc"] .side .foot { position: static; } :root[data-style="noc"] .top { padding-inline: 12px; }
+}
+

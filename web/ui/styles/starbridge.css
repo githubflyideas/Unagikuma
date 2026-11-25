@@ -1,0 +1,119 @@
+/* Starship bridge: the bridge of a ship at night — a starfield behind HUD
+   panels with corner brackets, neon cyan lines and glow, monospace
+   capitals. Brings its own (dark) colours. Registered. */
+:root[data-style="starbridge"] {
+  --bg: #04060f; --side: #070b1a; --panel: #0a1126; --panel-2: #0e1832; --border: #1b3a5c; --border-strong: #2b628f;
+  --text: #d8edff; --muted: #94b6d8; --faint: #86a8ca;
+  --accent: #29e0ff; --accent-soft: #0b2c40; --accent-text: #02121a; --link: #6eeaff;
+  --ok: #3dffa0; --ok-soft: #0a2b22; --degraded: #ffc24a; --degraded-soft: #2e2410;
+  --critical: #ff5272; --critical-soft: #3a111d; --unknown: #bba2ff; --unknown-soft: #1f1840;
+  --pending: #93a9c0; --pending-soft: #142033; --maint: #62adff; --maint-soft: #102340;
+  --on-status: #02070f; --on-degraded: #1d1600;
+  --empty: #14213a; --stripe: transparent;
+  --shadow: 0 0 0 1px rgba(41, 224, 255, .10), 0 0 26px rgba(41, 224, 255, .07); --radius: 2px; --bg-image: none;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --side-text: #d8edff; --side-muted: #94b6d8; --side-hover: rgba(41, 224, 255, .08); --side-on: rgba(41, 224, 255, .14); --side-on-text: #6eeaff; --side-mark: #29e0ff;
+  color-scheme: dark;
+}
+:root[data-style="starbridge"] .themes { display: none; }
+:root[data-style="starbridge"] body { background-color: var(--bg); background-image: none; }
+:root[data-style="starbridge"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="starbridge"] .side { background: var(--side); border-inline-end: 1px solid var(--border); }
+:root[data-style="starbridge"] .brand { color: var(--accent); }
+:root[data-style="starbridge"] .side .nav a { border-radius: 12px; box-shadow: none; }
+:root[data-style="starbridge"] .side .nav a.on { font-weight: 650; }
+:root[data-style="starbridge"] .top { background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom-color: var(--border); }
+:root[data-style="starbridge"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="starbridge"] .card, :root[data-style="starbridge"] .tile, :root[data-style="starbridge"] .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); }
+:root[data-style="starbridge"] .card > .hd { border-bottom-color: var(--border); padding: 16px 22px; }
+:root[data-style="starbridge"] .card > .hd h2, :root[data-style="starbridge"] .card > .hd h3 { font-size: 15px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="starbridge"] .card > .bd { padding: 18px 22px; }
+:root[data-style="starbridge"] .card > .bd.flush { padding: 0; }
+:root[data-style="starbridge"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="starbridge"] .tile.ok { border-top-color: var(--ok); } :root[data-style="starbridge"] .tile.critical { border-top-color: var(--critical); } :root[data-style="starbridge"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="starbridge"] .tile b { font-size: 28px; }
+:root[data-style="starbridge"] .btn { border-radius: 12px; background: var(--panel); border-color: var(--border-strong); }
+:root[data-style="starbridge"] .btn:hover { background: var(--panel-2); }
+:root[data-style="starbridge"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="starbridge"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="starbridge"] input[type=text], :root[data-style="starbridge"] input[type=password], :root[data-style="starbridge"] input[type=number], :root[data-style="starbridge"] input[type=url], :root[data-style="starbridge"] input[type=email], :root[data-style="starbridge"] select, :root[data-style="starbridge"] textarea { background: var(--panel); border-radius: 12px; }
+:root[data-style="starbridge"] .search, :root[data-style="starbridge"] .chip, :root[data-style="starbridge"] .seg { border-radius: 12px; background: var(--panel); }
+:root[data-style="starbridge"] .banner { border-radius: 14px; }
+:root[data-style="starbridge"] .pill, :root[data-style="starbridge"] .pill.ok, :root[data-style="starbridge"] .pill.degraded, :root[data-style="starbridge"] .pill.critical, :root[data-style="starbridge"] .pill.unknown, :root[data-style="starbridge"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="starbridge"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="starbridge"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 78%, var(--text)); }
+:root[data-style="starbridge"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 72%, var(--text)); }
+:root[data-style="starbridge"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 80%, var(--text)); }
+:root[data-style="starbridge"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 78%, var(--text)); }
+:root[data-style="starbridge"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 78%, var(--text)); }
+:root[data-style="starbridge"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="starbridge"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="starbridge"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="starbridge"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+:root[data-style="starbridge"] .pub .overall { border-radius: 16px; }
+:root[data-style="starbridge"] .kpi, :root[data-style="starbridge"] .sum-now { border-radius: 20px; }
+
+/* ===== Cockpit layout: the sidebar is taken apart. The navigation is a
+   dock floating at the bottom of the screen, the name is a badge at the
+   top left, the account tools sit bottom right, and the panels are glass
+   over a starfield with a planet on the horizon. ===== */
+:root[data-style="starbridge"] body { background-color: #02040c; background-attachment: fixed; background-image:
+  radial-gradient(1.2px 1.2px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 27% 71%, #cfe9ff, transparent), radial-gradient(1.6px 1.6px at 41% 33%, #fff, transparent),
+  radial-gradient(1px 1px at 58% 12%, #cfe9ff, transparent), radial-gradient(1px 1px at 66% 54%, #fff, transparent), radial-gradient(1.6px 1.6px at 79% 36%, #bfe4ff, transparent),
+  radial-gradient(1px 1px at 91% 22%, #fff, transparent), radial-gradient(1px 1px at 5% 48%, #fff, transparent), radial-gradient(1px 1px at 48% 28%, #9fd8ff, transparent),
+  radial-gradient(1px 1px at 34% 9%, #fff, transparent), radial-gradient(1.4px 1.4px at 73% 8%, #fff, transparent), radial-gradient(1px 1px at 18% 38%, #cfe9ff, transparent),
+  radial-gradient(ellipse 150% 34% at 50% 128%, #1a6fb8 0, #0a3a6e 38%, #05182f 52%, transparent 53%),
+  radial-gradient(ellipse 160% 40% at 50% 132%, rgba(80, 220, 255, .55) 0, transparent 55%),
+  radial-gradient(900px 500px at 88% -8%, rgba(110, 70, 230, .28), transparent 60%), radial-gradient(700px 420px at 4% 18%, rgba(0, 160, 220, .14), transparent 60%); }
+:root[data-style="starbridge"] body, :root[data-style="starbridge"] .btn, :root[data-style="starbridge"] input, :root[data-style="starbridge"] select, :root[data-style="starbridge"] textarea { font-family: var(--mono); }
+:root[data-style="starbridge"] body { font-size: 13px; }
+:root[data-style="starbridge"] .shell, :root[data-style="starbridge"] .shell.mini { display: block; max-width: none; background: transparent; box-shadow: none; }
+:root[data-style="starbridge"] .shell::after { display: none; }
+:root[data-style="starbridge"] .side { display: contents; }
+:root[data-style="starbridge"] .themes { display: none; }
+/* name badge: the mascot becomes a cyan hologram in a hexagon */
+:root[data-style="starbridge"] .brand { position: fixed; z-index: 60; inset-block-start: 12px; inset-inline-start: 18px; flex-direction: row; gap: 10px; padding: 0; align-items: center; text-align: start; font-family: var(--mono); font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); text-shadow: 0 0 12px rgba(41, 224, 255, .7); }
+:root[data-style="starbridge"] .brand img { width: 40px; height: 40px; clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); filter: grayscale(1) contrast(1.15) sepia(1) hue-rotate(150deg) saturate(5) brightness(1.1) drop-shadow(0 0 8px #29e0ff); background: rgba(41, 224, 255, .12); }
+:root[data-style="starbridge"] .brand .edition { letter-spacing: .14em; font-size: 9.5px; color: var(--muted); text-shadow: none; }
+:root[data-style="starbridge"] .shell.mini .brand > div { display: revert; }
+/* the dock */
+:root[data-style="starbridge"] .nav { position: fixed; z-index: 60; inset-block-end: 16px; inset-inline-start: 0; inset-inline-end: 350px; margin-inline: auto; width: max-content; max-width: calc(100vw - 380px); display: flex; flex-direction: row; gap: 4px; padding: 8px 12px; border-radius: 22px; background: rgba(6, 14, 34, .72); border: 1px solid rgba(110, 234, 255, .35); backdrop-filter: blur(14px); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 10px 40px rgba(0, 0, 0, .6), 0 0 40px rgba(41, 224, 255, .18); overflow-x: auto; }
+:root[data-style="starbridge"] .side .nav a, :root[data-style="starbridge"] .shell.mini .nav a { flex-direction: column; justify-content: center; gap: 3px; width: 72px; padding: 8px 3px 7px; border-radius: 14px; text-align: center; position: relative; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; line-height: 1.15; }
+:root[data-style="starbridge"] .nav .ico { width: auto; font-size: 20px; opacity: 1; filter: drop-shadow(0 0 6px rgba(41, 224, 255, .8)); }
+:root[data-style="starbridge"] .shell.mini .nav .lbl { display: revert; }
+:root[data-style="starbridge"] .side .nav a:hover { background: rgba(41, 224, 255, .1); transform: translateY(-3px); transition: transform .12s; }
+:root[data-style="starbridge"] .side .nav a.on { background: radial-gradient(circle at 50% 0, rgba(41, 224, 255, .3), rgba(41, 224, 255, .06) 70%); box-shadow: inset 0 0 0 1px rgba(110, 234, 255, .6), 0 0 22px rgba(41, 224, 255, .4); color: #fff; }
+:root[data-style="starbridge"] .nav .count { position: absolute; inset-block-start: 2px; inset-inline-end: 8px; margin: 0; border-radius: 9px; min-width: 16px; font-size: 10px; padding: 0 4px; }
+:root[data-style="starbridge"] .nav .rdot { position: absolute; inset-block-start: 6px; inset-inline-end: 12px; margin: 0 !important; }
+/* account tools */
+:root[data-style="starbridge"] .side .foot { position: fixed; z-index: 60; inset-block-end: 20px; inset-inline-end: 18px; margin: 0; padding: 8px 10px; flex-direction: row; align-items: center; gap: 8px; border-radius: 16px; background: rgba(6, 14, 34, .72); border: 1px solid var(--border-strong); backdrop-filter: blur(10px); }
+:root[data-style="starbridge"] .side .foot .host { display: none; }
+:root[data-style="starbridge"] .side .foot .row { flex-wrap: nowrap; }
+:root[data-style="starbridge"] .side .foot select { width: auto; max-width: 92px; font-size: 11px; padding: 3px 4px; }
+/* the top strip is only a title and a search */
+:root[data-style="starbridge"] .top { position: static; margin: 0 0 0 240px; padding: 14px 24px 4px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; }
+:root[data-style="starbridge"] .top > .btn.sm:first-child { display: none; }
+:root[data-style="starbridge"] .top .crumbs { font-size: 22px; font-weight: 200; letter-spacing: .38em; text-transform: uppercase; color: #fff; text-shadow: 0 0 18px rgba(41, 224, 255, .75); }
+:root[data-style="starbridge"] .top .crumbs::before { content: ""; }
+:root[data-style="starbridge"] .page { padding: 8px 28px 130px; gap: 22px; max-width: 1380px; margin-inline: auto; }
+/* glass holograms */
+:root[data-style="starbridge"] .card, :root[data-style="starbridge"] .tile, :root[data-style="starbridge"] .modal, :root[data-style="starbridge"] .kpi, :root[data-style="starbridge"] .sum-now { border-radius: 22px; border: 1px solid rgba(110, 234, 255, .24); background: linear-gradient(155deg, rgba(24, 48, 92, .5), rgba(6, 12, 30, .55)); backdrop-filter: blur(12px); background-image: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 24px 60px rgba(0, 0, 0, .5), 0 0 34px rgba(41, 224, 255, .08); }
+:root[data-style="starbridge"] .card > .hd { border-bottom: 0; padding: 16px 24px 4px; }
+:root[data-style="starbridge"] .card > .hd h2::before, :root[data-style="starbridge"] .card > .hd h3::before { content: "◈ "; opacity: .8; }
+:root[data-style="starbridge"] .card > .hd h2, :root[data-style="starbridge"] .card > .hd h3 { font-weight: 300; font-size: 13px; letter-spacing: .3em; }
+:root[data-style="starbridge"] .card > .bd { padding: 12px 24px 22px; }
+:root[data-style="starbridge"] .tile { text-align: center; padding: 18px 12px; }
+:root[data-style="starbridge"] .tile b { font-weight: 200; font-size: 40px; }
+:root[data-style="starbridge"] .card.scroll, :root[data-style="starbridge"] .page.list .card.scroll { background: linear-gradient(155deg, rgba(24, 48, 92, .45), rgba(6, 12, 30, .5)); }
+:root[data-style="starbridge"] .tbl th { font-weight: 300; letter-spacing: .24em; border-bottom: 1px solid rgba(110, 234, 255, .4); }
+:root[data-style="starbridge"] .tbl td { border-bottom: 1px solid rgba(110, 234, 255, .08); }
+:root[data-style="starbridge"] .btn, :root[data-style="starbridge"] .search, :root[data-style="starbridge"] .chip, :root[data-style="starbridge"] .seg, :root[data-style="starbridge"] input[type=text], :root[data-style="starbridge"] input[type=password], :root[data-style="starbridge"] input[type=number], :root[data-style="starbridge"] input[type=url], :root[data-style="starbridge"] input[type=email], :root[data-style="starbridge"] select, :root[data-style="starbridge"] textarea { border-radius: 999px; }
+:root[data-style="starbridge"] textarea { border-radius: 16px; }
+:root[data-style="starbridge"] .pill, :root[data-style="starbridge"] .pill.ok, :root[data-style="starbridge"] .pill.degraded, :root[data-style="starbridge"] .pill.critical, :root[data-style="starbridge"] .pill.unknown, :root[data-style="starbridge"] .pill.maintenance { border-radius: 999px; }
+@media (max-width: 860px) {
+  :root[data-style="starbridge"] .brand { position: static; } :root[data-style="starbridge"] .nav { position: static; width: auto; max-width: none; flex-direction: column; margin: 0; padding: 8px; border-radius: 0; }
+  :root[data-style="starbridge"] .side .nav a { flex-direction: row; width: auto; font-size: 12px; justify-content: flex-start; padding: 9px 12px; }
+  :root[data-style="starbridge"] .side { display: flex; } :root[data-style="starbridge"] .side .foot { position: static; }
+  :root[data-style="starbridge"] .top { margin: 0; } :root[data-style="starbridge"] .page { padding-bottom: 40px; }
+}
+@media (prefers-reduced-motion: reduce) { :root[data-style="starbridge"] .nav a, :root[data-style="starbridge"] .side .nav a:hover { transition: none; transform: none; } }

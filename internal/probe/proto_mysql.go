@@ -1,0 +1,451 @@
+package probe
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha1" //nolint:gosec // mysql_native_password is defined with SHA-1
+	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/binary"
+	"encoding/pem"
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"strconv"
+)
+
+const (
+	myLongPassword   = 0x00000001
+	myConnectWithDB  = 0x00000008
+	myProtocol41     = 0x00000200
+	mySSL            = 0x00000800
+	mySecureConn     = 0x00008000
+	myPluginAuth     = 0x00080000
+	myMaxPacket      = 1 << 24
+	myCharsetUTF8MB4 = 45
+)
+
+// mysqlConn frames MySQL packets: 3-byte length, sequence number, payload.
+type mysqlConn struct {
+	c   net.Conn
+	br  *bufio.Reader
+	seq byte
+}
+
+func (m *mysqlConn) read() ([]byte, error) {
+	var h [4]byte
+	if _, err := io.ReadFull(m.br, h[:]); err != nil {
+		return nil, err
+	}
+	n := int(h[0]) | int(h[1])<<8 | int(h[2])<<16
+	m.seq = h[3] + 1
+	if n > 1<<20 {
+		return nil, errors.New("packet too large")
+	}
+	b := make([]byte, n)
+	_, err := io.ReadFull(m.br, b)
+	return b, err
+}
+
+func (m *mysqlConn) write(p []byte) error {
+	h := []byte{byte(len(p)), byte(len(p) >> 8), byte(len(p) >> 16), m.seq}
+	m.seq++
+	_, err := m.c.Write(append(h, p...))
+	return err
+}
+
+func myError(p []byte) (int, string) {
+	if len(p) < 3 {
+		return 0, "error"
+	}
+	code := int(binary.LittleEndian.Uint16(p[1:]))
+	msg := p[3:]
+	if len(msg) > 6 && msg[0] == '#' {
+		msg = msg[6:]
+	}
+	return code, string(msg)
+}
+
+func cstr(b []byte) (string, []byte) {
+	i := bytes.IndexByte(b, 0)
+	if i < 0 {
+		return string(b), nil
+	}
+	return string(b[:i]), b[i+1:]
+}
+
+// scramble computes the auth response of the two common MySQL plugins.
+func scramble(plugin, pass string, salt []byte) []byte {
+	if pass == "" {
+		return nil
+	}
+	switch plugin {
+	case "caching_sha2_password":
+		h1 := sha256.Sum256([]byte(pass))
+		h2 := sha256.Sum256(h1[:])
+		h3 := sha256.Sum256(append(h2[:], salt...))
+		out := make([]byte, 32)
+		for i := range out {
+			out[i] = h1[i] ^ h3[i]
+		}
+		return out
+	default: // mysql_native_password
+		h1 := sha1.Sum([]byte(pass)) //nolint:gosec
+		h2 := sha1.Sum(h1[:])        //nolint:gosec
+		h3 := sha1.Sum(append(append([]byte{}, salt...), h2[:]...))
+		out := make([]byte, 20)
+		for i := range out {
+			out[i] = h1[i] ^ h3[i]
+		}
+		return out
+	}
+}
+
+// mysqlCheck reads the server greeting and, with user=, logs in and sends
+// COM_PING. Without credentials the greeting proves MySQL answers.
+func mysqlCheck(ctx context.Context, conn net.Conn, host string, o opts, r Result) Result {
+	m := &mysqlConn{c: conn, br: bufio.NewReader(conn)}
+	g, err := m.read()
+	if err != nil {
+		return protoFail(r, "MySQL greeting", err)
+	}
+	if len(g) > 0 && g[0] == 0xff {
+		code, msg := myError(g)
+		return failKeep(r, ReasonAuthError, "MySQL refuses this host: %s (%d)", msg, code)
+	}
+	gr, problem := parseMyGreeting(g)
+	if problem != "" {
+		return failKeep(r, ReasonProtoError, "%s", problem)
+	}
+	user := o.str("user", "")
+	if user == "" {
+		r.Detail = "MySQL " + gr.version + " answers (no credentials given; login not tried)"
+		return r
+	}
+	want := uint32(myLongPassword | myProtocol41 | mySecureConn | myPluginAuth)
+	db := o.str("database", "")
+	if db != "" {
+		want |= myConnectWithDB
+	}
+	l := &myLogin{m: m, pass: o.str("password", ""), plugin: gr.plugin, salt: gr.salt, version: gr.version, o: o, ctx: ctx}
+	if o.on("ssl") {
+		if gr.caps&mySSL == 0 {
+			return failKeep(r, ReasonAssertFailed, "the server does not offer SSL")
+		}
+		want |= mySSL
+		if err := m.write(myHead(want)); err != nil {
+			return protoFail(r, "SSL request", err)
+		}
+		tc := tls.Client(conn, &tls.Config{ServerName: o.str("servername", host), InsecureSkipVerify: o.on("insecure")}) //nolint:gosec // opt-in
+		if err := tc.HandshakeContext(ctx); err != nil {
+			return failKeep(r, ReasonTLS, "TLS handshake failed: %v", rootErr(err))
+		}
+		m.c, m.br, l.secure = tc, bufio.NewReader(tc), true
+	}
+	auth := scramble(l.plugin, l.pass, l.salt)
+	resp := myHead(want)
+	resp = append(append(resp, user...), 0)
+	resp = append(append(resp, byte(len(auth))), auth...)
+	if db != "" {
+		resp = append(append(resp, db...), 0)
+	}
+	resp = append(append(resp, l.plugin...), 0)
+	if err := m.write(resp); err != nil {
+		return protoFail(r, "login", err)
+	}
+	for {
+		p, err := m.read()
+		if err != nil {
+			return protoFail(r, "login", err)
+		}
+		if res, done := l.reply(p, r); done {
+			return res
+		}
+	}
+}
+
+// myHead is the start of a handshake response with capabilities c.
+func myHead(c uint32) []byte {
+	b := binary.LittleEndian.AppendUint32(nil, c)
+	b = binary.LittleEndian.AppendUint32(b, myMaxPacket)
+	b = append(b, myCharsetUTF8MB4)
+	return append(b, make([]byte, 23)...)
+}
+
+// myGreeting is what the server's first packet says.
+type myGreeting struct {
+	version, plugin string
+	salt            []byte
+	caps            uint32
+}
+
+// parseMyGreeting reads a protocol 10 greeting; problem says what is wrong
+// with one that is not.
+func parseMyGreeting(g []byte) (gr myGreeting, problem string) {
+	if len(g) < 33 || g[0] != 10 {
+		return gr, "not a MySQL greeting"
+	}
+	version, rest := cstr(g[1:])
+	if len(rest) < 4+8+1+2+1+2+2+1+10 {
+		return gr, "short MySQL greeting"
+	}
+	rest = rest[4:] // connection id
+	salt := append([]byte{}, rest[:8]...)
+	rest = rest[9:] // salt part 1 and filler
+	caps := uint32(binary.LittleEndian.Uint16(rest))
+	rest = rest[2+1+2:] // capabilities low, charset, status
+	caps |= uint32(binary.LittleEndian.Uint16(rest)) << 16
+	saltLen := int(rest[2])
+	rest = rest[3+10:]
+	n := max(13, saltLen-8)
+	if len(rest) < n {
+		n = len(rest)
+	}
+	salt = append(salt, bytes.TrimRight(rest[:n], "\x00")...)
+	plugin := "mysql_native_password"
+	if len(rest) > n {
+		if p, _ := cstr(rest[n:]); p != "" {
+			plugin = p
+		}
+	}
+	return myGreeting{version: version, plugin: plugin, salt: salt, caps: caps}, ""
+}
+
+// myLogin follows the server's replies to a login.
+type myLogin struct {
+	m               *mysqlConn
+	pass            string
+	plugin, version string
+	salt            []byte
+	secure          bool // the connection is TLS
+	o               opts
+	ctx             context.Context
+}
+
+// reply handles one packet of the login; done says the check is over.
+func (l *myLogin) reply(p []byte, r Result) (Result, bool) {
+	m := l.m
+	if len(p) == 0 {
+		return failKeep(r, ReasonProtoError, "empty reply"), true
+	}
+	switch p[0] {
+	case 0x00: // OK: logged in
+		return l.ping(r), true
+	case 0xff:
+		code, msg := myError(p)
+		if code == 1045 || code == 1044 || code == 1698 {
+			return failKeep(r, ReasonAuthError, "MySQL refused the login: %s", msg), true
+		}
+		return failKeep(r, ReasonAssertFailed, "MySQL: %s (%d)", msg, code), true
+	case 0xfe: // auth switch
+		name, data := cstr(p[1:])
+		l.plugin, l.salt = name, bytes.TrimRight(data, "\x00")
+		if err := m.write(scramble(l.plugin, l.pass, l.salt)); err != nil {
+			return protoFail(r, "login", err), true
+		}
+		return r, false
+	case 0x01: // more auth data (caching_sha2_password)
+		return l.moreAuth(p, r)
+	}
+	return failKeep(r, ReasonProtoError, "unexpected reply 0x%02x", p[0]), true
+}
+
+// ping sends COM_PING once logged in (or runs the monitor's query).
+func (l *myLogin) ping(r Result) Result {
+	if l.o.has("query") {
+		return l.query(r)
+	}
+	m := l.m
+	m.seq = 0
+	if err := m.write([]byte{0x0e}); err != nil { // COM_PING
+		return protoFail(r, "ping", err)
+	}
+	q, err := m.read()
+	if err != nil {
+		return protoFail(r, "ping", err)
+	}
+	if len(q) == 0 || q[0] != 0x00 {
+		code, msg := myError(q)
+		return failKeep(r, ReasonAssertFailed, "COM_PING failed: %s (%d)", msg, code)
+	}
+	m.seq = 0
+	_ = m.write([]byte{0x01}) // COM_QUIT
+	r.Detail = "MySQL " + l.version + ": login and ping ok"
+	return r
+}
+
+// myResult is what a statement answered.
+type myResult struct {
+	first string // the first column of the first row
+	null  bool
+	rows  int  // 1 when there is a first row (the rest is not read)
+	ok    bool // an OK packet: no result set
+	err   string
+}
+
+// exec sends COM_QUERY and reads the answer: an error, an OK, or a result
+// set of which only the first row is read.
+func (l *myLogin) exec(sql string) (myResult, error) {
+	var res myResult
+	m := l.m
+	m.seq = 0
+	if err := m.write(append([]byte{0x03}, sql...)); err != nil {
+		return res, err
+	}
+	p, err := m.read()
+	if err != nil {
+		return res, err
+	}
+	if len(p) == 0 {
+		return res, errors.New("empty reply")
+	}
+	switch p[0] {
+	case 0x00:
+		res.ok = true
+		return res, nil
+	case 0xff:
+		code, msg := myError(p)
+		res.err = fmt.Sprintf("%s (%d)", msg, code)
+		return res, nil
+	}
+	cols, _, ok := myLenEnc(p)
+	if !ok || cols == 0 || cols > 4096 {
+		return res, errors.New("malformed result set")
+	}
+	for i := uint64(0); i < cols; i++ { // column definitions
+		if _, err := m.read(); err != nil {
+			return res, err
+		}
+	}
+	p, err = m.read() // EOF after the definitions
+	if err != nil {
+		return res, err
+	}
+	if len(p) == 0 || p[0] != 0xfe {
+		return res, errors.New("malformed result set")
+	}
+	p, err = m.read() // the first row, or the closing EOF
+	if err != nil {
+		return res, err
+	}
+	switch {
+	case len(p) > 0 && p[0] == 0xff:
+		code, msg := myError(p)
+		res.err = fmt.Sprintf("%s (%d)", msg, code)
+	case len(p) > 0 && p[0] == 0xfe && len(p) < 9: // no rows
+	default:
+		res.rows = 1
+		if len(p) > 0 && p[0] == 0xfb {
+			res.null = true
+		} else if n, rest, ok := myLenEnc(p); ok && uint64(len(rest)) >= n {
+			res.first = string(rest[:n])
+		} else {
+			return res, errors.New("malformed row")
+		}
+	}
+	return res, nil
+}
+
+// myLenEnc reads a length-encoded integer.
+func myLenEnc(b []byte) (uint64, []byte, bool) {
+	if len(b) == 0 {
+		return 0, nil, false
+	}
+	switch c := b[0]; {
+	case c < 0xfb:
+		return uint64(c), b[1:], true
+	case c == 0xfc && len(b) >= 3:
+		return uint64(binary.LittleEndian.Uint16(b[1:])), b[3:], true
+	case c == 0xfd && len(b) >= 4:
+		return uint64(b[1]) | uint64(b[2])<<8 | uint64(b[3])<<16, b[4:], true
+	case c == 0xfe && len(b) >= 9:
+		return binary.LittleEndian.Uint64(b[1:]), b[9:], true
+	}
+	return 0, nil, false
+}
+
+// query runs the monitor's SELECT in a read-only session and judges the
+// number it returns.
+func (l *myLogin) query(r Result) Result {
+	quit := func() { l.m.seq = 0; _ = l.m.write([]byte{0x01}) }
+	defer quit()
+	res, err := l.exec("SET SESSION TRANSACTION READ ONLY")
+	if err != nil {
+		return protoFail(r, "query", err)
+	}
+	if !res.ok {
+		return failKeep(r, ReasonAssertFailed, "the session cannot be made read-only, so the query is not run: %s", res.err)
+	}
+	// The server stops the statement when the check gives up (MySQL:
+	// max_execution_time in ms, MariaDB: max_statement_time in s). A server
+	// with neither still runs it to the end: the check's own timeout holds.
+	if ms := remainingMS(l.ctx); ms > 0 {
+		if res, err := l.exec("SET SESSION max_execution_time=" + strconv.FormatInt(ms, 10)); err == nil && !res.ok {
+			_, _ = l.exec("SET SESSION max_statement_time=" + strconv.FormatFloat(float64(ms)/1000, 'f', 3, 64))
+		}
+	}
+	res, err = l.exec(statement(l.o.str("query", "")))
+	if err != nil {
+		return protoFail(r, "query", err)
+	}
+	if res.err != "" {
+		return failKeep(r, ReasonAssertFailed, "the query failed: %s", res.err)
+	}
+	r.Detail = "MySQL " + l.version
+	return queryNumber(r, l.o, res.first, res.null, res.rows)
+}
+
+// moreAuth answers caching_sha2_password's extra round.
+func (l *myLogin) moreAuth(p []byte, r Result) (Result, bool) {
+	if len(p) < 2 {
+		return failKeep(r, ReasonProtoError, "short auth data"), true
+	}
+	var err error
+	switch {
+	case p[1] == 0x03: // fast auth ok; the OK packet follows
+	case p[1] == 0x04: // full auth: the password in clear over TLS, else RSA
+		if l.secure {
+			err = l.m.write(append([]byte(l.pass), 0))
+		} else {
+			err = l.m.write([]byte{0x02}) // ask for the public key
+		}
+	case p[1] == '-': // PEM public key
+		return l.rsaPassword(p[1:], r)
+	default:
+		return failKeep(r, ReasonProtoError, "unexpected auth data"), true
+	}
+	if err != nil {
+		return protoFail(r, "login", err), true
+	}
+	return r, false
+}
+
+// rsaPassword sends the password encrypted with the server's public key.
+func (l *myLogin) rsaPassword(key []byte, r Result) (Result, bool) {
+	block, _ := pem.Decode(key)
+	if block == nil {
+		return failKeep(r, ReasonProtoError, "bad server public key"), true
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	rk, ok := pub.(*rsa.PublicKey)
+	if err != nil || !ok {
+		return failKeep(r, ReasonProtoError, "bad server public key"), true
+	}
+	plain := append([]byte(l.pass), 0)
+	for i := range plain {
+		plain[i] ^= l.salt[i%len(l.salt)]
+	}
+	enc, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, rk, plain, nil) //nolint:gosec // MySQL's choice
+	if err != nil {
+		return failKeep(r, ReasonProtoError, "%v", err), true
+	}
+	if err := l.m.write(enc); err != nil {
+		return protoFail(r, "login", err), true
+	}
+	return r, false
+}

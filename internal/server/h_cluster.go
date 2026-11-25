@@ -1,0 +1,190 @@
+package server
+
+import (
+	"errors"
+	"net/http"
+	"strings"
+
+	"github.com/githubflyideas/unagikuma/internal/app"
+	"github.com/githubflyideas/unagikuma/internal/cluster"
+	"github.com/githubflyideas/unagikuma/internal/config"
+	"github.com/githubflyideas/unagikuma/internal/i18n"
+	"github.com/githubflyideas/unagikuma/internal/store"
+)
+
+// joinCode issues a one-time join code for another machine.
+func (s *Server) joinCode(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req struct {
+		Server string `json:"server"`
+	}
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	server := strings.TrimRight(strings.TrimSpace(req.Server), "/")
+	if server == "" {
+		server = agentServerURL(r)
+	}
+	if !strings.HasPrefix(server, "https://") {
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "the master address must start with https://")
+	}
+	code, exp, err := s.app.CreateJoinCode(server)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"code": code, "expires": exp, "server": server, "fingerprint": s.app.PKI().Fingerprint()}, nil
+}
+
+// agentJoin is called by a machine joining with a code (no session: the
+// code is the credential). TLS only, since the answer carries a token.
+func (s *Server) agentJoin(w http.ResponseWriter, r *http.Request) {
+	if r.TLS == nil {
+		writeError(w, Errorf(http.StatusForbidden, CodeForbidden, "joining requires TLS"))
+		return
+	}
+	if ok, wait := s.joins.Allow(s.ip(r), s.now()); !ok {
+		writeError(w, rateLimited(wait))
+		return
+	}
+	var req cluster.JoinRequest
+	if err := decodeJSON(r, s.maxBody()*4, &req); err != nil {
+		writeError(w, err)
+		return
+	}
+	resp, err := s.app.AcceptJoin(req)
+	switch {
+	case errors.Is(err, store.ErrJoinCode):
+		s.log.Warn("join refused", "ip", s.ip(r), "node", req.Node, "err", err)
+		writeError(w, Errorf(http.StatusForbidden, CodeForbidden, "%v", err))
+	case errors.Is(err, app.ErrNodeName):
+		writeError(w, Errorf(http.StatusConflict, CodeConflict, "%v", err))
+	case errors.Is(err, app.ErrQuota):
+		writeError(w, quotaError(err))
+	case err != nil:
+		writeError(w, s.configError(err))
+	default:
+		writeJSON(w, http.StatusOK, resp)
+	}
+}
+
+// clusterJoin makes this server join a cluster with a code from its master.
+func (s *Server) clusterJoin(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req struct {
+		Code   string `json:"code"`
+		Node   string `json:"node"`
+		Title  string `json:"title"`
+		Region string `json:"region"`
+		Import bool   `json:"import"`
+	}
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	if len(s.nodeViews()) > 1 {
+		return nil, Errorf(http.StatusConflict, CodeConflict, "this server is the master of a cluster; it cannot join another")
+	}
+	resp, err := s.app.JoinCluster(r.Context(), app.JoinOptions{Code: req.Code, Node: req.Node, Title: req.Title, Region: req.Region,
+		Import: req.Import, Author: authOf(r).user})
+	if err != nil {
+		if errors.Is(err, app.ErrAlreadyJoined) {
+			return nil, Errorf(http.StatusConflict, CodeConflict, "%v", err)
+		}
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
+	}
+	return map[string]any{"node": resp.Node, "imported": resp.Imported, "skipped": resp.Skipped}, nil
+}
+
+func (s *Server) clusterAgent(w http.ResponseWriter, r *http.Request) (any, error) {
+	st := s.app.Standby()
+	st.Key = "" // never shown
+	return map[string]any{"member": s.app.Agent().Member, "status": s.app.Agent().Status, "standby": st, "replica": s.app.ReplicaStatus()}, nil
+}
+
+// clusterPromote makes this standby the master, with the copy of the
+// master's state it holds; the server restarts.
+func (s *Server) clusterPromote(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req struct {
+		Force bool `json:"force"`
+	}
+	if r.ContentLength != 0 {
+		if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+			return nil, err
+		}
+	}
+	term, err := s.app.PromoteForce(r.Context(), 0, authOf(r).user, req.Force)
+	if err != nil {
+		var alive *app.ErrMasterAlive
+		if errors.As(err, &alive) {
+			e := Errorf(http.StatusConflict, "master_alive", "%v", err)
+			e.Extra = map[string]any{"master": alive.Master, "term": alive.Term}
+			return nil, e
+		}
+		var refused *app.PromoteRefused
+		if errors.As(err, &refused) {
+			lang := i18n.Normalize(firstLang(r.Header.Get("Accept-Language")))
+			key := "ui.ha.promote_refused"
+			if refused.Racing {
+				key = "ui.ha.promote_racing"
+			}
+			msg := i18n.T(lang, key, "peer", refused.Peer, "term", refused.Term)
+			return nil, Errorf(http.StatusConflict, CodeConflict, "%s", msg)
+		}
+		return nil, Errorf(http.StatusConflict, CodeConflict, "%v", err)
+	}
+	auditOf(r).note("term", term).note("force", req.Force)
+	return map[string]any{"term": term, "restarting": true}, nil
+}
+
+func (s *Server) clusterLeave(w http.ResponseWriter, r *http.Request) (any, error) {
+	return map[string]any{"ok": true}, s.app.LeaveCluster()
+}
+
+// siteLocal shows this site's own configuration (never synced).
+func (s *Server) siteLocal(w http.ResponseWriter, r *http.Request) (any, error) {
+	return map[string]any{"text": s.app.SiteLocal(), "file": app.SiteLocalFile}, nil
+}
+
+// siteLocalSave replaces this site's own configuration.
+func (s *Server) siteLocalSave(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req struct {
+		Text string `json:"text"`
+	}
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	text, diags, err := s.app.SetSiteLocal(req.Text, authOf(r).user)
+	if err != nil {
+		if diags != nil {
+			return map[string]any{"ok": false, "text": text, "diagnostics": diags, "suggestions": recordSuggestions(text, diags)}, nil
+		}
+		return nil, err
+	}
+	return map[string]any{"ok": true, "text": text}, nil
+}
+
+// suggestion is the full record for a line written the quick-add way.
+type suggestion struct {
+	Line int    `json:"line"`
+	From string `json:"from"`
+	Text string `json:"text"`
+}
+
+// recordSuggestions offers the full record for each line that is not a
+// record but reads as a quick-add line ("ping 8.8.8.4"), so a person who
+// typed the short form sees what to write instead.
+func recordSuggestions(text string, diags []config.Diagnostic) []suggestion {
+	lines := strings.Split(text, "\n")
+	used := map[string]bool{}
+	out := []suggestion{}
+	for _, d := range diags {
+		if d.Code != "syntax" || d.Pos.Line < 1 || d.Pos.Line > len(lines) || !strings.HasPrefix(d.Msg, "expected \"<name>") {
+			continue
+		}
+		line := strings.TrimSpace(lines[d.Pos.Line-1])
+		spec, err := quickRecord(line, used)
+		if err != nil {
+			continue
+		}
+		used[spec.Name] = true
+		out = append(out, suggestion{Line: d.Pos.Line, From: line, Text: spec.Render()})
+	}
+	return out
+}

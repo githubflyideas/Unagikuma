@@ -1,0 +1,133 @@
+package server
+
+import (
+	"bytes"
+	"encoding/base64"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/githubflyideas/unagikuma/internal/backup"
+)
+
+func TestBackupDownloads(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	e.setup()
+	fetch := func(method, body string) []byte {
+		t.Helper()
+		req, _ := http.NewRequest(method, e.ts.URL+"/api/v1/backup?history=1", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Unagikuma-CSRF", e.csrf)
+		resp, err := e.c.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode != 200 {
+			t.Fatalf("%s: %d %s", method, resp.StatusCode, b)
+		}
+		return b
+	}
+	plain := fetch("GET", "")
+	dst := t.TempDir()
+	m, err := backup.Restore(bytes.NewReader(plain), dst, filepath.Join(dst, "monitors.conf"), "", false)
+	if err != nil || m.Keys || len(m.Files) != 4 { // databases, monitors.conf, installation number
+		t.Fatalf("plain: %v %+v", err, m)
+	}
+	enc := fetch("POST", `{"passphrase":"long enough"}`)
+	dst = t.TempDir()
+	m, err = backup.Restore(bytes.NewReader(enc), dst, filepath.Join(dst, "monitors.conf"), "long enough", false)
+	if err != nil || !m.Keys {
+		t.Fatalf("encrypted: %v %+v", err, m)
+	}
+	if !strings.Contains(strings.Join(m.Files, ","), "cluster-ca.key") || !strings.Contains(strings.Join(m.Files, ","), "unagikuma.key") {
+		t.Fatalf("keys missing: %v", m.Files)
+	}
+	if c := e.do("POST", "/api/v1/backup", map[string]any{"passphrase": "short"}, nil); c != 400 {
+		t.Fatalf("short passphrase: %d", c)
+	}
+}
+
+// The configuration alone is monitors.conf as it is, and what it exports
+// the Unagikuma source imports: nothing is added twice.
+func TestConfigExportAndImportBack(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	e.setup()
+	code, conf := e.raw("GET", "/api/v1/backup?kind=config", nil, "")
+	if code != 200 || !strings.Contains(string(conf), "IN SOA") && !strings.Contains(string(conf), "$FILE") || !strings.Contains(string(conf), "IN HTTP") {
+		t.Fatalf("export: %d %q", code, conf)
+	}
+	if bytes.Contains(conf, []byte("unagikuma.key")) || bytes.Contains(conf, []byte("SQLite format")) {
+		t.Fatal("the export holds more than the configuration")
+	}
+	// Previewing it into the installation it came from adds nothing.
+	code, body := e.raw("POST", "/api/v1/import/unagikuma", conf, "text/plain")
+	if code != 200 {
+		t.Fatalf("preview: %d %s", code, body)
+	}
+	if !strings.Contains(string(body), `"source":"Unagikuma"`) || strings.Contains(string(body), `"status":"imported"`) {
+		t.Fatalf("an import of its own export adds records: %s", body)
+	}
+	// Something that is not a monitors.conf is refused with a reason.
+	if code, body = e.raw("POST", "/api/v1/import/unagikuma", []byte("hello"), "text/plain"); code != 400 {
+		t.Fatalf("junk: %d %s", code, body)
+	}
+}
+
+// A backup sent from the page is checked and kept for the next start; the
+// running installation is untouched, and it can be dropped again.
+func TestRestoreIsStagedNotApplied(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	e.setup()
+	send := func(method string, body []byte, pass string) (int, string) {
+		t.Helper()
+		req, _ := http.NewRequest(method, e.ts.URL+"/api/v1/restore", bytes.NewReader(body))
+		req.Header.Set("X-Unagikuma-CSRF", e.csrf)
+		if pass != "" {
+			req.Header.Set("X-Backup-Passphrase", base64.StdEncoding.EncodeToString([]byte(pass)))
+		}
+		resp, err := e.c.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(b)
+	}
+	_, none := send("GET", nil, "")
+	if !strings.Contains(none, `"pending":false`) {
+		t.Fatalf("nothing staged yet: %s", none)
+	}
+	// Something that is not a backup is refused and leaves nothing behind.
+	if code, body := send("POST", []byte("not a backup"), ""); code != 400 {
+		t.Fatalf("junk: %d %s", code, body)
+	}
+	if _, st := send("GET", nil, ""); !strings.Contains(st, `"pending":false`) {
+		t.Fatalf("a refused upload left something staged: %s", st)
+	}
+	before, _ := os.ReadFile(e.app.ConfigPath())
+	_, enc := e.raw("POST", "/api/v1/backup", []byte(`{"passphrase":"long enough"}`), "application/json")
+	// Wrong passphrase: refused.
+	if code, _ := send("POST", enc, "wrong passphrase"); code != 400 {
+		t.Fatalf("wrong passphrase: %d", code)
+	}
+	if code, body := send("POST", enc, "long enough"); code != 200 || !strings.Contains(body, `"staged"`) {
+		t.Fatalf("stage: %d %s", code, body)
+	}
+	if _, st := send("GET", nil, ""); !strings.Contains(st, `"pending":true`) {
+		t.Fatalf("not pending: %s", st)
+	}
+	if after, _ := os.ReadFile(e.app.ConfigPath()); !bytes.Equal(before, after) {
+		t.Fatal("staging changed the running configuration")
+	}
+	if code, _ := send("DELETE", nil, ""); code != 200 {
+		t.Fatalf("cancel: %d", code)
+	}
+	if _, st := send("GET", nil, ""); !strings.Contains(st, `"pending":false`) {
+		t.Fatalf("still pending after cancel: %s", st)
+	}
+}

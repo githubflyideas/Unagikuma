@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("[   {     \"id\": \"000000000000000000000000\",     \"userId\": \"000000000000000000000000\",     \"teamId\": \"000000000000000000000000\",     \"name\": \"00000000000000000000000000000000000000000000000000000000000000000\",\"type\": \"http\",\"url\": \"https://0\",\"isActive\": false,\"interval\":10000,\"statusWindowSize\": 1,\"statusWindowThreshold\":10,\"proxyMode\": \"none\"} ] ")

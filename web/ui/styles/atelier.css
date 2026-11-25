@@ -1,0 +1,72 @@
+/* Atelier: a craftsman's workshop of leather and paper — cream stock, a
+   saddle-orange sidebar, saddle-stitch lines, luggage-tag tiles and
+   serif capitals. Brings its own colours. Registered. */
+:root[data-style="atelier"] {
+  --bg: #f5ecdd; --side: #b9500d; --panel: #fffaf0; --panel-2: #f8efde; --border: #e2d1b6; --border-strong: #b99c72;
+  --text: #2a1b10; --muted: #644c33; --faint: #6b5237;
+  --accent: #b9500d; --accent-soft: #fbe6d2; --accent-text: #ffffff; --link: #8f3a07;
+  --ok: #17804a; --ok-soft: #e1f2e4; --degraded: #a14b00; --degraded-soft: #fbe9cc;
+  --critical: #b3261e; --critical-soft: #fbe0dc; --unknown: #6b45c8; --unknown-soft: #ece4fa;
+  --pending: #6a5d4e; --pending-soft: #ebe3d6; --maint: #2a62b8; --maint-soft: #e0e9f8;
+  --on-status: #ffffff; --on-degraded: #2a1700;
+  --empty: #eadfca; --stripe: transparent;
+  --shadow: 0 1px 0 rgba(42, 27, 16, .06), 0 6px 18px rgba(90, 60, 20, .08); --radius: 2px; --bg-image: none;
+  --serif: Georgia, "Noto Serif", "Songti SC", "Source Han Serif SC", serif;
+  --side-text: #fff6e8; --side-muted: #ffe6c8; --side-hover: rgba(255, 246, 232, .12); --side-on: #fff6e8; --side-on-text: #8f3a07; --side-mark: #fff6e8;
+  color-scheme: light;
+}
+:root[data-style="atelier"] .themes { display: none; }
+/* ===== Ledger layout: the sidebar is taken apart. The navigation is a
+   row of index tabs sticking out of the right edge of the book (icons;
+   the open one shows its name), every card is a ruled ledger page with
+   binder holes and a margin line, and the title is a large italic head. ===== */
+:root[data-style="atelier"] body { background-color: #efe3cf; background-image: repeating-linear-gradient(to bottom, transparent 0 31px, rgba(120, 80, 30, .09) 31px 32px), radial-gradient(1200px 700px at 30% -10%, rgba(255, 250, 235, .9), transparent 70%); background-attachment: fixed; font-family: var(--serif); }
+:root[data-style="atelier"] .shell, :root[data-style="atelier"] .shell.mini { display: block; max-width: none; background: transparent; box-shadow: none; }
+:root[data-style="atelier"] .side { display: contents; }
+:root[data-style="atelier"] .side::before { display: none; }
+:root[data-style="atelier"] .themes { display: none; }
+/* masthead: a stamp at the top left */
+:root[data-style="atelier"] .brand { position: absolute; z-index: 60; inset-block-start: 18px; inset-inline-start: 26px; flex-direction: row; gap: 12px; padding: 0; align-items: center; text-align: start; font-family: var(--serif); font-style: italic; font-size: 22px; letter-spacing: .04em; color: var(--accent); }
+:root[data-style="atelier"] .brand img { width: 52px; height: 52px; border-radius: 50%; padding: 5px; background: #fffaf0; box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 4px #fffaf0, 0 0 0 5.5px var(--accent); filter: sepia(.75) saturate(1.25) hue-rotate(-12deg); }
+:root[data-style="atelier"] .brand .edition { font-style: normal; font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+:root[data-style="atelier"] .shell.mini .brand > div { display: revert; }
+/* index tabs on the right edge */
+:root[data-style="atelier"] .nav { position: fixed; z-index: 60; inset-inline-end: 0; inset-block-start: 96px; display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
+:root[data-style="atelier"] .side .nav a, :root[data-style="atelier"] .shell.mini .nav a { width: 48px; height: 44px; padding: 0 0 0 14px; justify-content: flex-start; flex-direction: row; gap: 12px; overflow: hidden; white-space: nowrap; border-radius: 12px 0 0 12px; margin: 0; clip-path: none; color: #fff6e8; font-family: var(--serif); font-size: 15px; letter-spacing: .06em; box-shadow: -3px 3px 8px rgba(70, 40, 10, .28); transition: width .16s ease; background: var(--tab, #b9500d); }
+:root[data-style="atelier"] .nav a:nth-child(5n+1) { --tab: #b9500d; } :root[data-style="atelier"] .nav a:nth-child(5n+2) { --tab: #8a5a2b; } :root[data-style="atelier"] .nav a:nth-child(5n+3) { --tab: #7a6a1c; } :root[data-style="atelier"] .nav a:nth-child(5n+4) { --tab: #9c3d2a; } :root[data-style="atelier"] .nav a:nth-child(5n) { --tab: #5f4a37; }
+:root[data-style="atelier"] .side .nav a:not(.on):not(:hover):not(:focus-visible) .lbl { opacity: 0; }
+:root[data-style="atelier"] .nav .ico { width: 20px; flex: none; font-size: 18px; opacity: 1; }
+:root[data-style="atelier"] .shell.mini .nav .lbl { display: revert; }
+:root[data-style="atelier"] .side .nav a:hover, :root[data-style="atelier"] .side .nav a:focus-visible, :root[data-style="atelier"] .side .nav a.on, :root[data-style="atelier"] .shell.mini .nav a.on { width: 230px; clip-path: none; }
+:root[data-style="atelier"] .side .nav a.on { background: var(--panel); color: var(--accent); font-weight: 700; box-shadow: -4px 4px 10px rgba(70, 40, 10, .3), inset 4px 0 0 var(--tab, #b9500d); }
+:root[data-style="atelier"] .nav .count { margin-inline-start: auto; margin-inline-end: 12px; background: #fff6e8; color: var(--critical); }
+:root[data-style="atelier"] .nav .rdot { margin: 0 10px 0 auto !important; }
+/* the account stamp at the bottom left */
+:root[data-style="atelier"] .side .foot { position: fixed; z-index: 60; inset-block-end: 10px; inset-inline-end: 4px; width: 74px; margin: 0; padding: 6px 5px; flex-direction: column; align-items: stretch; gap: 5px; background: rgba(255, 250, 240, .92); border: 1px dashed var(--border-strong); border-radius: 4px; color: var(--text); font-size: 11px; text-align: center; }
+:root[data-style="atelier"] .side .foot .host { display: none; }
+:root[data-style="atelier"] .side .foot .row { flex-wrap: wrap; justify-content: center; gap: 4px; } :root[data-style="atelier"] .side .foot .lang-zoom { flex-direction: column; }
+:root[data-style="atelier"] .side .foot select { width: 100%; max-width: none; font-size: 10.5px; padding: 2px; background: #fffdf8; border: 1px solid var(--border-strong); }
+:root[data-style="atelier"] .side .foot button.linkish, :root[data-style="atelier"] .side .foot a { color: var(--accent); }
+:root[data-style="atelier"] .side .foot .btn { background: transparent; border: 1px solid var(--border-strong); color: var(--text); }
+/* the page title is a large italic head */
+:root[data-style="atelier"] .top { position: static; margin: 0 80px 0 110px; padding: 84px 12px 6px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
+:root[data-style="atelier"] .top > .btn.sm:first-child { display: none; }
+:root[data-style="atelier"] .top .crumbs { flex: 0 0 100%; order: -1; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 44px; line-height: 1.1; color: var(--accent); letter-spacing: .01em; margin-bottom: 6px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+:root[data-style="atelier"] .page { margin: 0 80px 0 110px; width: auto; max-width: 1180px; padding: 18px 12px 80px; gap: 26px; }
+/* ledger pages */
+:root[data-style="atelier"] .card, :root[data-style="atelier"] .modal { position: relative; outline: 0; border: 1px solid var(--border-strong); border-radius: 3px 10px 10px 3px; padding-inline-start: 46px; box-shadow: 0 2px 0 #fff8ec inset, 4px 6px 16px rgba(90, 60, 20, .16), 8px 12px 0 -4px #f3e7d2, 8px 12px 0 -3px var(--border-strong);
+  background-color: var(--panel); background-image: radial-gradient(circle, #efe3cf 0 4.5px, #b99c72 5px 5.8px, transparent 6.4px), linear-gradient(to right, transparent 36px, rgba(185, 80, 13, .45) 36px 37.5px, transparent 37.5px), repeating-linear-gradient(to bottom, transparent 0 27px, rgba(120, 80, 30, .08) 27px 28px);
+  background-size: 22px 46px, 100% 100%, 100% 100%; background-position: 7px 14px, 0 0, 0 0; background-repeat: repeat-y, no-repeat, repeat; }
+:root[data-style="atelier"] .card > .hd { justify-content: flex-start; text-align: start; padding: 18px 22px 6px 12px; }
+:root[data-style="atelier"] .card > .hd h2::before, :root[data-style="atelier"] .card > .hd h3::before { content: ""; } :root[data-style="atelier"] .card > .hd h2::after, :root[data-style="atelier"] .card > .hd h3::after { content: ""; }
+:root[data-style="atelier"] .card > .hd h2, :root[data-style="atelier"] .card > .hd h3 { font-style: italic; font-variant: normal; font-size: 22px; font-weight: 500; letter-spacing: .01em; }
+:root[data-style="atelier"] .card > .bd { padding: 8px 24px 22px 12px; }
+:root[data-style="atelier"] .card.scroll { padding-inline-start: 46px; }
+:root[data-style="atelier"] .tile { border-radius: 6px 6px 18px 18px; }
+:root[data-style="atelier"] .tbl td, :root[data-style="atelier"] .tbl th { background: transparent; }
+@media (max-width: 860px) {
+  :root[data-style="atelier"] .brand { position: static; } :root[data-style="atelier"] .nav { position: static; align-items: stretch; }
+  :root[data-style="atelier"] .side .nav a { width: auto; height: auto; padding: 10px 14px; border-radius: 0; } :root[data-style="atelier"] .side .nav a:hover { width: auto; }
+  :root[data-style="atelier"] .side { display: flex; background: var(--side); } :root[data-style="atelier"] .side .foot { position: static; }
+  :root[data-style="atelier"] .top, :root[data-style="atelier"] .page { margin: 0; } :root[data-style="atelier"] .top .crumbs { font-size: 30px; }
+}

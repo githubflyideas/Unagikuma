@@ -1,0 +1,31 @@
+{
+  "version": "1.23.13",
+  "notificationList": [
+    {"id": 1, "name": "运维群", "active": 1, "isDefault": 1, "userId": 1,
+     "config": "{\"name\":\"运维群\",\"type\":\"feishu\",\"feishuWebHookUrl\":\"https://open.feishu.cn/open-apis/bot/v2/hook/abc\",\"isDefault\":true,\"applyExisting\":true}"},
+    {"id": 2, "name": "TG Ops", "active": true, "isDefault": false, "userId": 1,
+     "config": "{\"name\":\"TG Ops\",\"type\":\"telegram\",\"telegramBotToken\":\"123:ABC\",\"telegramChatID\":\"-1001\"}"},
+    {"id": 3, "name": "Mail", "active": 0, "isDefault": 0, "userId": 1,
+     "config": "{\"type\":\"smtp\",\"smtpHost\":\"smtp.example.com\",\"smtpPort\":465,\"smtpSecure\":true,\"smtpUsername\":\"a@example.com\",\"smtpPassword\":\"pw\",\"smtpFrom\":\"a@example.com\",\"smtpTo\":\"ops@example.com\"}"},
+    {"id": 4, "name": "Pager", "active": 1, "isDefault": 0, "userId": 1, "config": "{\"type\":\"PagerDuty\"}"}
+  ],
+  "monitorList": [
+    {"id": 10, "name": "Core", "type": "group", "active": 1, "interval": 60, "notificationIDList": {}},
+    {"id": 11, "name": "官网", "type": "keyword", "url": "https://www.example.com/", "method": "GET", "keyword": "Welcome", "invertKeyword": false,
+     "interval": 60, "retryInterval": 30, "maxretries": 2, "timeout": 48, "active": 1, "ignoreTls": false, "upsideDown": false,
+     "accepted_statuscodes": ["200-299"], "expiryNotification": true, "parent": 10, "notificationIDList": {"1": true, "2": true},
+     "tags": [{"name": "Site", "value": "bj", "color": "#fff"}], "description": "public site", "maxredirects": 10},
+    {"id": 12, "name": "API health", "type": "json-query", "url": "http://10.0.0.5:8080/health", "jsonPath": "$.status", "expectedValue": "ok",
+     "interval": 30, "retryInterval": 30, "maxretries": 0, "active": true, "notificationIDList": {"1": true}, "headers": "{\"X-Env\":\"prod\",\"Authorization\":\"Bearer x\"}"},
+    {"id": 13, "name": "Postgres", "type": "port", "hostname": "10.0.0.6", "port": 5432, "interval": 60, "maxretries": 1, "active": 1, "notificationIDList": {"2": true, "1": true}},
+    {"id": 14, "name": "Gateway", "type": "ping", "hostname": "192.168.1.1", "interval": 20, "maxretries": 3, "active": 0, "upsideDown": true},
+    {"id": 15, "name": "Resolver", "type": "dns", "hostname": "corp.example.com", "dns_resolve_server": "10.0.0.53", "dns_resolve_type": "MX", "interval": 60, "active": 1},
+    {"id": 16, "name": "Backup job", "type": "push", "interval": 3600, "active": 1, "pushToken": "abc"},
+    {"id": 17, "name": "Redis", "type": "redis", "active": 1, "interval": 60, "databaseConnectionString": "redis://:pw@10.0.0.7:6379"},
+    {"id": 19, "name": "Orders DB", "type": "mysql", "active": 1, "interval": 60, "databaseConnectionString": "mysql://mon:pw@10.0.0.8:3306/orders"},
+    {"id": 20, "name": "nginx", "type": "docker", "active": 1, "interval": 60, "docker_container": "nginx", "docker_host": 1},
+    {"id": 21, "name": "Search", "type": "grpc-keyword", "active": 1, "interval": 60, "grpcUrl": "search.lan:50051", "grpcServiceName": "search.v1", "grpcEnableTls": false},
+    {"id": 22, "name": "Mongo", "type": "mongodb", "active": 1, "databaseConnectionString": "mongodb://10.0.0.9"},
+    {"id": 18, "name": "web", "type": "http", "url": "http://192.168.1.10/", "interval": 60, "active": 1, "method": "POST", "body": "{}", "accepted_statuscodes": ["200-299", "301"], "ignoreTls": true, "maxredirects": 0}
+  ]
+}

@@ -1,0 +1,104 @@
+/* Datacenter: a green-phosphor terminal. A function-key bar at the bottom
+   is the navigation; panels have double lines; buttons are [ bracketed ].
+   Brings its own colours. Registered. */
+:root[data-style="datacenter"] {
+  --bg: #010603; --side: #04150a; --panel: #020d06; --panel-2: #06190d; --border: #0f5a2c; --border-strong: #1fa653;
+  --text: #8cffb4; --muted: #52d081; --faint: #48c276;
+  --accent: #33ff88; --accent-soft: #08331b; --accent-text: #001a0a; --link: #8cffb4;
+  --ok: #33ff88; --ok-soft: #06301a; --degraded: #ffcc33; --degraded-soft: #2b2300;
+  --critical: #ff5555; --critical-soft: #330a0a; --unknown: #c79bff; --unknown-soft: #1f1438;
+  --pending: #7ab992; --pending-soft: #0e2418; --maint: #62c8ff; --maint-soft: #0b2236;
+  --on-status: #001a0a; --on-degraded: #1d1600;
+  --empty: #0a2616; --stripe: transparent;
+  --shadow: none; --radius: 0px; --bg-image: none;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --side-text: #8cffb4; --side-muted: #52d081; --side-hover: #08331b; --side-on: #33ff88; --side-on-text: #001a0a; --side-mark: #33ff88;
+  color-scheme: dark;
+}
+:root[data-style="datacenter"] .themes { display: none; }
+:root[data-style="datacenter"] body { background-color: var(--bg); background-image: none; }
+:root[data-style="datacenter"] .shell { background: transparent; box-shadow: none; }
+:root[data-style="datacenter"] .side { background: var(--side); border-inline-end: 1px solid var(--border); }
+:root[data-style="datacenter"] .brand { color: var(--accent); }
+:root[data-style="datacenter"] .side .nav a { border-radius: 12px; box-shadow: none; }
+:root[data-style="datacenter"] .side .nav a.on { font-weight: 650; }
+:root[data-style="datacenter"] .top { background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px); border-bottom-color: var(--border); }
+:root[data-style="datacenter"] .page { gap: 22px; padding: 22px 24px 48px; }
+:root[data-style="datacenter"] .card, :root[data-style="datacenter"] .tile, :root[data-style="datacenter"] .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); }
+:root[data-style="datacenter"] .card > .hd { border-bottom-color: var(--border); padding: 16px 22px; }
+:root[data-style="datacenter"] .card > .hd h2, :root[data-style="datacenter"] .card > .hd h3 { font-size: 15px; font-weight: 650; text-transform: none; letter-spacing: 0; color: var(--text); }
+:root[data-style="datacenter"] .card > .bd { padding: 18px 22px; }
+:root[data-style="datacenter"] .card > .bd.flush { padding: 0; }
+:root[data-style="datacenter"] .tile { border-top: 3px solid var(--border-strong); }
+:root[data-style="datacenter"] .tile.ok { border-top-color: var(--ok); } :root[data-style="datacenter"] .tile.critical { border-top-color: var(--critical); } :root[data-style="datacenter"] .tile.degraded { border-top-color: var(--degraded); }
+:root[data-style="datacenter"] .tile b { font-size: 28px; }
+:root[data-style="datacenter"] .btn { border-radius: 12px; background: var(--panel); border-color: var(--border-strong); }
+:root[data-style="datacenter"] .btn:hover { background: var(--panel-2); }
+:root[data-style="datacenter"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+:root[data-style="datacenter"] .btn.ghost { background: transparent; border-color: transparent; }
+:root[data-style="datacenter"] input[type=text], :root[data-style="datacenter"] input[type=password], :root[data-style="datacenter"] input[type=number], :root[data-style="datacenter"] input[type=url], :root[data-style="datacenter"] input[type=email], :root[data-style="datacenter"] select, :root[data-style="datacenter"] textarea { background: var(--panel); border-radius: 12px; }
+:root[data-style="datacenter"] .search, :root[data-style="datacenter"] .chip, :root[data-style="datacenter"] .seg { border-radius: 12px; background: var(--panel); }
+:root[data-style="datacenter"] .banner { border-radius: 14px; }
+:root[data-style="datacenter"] .pill, :root[data-style="datacenter"] .pill.ok, :root[data-style="datacenter"] .pill.degraded, :root[data-style="datacenter"] .pill.critical, :root[data-style="datacenter"] .pill.unknown, :root[data-style="datacenter"] .pill.maintenance { border-radius: 999px; text-transform: none; letter-spacing: 0; padding: 1px 9px 1px 8px; gap: 6px; font-weight: 650; }
+:root[data-style="datacenter"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+:root[data-style="datacenter"] .pill.ok { background: var(--ok-soft); color: color-mix(in srgb, var(--ok) 78%, var(--text)); }
+:root[data-style="datacenter"] .pill.degraded { background: var(--degraded-soft); color: color-mix(in srgb, var(--degraded) 72%, var(--text)); }
+:root[data-style="datacenter"] .pill.critical { background: var(--critical-soft); color: color-mix(in srgb, var(--critical) 80%, var(--text)); }
+:root[data-style="datacenter"] .pill.unknown { background: var(--unknown-soft); color: color-mix(in srgb, var(--unknown) 78%, var(--text)); }
+:root[data-style="datacenter"] .pill.maintenance { background: var(--maint-soft); color: color-mix(in srgb, var(--maint) 78%, var(--text)); }
+:root[data-style="datacenter"] .tbl th { background: transparent; text-transform: none; letter-spacing: 0; font-size: 12.5px; border-bottom-color: var(--border-strong); }
+:root[data-style="datacenter"] .page.list .card.scroll thead th { background: var(--panel-2); }
+:root[data-style="datacenter"] .tbl tbody tr:nth-child(even) td { background: none; }
+:root[data-style="datacenter"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+:root[data-style="datacenter"] .pub .overall { border-radius: 16px; }
+:root[data-style="datacenter"] .kpi, :root[data-style="datacenter"] .sum-now { border-radius: 20px; }
+
+/* ===== Terminal layout: a phosphor screen with a function-key bar at the
+   bottom for navigation, double-line panels, [ bracketed ] buttons. ===== */
+:root[data-style="datacenter"] body { background: #010603; font-family: var(--mono); font-size: 13px; text-shadow: 0 0 6px rgba(51, 255, 136, .35); }
+:root[data-style="datacenter"] .shell, :root[data-style="datacenter"] .shell.mini { display: block; max-width: none; background: transparent; box-shadow: none; }
+:root[data-style="datacenter"] .shell::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 95; background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, .55) 100%); }
+:root[data-style="datacenter"] .shell::before { content: ""; position: fixed; z-index: 58; inset-inline: 0; inset-block-end: 0; height: 38px; background: #04150a; border-top: 3px double var(--border-strong); }
+:root[data-style="datacenter"] .side { display: contents; }
+:root[data-style="datacenter"] .themes { display: none; }
+:root[data-style="datacenter"] .brand { position: fixed; z-index: 60; inset-block-end: 0; inset-inline-start: 0; height: 38px; padding: 0 16px; flex-direction: row; align-items: center; font-size: 13px; letter-spacing: .2em; color: #001a0a; background: var(--accent); text-shadow: none; text-transform: uppercase; }
+:root[data-style="datacenter"] .brand img, :root[data-style="datacenter"] .brand .edition { display: none; }
+:root[data-style="datacenter"] .brand > div::before { content: "▌"; } :root[data-style="datacenter"] .brand > div { display: flex; }
+:root[data-style="datacenter"] .nav { position: fixed; z-index: 60; inset-block-end: 0; inset-inline: 150px 300px; height: 38px; display: flex; flex-direction: row; gap: 0; counter-reset: fk; overflow-x: auto; overflow-y: hidden; }
+:root[data-style="datacenter"] .side .nav a, :root[data-style="datacenter"] .shell.mini .nav a { height: 38px; padding: 0 6px; border-radius: 0; gap: 0; text-transform: uppercase; letter-spacing: .02em; font-size: 10.5px; white-space: nowrap; color: var(--text); box-shadow: none; counter-increment: fk; }
+:root[data-style="datacenter"] .nav a::before { content: "F" counter(fk); background: var(--border-strong); color: #00140a; padding: 0 5px; margin-inline-end: 7px; font-weight: 700; text-shadow: none; }
+:root[data-style="datacenter"] .nav .ico { display: none; } :root[data-style="datacenter"] .shell.mini .nav .lbl { display: revert; }
+:root[data-style="datacenter"] .side .nav a:hover { background: var(--accent-soft); }
+:root[data-style="datacenter"] .side .nav a.on { background: var(--accent); color: #001a0a; text-shadow: none; box-shadow: none; } :root[data-style="datacenter"] .side .nav a.on::before { background: #001a0a; color: var(--accent); }
+:root[data-style="datacenter"] .nav .count { margin-inline-start: 6px; border-radius: 0; } :root[data-style="datacenter"] .nav .rdot { display: none; }
+:root[data-style="datacenter"] .side .foot { position: fixed; z-index: 60; inset-block-end: 0; inset-inline-end: 0; height: 38px; margin: 0; padding: 0 10px; flex-direction: row; align-items: center; gap: 8px; width: 290px; }
+:root[data-style="datacenter"] .side .foot .host { display: none; } :root[data-style="datacenter"] .side .foot .row { flex-wrap: nowrap; } :root[data-style="datacenter"] .side .foot select { width: auto; max-width: 84px; font-size: 11px; padding: 1px 2px; border-radius: 0; }
+:root[data-style="datacenter"] .side .foot .btn, :root[data-style="datacenter"] .side .foot button.linkish { font-size: 11px; }
+:root[data-style="datacenter"] .top { position: static; margin: 0; padding: 8px 18px; background: #04150a; border-bottom: 3px double var(--border-strong); backdrop-filter: none; box-shadow: none; }
+:root[data-style="datacenter"] .top > .btn.sm:first-child { display: none; }
+:root[data-style="datacenter"] .top .crumbs { font-size: 16px; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
+:root[data-style="datacenter"] .top .crumbs::before { content: "┤ "; } :root[data-style="datacenter"] .top .crumbs::after { content: " ├"; }
+:root[data-style="datacenter"] .page { padding: 18px 22px 70px; gap: 18px; max-width: none; }
+:root[data-style="datacenter"] .card, :root[data-style="datacenter"] .tile, :root[data-style="datacenter"] .modal, :root[data-style="datacenter"] .kpi, :root[data-style="datacenter"] .sum-now { border-radius: 0; border: 3px double var(--border-strong); background: #020d06; box-shadow: none; }
+:root[data-style="datacenter"] .card > .hd { border-bottom: 1px dashed var(--border); padding: 8px 16px; }
+:root[data-style="datacenter"] .card > .hd h2, :root[data-style="datacenter"] .card > .hd h3 { font-size: 13px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+:root[data-style="datacenter"] .card > .hd h2::before, :root[data-style="datacenter"] .card > .hd h3::before { content: "┤ "; } :root[data-style="datacenter"] .card > .hd h2::after, :root[data-style="datacenter"] .card > .hd h3::after { content: " ├"; }
+:root[data-style="datacenter"] .tile { text-align: center; } :root[data-style="datacenter"] .tile b { font-size: 34px; font-weight: 400; color: var(--accent); text-shadow: 0 0 14px rgba(51, 255, 136, .6); }
+:root[data-style="datacenter"] .btn { border: 0; background: transparent; color: var(--accent); border-radius: 0; text-transform: uppercase; letter-spacing: .08em; padding-inline: 4px; }
+:root[data-style="datacenter"] .btn::before { content: "[ "; } :root[data-style="datacenter"] .btn::after { content: " ]"; }
+:root[data-style="datacenter"] .btn:hover { background: var(--accent); color: #001a0a; text-shadow: none; } :root[data-style="datacenter"] .btn.primary { background: var(--accent); color: #001a0a; text-shadow: none; padding-inline: 8px; }
+:root[data-style="datacenter"] .pill, :root[data-style="datacenter"] .pill.ok, :root[data-style="datacenter"] .pill.degraded, :root[data-style="datacenter"] .pill.critical, :root[data-style="datacenter"] .pill.unknown, :root[data-style="datacenter"] .pill.maintenance { border-radius: 0; background: transparent; border: 0; padding: 0; font-weight: 700; letter-spacing: .1em; }
+:root[data-style="datacenter"] .pill::before { content: "[" !important; width: auto !important; height: auto !important; background: none !important; border-radius: 0 !important; } :root[data-style="datacenter"] .pill::after { content: "]"; }
+:root[data-style="datacenter"] .pill.ok { color: var(--ok); } :root[data-style="datacenter"] .pill.degraded { color: var(--degraded); } :root[data-style="datacenter"] .pill.critical { color: var(--critical); animation: dcblink 1.1s steps(2) infinite; } :root[data-style="datacenter"] .pill.unknown { color: var(--unknown); } :root[data-style="datacenter"] .pill.maintenance { color: var(--maint); }
+:root[data-style="datacenter"]keyframes dcblink { 50% { opacity: .35; } }
+:root[data-style="datacenter"]media (prefers-reduced-motion: reduce) { :root[data-style="datacenter"] .pill.critical { animation: none; } }
+:root[data-style="datacenter"] .tbl th { color: var(--accent); text-transform: uppercase; letter-spacing: .16em; font-size: 11px; border-bottom: 1px dashed var(--border-strong); background: transparent; }
+:root[data-style="datacenter"] .tbl td { border-bottom: 1px dashed var(--border); } :root[data-style="datacenter"] .tbl tr.click:hover td { background: var(--accent-soft); }
+:root[data-style="datacenter"] input[type=text], :root[data-style="datacenter"] input[type=password], :root[data-style="datacenter"] input[type=number], :root[data-style="datacenter"] input[type=url], :root[data-style="datacenter"] input[type=email], :root[data-style="datacenter"] select, :root[data-style="datacenter"] textarea, :root[data-style="datacenter"] .search, :root[data-style="datacenter"] .chip, :root[data-style="datacenter"] .seg { border-radius: 0; background: #010a04; border: 1px solid var(--border-strong); color: var(--text); }
+:root[data-style="datacenter"] input:focus, :root[data-style="datacenter"] select:focus, :root[data-style="datacenter"] textarea:focus { outline: 1px solid var(--accent); box-shadow: 0 0 10px rgba(51, 255, 136, .4); }
+:root[data-style="datacenter"] .banner { border-radius: 0; border: 1px dashed currentColor; }
+:root[data-style="datacenter"]media (max-width: 860px) {
+  :root[data-style="datacenter"] .shell::before { display: none; } :root[data-style="datacenter"] .brand { position: static; } :root[data-style="datacenter"] .nav { position: static; flex-direction: column; height: auto; } :root[data-style="datacenter"] .side .nav a { height: auto; padding: 9px 12px; }
+  :root[data-style="datacenter"] .side { display: flex; } :root[data-style="datacenter"] .side .foot { position: static; width: auto; height: auto; } :root[data-style="datacenter"] .page { padding-bottom: 30px; }
+}
+

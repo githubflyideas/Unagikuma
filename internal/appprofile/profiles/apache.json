@@ -1,0 +1,14 @@
+{
+  "id": "apache", "title": "Apache HTTP Server", "reader": "text", "path": "/server-status?auto", "port": 80,
+  "docs": "https://httpd.apache.org/docs/2.4/mod/mod_status.html",
+  "needs": "Enable mod_status with a server-status location and allow only the monitoring host.",
+  "verified": "Apache 2.4.58",
+  "primary": "busy",
+  "summary": ["busy", "idle", "accesses"],
+  "fields": [
+    {"key": "busy", "label": "Busy workers", "label_zh": "忙碌的工作进程", "type": "quantity", "line": "BusyWorkers"},
+    {"key": "idle", "label": "Idle workers", "label_zh": "空闲的工作进程", "type": "quantity", "line": "IdleWorkers"},
+    {"key": "accesses", "label": "Total accesses", "label_zh": "累计访问数", "type": "counter", "line": "Total Accesses"},
+    {"key": "uptime", "label": "Uptime (s)", "label_zh": "运行时间（秒）", "type": "quantity", "unit": "s", "line": "Uptime"}
+  ]
+}
