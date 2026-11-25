@@ -93,16 +93,18 @@ func AreaInMasterSet(area string, cfg *config.Config) bool {
 // MonitorCap is the installation's standing against the monitor
 // limit, for the registration page and the over-limit notice.
 type MonitorCap struct {
-	Used  int  `json:"used"`
-	Limit int  `json:"limit"` // 0 = no limit
-	Over  bool `json:"over"`
+	Used       int  `json:"used"`
+	Limit      int  `json:"limit"` // 0 = no limit
+	Over       bool `json:"over"`
+	Registered bool `json:"registered"`
 }
 
 // MonitorCap reports the current standing.
 func (a *App) MonitorCap() MonitorCap {
-	limit := MonitorLimit(a.License().State())
+	st := a.License().State()
+	limit := MonitorLimit(st)
 	used := a.MonitorCount(a.Config().Config)
-	return MonitorCap{Used: used, Limit: limit, Over: limit > 0 && used > limit}
+	return MonitorCap{Used: used, Limit: limit, Over: limit > 0 && used > limit, Registered: st.Registered}
 }
 
 // monitorCapDiag is the refusal a configuration change gets when it
