@@ -1,5 +1,19 @@
 # Changelog
 
+## v2.6.37 — 2026-11-25
+
+**Added**
+- The web UI can now be served under a path prefix behind a reverse proxy (for example `/uk/`): pages, assets, the API and the sign-in all stay inside the prefix when the proxy sends `X-Forwarded-Prefix` and is listed as a trusted proxy.
+- A first start whose monitors.conf has errors no longer stops the program. It starts in repair mode — the web UI is up, nothing is monitored yet, and the file can be fixed in the editor; saving a correct configuration starts monitoring without a restart. A configuration that was already running is unchanged: its last good version keeps running, as before.
+
+**Changed**
+- Importing from Uptime Kuma keeps every check's timing as it was: retry intervals are carried over (they could be lost before, which made retries happen more often than in Uptime Kuma), timeouts are no longer shortened, and a check whose interval is missing says which default it will run at.
+- Gatus and Checkmate imports now bring over everything they can instead of refusing the whole file when one item cannot be carried over; every item that is not carried over is listed with its reason. More Gatus conditions are understood, Checkmate's status windows become attempt counts, and Nagios services whose host is only named — by a host group or a service — get that host, marked as made up in the report.
+
+**Fixed**
+- Webhook channels with a form body and a custom template now send values intact: a value holding `&` or `=` stays one field's value. Use `{{raw .X}}` in the template for a value that must be sent unescaped.
+- The notice that a cluster node has gone down now says when the node was last in contact.
+
 ## v2.6.36 — 2026-11-25
 
 **Added**
