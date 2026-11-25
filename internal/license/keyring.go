@@ -1,7 +1,7 @@
 package license
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
 	"sort"
 )
 
@@ -9,7 +9,7 @@ import (
 // licence signed by one gets a clear answer instead of "corrupt".
 type Key struct {
 	ID       string
-	Pub      ed25519.PublicKey
+	Pub      *ecdsa.PublicKey
 	Disabled bool
 	Note     string
 }
@@ -31,7 +31,9 @@ func (r Keyring) Allows(f File) bool {
 	return i < len(r.Allow) && r.Allow[i] == fp
 }
 
-// Verify checks f against the key it names.
+// Verify checks f against the key it names. The licence's format
+// version picks the signature scheme; a version with no entry in
+// formats is refused before anything else is looked at.
 func (r Keyring) Verify(f File) (Key, error) {
 	if len(r.Keys) == 0 {
 		return Key{}, ErrNoKeys
@@ -42,8 +44,12 @@ func (r Keyring) Verify(f File) (Key, error) {
 	if err := printable(f); err != nil {
 		return Key{}, err
 	}
+	spec, ok := formats[f.Version]
+	if !ok {
+		return Key{}, ErrVersion
+	}
 	sig, err := b64.DecodeString(f.Signature)
-	if err != nil || len(sig) != ed25519.SignatureSize {
+	if err != nil {
 		return Key{}, ErrSignature
 	}
 	if !r.Allows(f) {
@@ -56,7 +62,7 @@ func (r Keyring) Verify(f File) (Key, error) {
 		if k.Disabled {
 			return k, ErrKeyDisabled
 		}
-		if !ed25519.Verify(k.Pub, Message(f), sig) {
+		if !spec.verify(k.Pub, Message(f), sig) {
 			return Key{}, ErrSignature
 		}
 		if f.Product != Product {
@@ -68,6 +74,6 @@ func (r Keyring) Verify(f File) (Key, error) {
 }
 
 // SingleKey is the ring of one key, for issuing and tests.
-func SingleKey(pub ed25519.PublicKey) Keyring {
+func SingleKey(pub *ecdsa.PublicKey) Keyring {
 	return Keyring{Keys: []Key{{ID: KeyID(pub), Pub: pub}}}
 }

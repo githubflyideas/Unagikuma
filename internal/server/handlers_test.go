@@ -3,7 +3,9 @@ package server
 import (
 	"bytes"
 	"context"
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/sha512"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -57,7 +59,7 @@ func newEnv(t *testing.T, bind string, ui fstest.MapFS) *env {
 		t.Fatal(err)
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	ring := license.SingleKey(testLicenseKey.Public().(ed25519.PublicKey))
+	ring := license.SingleKey(&testLicenseKey.PublicKey)
 	a, err := app.New(app.Options{DataDir: dir, Probe: okProbe, Log: log, Instance: "test", LicenseRing: &ring})
 	if err != nil {
 		t.Fatal(err)
@@ -443,8 +445,18 @@ func waitUntil(t *testing.T, cond func() bool) {
 }
 
 // testLicenseKey signs licences for tests; envs accept it instead of the
-// release keys.
-var testLicenseKey = ed25519.NewKeyFromSeed(make([]byte, ed25519.SeedSize))
+// release keys. It is a fixed P-521 key, derived from a constant so
+// every run signs with the same key.
+var testLicenseKey = func() *ecdsa.PrivateKey {
+	sum := sha512.Sum512([]byte("unagikuma test licence key"))
+	raw := make([]byte, 66)
+	copy(raw[len(raw)-len(sum):], sum[:])
+	priv, err := ecdsa.ParseRawPrivateKey(elliptic.P521(), raw)
+	if err != nil {
+		panic(err)
+	}
+	return priv
+}()
 
 // register installs a licence.
 func (e *env) register() {

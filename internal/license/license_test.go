@@ -1,16 +1,26 @@
 package license
 
 import (
-	"crypto/ed25519"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/json"
 	"testing"
 	"time"
 )
 
+func testPrivateKey(t *testing.T) *ecdsa.PrivateKey {
+	t.Helper()
+	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return priv
+}
+
 func TestSignAndCheck(t *testing.T) {
-	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
-	ring := SingleKey(pub)
+	priv := testPrivateKey(t)
+	ring := SingleKey(&priv.PublicKey)
 	exp := "2027-10-31"
 	f := Sign(priv, File{Customer: "Example KK", Licensee: LicenseeOrganization, Product: Product, License: TypeSubscription,
 		Expires: &exp})
@@ -41,17 +51,17 @@ func TestSignAndCheck(t *testing.T) {
 		t.Fatal("installation pinning")
 	}
 	// Unknown and disabled keys.
-	pub2, _, _ := ed25519.GenerateKey(rand.Reader)
-	if _, err := SingleKey(pub2).Verify(f); err != ErrUnknownKey {
+	other := testPrivateKey(t)
+	if _, err := SingleKey(&other.PublicKey).Verify(f); err != ErrUnknownKey {
 		t.Fatalf("unknown key: %v", err)
 	}
-	r := SingleKey(pub)
+	r := SingleKey(&priv.PublicKey)
 	r.Keys[0].Disabled, r.Keys[0].Note = true, "replaced"
 	if s := Check(r, f, "1", now); s.Registered {
 		t.Fatal("disabled key accepted")
 	}
 	// Allow list.
-	r = SingleKey(pub)
+	r = SingleKey(&priv.PublicKey)
 	r.Allow = []string{"0000000000000000"}
 	if Check(r, f, "1", now).Registered {
 		t.Fatal("allow list ignored")
@@ -59,9 +69,9 @@ func TestSignAndCheck(t *testing.T) {
 }
 
 func TestCheckerInstall(t *testing.T) {
-	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	priv := testPrivateKey(t)
 	dir := t.TempDir()
-	c, err := OpenWith(dir, SingleKey(pub))
+	c, err := OpenWith(dir, SingleKey(&priv.PublicKey))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +87,7 @@ func TestCheckerInstall(t *testing.T) {
 	if err != nil || !st.Registered || st.Days != -1 {
 		t.Fatalf("install: %+v %v", st, err)
 	}
-	c2, _ := OpenWith(dir, SingleKey(pub))
+	c2, _ := OpenWith(dir, SingleKey(&priv.PublicKey))
 	if !c2.State().Registered || c2.InstallationID() != c.InstallationID() {
 		t.Fatal("not kept across restarts")
 	}
@@ -87,7 +97,14 @@ func TestCheckerInstall(t *testing.T) {
 }
 
 func TestReleaseKeys(t *testing.T) {
-	if r := Release(); len(r.Keys) != 3 || r.Keys[0].ID != "1012acd9" {
+	r := Release()
+	if len(r.Keys) != 3 {
 		t.Fatalf("release keys: %+v", r.Keys)
+	}
+	want := []string{"ec0599d8", "675c11b1", "bc828b1b"}
+	for i, id := range want {
+		if r.Keys[i].ID != id {
+			t.Fatalf("release key %d: %s, want %s", i, r.Keys[i].ID, id)
+		}
 	}
 }
