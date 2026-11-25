@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.6.34 — 2026-11-25
+
+**Added**
+- Four scenario styles — Small business, Data centre, Retail chain and ISP — are now the registered styles. A registered installation can set any of them for an account or as the installation default; without a licence they are listed in the style picker but cannot be used. The wall and summary views now follow the installation's style too; before, they always used the classic look.
+
+**Removed**
+- The fifteen legacy styles are removed: modern, relic, legend, starship, rune, aurora, nebula, ocean, sunset, forest, sakura, dune, neon, glacier and ink. The classic style stays, and stays free. An installation or account still set to a removed style falls back to classic on its own.
+
 ## v2.6.33 — 2026-11-22
 
 **Changed**
