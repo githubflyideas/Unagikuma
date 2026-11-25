@@ -31,11 +31,12 @@ func (e *QuotaError) Unwrap() error { return ErrQuota }
 
 // Usage is what counts against the quotas.
 type Usage struct {
-	Nodes int `json:"nodes"` // the master and every probing node
-	Users int `json:"users"`
+	Nodes    int `json:"nodes"` // the master and every probing node
+	Users    int `json:"users"`
+	Monitors int `json:"monitors"` // the master's running set (see monitorcap.go)
 }
 
-// Usage counts nodes and accounts.
+// Usage counts nodes, accounts and monitors.
 func (a *App) Usage() Usage {
 	u := Usage{Nodes: 1}
 	cfg := a.Config().Config
@@ -44,6 +45,7 @@ func (a *App) Usage() Usage {
 			u.Nodes++
 		}
 	}
+	u.Monitors = a.MonitorCount(cfg)
 	if users, err := a.store.Users(); err == nil {
 		u.Users = len(users)
 	}

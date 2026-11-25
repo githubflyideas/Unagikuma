@@ -28,6 +28,15 @@ type KumaOptions struct {
 func (a *App) convert(data []byte, o KumaOptions) (*importer.Result, error) {
 	opts := importer.Options{Area: o.Area, File: "upload", SecretExists: a.secrets.Has, Existing: a.Config().File,
 		UserExists: func(name string) bool { _, err := a.store.UserID(name); return err == nil }}
+	// The import ceiling: an import may take the counted total to
+	// importer.ImportCeiling. It binds only when the imported monitors
+	// land in the master's running set; monitors placed on other nodes
+	// are counted there, not here.
+	cfg := a.Config().Config
+	opts.TotalNow = a.MonitorCount(cfg)
+	if AreaInMasterSet(o.Area, cfg) {
+		opts.TotalLimit = importer.ImportCeiling
+	}
 	switch o.Source {
 	case "nagios":
 		return importer.Nagios(data, a.Config().Config, opts)
@@ -111,7 +120,7 @@ func (a *App) ImportKuma(data []byte, author string, o KumaOptions) (ConfigState
 	}
 	st := a.Config()
 	if len(res.Records) > 0 {
-		st, err = a.EditConfig(author, fmt.Sprintf("import from %s: %d monitors, %d channels", from, res.Monitors, res.Channels),
+		st, err = a.editConfigImport(author, fmt.Sprintf("import from %s: %d monitors, %d channels", from, res.Monitors, res.Channels),
 			func(f *config.File) error { return f.AppendBlock(res.Render(f.EndArea())) })
 		if err != nil {
 			undo()
