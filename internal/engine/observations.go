@@ -1,9 +1,11 @@
 package engine
 
 import (
+	"sync"
+	"time"
+
 	"github.com/githubflyideas/unagikuma/internal/observation"
 	"github.com/githubflyideas/unagikuma/internal/probe"
-	"time"
 )
 
 type observationSink interface {
@@ -37,11 +39,59 @@ func (e *Engine) recordSiteObservation(m *MonitorSpec, rt *monRuntime, nv NodeVo
 	}
 }
 
-// observationReadWait is the longest an alert waits for the sites'
-// observations of its monitor.
-const observationReadWait = 50 * time.Millisecond
+// observationReadWait is the longest one alert waits for the sites'
+// observations of its monitor. The read is made where the alert is sent,
+// not in the engine loop, so the wait holds back that one alert only —
+// never the checks or other alerts — and a normal read takes far less.
+const observationReadWait = 3 * time.Second
 
-func (e *Engine) siteObservationSnapshot(name string) *observation.Snapshot {
+// obsFetch is the sites' observations an alert should carry, read once
+// where the alert is sent (and shared by every channel it goes to).
+type obsFetch struct {
+	read    func() (*observation.Snapshot, error)
+	since   time.Time
+	gateway string
+	uplink  string
+	wait    time.Duration
+	log     func(msg string, args ...any)
+	once    sync.Once
+	snap    *observation.Snapshot
+}
+
+// get reads the observations, waiting at most f.wait; nil when they are
+// not there in time (the alert then goes without them).
+func (f *obsFetch) get() *observation.Snapshot {
+	f.once.Do(func() {
+		type result struct {
+			snap *observation.Snapshot
+			err  error
+		}
+		ch := make(chan result, 1)
+		go func() {
+			snap, err := f.read()
+			ch <- result{snap, err}
+		}()
+		select {
+		case r := <-ch:
+			if r.err != nil {
+				f.log("observation snapshot unavailable", "err", r.err)
+				return
+			}
+			if r.snap != nil {
+				r.snap.Since, r.snap.Gateway, r.snap.Uplink = f.since, f.gateway, f.uplink
+			}
+			f.snap = r.snap
+		case <-time.After(f.wait):
+			f.log("observation snapshot too slow: alert sent without it")
+		}
+	})
+	return f.snap
+}
+
+// observationFetch prepares, in the engine loop, what an alert about a
+// monitor needs to read its sites' observations later (nil outside a
+// cluster). Nothing is read here.
+func (e *Engine) observationFetch(name string) *obsFetch {
 	if len(e.cfg.Nodes) == 0 {
 		return nil
 	}
@@ -53,42 +103,19 @@ func (e *Engine) siteObservationSnapshot(name string) *observation.Snapshot {
 	if !ok {
 		return nil
 	}
-	// An alert never waits for this: the read gets observationReadWait,
-	// and an alert built without it simply has no observation line.
-	type result struct {
-		snap *observation.Snapshot
-		err  error
-	}
-	ch := make(chan result, 1)
 	sites, def, now := e.cfg.ObservationSites[name], m.DefHash, e.now()
-	go func() {
-		snap, err := s.SiteObservationSnapshot(name, def, sites, now)
-		ch <- result{snap, err}
-	}()
-	var snap *observation.Snapshot
-	select {
-	case r := <-ch:
-		if r.err != nil {
-			e.log.Warn("observation snapshot unavailable", "err", r.err)
-			return nil
-		}
-		snap = r.snap
-	case <-time.After(observationReadWait):
-		e.log.Warn("observation snapshot too slow: alert sent without it", "monitor", name)
-		return nil
+	f := &obsFetch{
+		read: func() (*observation.Snapshot, error) { return s.SiteObservationSnapshot(name, def, sites, now) },
+		wait: observationReadWait,
+		log:  func(msg string, args ...any) { e.log.Warn(msg, append([]any{"monitor", name}, args...)...) },
 	}
-	if snap != nil {
-		if rt := e.states[name]; rt != nil {
-			snap.Since = rt.FailSince
-		}
+	if rt := e.states[name]; rt != nil {
+		f.since = rt.FailSince
 	}
-	if snap != nil {
-		h := e.localnet.Health(e.now())
-		snap.Gateway = h.GatewayState
-		snap.Uplink = h.Uplink
-		if snap.Gateway == "" {
-			snap.Gateway = "unknown"
-		}
+	h := e.localnet.Health(now)
+	f.gateway, f.uplink = h.GatewayState, h.Uplink
+	if f.gateway == "" {
+		f.gateway = "unknown"
 	}
-	return snap
+	return f
 }

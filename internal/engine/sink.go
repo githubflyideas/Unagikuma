@@ -148,6 +148,8 @@ type Intent struct {
 	// counted are the recipients this alert has been counted for (each
 	// once, however many channels reach them).
 	counted map[string]bool
+	// obs reads the sites' observations where the alert is sent.
+	obs *obsFetch
 }
 
 // DeliveryRecord is one row of the notification log.

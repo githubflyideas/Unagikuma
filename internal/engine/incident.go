@@ -251,6 +251,9 @@ func (e *Engine) notices(inc *Incident, ns []PlannedNotice, now time.Time) {
 			IncidentID: inc.ID, Seq: n.Seq, Kind: string(n.Kind), Policy: inc.Policy,
 			Message: msg, CreatedAt: now, DueAt: now, System: inc.Kind == IncidentSystem, Evidence: evidence,
 		}
+		if inc.Kind != IncidentSystem {
+			in.obs = e.observationFetch(inc.Monitor)
+		}
 		if e.enqueue(in) {
 			e.decideIntent(in, LedQueued, "")
 		}
@@ -329,7 +332,6 @@ func (e *Engine) message(inc *Incident, n PlannedNotice, now time.Time) notify.M
 		msg.Description = m.Description
 		if rt := e.states[m.Name]; rt != nil {
 			msg.Status = rt.State.Display()
-			msg.Observations = e.siteObservationSnapshot(m.Name)
 			if len(e.cfg.Nodes) > 0 {
 				msg.Site = e.cfg.SourceNode
 			}

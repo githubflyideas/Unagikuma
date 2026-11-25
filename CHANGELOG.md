@@ -7,7 +7,7 @@
 - In a cluster, the monitor list shows what every site sees next to each monitor — ✓ normal, ✗ failing, ⊘ no recent word — so it is clear at a glance whether one site's way to a target fails or the target itself. Before, it was only on the monitor's own page.
 
 **Changed**
-- Building an alert waits at most 50 ms for the sites' observations; a slow disk means an alert without the site line, never a late alert. Before, it could wait up to ten seconds and hold up the checks meanwhile.
+- The sites' observations an alert carries are read where the alert is sent, not in the engine loop: a slow disk holds back that one alert for three seconds at most, then it goes without the site line, and the checks and other alerts never wait. Before, the read happened in the engine loop and could hold up everything for up to ten seconds.
 - A site's observation of a monitor counts as stale (⊘) after three missed checks and never sooner than three minutes, so a monitor checked every few seconds no longer flickers to unknown on a short network hiccup.
 
 ## v2.7.0 — 2026-11-25

@@ -92,8 +92,10 @@ func TestFirstFailureAsksOtherSites(t *testing.T) {
 	wait("second failure", func() bool { return count("global") == 2 })
 }
 
-// Building an alert never waits long for the sites' observations: a slow
-// store means an alert without that line, not a late alert.
+// Preparing an alert reads nothing in the engine loop; where the alert is
+// sent, a slow store holds back that one alert for observationReadWait at
+// most, and then it goes without the site line. Every channel of the
+// alert shares the one read.
 func TestObservationReadIsBounded(t *testing.T) {
 	e := New(Deps{Sink: &slowObsSink{memSink: newMemSink(), wait: 2 * time.Second}})
 	ts, _ := tunables.New(nil)
@@ -102,10 +104,24 @@ func TestObservationReadIsBounded(t *testing.T) {
 	e.monitors["web"] = &MonitorSpec{Name: "web", DefHash: "h"}
 	e.states["web"] = &monRuntime{}
 	start := time.Now()
-	if snap := e.siteObservationSnapshot("web"); snap != nil {
+	f := e.observationFetch("web")
+	if f == nil || time.Since(start) > 50*time.Millisecond {
+		t.Fatalf("preparing took %v", time.Since(start))
+	}
+	if observationReadWait < 3*time.Second {
+		t.Fatalf("read wait %v, want at least 3s", observationReadWait)
+	}
+	f.wait = 100 * time.Millisecond
+	start = time.Now()
+	if snap := f.get(); snap != nil {
 		t.Fatal("a late snapshot was used")
 	}
-	if d := time.Since(start); d > 300*time.Millisecond {
+	if d := time.Since(start); d > 500*time.Millisecond {
 		t.Fatalf("waited %v", d)
+	}
+	start = time.Now()
+	f.get() // the second channel does not wait again
+	if d := time.Since(start); d > 50*time.Millisecond {
+		t.Fatalf("read twice: %v", d)
 	}
 }

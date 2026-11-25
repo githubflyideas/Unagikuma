@@ -130,7 +130,7 @@ func (e *Engine) dispatchIntents(ctx context.Context, wg *sync.WaitGroup) {
 			}
 			msg := in.Message
 			msg.Delayed = LateBy(in.DueAt, now, late)
-			id, step := in.ID, i
+			id, step, obs := in.ID, i, in.obs
 			members := e.groupMembers(ch, now)
 			wg.Add(1)
 			go func() {
@@ -138,6 +138,9 @@ func (e *Engine) dispatchIntents(ctx context.Context, wg *sync.WaitGroup) {
 				sctx, cancel := context.WithTimeout(ctx, timeout)
 				defer cancel()
 				res := attemptResult{intent: id, step: step}
+				if obs != nil && msg.Observations == nil {
+					msg.Observations = obs.get()
+				}
 				switch {
 				case len(ch.Members) == 0:
 					res.att = e.deps.Send(sctx, ch.Channel, &msg)

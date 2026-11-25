@@ -91,8 +91,12 @@ func (e *Engine) escalate(now time.Time) {
 		inc.State.Escalated++
 		e.saveIncident(inc)
 		msg := e.message(inc, PlannedNotice{Kind: NoticeEscalate, Seq: inc.State.NotifyCount}, now)
-		e.enqueue(&Intent{IncidentID: inc.ID, Kind: string(NoticeEscalate), Policy: inc.Policy, Message: msg,
-			CreatedAt: now, DueAt: now, Chain: step.Channels, System: inc.Kind == IncidentSystem})
+		in := &Intent{IncidentID: inc.ID, Kind: string(NoticeEscalate), Policy: inc.Policy, Message: msg,
+			CreatedAt: now, DueAt: now, Chain: step.Channels, System: inc.Kind == IncidentSystem}
+		if inc.Kind != IncidentSystem {
+			in.obs = e.observationFetch(inc.Monitor)
+		}
+		e.enqueue(in)
 		e.event(Event{Type: EventIncident, Severity: "warning", Monitor: inc.Monitor,
 			Message: "escalated to " + strings.Join(step.Channels, ", "),
 			Data:    map[string]any{"msg": "escalated", "channels": strings.Join(step.Channels, ", "), "incident_id": inc.ID, "step": inc.State.Escalated}})
