@@ -50,7 +50,7 @@ func Unagikuma(data []byte, existing *config.Config, o Options) (*Result, error)
 		}
 		return nil, fmt.Errorf("this is not a valid monitors.conf: %s", strings.Join(msgs, "; "))
 	}
-	r := &Result{Source: "Unagikuma", File: o.File, Area: o.Area, When: o.now(), Secrets: map[string]string{}}
+	r := &Result{Source: "Unagikuma", File: o.File, Area: o.Area, When: o.now(), Secrets: map[string]string{}, totalNow: o.TotalNow, totalLimit: o.TotalLimit}
 	var here map[string]config.Record
 	hereChecks := map[string]string{} // a monitor's effect → its name here
 	taken := map[string]bool{}

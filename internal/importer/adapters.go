@@ -28,7 +28,7 @@ type adapterMonitor struct {
 }
 
 func adapterResult(source string, monitors []adapterMonitor, existing *config.Config, o Options) *Result {
-	r := &Result{Source: source, File: "upload", Area: o.Area, When: o.now(), Secrets: map[string]string{}}
+	r := &Result{Source: source, File: "upload", Area: o.Area, When: o.now(), Secrets: map[string]string{}, totalNow: o.TotalNow, totalLimit: o.TotalLimit}
 	used := map[string]bool{}
 	for _, m := range monitors {
 		it := Item{Kind: "monitor", Source: m.name, Group: m.group, Type: "HTTP", Status: StatusLeftOut, Todo: "Resolve the unsupported configuration and preview again; apply is blocked."}
@@ -173,7 +173,7 @@ func (r *Result) ActivationError() error {
 		return nil
 	}
 	for _, it := range r.Items {
-		if it.Status == StatusLeftOut {
+		if it.Status == StatusLeftOut && !it.ceiling {
 			return errors.New("import blocked: resolve every not-imported item in the preview before applying")
 		}
 	}
