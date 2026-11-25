@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/config"
@@ -54,12 +55,16 @@ func (e *InvalidError) Error() string {
 }
 
 type configManager struct {
-	app    *App
-	path   string
-	mu     sync.Mutex
-	cur    ConfigState
-	banner *Banner
-	stat   fileStamp
+	app  *App
+	path string
+	mu   sync.Mutex
+	cur  ConfigState
+	// capExempt > 0 while a change the monitor limit does not govern
+	// applies: an import (the import ceiling governs it) or the gateway
+	// seeding (its monitors never count).
+	capExempt atomic.Int32
+	banner    *Banner
+	stat      fileStamp
 }
 
 type fileStamp struct {
@@ -90,6 +95,7 @@ $FILE revision=%d master=unagikuma interval=1m retry=15s timeout=5s attempts=3
 // snapshot, or created from the starter template; an invalid file keeps the
 // last good snapshot running and raises a banner.
 func (cm *configManager) load() error {
+	cm.app.forgetImportSHA()
 	text, err := os.ReadFile(cm.path)
 	if errors.Is(err, os.ErrNotExist) {
 		if snaps, _ := cm.app.store.Snapshots(1); len(snaps) > 0 {
@@ -216,6 +222,11 @@ func (cm *configManager) saveRenamed(text []byte, ifMatch, author, message strin
 	if err := config.CheckSerial(cfg.Serial, cm.cur.Serial); err != nil {
 		return cm.cur, &InvalidError{Diags: []config.Diagnostic{{Pos: config.Pos{Line: 1, Col: 1}, Severity: config.SevError, Code: "invalid_serial", Msg: err.Error()}}}
 	}
+	if cm.capExempt.Load() == 0 {
+		if d := cm.app.monitorCapDiag(cm.cur.Config, cfg); d != nil {
+			return cm.cur, &InvalidError{Diags: []config.Diagnostic{*d}}
+		}
+	}
 	if err := writeAtomic(cm.path, text); err != nil {
 		if os.IsPermission(err) {
 			return cm.cur, ErrReadonly
@@ -275,8 +286,16 @@ func (cm *configManager) check() {
 		cm.setBanner(&Banner{Kind: "warning", Code: "serial_not_bumped", Message: "monitors.conf changed but the revision was not increased", Serial: cfg.Serial})
 	case config.CheckSerial(cfg.Serial, cm.cur.Serial) != nil:
 		cm.setBanner(&Banner{Kind: "warning", Code: "serial_lower", Message: config.CheckSerial(cfg.Serial, cm.cur.Serial).Error(), Serial: cfg.Serial})
-	default:
+	case cm.app.consumeImportSHA(shaOf(text)):
+		// The file an import just wrote: the import ceiling already
+		// held it, so the monitor limit does not refuse it here.
 		_ = cm.apply(text, f, cfg, "file", "", "", nil, nil)
+	default:
+		if d := cm.app.monitorCapDiag(cm.cur.Config, cfg); d != nil {
+			cm.setBanner(&Banner{Kind: "error", Code: "monitor_limit", Message: d.Msg, Diags: []config.Diagnostic{*d}})
+		} else {
+			_ = cm.apply(text, f, cfg, "file", "", "", nil, nil)
+		}
 	}
 }
 

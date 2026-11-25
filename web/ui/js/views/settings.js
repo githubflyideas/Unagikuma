@@ -596,7 +596,7 @@ function Registration() {
   return html`<div class="col" style=${{ gap: '12px' }}>
     <${Card} title=${s.registered ? t('ui.reg.registered_to', { name: s.customer }) : s.kind === 'expired' ? t('ui.reg.expired') : t('ui.reg.unregistered')}
       actions=${s.registered && html`<button class="btn sm" onClick=${remove}>${t('ui.reg.remove')}</button>`}>
-      ${!s.registered && html`<p class="small muted" style=${{ marginTop: 0 }}>${t('ui.reg.intro')} ${t('ui.reg.free_note', { n: s.free_users, days: s.free_audit_days })}</p>`}
+      ${!s.registered && html`<p class="small muted" style=${{ marginTop: 0 }}>${t('ui.reg.intro')} ${t('ui.reg.free_note', { n: s.free_users, m: s.free_monitors })} ${t('ui.reg.contact')}</p>`}
       ${s.reason && html`<div class="banner warning small">${s.reason}</div>`}
       <table class="kvtable"><tbody>
         <tr><th>${t('ui.reg.installation')}</th><td class="ltr"><b>${s.installation_id}</b> <${Copy} text=${s.installation_id} /></td></tr>
@@ -605,7 +605,8 @@ function Registration() {
         ${row(t('ui.reg.expires'), s.registered ? (s.days < 0 ? t('ui.reg.never') : s.expires + ' (' + t('ui.reg.days_left', { n: s.days }) + ')') : s.expires)}
         ${row(t('ui.reg.updates'), s.updates_until)}
         ${s.usage && html`<tr><th>${t('ui.reg.nodes')}</th><td>${quota(s.usage.nodes, 0)}</td></tr>
-          <tr><th>${t('ui.reg.users')}</th><td>${quota(s.usage.users, s.user_limit)}</td></tr>`}
+          <tr><th>${t('ui.reg.users')}</th><td>${quota(s.usage.users, s.user_limit)}</td></tr>
+          <tr><th>${t('ui.reg.monitors')}</th><td>${quota(s.usage.monitors, s.monitor_limit)}</td></tr>`}
         ${row(t('ui.reg.fingerprint'), s.fingerprint)}
       </tbody></table>
     <//>
@@ -651,7 +652,7 @@ function Audit() {
   };
   useEffect(() => { load(); setCheck(null); }, [f.action, f.range, f.risk, f.site, f.session]);
   if (err && err.code === 'registration_required') return html`<div class="card"><div class="bd col" style=${{ gap: '10px' }}>
-    <b>${t('ui.audit.locked')}</b><p class="small muted" style=${{ margin: 0 }}>${t('ui.audit.locked_hint')}</p>
+    <b>${t('ui.audit.locked')}</b><p class="small muted" style=${{ margin: 0 }}>${t('ui.audit.locked_hint')} ${t('ui.reg.contact')}</p>
     <div><a class="btn primary" href="#/settings/registration">${t('ui.set.tab.registration')}</a></div></div></div>`;
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return html`<div class="col" style=${{ gap: '12px' }}>

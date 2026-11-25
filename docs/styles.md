@@ -10,8 +10,10 @@ theme, light and dark.
    the status colours …) rather than fixed colours.
 2. List it in `web/ui/styles/styles.json`. A style is free unless its
    entry carries `"registered": true`; a registered style is listed for
-   everyone, but its sheet is served — and it can be picked or set as
-   the default — only on a registered installation.
+   everyone and can be picked or set as the default anywhere, but its
+   sheet is served only on a registered installation or while the
+   installation's seven-day style trial (from the first time a
+   registered style is switched on) is running.
 3. Name it in every locale under `internal/i18n/locales/`, key
    `ui.style.<id>`.
 4. Check it: every theme, a phone width, right-to-left (Arabic, Urdu),

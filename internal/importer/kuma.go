@@ -20,26 +20,40 @@ import (
 )
 
 // Result is a conversion: records to add, secrets to store, and the report.
+// ImportCeiling is the most monitors an import may take an
+// installation to, whatever its licence says: imports are how whole
+// installations move, so they get room the everyday limit does not.
+const ImportCeiling = 300
+
 type Result struct {
 	Blocked  bool                `json:"blocked,omitempty"` // bounded adapters: any unsupported item blocks apply
 	Records  []config.RecordSpec `json:"-"`
 	Secrets  map[string]string   `json:"-"`
 	Text     string              `json:"text"` // the records as they will be written
 	Monitors int                 `json:"monitors"`
-	Channels int                 `json:"channels"`
-	Notes    []string            `json:"notes"` // everything not imported as it was, in one line each
-	Area     string              `json:"area"`  // $SCOPE section the monitors go to
-	Users    []KumaUser          `json:"users"` // accounts found in kuma.db
-	Items    []Item              `json:"items"` // the report, item by item
-	Info     []string            `json:"info"`  // general remarks for the report
-	Source   string              `json:"source"`
-	File     string              `json:"file"`
-	When     time.Time           `json:"-"`
+	// TotalAfter is the installation's counted monitor total once
+	// this import is applied, when a ceiling was in force.
+	TotalAfter int        `json:"total_after,omitempty"`
+	Channels   int        `json:"channels"`
+	Notes      []string   `json:"notes"` // everything not imported as it was, in one line each
+	Area       string     `json:"area"`  // $SCOPE section the monitors go to
+	Users      []KumaUser `json:"users"` // accounts found in kuma.db
+	Items      []Item     `json:"items"` // the report, item by item
+	Info       []string   `json:"info"`  // general remarks for the report
+	Source     string     `json:"source"`
+	File       string     `json:"file"`
+	When       time.Time  `json:"-"`
 	// PushTokens are Uptime Kuma push tokens by monitor name: set them
 	// once the monitors exist and senders keep working unchanged.
 	PushTokens map[string]string `json:"-"`
 
 	sections []section
+
+	// The import ceiling: totalNow counted monitors are already here,
+	// totalLimit is the most the import may take the total to (0 = no
+	// ceiling). Set from Options by every adapter.
+	totalNow, totalLimit int
+	ceilingDone          bool
 }
 
 // Options steer an import.
@@ -63,6 +77,11 @@ type Options struct {
 	// telling a record that is already here from one that only shares its
 	// name (the Unagikuma source).
 	Existing *config.File
+	// TotalNow is the installation's counted monitor total before the
+	// import, and TotalLimit the most the import may take it to (the
+	// caller passes ImportCeiling when the imported monitors count
+	// toward the total; 0 = no ceiling).
+	TotalNow, TotalLimit int
 }
 
 func (o Options) now() time.Time {
@@ -231,7 +250,7 @@ func KumaWithWAL(data, wal []byte, existing *config.Config, o Options) (*Result,
 	if bk.Version != "" {
 		source += " " + bk.Version
 	}
-	res := &Result{Secrets: map[string]string{}, Area: o.Area, Users: users, Source: source, File: o.File, When: o.now(), PushTokens: map[string]string{}}
+	res := &Result{Secrets: map[string]string{}, Area: o.Area, Users: users, Source: source, File: o.File, When: o.now(), PushTokens: map[string]string{}, totalNow: o.TotalNow, totalLimit: o.TotalLimit}
 	k := &kumaImport{bk: &bk, o: o, res: res, names: newNamer(existing), have: existingChecks(existing), secrets: map[string]bool{},
 		byID: map[int64]*kumaMonitor{}, monName: map[int64]string{}}
 	for i := range bk.MonitorList {

@@ -65,7 +65,7 @@ func NagiosInput(in *NagiosFiles, existing *config.Config, o Options) (*Result, 
 	if o.File == "" {
 		o.File = in.Name
 	}
-	res := &Result{Secrets: map[string]string{}, Area: o.Area, Source: "Nagios", File: o.File, When: o.now()}
+	res := &Result{Secrets: map[string]string{}, Area: o.Area, Source: "Nagios", File: o.File, When: o.now(), totalNow: o.TotalNow, totalLimit: o.TotalLimit}
 	n.names, n.have, n.res, n.o, n.existing = newNamer(existing), existingChecks(existing), res, o, existing
 	n.resources = in.Resources
 	if n.resources == nil {

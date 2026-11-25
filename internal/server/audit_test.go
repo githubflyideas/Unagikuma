@@ -3,8 +3,6 @@ package server
 import (
 	"strings"
 	"testing"
-
-	"github.com/githubflyideas/unagikuma/internal/license"
 )
 
 type auditItem struct {
@@ -30,16 +28,9 @@ func TestAuditLog(t *testing.T) {
 	if c := ops.do("GET", "/api/v1/audit", nil, nil); c != 403 {
 		t.Fatalf("operators may not read the audit log: %d", c)
 	}
-	// Recorded all along. Unregistered, the last days can be read but not
-	// exported or verified; registered, all of it.
-	var free struct {
-		Items       []auditItem
-		LimitedDays int `json:"limited_days"`
-	}
-	if c := admin.do("GET", "/api/v1/audit", nil, &free); c != 200 || free.LimitedDays != license.FreeAuditDays || len(free.Items) == 0 {
-		t.Fatalf("unregistered: %d %+v", c, free)
-	}
-	for _, p := range []string{"/api/v1/audit/export", "/api/v1/audit/verify"} {
+	// Recorded all along, but reading is registered-only now: view,
+	// export and verify all refuse the unregistered alike.
+	for _, p := range []string{"/api/v1/audit", "/api/v1/audit/export", "/api/v1/audit/verify"} {
 		if c := admin.do("GET", p, nil, nil); c != 402 {
 			t.Fatalf("unregistered %s: %d", p, c)
 		}
@@ -47,12 +38,10 @@ func TestAuditLog(t *testing.T) {
 	admin.register()
 
 	var log struct {
-		Items       []auditItem
-		LimitedDays int `json:"limited_days"`
+		Items []auditItem
 	}
-	admin.do("GET", "/api/v1/audit", nil, &log)
-	if log.LimitedDays != 0 {
-		t.Fatalf("registered is still limited: %+v", log.LimitedDays)
+	if c := admin.do("GET", "/api/v1/audit", nil, &log); c != 200 || len(log.Items) == 0 {
+		t.Fatalf("registered: %d %+v", c, log)
 	}
 	find := func(action string) *auditItem {
 		for i := range log.Items {

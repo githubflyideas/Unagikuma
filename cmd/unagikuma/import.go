@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -268,9 +270,27 @@ func (j *importJob) openStore() error {
 	return nil
 }
 
+// countedTotal is the target installation's monitor count against
+// the limit, counted the server's way (see app.CountMasterMonitors).
+func (j *importJob) countedTotal() int {
+	if j.cfg == nil {
+		return 0
+	}
+	if j.st == nil {
+		return app.CountMasterMonitors(j.cfg, nil)
+	}
+	return app.CountMasterMonitors(j.cfg, func(name string) bool { return app.GatewaySeeded(j.st.Setting, name) })
+}
+
 func (j *importJob) convert() (*importer.Result, error) {
 	o := importer.Options{Area: j.area, SecretExists: func(n string) bool { return j.sec != nil && j.sec.Has(n) },
 		UserExists: func(n string) bool { return j.st != nil && userExists(j.st, n) }}
+	// The import ceiling, as on the server: it binds when the imported
+	// monitors land in the master's running set.
+	o.TotalNow = j.countedTotal()
+	if app.AreaInMasterSet(j.area, j.cfg) {
+		o.TotalLimit = importer.ImportCeiling
+	}
 	switch j.source {
 	case "gatus", "checkmate":
 		res, err := j.runAdapter(j.cfg, o)
@@ -396,6 +416,13 @@ func (j *importJob) write(res *importer.Result, changed bool, ro *importer.Repor
 			if err := j.sec.Put(name, value, nil); err != nil {
 				return err
 			}
+		}
+		// Mark the file before writing it, so a running server applies
+		// it under the import ceiling instead of refusing it as a hand
+		// edit past the monitor limit.
+		if j.st != nil {
+			h := sha256.Sum256(j.file.Bytes())
+			_ = j.st.SetSetting(app.ImportSHAKey, hex.EncodeToString(h[:]))
 		}
 		if err := replaceFile(j.cfgPath, j.file.Bytes()); err != nil {
 			return err

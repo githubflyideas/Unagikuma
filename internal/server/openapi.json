@@ -601,6 +601,9 @@
       },
       "Usage": {
         "properties": {
+          "monitors": {
+            "type": "integer"
+          },
           "nodes": {
             "type": "integer"
           },
@@ -609,6 +612,7 @@
           }
         },
         "required": [
+          "monitors",
           "nodes",
           "users"
         ],
@@ -2229,14 +2233,6 @@
                     {
                       "properties": {
                         "items": {},
-                        "sites": {}
-                      },
-                      "type": "object"
-                    },
-                    {
-                      "properties": {
-                        "items": {},
-                        "limited_days": {},
                         "sites": {}
                       },
                       "type": "object"
@@ -8890,7 +8886,7 @@
                     "fingerprint": {
                       "type": "string"
                     },
-                    "free_audit_days": {
+                    "free_monitors": {
                       "type": "integer"
                     },
                     "free_users": {
@@ -8908,7 +8904,13 @@
                     "licensee": {
                       "type": "string"
                     },
+                    "max_monitors": {
+                      "type": "integer"
+                    },
                     "max_users": {
+                      "type": "integer"
+                    },
+                    "monitor_limit": {
                       "type": "integer"
                     },
                     "reason": {
@@ -8932,11 +8934,13 @@
                   },
                   "required": [
                     "days",
-                    "free_audit_days",
+                    "free_monitors",
                     "free_users",
                     "installation_id",
                     "kind",
+                    "max_monitors",
                     "max_users",
+                    "monitor_limit",
                     "registered",
                     "usage",
                     "user_limit"

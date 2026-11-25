@@ -496,7 +496,7 @@ Entries are kept for two years. Only the server's `--audit-retention` (or `UNAGI
 
 The log cannot be changed quietly: each entry carries the hash of the one before it. The page's **Check integrity** button and `unagikuma audit verify` say whether an entry was changed, inserted or removed, and which. `verify` prints the newest entry's hash; keep it elsewhere and pass it later with `--head HASH` to prove nothing was cut off the end. `unagikuma audit export --format csv|json [--since 30d] [--high]` (or the page's export buttons) writes the log out.
 
-Without a registration the page shows the last 3 days of the log, and export and the integrity check are off; a registered installation reads all of it. See [Registration and quotas](#registration-and-quotas).
+The log is recorded whether or not the installation is registered, but reading it — the page, the export and the integrity check — needs a registration; an unregistered installation is told so, and everything recorded before registering is there once it does. See [Registration and quotas](#registration-and-quotas).
 
 ## Wall screen
 
@@ -519,9 +519,15 @@ Pick a theme with the coloured dots under the product name: Perfume, Country, In
 
 ## Registration and quotas
 
-Without a licence everything works, with two limits: up to 5 accounts, and the last 3 days of the audit log (no export, no integrity check). Nodes are never limited. The classic interface style is free; the four scenario styles — Small business, Data centre, Retail chain and ISP — are the only other styles, and they are registered. An installation or account still set to a style from an older release falls back to classic. Install the `license.json` you received under **Settings › Registration**; a trial licence is issued for the installation number shown there.
+Without a licence everything works, with two limits: up to 5 accounts and up to 100 monitors, and the audit log is registered-only (it is recorded either way; reading, exporting and verifying it needs a registration). To register, contact the author with the installation number shown under **Settings › Registration**; a trial licence is issued for that number. Install the `license.json` you receive there.
 
-A licence adds the whole audit log (with export and the integrity check), the product's own name, logo and status page footer, and the four scenario styles; there is nothing to pick, a registered installation has all of it. It states its own number of accounts (none stated: no limit) and never gives fewer than the free 5. Beyond the limit, adding a new or imported account is refused with a message saying so. Nothing already in use is switched off, for example when a licence is removed; the registration page shows the usage against the limit.
+The monitor count is what runs on the master: the monitors every node checks plus the ones placed on the master itself (its region's, or named to it). The two gateway monitors the installation adds for itself do not count; a paused monitor does. Nodes are never limited. The limit only ever refuses growth: a change that would take the count past the limit *and* past what is already running is refused — in the web UI, through the API and in a hand-edited `monitors.conf` alike, where the running configuration stays as it was and a notice names the limit. Editing or deleting monitors is never refused, so an installation over its limit (an import can put it there, see below) works normally and shrinks back under the limit by deleting; while it is over, the console shows a standing notice with the count against the limit.
+
+An import — from Uptime Kuma, Nagios, Checkmate, Gatus or another Unagikuma — may take the count to at most 300, whatever the licence says: monitors past that are not imported and are listed in the report with the limit as the reason, and the report states the monitor count after the import.
+
+The classic interface style is free. The four scenario styles — Small business, Data centre, Retail chain and ISP — are the only other styles, and they are registered, with a free trial: the first time one of them is switched on (as the default, or for an account) starts seven days in which they work fully; the style page shows the days left. When the trial ends, a stored scenario style falls back to classic and choosing one asks for a registration. An installation or account still set to a style from an older release falls back to classic.
+
+A licence adds the audit log (with export and the integrity check), the product's own name, logo and status page footer, and the four scenario styles without a trial; there is nothing to pick, a registered installation has all of it. It states its own number of accounts and its own number of monitors (none stated: no limit) and never gives fewer than the free 5 and 100. Beyond a limit, adding a new or imported account, or a monitor past the rule above, is refused with a message saying so. Nothing already in use is switched off, for example when a licence is removed; the registration page shows the usage against the limits.
 
 ## Moving from Uptime Kuma, Nagios, Checkmate or Gatus
 

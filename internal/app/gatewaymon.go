@@ -105,7 +105,7 @@ func (a *App) ensureGatewayMonitors() {
 			}
 			return f.UpsertRecord(spec)
 		}
-		if _, err := a.EditConfig("system", "gateway monitor", change); err != nil {
+		if _, err := a.editConfigCapExempt("system", "gateway monitor", change); err != nil {
 			a.log.Warn("could not add the gateway monitor", "monitor", g.name, "err", err)
 			continue
 		}

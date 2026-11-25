@@ -31,6 +31,11 @@ type Item struct {
 	Status string `json:"status"`
 	Why    string `json:"why,omitempty"`  // what changed or why it was left out
 	Todo   string `json:"todo,omitempty"` // what to do about it
+
+	// ceiling: left out by the import ceiling alone (see applyCeiling);
+	// such an item is fully supported, so it does not block an apply
+	// the way an unsupported one does.
+	ceiling bool
 }
 
 // section is a titled run of records in the imported block.
@@ -84,9 +89,85 @@ func contains(list []string, s string) bool {
 	return false
 }
 
+// applyCeiling holds an import to its ceiling: the counted monitors
+// after the import may not pass totalLimit. Monitors past it are left
+// out one by one, each with the ceiling as its reason — never silently
+// — and their records, push tokens and secrets go with them.
+func (r *Result) applyCeiling() {
+	if r.totalLimit <= 0 || r.ceilingDone {
+		return
+	}
+	r.ceilingDone = true
+	allowed := r.totalLimit - r.totalNow
+	if allowed < 0 {
+		allowed = 0
+	}
+	kept := 0
+	var capped []string
+	for i := range r.Items {
+		it := &r.Items[i]
+		if it.Kind != "monitor" || (it.Status != StatusImported && it.Status != StatusAttention) {
+			continue
+		}
+		if kept < allowed {
+			kept++
+			continue
+		}
+		it.Status = StatusLeftOut
+		it.ceiling = true
+		it.Why = fmt.Sprintf("the import limit is %d monitors in total and %d are already here", r.totalLimit, r.totalNow)
+		it.Todo = "Remove monitors first, or register for a higher limit, then import this one again."
+		capped = append(capped, it.Name)
+	}
+	if len(capped) > 0 {
+		drop := map[string]bool{}
+		for _, n := range capped {
+			drop[n] = true
+			delete(r.PushTokens, n)
+		}
+		for si := range r.sections {
+			recs := r.sections[si].recs[:0]
+			for _, rec := range r.sections[si].recs {
+				if drop[rec.Name] && config.IsMonitorType(rec.Type) {
+					for _, o := range rec.Opts {
+						for _, sn := range secretRefs(o.Value) {
+							delete(r.Secrets, sn)
+						}
+					}
+					continue
+				}
+				recs = append(recs, rec)
+			}
+			r.sections[si].recs = recs
+		}
+		r.Monitors -= len(capped)
+	}
+	r.TotalAfter = r.totalNow + kept
+	r.Info = append(r.Info, fmt.Sprintf("Monitors after this import: %d. An import may take the total to at most %d.", r.TotalAfter, r.totalLimit))
+}
+
+// secretRefs lists the ${secret:NAME} references in an option value.
+func secretRefs(v string) []string {
+	var out []string
+	for {
+		i := strings.Index(v, "${secret:")
+		if i < 0 {
+			return out
+		}
+		v = v[i+len("${secret:"):]
+		j := strings.IndexByte(v, '}')
+		if j < 0 {
+			return out
+		}
+		out = append(out, v[:j])
+		v = v[j+1:]
+	}
+}
+
 // finish fills in what the CLI, the API and the web UI read: the block of
 // records, the counts and the notes.
 func (r *Result) finish() {
+	r.applyCeiling()
 	r.Blocked = r.ActivationError() != nil
 	r.Records = nil
 	for i := range r.sections {

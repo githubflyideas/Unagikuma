@@ -14,7 +14,7 @@ const CodeRegistration = "registration_required"
 // registrationError is the refusal a registered-only feature serves.
 func registrationError(s *Server) error {
 	st := s.app.License().State()
-	e := Errorf(http.StatusPaymentRequired, CodeRegistration, "this feature needs a registered installation (Settings › Registration)")
+	e := Errorf(http.StatusPaymentRequired, CodeRegistration, "this feature needs a registered installation; to register, please contact the author (Settings › Registration)")
 	e.Extra = map[string]any{"installation_id": st.InstallationID}
 	return e
 }
@@ -37,13 +37,15 @@ func quotaError(err error) error {
 }
 
 func (s *Server) licenseGet(w http.ResponseWriter, r *http.Request) (any, error) {
+	st := s.app.License().State()
 	return struct {
 		license.State
-		Usage     app.Usage `json:"usage"`
-		UserLimit int       `json:"user_limit"`
-		FreeUsers int       `json:"free_users"`
-		FreeAudit int       `json:"free_audit_days"`
-	}{s.app.License().State(), s.app.Usage(), app.UserLimit(s.app.License().State()), license.FreeUsers, license.FreeAuditDays}, nil
+		Usage        app.Usage `json:"usage"`
+		UserLimit    int       `json:"user_limit"`
+		MonitorLimit int       `json:"monitor_limit"`
+		FreeUsers    int       `json:"free_users"`
+		FreeMonitors int       `json:"free_monitors"`
+	}{st, s.app.Usage(), app.UserLimit(st), app.MonitorLimit(st), license.FreeUsers, license.FreeMonitors}, nil
 }
 
 // licensePut installs a licence file (its JSON as the body); an invalid

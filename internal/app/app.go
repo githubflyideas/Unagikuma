@@ -703,6 +703,25 @@ func (a *App) EditConfigFrom(author, message string, client map[string]any, chan
 	return a.cfg.edit(author, message, client, change)
 }
 
+// editConfigCapExempt is EditConfig for a change the monitor limit
+// does not govern: an import (the import ceiling already held the
+// result) or the gateway seeding (its monitors never count, so adding
+// one cannot pass the limit either).
+func (a *App) editConfigCapExempt(author, message string, change func(f *config.File) error) (ConfigState, error) {
+	if err := a.editable(); err != nil {
+		return a.Config(), err
+	}
+	a.cfg.capExempt.Add(1)
+	defer a.cfg.capExempt.Add(-1)
+	return a.cfg.edit(author, message, nil, change)
+}
+
+// editConfigImport is EditConfig for an import: the import ceiling
+// already held the result, so the monitor limit does not refuse it.
+func (a *App) editConfigImport(author, message string, change func(f *config.File) error) (ConfigState, error) {
+	return a.editConfigCapExempt(author, message, change)
+}
+
 // BumpSerial applies the file on disk with an increased serial.
 func (a *App) BumpSerial(author string, client map[string]any) (ConfigState, error) {
 	if err := a.editable(); err != nil {
