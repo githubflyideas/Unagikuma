@@ -1919,6 +1919,8 @@
 "ui.obs.stale": "Périmé",
 "ui.obs.local": "Ce site",
 "msg.observations": "Observations : {table}",
+"msg.obs.after": "vérifié après la panne",
+"msg.obs.before": "{age} avant la panne",
 "ui.inc.archive": "Instantané historique ; actions envoyées au site source",
 "detail.push_site": "PUSH exige exactement un site de réception",
 "detail.config_read_only": "La configuration partagée est en lecture seule sur ce site",

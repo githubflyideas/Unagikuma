@@ -1919,6 +1919,8 @@
 "ui.obs.stale": "Desatualizado",
 "ui.obs.local": "Este local",
 "msg.observations": "Observações: {table}",
+"msg.obs.after": "verificado após a falha",
+"msg.obs.before": "{age} antes da falha",
 "ui.inc.archive": "Registro histórico; ações são enviadas ao local de origem",
 "detail.push_site": "PUSH exige exatamente um local receptor",
 "detail.config_read_only": "A configuração compartilhada é somente leitura neste local",

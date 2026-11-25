@@ -7,6 +7,7 @@ import (
 	"unicode"
 
 	"github.com/githubflyideas/unagikuma/internal/i18n"
+	"github.com/githubflyideas/unagikuma/internal/observation"
 )
 
 // detailCap bounds remote-controlled text (HTTP bodies, DNS answers, SNMP
@@ -155,7 +156,7 @@ func renderMonitor(m *Message, icon, head string) (title, body string) {
 		lines = append(lines, problemLines(m)...)
 	}
 	if m.Observations != nil {
-		lines = append(lines, i18n.T(lang, "msg.observations", "table", m.Observations.Summary()))
+		lines = append(lines, i18n.T(lang, "msg.observations", "table", ObservationText(lang, m.Observations, m.Site)))
 	}
 	if u := m.DetailURL; u != "" {
 		lines = append(lines, i18n.T(lang, "msg.details", "url", u))
@@ -183,4 +184,34 @@ func problemLines(m *Message) []string {
 		lines = append(lines, sanitize(m.Body, detailCap))
 	}
 	return lines
+}
+
+// ObservationText is each site's view of a monitor, ✓ normal, ✗ failing,
+// ⊘ no recent word. For an alert about a failure, other sites' rows say
+// whether they were checked after it began (asked to check at once) or
+// are from before it, and how long before: those are the sites' last word,
+// not proof either way. self is the site sending the alert.
+func ObservationText(lang string, s *observation.Snapshot, self string) string {
+	var parts []string
+	for _, r := range s.Rows {
+		mark := "?"
+		switch {
+		case r.Stale:
+			mark = "⊘"
+		case r.Status == "up":
+			mark = "✓"
+		case r.Status == "down":
+			mark = "✗"
+		}
+		p := r.NodeID + " " + mark
+		if !r.Stale && !s.Since.IsZero() && r.NodeID != self {
+			if at := r.CheckedHere(); at.Before(s.Since) {
+				p += " (" + i18n.T(lang, "msg.obs.before", "age", i18n.Duration(s.Since.Sub(at).Round(time.Second), lang)) + ")"
+			} else {
+				p += " (" + i18n.T(lang, "msg.obs.after") + ")"
+			}
+		}
+		parts = append(parts, p)
+	}
+	return strings.Join(parts, ", ")
 }

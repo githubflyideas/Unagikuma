@@ -1910,6 +1910,8 @@
 "ui.obs.stale": "Kedaluwarsa",
 "ui.obs.local": "Situs ini",
 "msg.observations": "Pengamatan: {table}",
+"msg.obs.after": "diperiksa setelah gangguan",
+"msg.obs.before": "{age} sebelum gangguan",
 "ui.inc.archive": "Cuplikan riwayat; tindakan dikirim ke situs sumber",
 "detail.push_site": "PUSH memerlukan tepat satu situs penerima",
 "detail.config_read_only": "Konfigurasi bersama hanya dapat dibaca di situs ini",

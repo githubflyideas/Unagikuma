@@ -1910,6 +1910,8 @@
 "ui.obs.stale": "Đã cũ",
 "ui.obs.local": "Địa điểm này",
 "msg.observations": "Quan sát: {table}",
+"msg.obs.after": "kiểm tra sau sự cố",
+"msg.obs.before": "{age} trước sự cố",
 "ui.inc.archive": "Ảnh chụp lịch sử; thao tác được gửi về điểm nguồn",
 "detail.push_site": "PUSH cần đúng một điểm nhận",
 "detail.config_read_only": "Cấu hình dùng chung tại điểm này chỉ có thể đọc",

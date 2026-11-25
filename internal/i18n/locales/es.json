@@ -1919,6 +1919,8 @@
 "ui.obs.stale": "Obsoleto",
 "ui.obs.local": "Este sitio",
 "msg.observations": "Observaciones: {table}",
+"msg.obs.after": "comprobado tras el fallo",
+"msg.obs.before": "{age} antes del fallo",
 "ui.inc.archive": "Instantánea histórica; las acciones se envían al sitio de origen",
 "detail.push_site": "PUSH requiere exactamente un sitio receptor",
 "detail.config_read_only": "La configuración compartida es de solo lectura en este sitio",

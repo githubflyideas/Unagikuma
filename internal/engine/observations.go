@@ -36,6 +36,11 @@ func (e *Engine) recordSiteObservation(m *MonitorSpec, rt *monRuntime, nv NodeVo
 		e.log.Error("persist local observation", "monitor", m.Name, "err", err)
 	}
 }
+
+// observationReadWait is the longest an alert waits for the sites'
+// observations of its monitor.
+const observationReadWait = 50 * time.Millisecond
+
 func (e *Engine) siteObservationSnapshot(name string) *observation.Snapshot {
 	if len(e.cfg.Nodes) == 0 {
 		return nil
@@ -48,10 +53,34 @@ func (e *Engine) siteObservationSnapshot(name string) *observation.Snapshot {
 	if !ok {
 		return nil
 	}
-	snap, err := s.SiteObservationSnapshot(name, m.DefHash, e.cfg.ObservationSites[name], e.now())
-	if err != nil {
-		e.log.Warn("observation snapshot unavailable", "err", err)
+	// An alert never waits for this: the read gets observationReadWait,
+	// and an alert built without it simply has no observation line.
+	type result struct {
+		snap *observation.Snapshot
+		err  error
+	}
+	ch := make(chan result, 1)
+	sites, def, now := e.cfg.ObservationSites[name], m.DefHash, e.now()
+	go func() {
+		snap, err := s.SiteObservationSnapshot(name, def, sites, now)
+		ch <- result{snap, err}
+	}()
+	var snap *observation.Snapshot
+	select {
+	case r := <-ch:
+		if r.err != nil {
+			e.log.Warn("observation snapshot unavailable", "err", r.err)
+			return nil
+		}
+		snap = r.snap
+	case <-time.After(observationReadWait):
+		e.log.Warn("observation snapshot too slow: alert sent without it", "monitor", name)
 		return nil
+	}
+	if snap != nil {
+		if rt := e.states[name]; rt != nil {
+			snap.Since = rt.FailSince
+		}
 	}
 	if snap != nil {
 		h := e.localnet.Health(e.now())

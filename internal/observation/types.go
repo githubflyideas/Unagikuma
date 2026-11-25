@@ -31,6 +31,10 @@ type Delta struct {
 }
 type Snapshot struct {
 	TakenAt time.Time `json:"taken_at"`
+	// Since is when the failure the snapshot is taken for was first seen
+	// here (zero when it is not for a failure): rows checked before it
+	// show the sites' state from before the failure.
+	Since   time.Time `json:"since,omitempty"`
 	Rows    []Row     `json:"rows"`
 	Gateway string    `json:"gateway"`
 	Uplink  string    `json:"uplink"`
@@ -53,4 +57,14 @@ func (s Snapshot) Summary() string {
 		parts = append(parts, r.NodeID+" "+mark)
 	}
 	return strings.Join(parts, ", ")
+}
+
+// CheckedHere is when the row's check was made, on the receiving site's
+// clock: the time it arrived less its age then. Clocks of other sites are
+// never compared with this one.
+func (r Row) CheckedHere() time.Time {
+	if r.ReceivedAt.IsZero() {
+		return r.CheckedAt
+	}
+	return r.ReceivedAt.Add(-time.Duration(r.AgeMS) * time.Millisecond)
 }

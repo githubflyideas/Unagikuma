@@ -1919,6 +1919,8 @@
 "ui.obs.stale": "Stale",
 "ui.obs.local": "This site",
 "msg.observations": "Observations: {table}",
+"msg.obs.after": "checked after the failure",
+"msg.obs.before": "{age} before the failure",
 "ui.inc.archive": "Historical snapshot; actions are sent to the source site",
 "detail.push_site": "PUSH requires exactly one receiving site",
 "detail.config_read_only": "configuration is read-only on this site",

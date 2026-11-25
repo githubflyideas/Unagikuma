@@ -99,6 +99,19 @@ func (e *Engine) judge(m *MonitorSpec, rt *monRuntime, nv NodeVote, res probe.Re
 	if t.Changed() {
 		rt.LastChange = now
 	}
+	switch {
+	case t.To.Avail != StatusCritical:
+		rt.FailSince = time.Time{}
+	case t.From.Avail != StatusCritical:
+		// The first failing check: other sites checking this monitor are
+		// asked to check it now, so that when this failure is confirmed
+		// the alert can say whether they see it too. Nothing waits for
+		// them.
+		rt.FailSince = end
+		if sites := e.cfg.ObservationSites[m.Name]; e.deps.FirstFailure != nil && !m.Push && !push && len(sites) > 1 {
+			e.deps.FirstFailure(m.Name, m.DefHash, sites)
+		}
+	}
 
 	status, excluded := t.To.Display(), v.Kind == VerdictUnknown
 	if e.inMaint(m.Name) {

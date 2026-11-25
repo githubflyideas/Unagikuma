@@ -1910,6 +1910,8 @@
 "ui.obs.stale": "已过期",
 "ui.obs.local": "本站状态",
 "msg.observations": "各站观测：{table}",
+"msg.obs.after": "失败后复查",
+"msg.obs.before": "故障前 {age}",
 "ui.inc.archive": "历史快照；操作将发送至源站",
 "detail.push_site": "PUSH 必须指定唯一接收站点",
 "detail.config_read_only": "此站点的共享配置为只读",

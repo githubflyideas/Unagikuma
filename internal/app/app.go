@@ -63,6 +63,7 @@ type Options struct {
 
 // App is a running unagikuma instance.
 type App struct {
+	rechecks  *peerRechecker // asks other sites to check a failing monitor at once
 	opts      Options
 	log       *slog.Logger
 	store     *store.Store
@@ -247,9 +248,11 @@ func (a *App) newMaster() error {
 			return ""
 		},
 	})
+	a.rechecks = newPeerRechecker()
 	a.engine = engine.New(engine.Deps{
 		Clock: o.Now, Probe: o.Probe, Send: a.send, Sink: &sink{a: a, Store: st},
 		InContainer: netscope.InContainer(), Remote: a.master, Log: o.Log,
+		FirstFailure: a.firstFailure,
 	})
 	a.master.SetSink(a.engine)
 	return nil
@@ -537,6 +540,7 @@ func (a *App) Run(ctx context.Context) error {
 	run(func() { a.runAgentMode(ctx) })
 	run(func() { a.runReplica(ctx) })
 	run(func() { a.runSiteObservations(ctx) })
+	run(func() { a.runPeerRechecks(ctx) })
 	run(func() { a.runGatewayMonitors(ctx) })
 	run(func() { a.runWeeklyReport(ctx) })
 	run(func() { a.every(ctx, 2*time.Second, a.cfg.check) })

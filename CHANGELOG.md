@@ -3,9 +3,11 @@
 ## Unreleased
 
 **Added**
+- In a cluster, a monitor that other sites check too asks them to check it at once the moment it first fails here, before the failure is confirmed. When the alert goes out after the retries, its site line says for each other site whether it was checked after the failure or gives that site's last word and how long before the failure it was — so it shows whether the target is down or only this site's way to it. Nothing ever waits for the other sites; an unreachable or slow site just shows its last word. Each monitor asks at most once in five minutes, many failures at once go to each site as one request, and only sites that prove their identity are heard.
 - In a cluster, the monitor list shows what every site sees next to each monitor — ✓ normal, ✗ failing, ⊘ no recent word — so it is clear at a glance whether one site's way to a target fails or the target itself. Before, it was only on the monitor's own page.
 
 **Changed**
+- Building an alert waits at most 50 ms for the sites' observations; a slow disk means an alert without the site line, never a late alert. Before, it could wait up to ten seconds and hold up the checks meanwhile.
 - A site's observation of a monitor counts as stale (⊘) after three missed checks and never sooner than three minutes, so a monitor checked every few seconds no longer flickers to unknown on a short network hiccup.
 
 ## v2.7.0 — 2026-11-25

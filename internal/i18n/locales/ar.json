@@ -1955,6 +1955,8 @@
 "ui.obs.stale": "قديم",
 "ui.obs.local": "هذا الموقع",
 "msg.observations": "الملاحظات: {table}",
+"msg.obs.after": "فُحص بعد العطل",
+"msg.obs.before": "قبل العطل بـ {age}",
 "ui.inc.archive": "لقطة تاريخية؛ تُرسل الإجراءات إلى الموقع المصدر",
 "detail.push_site": "يتطلب PUSH موقع استقبال واحدًا فقط",
 "detail.config_read_only": "الإعدادات المشتركة للقراءة فقط في هذا الموقع",

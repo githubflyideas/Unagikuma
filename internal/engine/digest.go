@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/i18n"
+	"github.com/githubflyideas/unagikuma/internal/notify"
 	"github.com/githubflyideas/unagikuma/internal/probe"
 )
 
@@ -98,7 +99,7 @@ func digestLine(in *Intent) string {
 		line += " (" + i18n.Duration(m.Duration.Round(time.Minute), m.Lang) + ")"
 	}
 	if m.Observations != nil {
-		line += " — " + i18n.T(m.Lang, "msg.observations", "table", m.Observations.Summary())
+		line += " — " + i18n.T(m.Lang, "msg.observations", "table", notify.ObservationText(m.Lang, m.Observations, m.Site))
 	}
 	return line
 }

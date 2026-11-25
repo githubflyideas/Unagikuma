@@ -1919,6 +1919,8 @@
 "ui.obs.stale": "পুরোনো",
 "ui.obs.local": "এই সাইট",
 "msg.observations": "পর্যবেক্ষণ: {table}",
+"msg.obs.after": "ব্যর্থতার পরে যাচাই",
+"msg.obs.before": "ব্যর্থতার {age} আগে",
 "ui.inc.archive": "ঐতিহাসিক স্ন্যাপশট; পদক্ষেপ উৎস সাইটে পাঠানো হয়",
 "detail.push_site": "PUSH-এর জন্য ঠিক একটি গ্রহণকারী সাইট প্রয়োজন",
 "detail.config_read_only": "এই সাইটের যৌথ কনফিগারেশন কেবল পড়া যায়",

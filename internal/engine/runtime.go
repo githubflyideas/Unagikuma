@@ -202,7 +202,12 @@ type Deps struct {
 	InContainer bool
 	// Remote sends probe requests to agents (nil without a cluster).
 	Remote Remote
-	Log    *slog.Logger
+	// FirstFailure, when set, is told the moment a monitor that other sites
+	// check too fails for the first time (before it is confirmed), with the
+	// sites that check it, so they can be asked to check it at once. It is
+	// called from the engine loop and must not block.
+	FirstFailure func(monitor, defHash string, sites []string)
+	Log          *slog.Logger
 }
 
 // Engine runs rounds, judges them and drives incidents and notifications.
@@ -320,6 +325,9 @@ type monRuntime struct {
 	// Dependencies: a held HARD failure and whether a parent explains it.
 	Dep         *depHold
 	Unreachable bool
+	// FailSince is when the current failure was first seen (its first
+	// failing check, before it was confirmed); zero while not failing.
+	FailSince time.Time
 }
 
 // NodeName is the name this node votes under in single-node mode.
@@ -425,6 +433,10 @@ func (e *Engine) do(f func()) bool {
 		return false
 	}
 }
+
+// Running reports whether the engine loop has started. Before it has,
+// calls that go through the loop would wait for it.
+func (e *Engine) Running() bool { return e.started.Load() }
 
 // Run is the engine loop; it returns when ctx is done.
 func (e *Engine) Run(ctx context.Context) {

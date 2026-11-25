@@ -1919,6 +1919,8 @@
 "ui.obs.stale": "پرانی معلومات",
 "ui.obs.local": "یہ سائٹ",
 "msg.observations": "مشاہدات: {table}",
+"msg.obs.after": "خرابی کے بعد جانچا",
+"msg.obs.before": "خرابی سے {age} پہلے",
 "ui.inc.archive": "تاریخی عکس؛ کارروائیاں اصل سائٹ کو بھیجی جاتی ہیں",
 "detail.push_site": "PUSH کے لیے صرف ایک وصول کنندہ سائٹ ضروری ہے",
 "detail.config_read_only": "اس سائٹ پر مشترکہ ترتیب صرف پڑھی جا سکتی ہے",
