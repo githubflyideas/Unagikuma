@@ -12,10 +12,10 @@ import (
 
 // A small YAML reader for the subset that tool configurations use: block
 // and flow mappings and sequences, plain and quoted scalars, block
-// scalars (| and >) and comments. It treats the file strictly as data:
-// anchors, aliases, merges, tags, directives and several documents are
-// refused rather than interpreted, and nesting and size are bounded.
-// Writing it here keeps the program free of a YAML library.
+// scalars (| and >), comments, anchors, aliases and merge keys. It
+// treats the file strictly as data: tags, directives and several
+// documents are refused rather than interpreted, and nesting and size
+// are bounded. Writing it here keeps the program free of a YAML library.
 
 const (
 	yamlMaxDepth = 32
@@ -56,9 +56,10 @@ type yline struct {
 }
 
 type yparser struct {
-	lines []yline
-	pos   int
-	nodes int
+	lines   []yline
+	pos     int
+	nodes   int
+	anchors map[string]*ynode
 }
 
 var errYAML = errors.New("invalid YAML document")
@@ -75,7 +76,7 @@ func boundedYAML(data []byte) (*ynode, error) {
 	if !utf8.Valid(data) {
 		return nil, errors.New("the file is not valid UTF-8")
 	}
-	p := &yparser{}
+	p := &yparser{anchors: map[string]*ynode{}}
 	started := false
 	for i, raw := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
 		trim := strings.TrimSpace(raw)
@@ -187,9 +188,14 @@ func (p *yparser) seq(indent, depth int) (*ynode, error) {
 		var item *ynode
 		var err error
 		switch {
-		case rest == "":
+		case rest == "" || isAnchorOnly(rest):
+			// "- &name" alone anchors the block that follows.
+			anchor := anchorName(rest)
 			p.pos++
 			item, err = p.child(indent, depth)
+			if err == nil && anchor != "" {
+				p.anchors[anchor] = item
+			}
 		case !strings.HasPrefix(rest, "{") && !strings.HasPrefix(rest, "[") && !strings.HasPrefix(rest, "\"") && !strings.HasPrefix(rest, "'") && hasKey(rest):
 			// "- key: value" starts a mapping indented to the key.
 			inner := indent + len(l.text) - len(rest)
@@ -224,6 +230,7 @@ func (p *yparser) child(indent, depth int) (*ynode, error) {
 
 func (p *yparser) mapping(indent, depth int) (*ynode, error) {
 	n := &ynode{kind: yMap}
+	var merges []*ynode // maps named by << merge keys, in order
 	for {
 		p.skipBlank()
 		if p.pos >= len(p.lines) {
@@ -240,6 +247,17 @@ func (p *yparser) mapping(indent, depth int) (*ynode, error) {
 		if !ok {
 			return nil, yerr(l.no, "expected key: value")
 		}
+		p.pos++
+		if key == "<<" {
+			src, err := p.scalar(rest, l.no, depth+1)
+			if err != nil {
+				return nil, err
+			}
+			if err := mergeSources(&merges, src, l.no); err != nil {
+				return nil, err
+			}
+			continue
+		}
 		k, err := keyText(key, l.no)
 		if err != nil {
 			return nil, err
@@ -247,8 +265,16 @@ func (p *yparser) mapping(indent, depth int) (*ynode, error) {
 		if n.get(k) != nil {
 			return nil, yerr(l.no, "duplicate or non-string mapping key")
 		}
+		// An anchor names the value, whether it is written on this
+		// line or in the block below.
+		anchor := ""
+		if strings.HasPrefix(rest, "&") {
+			anchor, rest = splitAnchor(rest)
+			if anchor == "" {
+				return nil, yerr(l.no, "bad anchor")
+			}
+		}
 		var v *ynode
-		p.pos++
 		switch {
 		case rest == "":
 			v, err = p.child(indent, depth)
@@ -260,10 +286,62 @@ func (p *yparser) mapping(indent, depth int) (*ynode, error) {
 		if err != nil {
 			return nil, err
 		}
+		if anchor != "" {
+			p.anchors[anchor] = v
+		}
 		n.keys = append(n.keys, k)
 		n.vals = append(n.vals, v)
 	}
+	// Merged keys fill in what the mapping does not set itself; among
+	// several merge sources the first one wins.
+	for _, src := range merges {
+		for i, mk := range src.keys {
+			if n.get(mk) == nil {
+				n.keys = append(n.keys, mk)
+				n.vals = append(n.vals, src.vals[i])
+			}
+		}
+	}
 	return n, nil
+}
+
+// splitAnchor splits "&name rest" into the anchor name and what follows
+// it ("" when the anchor stands alone).
+func splitAnchor(s string) (name, rest string) {
+	i := strings.IndexByte(s, ' ')
+	if i < 0 {
+		return s[1:], ""
+	}
+	return s[1:i], strings.TrimSpace(s[i+1:])
+}
+
+// anchorName is the name of a lone "&name" ("" for anything else).
+func anchorName(s string) string {
+	if strings.HasPrefix(s, "&") && !strings.ContainsAny(s, " \t") {
+		return s[1:]
+	}
+	return ""
+}
+
+func isAnchorOnly(s string) bool { return anchorName(s) != "" }
+
+// mergeSources adds a merge key's value (one mapping, or a list of
+// mappings) to the sources a mapping is merged from.
+func mergeSources(dst *[]*ynode, src *ynode, no int) error {
+	switch src.kind {
+	case yMap:
+		*dst = append(*dst, src)
+	case ySeq:
+		for _, it := range src.items {
+			if it.kind != yMap {
+				return yerr(no, "a merge key's list must hold mappings")
+			}
+			*dst = append(*dst, it)
+		}
+	default:
+		return yerr(no, "a merge key's value is not a mapping")
+	}
+	return nil
 }
 
 // splitKey splits "key: value" at the first ": " (or a trailing ":")
@@ -342,10 +420,42 @@ func (p *yparser) blockScalar(head string, indent, no int) (*ynode, error) {
 	return &ynode{kind: yScalar, value: v, quoted: true}, nil
 }
 
+// alias resolves "*name" to the node the anchor named; an anchor is
+// registered only once its value is complete, so a node cannot refer
+// to itself.
+func (p *yparser) alias(s string, no int) (*ynode, error) {
+	name := strings.TrimSpace(strings.TrimPrefix(s, "*"))
+	v, ok := p.anchors[name]
+	if !ok || name == "" || strings.ContainsAny(name, " \t") {
+		return nil, yerr(no, "unknown alias *"+name)
+	}
+	return v, nil
+}
+
 // scalar parses an inline value: a flow collection or a scalar.
 func (p *yparser) scalar(s string, no, depth int) (*ynode, error) {
 	if err := p.count(depth); err != nil {
 		return nil, err
+	}
+	if strings.HasPrefix(s, "&") {
+		name, rest := splitAnchor(s)
+		if name == "" {
+			return nil, yerr(no, "bad anchor")
+		}
+		if rest == "" {
+			v := &ynode{kind: yScalar}
+			p.anchors[name] = v
+			return v, nil
+		}
+		v, err := p.scalar(rest, no, depth)
+		if err != nil {
+			return nil, err
+		}
+		p.anchors[name] = v
+		return v, nil
+	}
+	if strings.HasPrefix(s, "*") {
+		return p.alias(s, no)
 	}
 	if s != "" && (s[0] == '[' || s[0] == '{') {
 		f := &flow{s: s, no: no, p: p}
@@ -368,7 +478,7 @@ func plainOrQuoted(s string, no int) (*ynode, error) {
 	}
 	switch s[0] {
 	case '&', '*':
-		return nil, yerr(no, "YAML anchors, aliases and merges are not supported")
+		return nil, yerr(no, "YAML anchors and aliases are not supported in this position")
 	case '!':
 		return nil, yerr(no, "custom YAML tags are not supported")
 	case '%', '@', '`', '|', '>':
@@ -418,6 +528,27 @@ func (f *flow) value(depth int) (*ynode, error) {
 	if f.i >= len(f.s) {
 		return nil, yerr(f.no, "unterminated flow collection")
 	}
+	if f.s[f.i] == '&' || f.s[f.i] == '*' {
+		ind := f.s[f.i]
+		start := f.i
+		for f.i < len(f.s) && !strings.ContainsRune(" ,]}", rune(f.s[f.i])) {
+			f.i++
+		}
+		tok := f.s[start:f.i]
+		if ind == '*' {
+			return f.p.alias(tok, f.no)
+		}
+		name, _ := splitAnchor(tok)
+		if name == "" {
+			return nil, yerr(f.no, "bad anchor")
+		}
+		v, err := f.value(depth + 1)
+		if err != nil {
+			return nil, err
+		}
+		f.p.anchors[name] = v
+		return v, nil
+	}
 	switch f.s[f.i] {
 	case '[':
 		f.i++
@@ -440,17 +571,26 @@ func (f *flow) value(depth int) (*ynode, error) {
 	case '{':
 		f.i++
 		n := &ynode{kind: yMap}
+		var merges []*ynode
 		for {
 			f.space()
 			if f.i < len(f.s) && f.s[f.i] == '}' {
 				f.i++
+				for _, src := range merges {
+					for i, mk := range src.keys {
+						if n.get(mk) == nil {
+							n.keys = append(n.keys, mk)
+							n.vals = append(n.vals, src.vals[i])
+						}
+					}
+				}
 				return n, nil
 			}
 			k, err := f.atom(true)
 			if err != nil {
 				return nil, err
 			}
-			if k.kind != yScalar || k.value == "" || k.value == "<<" || n.get(k.value) != nil {
+			if k.kind != yScalar || k.value == "" || n.get(k.value) != nil {
 				return nil, yerr(f.no, "duplicate or non-string mapping key")
 			}
 			f.space()
@@ -462,8 +602,14 @@ func (f *flow) value(depth int) (*ynode, error) {
 			if err != nil {
 				return nil, err
 			}
-			n.keys = append(n.keys, k.value)
-			n.vals = append(n.vals, v)
+			if k.value == "<<" {
+				if err := mergeSources(&merges, v, f.no); err != nil {
+					return nil, err
+				}
+			} else {
+				n.keys = append(n.keys, k.value)
+				n.vals = append(n.vals, v)
+			}
 			if err := f.sep('}'); err != nil {
 				return nil, err
 			}

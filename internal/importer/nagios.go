@@ -53,7 +53,8 @@ func NagiosInput(in *NagiosFiles, existing *config.Config, o Options) (*Result, 
 		}
 	}
 	n := newNagios(objs)
-	if len(n.hosts) == 0 {
+	n.synthesizeHosts()
+	if len(n.hosts) == 0 && len(n.services) == 0 {
 		if len(in.Missing) > 0 {
 			return nil, fmt.Errorf("no host definitions found; these files named in the main configuration were not found: %s", strings.Join(in.Missing, ", "))
 		}
@@ -169,6 +170,7 @@ type nagios struct {
 	resources map[string]string
 
 	hostMon                             map[string]string // host_name → monitor name
+	synthHosts                          map[string]bool   // hosts made up by synthesizeHosts
 	channelOf                           map[string]string // "c:NAME" or "g:NAME" → channel name
 	periodRec                           map[string]string // time period → PERIOD name ("" = always)
 	policyOf                            map[string]string
@@ -229,6 +231,46 @@ func newNagios(objs []*nagObj) *nagios {
 		}
 	}
 	return n
+}
+
+// synthesizeHosts makes a host definition for every host the services
+// and host groups name but the imported files do not define: some
+// installations generate their host definitions at deploy time (from
+// Puppet templates, say), so a set can carry services for hosts it
+// never defines. A defined host wins; a synthesized one is a plain
+// ping check on the name, and the report says it was made up, so the
+// services still have the host they belong to.
+func (n *nagios) synthesizeHosts() {
+	want := map[string]bool{}
+	add := func(name string) {
+		if name != "" && name != "*" && !strings.HasPrefix(name, "!") {
+			want[name] = true
+		}
+	}
+	for _, s := range n.services {
+		for _, h := range splitList(s.vals["host_name"]) {
+			add(h)
+		}
+	}
+	for _, g := range n.groups {
+		for _, h := range splitList(g.vals["members"]) {
+			add(h)
+		}
+	}
+	var names []string
+	for name := range want {
+		if n.hostByName[name] == nil {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	n.synthHosts = map[string]bool{}
+	for _, name := range names {
+		o := &nagObj{typ: "host", vals: map[string]string{"host_name": name, "address": name}}
+		n.hosts = append(n.hosts, o)
+		n.hostByName[name] = o
+		n.synthHosts[name] = true
+	}
 }
 
 // resolve merges an object with its templates: its own values win, then
@@ -470,6 +512,10 @@ func (c *nagConvert) host(h *nagObj) {
 	n, res, v := c.n, c.n.res, h.vals
 	it := Item{Kind: "monitor", Source: v["host_name"], Group: n.hostGroup(v["host_name"]), Status: StatusImported}
 	spec := n.hostSpec(v, &it)
+	if n.synthHosts[v["host_name"]] {
+		it.attention("No host definition for it was in the imported files, so a ping check on its name was made up for it; its services are attached to it.",
+			"Import the file that defines this host, or correct its address, if the name does not resolve to the host.")
+	}
 	res.add(it)
 	if spec == nil {
 		return
@@ -517,9 +563,16 @@ func (c *nagConvert) services() {
 	for _, s := range n.services {
 		hosts := n.hostsOf(s.vals)
 		if len(hosts) == 0 {
-			res.add(Item{Kind: "service", Source: s.vals["service_description"], Status: StatusLeftOut,
+			it := Item{Kind: "service", Source: s.vals["service_description"], Status: StatusLeftOut,
 				Why:  "It is not attached to any host that is defined (" + strings.TrimSpace(s.vals["host_name"]+" "+s.vals["hostgroup_name"]) + ").",
-				Todo: "Nothing to do if that host is gone; otherwise add the check by hand."})
+				Todo: "Nothing to do if that host is gone; otherwise add the check by hand."}
+			if s.vals["host_name"] == "" && s.vals["hostgroup_name"] != "" {
+				// The group is named, but membership lives in the host
+				// definitions, which this set does not carry.
+				it.Why = "It belongs to host group " + s.vals["hostgroup_name"] + ", but no host in the imported files is a member of it: membership is declared by the host definitions, which are not in these files."
+				it.Todo = "Import the host definitions too (they may be generated when Nagios is deployed), or add the check by hand."
+			}
+			res.add(it)
 			continue
 		}
 		for _, host := range hosts {

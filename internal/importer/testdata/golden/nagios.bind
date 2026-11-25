@@ -3,7 +3,7 @@ old-web1 IN TCP 10.0.1.11:22
 
 ; ====================================================================
 ; Imported from Nagios (nagios.cfg) on 2026-10-30 09:00
-; 31 monitors, 4 notification channels, 1 contact group, 4
+; 32 monitors, 4 notification channels, 1 contact group, 4
 ; notification policies, 2 time periods
 ; Names were made from the original names; title= keeps the original.
 ; ====================================================================
@@ -51,6 +51,9 @@ db2-mysql 5m IN MYSQL 10.0.2.22:3306 title="db2 / MySQL" user=monitor password=$
 
 ; --- Host dmz-noaddr
 dmz-noaddr IN PING dmz-noaddr device=dmz-noaddr
+
+; --- Host ghost-host
+ghost-host IN PING ghost-host device=ghost-host
 
 ; --- Host mail1 (Mail server), mail1.example.com, group linux-servers
 mail1                     5m IN TCP mail1.example.com:25 title="Mail server" retry=1m attempts=3 device=mail1 group=linux-servers policy=notify-nagiosadmin description="Production Linux"

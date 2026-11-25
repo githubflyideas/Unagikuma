@@ -4,10 +4,10 @@
 
 | | |
 |---|---|
-| Imported | 31 monitors, 4 notification channels, 1 contact group, 4 notification policies, 2 time periods |
-| Needs a look | 6 items (imported; see below) |
-| Not imported | 8 items (see below for what to do) |
-| Duplicates | 2 checks found twice (imported once) |
+| Imported | 32 monitors, 4 notification channels, 1 contact group, 4 notification policies, 2 time periods |
+| Needs a look | 7 items (imported; see below) |
+| Not imported | 7 items (see below for what to do) |
+| Duplicates | 3 checks found twice (imported once) |
 
 Added to `monitors.conf`.
 
@@ -30,6 +30,7 @@ Added to `monitors.conf`.
 | db2-disk | Script (paused) | check\_nrpe -H 10.0.2.22 -c check\_disk | db-servers |
 | db2-mysql | MySQL | 10.0.2.22:3306 | db-servers |
 | dmz-noaddr \* | Ping | dmz-noaddr |  |
+| ghost-host \* | Ping | ghost-host |  |
 | mail1 | TCP port | mail1.example.com:25 | linux-servers |
 | mail1-dns-resolve | DNS | 10.0.0.53 | linux-servers |
 | mail1-dns-system-resolver | DNS | mail1.example.com | linux-servers |
@@ -72,16 +73,19 @@ _* needs a look: see below._
    To do: Resume it when you want it checked.
 2. **dmz-noaddr (Ping)**  
    It has no address in Nagios; its name is checked instead.
-3. **Channel "alice"**  
+3. **ghost-host (Ping)**  
+   No host definition for it was in the imported files, so a ping check on its name was made up for it; its services are attached to it.  
+   To do: Import the file that defines this host, or correct its address, if the name does not resolve to the host.
+4. **Channel "alice"**  
    The pager number (15550001111) was not carried over.  
    To do: Add an SMS or voice channel for it.
-4. **core-sw1 / Passive trap (Push) → core-sw1-passive-trap**  
+5. **core-sw1 / Passive trap (Push) → core-sw1-passive-trap**  
    It only received passive results in Nagios; here it waits for results sent to its push URL (1h without one is a failure).  
    To do: Have the sender call the push URL shown on the monitor (…/api/push/TOKEN?status=up\|down&msg=…) instead of NSCA or NRDP.
-5. **web1 / Restart on failure (TCP port) → web1-restart-on-failure**  
+6. **web1 / Restart on failure (TCP port) → web1-restart-on-failure**  
    Its event handler runs restart-app.sh.  
    To do: Copy that script into the check-scripts directory.
-6. **Script checks: check\_nrpe**  
+7. **Script checks: check\_nrpe**  
    These checks run Nagios plugins, so they are imported paused: Unagikuma only runs plugins from its check-scripts directory.  
    To do: Copy the plugins into &lt;data>/check-scripts (for example from /usr/lib/nagios/plugins), then resume the checks in the web interface.
 
@@ -90,25 +94,22 @@ _* needs a look: see below._
 1. **Contact "carol"**  
    Why: It has no e-mail address.  
    To do: Add a channel for this person (SMS, chat or e-mail) under Alerting › Channels.
-2. **ghost-host / Orphan**  
-   Why: Host ghost-host is not defined.  
-   To do: Nothing to do if that host is gone; otherwise add the check by hand.
-3. **web2 / Uses undefined command**  
+2. **web2 / Uses undefined command**  
    Why: The command check\_foo is not defined.  
    To do: Add the check by hand.
-4. **web2 / Unknown macro**  
+3. **web2 / Unknown macro**  
    Why: It uses $\_HOSTSITE$, but host web2 has no \_SITE custom variable.  
    To do: Add the check by hand.
-5. **web2 / Uses resource macro**  
+4. **web2 / Uses resource macro**  
    Why: It uses $USER2$, which is not set in the resource file.  
    To do: Add the check by hand.
-6. **Time period "holidays-excluded"**  
+5. **Time period "holidays-excluded"**  
    Why: No imported contact uses it.  
    To do: Nothing to do, or add a PERIOD record when a channel needs one.
-7. **Definitions: 1 × define serviceescalation**  
+6. **Definitions: 1 × define serviceescalation**  
    Why: Escalations were not converted.  
    To do: Add escalate= to the policy, for example escalate=30m:manager (Alerting › Policies).
-8. **Definitions: 1 × define hostextinfo**  
+7. **Definitions: 1 × define hostextinfo**  
    Why: Icons and extra host information are not used here.  
    To do: Nothing to do.
 
@@ -118,6 +119,8 @@ _* needs a look: see below._
    It checks the same thing as web1-https-shop, so it was imported once, as web1-https-shop.
 2. **mail1 / SMTP (TCP port) → mail1**  
    It checks the same thing as mail1, so it was imported once, as mail1.
+3. **ghost-host / Orphan (Ping) → ghost-host**  
+   It checks the same thing as ghost-host, so it was imported once, as ghost-host.
 
 ## Good to know
 

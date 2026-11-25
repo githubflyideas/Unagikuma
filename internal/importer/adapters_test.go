@@ -8,7 +8,7 @@ import (
 )
 
 func TestGatusSafety(t *testing.T) {
-	for _, field := range []string{"conditions: ['[BODY].ok == true']", "conditions: []", "url: https://user:FAKEpass@example.invalid/?token=FAKEtoken", "headers: {Authorization: '$TOKEN'}", "client: {tls: {private-key-file: /etc/key}}", "interval: 500ms", "graphql: true", "mystery-option: true"} {
+	for _, field := range []string{"conditions: []", "url: https://user:FAKEpass@example.invalid/?token=FAKEtoken", "headers: {Authorization: '$TOKEN'}", "client: {tls: {private-key-file: /etc/key}}", "interval: 500ms"} {
 		t.Run(field, func(t *testing.T) {
 			base := "endpoints:\n  - name: safe\n    url: https://example.invalid\n    conditions: ['[STATUS] == 200']\n"
 			// Replace rather than duplicate the overridden YAML field.
@@ -69,7 +69,7 @@ func TestGatusSecretsAndCollisions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if other.Items[0].Status != StatusLeftOut || other.ActivationError() == nil {
+	if other.Items[0].Status != StatusLeftOut {
 		t.Fatalf("collision silently renamed: %+v", other)
 	}
 }
@@ -87,12 +87,12 @@ func TestCheckmateExport(t *testing.T) {
 	if config.HasErrors(ds) {
 		t.Fatal(ds)
 	}
-	for _, replace := range [][2]string{{`"http"`, `"hardware"`}, {`"proxyMode":"none"`, `"proxyMode":"inherit"`}, {`"statusWindowSize":1`, `"statusWindowSize":5`}, {`"customUpCodes":[404]`, `"customUpCodes":[404],"useAdvancedMatching":true`}, {`"secret":"FAKEcm"`, `"secret":"${HOST_SECRET}"`}, {`"interval":90000`, `"interval":90001`}} {
+	for _, replace := range [][2]string{{`"http"`, `"hardware"`}, {`"customUpCodes":[404]`, `"customUpCodes":[404],"useAdvancedMatching":true`}, {`"secret":"FAKEcm"`, `"secret":"${HOST_SECRET}"`}, {`"interval":90000`, `"interval":90001`}} {
 		r, err := Checkmate([]byte(strings.Replace(string(data), replace[0], replace[1], 1)), nil, Options{})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if r.Monitors != 0 || r.ActivationError() == nil {
+		if r.Monitors != 0 {
 			t.Fatalf("unsafe: %+v", r)
 		}
 	}

@@ -70,19 +70,30 @@ func TestBoundedImportsAPI(t *testing.T) {
 			if code >= 500 || e.app.Config().Serial != serial {
 				t.Fatalf("a second run changed the configuration: %d", code)
 			}
+			// A monitor that cannot be imported (a Gatus URL that is
+			// still a placeholder, a Checkmate hardware monitor) is
+			// reported and never created; it no longer blocks the
+			// import of everything else, and applying its preview
+			// changes nothing.
 			bad := strings.ReplaceAll(data, "imported-http", "unsafe-http")
 			if source == "gatus" {
-				bad = strings.ReplaceAll(bad, "[STATUS] == 200", "[BODY].ok == true")
+				bad = strings.ReplaceAll(bad, "https://example.invalid", "https://${IMPORT_HOST}")
 			} else {
 				bad = strings.ReplaceAll(bad, `"type":"http"`, `"type":"hardware"`)
 			}
 			code, p := post(bad, "")
-			if code != 200 || p["blocked"] != true {
-				t.Fatalf("unsafe preview %d %+v", code, p)
+			if code != 200 || p["monitors"] != float64(0) {
+				t.Fatalf("unimportable preview %d %+v", code, p)
+			}
+			if items, ok := p["items"].([]any); !ok || len(items) != 1 || items[0].(map[string]any)["status"] != "left-out" {
+				t.Fatalf("unimportable item not reported as left out: %+v", p)
 			}
 			code, _ = post(bad, "?apply=1")
-			if code != 400 || e.app.Config().Serial != serial {
-				t.Fatal("unsafe apply modified config")
+			if code >= 400 || e.app.Config().Serial != serial {
+				t.Fatal("applying an unimportable preview modified config")
+			}
+			if m := e.app.Config().Config.FindMonitor("unsafe-http"); m != nil {
+				t.Fatal("an unimportable monitor was created")
 			}
 			secretsAfter, err := e.app.SecretStore().List()
 			if err != nil || len(secretsAfter) != len(secretsBefore) {
