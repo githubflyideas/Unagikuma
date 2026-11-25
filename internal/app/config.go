@@ -59,9 +59,10 @@ type configManager struct {
 	path   string
 	mu     sync.Mutex
 	cur    ConfigState
-	// importOK > 0 while an import applies its records: the import
-	// ceiling governs those, not the monitor limit.
-	importOK atomic.Int32
+	// capExempt > 0 while a change the monitor limit does not govern
+	// applies: an import (the import ceiling governs it) or the gateway
+	// seeding (its monitors never count).
+	capExempt atomic.Int32
 	banner *Banner
 	stat   fileStamp
 }
@@ -221,7 +222,7 @@ func (cm *configManager) saveRenamed(text []byte, ifMatch, author, message strin
 	if err := config.CheckSerial(cfg.Serial, cm.cur.Serial); err != nil {
 		return cm.cur, &InvalidError{Diags: []config.Diagnostic{{Pos: config.Pos{Line: 1, Col: 1}, Severity: config.SevError, Code: "invalid_serial", Msg: err.Error()}}}
 	}
-	if cm.importOK.Load() == 0 {
+	if cm.capExempt.Load() == 0 {
 		if d := cm.app.monitorCapDiag(cm.cur.Config, cfg); d != nil {
 			return cm.cur, &InvalidError{Diags: []config.Diagnostic{*d}}
 		}
