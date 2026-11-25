@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.7.0 — 2026-11-25
 
 **Changed**
 - The registered styles are redrawn so each one changes the whole layout, not only the colours, and there are three more. Small business: a floating icon rail that opens on hover. Data centre: a green terminal with a function-key bar for navigation. Retail chain: big coloured touch tiles and coupon-shaped cards. ISP: a wallboard whose navigation is a drawer at the left edge and whose failing rows are solid. New: Modern dashboard (a navigation bar across the top), Starship bridge (a dock at the bottom over a starfield, glass panels) and Atelier (index tabs on the right edge, ledger pages). On a phone every style keeps the usual drawer. The free seven-day trial covers all of them.
