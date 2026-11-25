@@ -110,8 +110,12 @@ func (a *App) weeklyReport(now time.Time, team string) engine.Report {
 	if team == "" { // held back across the installation, not per team
 		if days, err := a.store.DailyCounters(from); err == nil {
 			for _, d := range days {
-				for _, n := range d {
-					saved += n
+				for k, n := range d {
+					// A blip that recovered before the failure count
+					// would never have alerted: nothing was held back.
+					if k != engine.CounterSoftFiltered {
+						saved += n
+					}
 				}
 			}
 		}
