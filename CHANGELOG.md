@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.6.35 — 2026-11-25
+
+**Changed**
+- Licence files are now signed with ECDSA P-521 (licence format version 3), replacing the Ed25519 signatures of earlier releases. The old keys and format are retired outright: a licence issued for an earlier release is not accepted by this one, and a reissued licence file is needed to register. Everything else about licences — what they lift, the account limit, the audit window — is unchanged.
+
 ## v2.6.34 — 2026-11-25
 
 **Added**
