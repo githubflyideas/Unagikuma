@@ -11,8 +11,9 @@ import (
 )
 
 // A storm of notices becomes summaries that say what kind of problem it
-// is: services for their owners, a failing segment or DNS for the network
-// team (to its own channel when the policy names one).
+// is: services for their owners, names failing to resolve for the network
+// team (to its own channel when the policy names one). Targets that do not
+// answer are never blamed on an address block: they stay with the services.
 func TestDigestTellsNetworkFromServices(t *testing.T) {
 	for _, withNetwork := range []bool{false, true} {
 		var sent []*Intent
@@ -32,7 +33,7 @@ func TestDigestTellsNetworkFromServices(t *testing.T) {
 				Message: notify.Message{Kind: "PROBLEM", Monitor: name, Title: name}})
 		}
 		for _, n := range []string{"db1", "db2", "db3", "db4"} {
-			mon(n, probe.ReasonTimeout, "4:10.0.3.0/24") // one segment, network-level
+			mon(n, probe.ReasonTimeout, "4:10.0.3.0/24") // one block, no answer: still services
 		}
 		for _, n := range []string{"a", "b", "c"} {
 			mon(n, probe.ReasonDNSResolve, "n:"+n+".example") // names do not resolve
@@ -56,20 +57,20 @@ func TestDigestTellsNetworkFromServices(t *testing.T) {
 			t.Fatalf("network=%v: %d digests", withNetwork, len(digests))
 		}
 		svc := digests[0]
-		if !strings.Contains(svc.Message.Title, "Services failing: 2") || !strings.Contains(svc.Message.Body, "shop") || !strings.Contains(svc.Message.Body, "api") {
+		if !strings.Contains(svc.Message.Title, "Services failing: 6") || !strings.Contains(svc.Message.Body, "shop") || !strings.Contains(svc.Message.Body, "db4") {
 			t.Errorf("network=%v: service digest %q / %q", withNetwork, svc.Message.Title, svc.Message.Body)
 		}
 		net := svc
 		if withNetwork {
 			net = digests[1]
-			if len(net.Chain) != 1 || net.Chain[0] != "netadmin" || strings.Contains(svc.Message.Body, "db1") {
+			if len(net.Chain) != 1 || net.Chain[0] != "netadmin" || strings.Contains(svc.Message.Body, "example") || strings.Contains(net.Message.Body, "db1") {
 				t.Errorf("the network summary goes to netadmin only: %v / %q", net.Chain, svc.Message.Body)
 			}
 		}
-		if !strings.Contains(net.Message.Body, "10.0.3.0/24") || !strings.Contains(net.Message.Body, "DNS") || !strings.Contains(net.Message.Body, "db4") {
+		if strings.Contains(net.Message.Body, "10.0.3.0/24") || !strings.Contains(net.Message.Body, "DNS") {
 			t.Errorf("network=%v: network causes %q", withNetwork, net.Message.Body)
 		}
-		if strings.Index(svc.Message.Body, "shop") > strings.Index(svc.Message.Body, "10.0.3.0/24") && !withNetwork {
+		if strings.Index(svc.Message.Body, "shop") > strings.Index(svc.Message.Body, "DNS") && !withNetwork {
 			t.Errorf("services must come first: %q", svc.Message.Body)
 		}
 	}

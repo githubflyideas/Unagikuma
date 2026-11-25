@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/netip"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -200,18 +201,8 @@ func (e *Engine) sendBackstop(pol string, ins []*Intent, now time.Time) {
 	// together, so a switch or a link shows as one run of addresses.
 	list := slices.Clone(ins)
 	slices.SortStableFunc(list, func(a, b *Intent) int {
-		aa, aok := targetAddr(a.Message.Target)
-		ba, bok := targetAddr(b.Message.Target)
-		switch {
-		case aok && bok:
-			if c := aa.Compare(ba); c != 0 {
-				return c
-			}
-		case aok != bok:
-			if aok {
-				return -1
-			}
-			return 1
+		if c := byTarget(a.Message.Target, b.Message.Target); c != 0 {
+			return c
 		}
 		return cmp.Compare(a.Message.Monitor, b.Message.Monitor)
 	})
@@ -232,21 +223,43 @@ func (e *Engine) sendBackstop(pol string, ins []*Intent, now time.Time) {
 	}
 }
 
-// targetAddr is the IP address in a monitor's target, if it names one
-// ("10.0.0.5:80", "https://10.0.0.5/", "[2001:db8::1]:443").
-func targetAddr(t string) (netip.Addr, bool) {
+// byTarget orders targets by address, then port; targets that name no
+// address come after the ones that do.
+func byTarget(a, b string) int {
+	aa, ap, aok := targetAddr(a)
+	ba, bp, bok := targetAddr(b)
+	switch {
+	case aok && bok:
+		if c := aa.Compare(ba); c != 0 {
+			return c
+		}
+		return cmp.Compare(ap, bp)
+	case aok:
+		return -1
+	case bok:
+		return 1
+	}
+	return 0
+}
+
+// targetAddr is the IP address and port in a monitor's target, if it
+// names an address ("10.0.0.5:80", "https://10.0.0.5/",
+// "[2001:db8::1]:443"); the port is 0 when none is given.
+func targetAddr(t string) (netip.Addr, int, bool) {
 	if i := strings.Index(t, "://"); i >= 0 {
 		t = t[i+3:]
 	}
 	if i := strings.IndexAny(t, "/?#"); i >= 0 {
 		t = t[:i]
 	}
-	if h, _, err := net.SplitHostPort(t); err == nil {
+	port := 0
+	if h, p, err := net.SplitHostPort(t); err == nil {
 		t = h
+		port, _ = strconv.Atoi(p)
 	}
 	a, err := netip.ParseAddr(strings.Trim(t, "[]"))
 	if err != nil {
-		return netip.Addr{}, false
+		return netip.Addr{}, 0, false
 	}
-	return a.Unmap(), true
+	return a.Unmap(), port, true
 }

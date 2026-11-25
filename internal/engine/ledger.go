@@ -1,11 +1,11 @@
 package engine
 
 import (
-	"strings"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/i18n"
 	"github.com/githubflyideas/unagikuma/internal/notify"
+	"github.com/githubflyideas/unagikuma/internal/probe"
 )
 
 // The alert decision ledger records why each alert was sent, held, merged
@@ -17,7 +17,8 @@ import (
 // Failure classes: what the evidence says the failure is.
 const (
 	ClassBusiness    = "business"     // the service answers, but wrongly: its owner acts
-	ClassNetwork     = "network"      // the network fails (this side, or a whole segment)
+	ClassNetwork     = "network"      // this side's own network fails
+	ClassRefused     = "refused"      // the host answers, nothing takes the connection: its owner acts
 	ClassUncertain   = "uncertain"    // cannot be reached: the service or the way to it
 	ClassChannelDown = "channel_down" // the alert itself could not be delivered
 	ClassSystem      = "system"       // about the monitoring itself
@@ -120,23 +121,16 @@ func (e *Engine) classOf(inc *Incident) (string, map[string]any) {
 			return ClassNetwork, ev
 		}
 	}
+	// Only what the evidence shows is said. A refused connection means
+	// the host answered: the service is not running or not listening. A
+	// target that does not answer at all may be down itself, or the way to
+	// it: nothing tells which, so no network segment is blamed — address
+	// blocks say nothing certain about switches or links.
+	if reason == probe.ReasonConnRefused || reason == probe.ReasonPortUnreachable {
+		return ClassRefused, ev
+	}
 	switch reasonClass(reason) {
 	case "network":
-		// A whole segment failing at the network level points at the
-		// network; one target alone could be the target or the path.
-		if rt != nil && (strings.HasPrefix(rt.Domain, "4:") || strings.HasPrefix(rt.Domain, "6:")) {
-			n := 0
-			for name, o := range e.states {
-				if name != inc.Monitor && o.Domain == rt.Domain && o.State.Avail == StatusCritical && reasonClass(o.LastReason) == "network" {
-					n++
-				}
-			}
-			ev["same_segment_failing"] = n
-			if n+1 >= max(2, e.cfg.Tunables.Int("notify.group-min")) {
-				ev["segment"] = rt.Domain[2:]
-				return ClassNetwork, ev
-			}
-		}
 		return ClassUncertain, ev
 	case "tls", "protocol", "value":
 		if m := e.monitors[inc.Monitor]; m != nil && m.Push {
@@ -161,10 +155,9 @@ func (e *Engine) classLine(class string, kind NoticeKind, ev map[string]any) str
 		return i18n.T(lang, "msg.class.business")
 	case ClassUncertain:
 		return i18n.T(lang, "msg.class.uncertain")
+	case ClassRefused:
+		return i18n.T(lang, "msg.class.refused")
 	case ClassNetwork:
-		if seg, ok := ev["segment"].(string); ok {
-			return i18n.T(lang, "msg.class.segment", "segment", seg, "n", ev["same_segment_failing"].(int)+1)
-		}
 		return i18n.T(lang, "msg.class.local")
 	}
 	return ""

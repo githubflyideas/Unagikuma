@@ -3,6 +3,7 @@ package engine
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -45,10 +46,14 @@ func TestClassOf(t *testing.T) {
 	}
 	set("shop", probe.ReasonHTTPStatus, "4:203.0.113.0/24")
 	set("api", probe.ReasonTimeout, "4:198.51.100.0/24")
+	set("mail", probe.ReasonConnRefused, "4:198.51.100.0/24")
 	for _, n := range []string{"db1", "db2", "db3"} {
 		set(n, probe.ReasonTimeout, "4:10.0.3.0/24")
 	}
-	cases := map[string]string{"shop": ClassBusiness, "api": ClassUncertain, "db1": ClassNetwork}
+	// A refused connection is the service, not the network; targets that
+	// do not answer are never blamed on their address block, however many
+	// fail in it.
+	cases := map[string]string{"shop": ClassBusiness, "api": ClassUncertain, "mail": ClassRefused, "db1": ClassUncertain}
 	for name, want := range cases {
 		class, ev := e.classOf(&Incident{Monitor: name, Reason: e.states[name].LastReason})
 		if class != want {
@@ -58,9 +63,12 @@ func TestClassOf(t *testing.T) {
 		if line == "" {
 			t.Errorf("%s: no class line", name)
 		}
-		if name == "db1" && (!strings.Contains(line, "10.0.3.0/24") || !strings.Contains(line, "3 monitors")) {
-			t.Errorf("segment line %q", line)
+		if strings.Contains(line, "10.0.3.0") || strings.Contains(line, "/24") {
+			t.Errorf("%s: blames an address block: %q", name, line)
 		}
+	}
+	if line := e.classLine(ClassRefused, NoticeProblem, nil); !strings.Contains(line, "nothing accepts the connection") {
+		t.Errorf("refused line %q", line)
 	}
 	if class, _ := e.classOf(&Incident{Kind: IncidentSystem, System: SystemAllFailed}); class != ClassSystem {
 		t.Errorf("system incident: %s", class)
@@ -210,6 +218,19 @@ func TestBackstopPerPerson(t *testing.T) {
 	}
 	if n := len(e.sentAt["person:2"]); n != 1 {
 		t.Fatalf("person 2 counted %d, want 1 (the held alert counts for nobody)", n)
+	}
+}
+
+// Alerts on one address are listed by port, not by name: "Down 3" (port
+// 21003) comes before "Down 22" (port 21022).
+func TestSummaryOrdersByPort(t *testing.T) {
+	list := []string{"127.0.0.1:21022", "127.0.0.1:21003", "127.0.0.2:80", "mail.example.com:25", "127.0.0.1:443"}
+	slices.SortStableFunc(list, byTarget)
+	if strings.Join(list, " ") != "127.0.0.1:443 127.0.0.1:21003 127.0.0.1:21022 127.0.0.2:80 mail.example.com:25" {
+		t.Fatalf("order %v", list)
+	}
+	if _, p, ok := targetAddr("https://[2001:db8::1]:8443/x"); !ok || p != 8443 {
+		t.Fatalf("v6 with port: %d %v", p, ok)
 	}
 }
 

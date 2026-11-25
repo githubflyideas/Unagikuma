@@ -8,6 +8,11 @@
 - An import may now take the number of monitors to 200, down from 300.
 - No flood of messages when many monitors fail at once. Nobody is sent more than 20 alerts a minute (`notify.backstop-max`, `notify.backstop-window`); a person is someone in the contact directory (phone and e-mail together) or an unknown address, and a chat room is one recipient. When anyone an alert goes to has had their share, the whole alert waits for one summary through the same channels, listing every held alert with its target, ordered by address. Before, the limit was 3 a minute per channel, new problems had a share of their own, recoveries and escalations were never held, and the summary named only the first ten monitors.
 
+**Fixed**
+- Alerts no longer blame an address block. Several monitors in one /24 failing used to be called "a network failure: the segment, its switch or its uplink", in alerts and summaries alike, though an address block says nothing certain about switches or links; a target that does not answer is now said to be unreachable, nothing more. A refused connection was counted as a network failure too; it now says what it is: the host answers, but nothing accepts the connection on that port, so the service is not running or not listening.
+- In a summary of held alerts, alerts on the same address are listed by port, not by monitor name.
+- Adding a monitor past the monitor limit through the API is answered 402 `quota_exceeded`, like the account limit, instead of 400 `invalid`; the diagnostic is still included.
+
 ## v2.6.37 — 2026-11-25
 
 **Added**

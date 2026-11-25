@@ -15,7 +15,6 @@ func TestEveryTextRenders(t *testing.T) {
 		"recovered_after_flaps":           {2},
 		"all_failed":                      {"p", "title"},
 		"digest_title":                    {3}, "digest_service_title": {3}, "digest_network_title": {3},
-		"digest_segment":     {3, "10.0.0.0/24"},
 		"digest_dns":         {3},
 		"backstop_title":     {3},
 		"backstop_body":      {3, 2, "a, b"},

@@ -68,7 +68,6 @@ var plainTexts = map[string]struct {
 	names []string
 }{
 	"all_failed":             {"sys.all_failed", []string{"policy", "title"}},
-	"digest_segment":         {"sys.digest_segment", []string{"n", "segment"}},
 	"digest_dns":             {"sys.digest_dns", []string{"n"}},
 	"backstop_title":         {"sys.backstop_title", []string{"n"}},
 	"backstop_body":          {"sys.backstop_body", []string{"n", "monitors"}},

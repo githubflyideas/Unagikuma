@@ -43,10 +43,11 @@ func TestLicenseMonitorCap(t *testing.T) {
 		Code        string
 		Diagnostics []struct{ Code string } `json:"diagnostics"`
 	}
-	if c := e.do("POST", "/api/v1/monitors", map[string]any{"record": map[string]any{"name": "one-more", "type": "PING", "target": "10.9.9.9"}}, &er); c != 400 {
+	// Refused as a quota, like the account limit: 402 quota_exceeded.
+	if c := e.do("POST", "/api/v1/monitors", map[string]any{"record": map[string]any{"name": "one-more", "type": "PING", "target": "10.9.9.9"}}, &er); c != 402 {
 		t.Fatalf("101st create: %d", c)
 	}
-	if len(er.Diagnostics) != 1 || er.Diagnostics[0].Code != "monitor_limit" {
+	if er.Code != CodeQuota || len(er.Diagnostics) != 1 || er.Diagnostics[0].Code != "monitor_limit" {
 		t.Fatalf("101st create refusal: %+v", er)
 	}
 	// A version 4 licence with max_monitors raises the limit to its own.

@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"sort"
 	"strings"
 	"time"
 
@@ -10,30 +9,27 @@ import (
 )
 
 // A digest says what kind of problem it is, because the reader acts on
-// that: services failing one by one need their owners now; a whole
-// network segment, or name resolution, failing at once is the network
-// team's — the services behind it are likely fine. Network causes are
-// told apart from the monitors' own results: several monitors of one IP
-// segment failing at the network level together, or monitors failing to
-// resolve their names together.
+// that: services failing need their owners now; name resolution failing
+// for several monitors at once is the network team's. Targets that do
+// not answer are not grouped by address block: a block says nothing
+// certain about which switch or link failed.
 
 // digestPart is one cause in a digest.
 type digestPart struct {
-	cause string // service | segment | dns
-	label string // the segment ("198.51.100.0/24")
+	cause string // service | dns
 	lines []string
 	ids   []int64
 }
 
-// classify splits the notices of a digest into service problems and
-// network causes. A cause needs notify.group-min monitors; smaller groups
-// stay service problems.
+// classify splits the notices of a digest into service problems and the
+// one network cause it can name with certainty: names failing to resolve
+// together (notify.group-min or more). Targets that do not answer are not
+// grouped by address: an address block says nothing certain about a
+// switch or a link.
 func (e *Engine) classify(q []*Intent) (service digestPart, network []digestPart) {
 	min := max(2, e.cfg.Tunables.Int("notify.group-min"))
 	service.cause = "service"
-	segments := map[string]*digestPart{}
 	dns := &digestPart{cause: "dns"}
-	var order []string
 	for _, in := range q {
 		line := digestLine(in)
 		var id int64
@@ -46,26 +42,8 @@ func (e *Engine) classify(q []*Intent) (service digestPart, network []digestPart
 		case rt.LastReason == probe.ReasonDNSResolve:
 			dns.lines, dns.ids = append(dns.lines, line), appendID(dns.ids, id)
 			continue
-		case reasonClass(rt.LastReason) == "network" && (strings.HasPrefix(rt.Domain, "4:") || strings.HasPrefix(rt.Domain, "6:")):
-			p := segments[rt.Domain]
-			if p == nil {
-				p = &digestPart{cause: "segment", label: rt.Domain[2:]}
-				segments[rt.Domain] = p
-				order = append(order, rt.Domain)
-			}
-			p.lines, p.ids = append(p.lines, line), appendID(p.ids, id)
-			continue
 		}
 		service.lines, service.ids = append(service.lines, line), appendID(service.ids, id)
-	}
-	sort.Strings(order)
-	for _, k := range order {
-		p := segments[k]
-		if len(p.lines) >= min {
-			network = append(network, *p)
-			continue
-		}
-		service.lines, service.ids = append(service.lines, p.lines...), append(service.ids, p.ids...)
 	}
 	if len(dns.lines) >= min {
 		network = append(network, *dns)
@@ -89,11 +67,7 @@ func (e *Engine) networkBody(parts []digestPart) string {
 		if i > 0 {
 			b.WriteString("\n\n")
 		}
-		if p.cause == "dns" {
-			b.WriteString(e.text("digest_dns", len(p.lines)))
-		} else {
-			b.WriteString(e.text("digest_segment", len(p.lines), p.label))
-		}
+		b.WriteString(e.text("digest_dns", len(p.lines)))
 		b.WriteString("\n" + strings.Join(p.lines, "\n"))
 	}
 	return b.String()
