@@ -36,6 +36,7 @@ type State struct {
 	Expires        string `json:"expires,omitempty"`
 	UpdatesUntil   string `json:"updates_until,omitempty"`
 	MaxUsers       int    `json:"max_users"`
+	MaxMonitors    int    `json:"max_monitors"`
 }
 
 // Unregistered is the state without a valid licence.
@@ -59,6 +60,11 @@ func Check(ring Keyring, f File, installID string, now time.Time) State {
 	}
 	s := State{Kind: KindLicensed, Registered: true, Customer: f.Customer, Licensee: f.Licensee, Type: f.License,
 		KeyID: key.ID, Fingerprint: Fingerprint(f), Days: -1, MaxUsers: f.MaxUsers,
+	}
+	// The monitor limit is signed only from format version 4 on; a
+	// version 3 licence carries none, whatever its file says.
+	if f.Version >= 4 {
+		s.MaxMonitors = f.MaxMonitors
 	}
 	if f.UpdatesUntil != nil {
 		s.UpdatesUntil = *f.UpdatesUntil

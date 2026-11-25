@@ -68,6 +68,34 @@ func TestSignAndCheck(t *testing.T) {
 	}
 }
 
+// The monitor limit reaches the state from a version 4 licence; a
+// version 3 licence has none, even when its file names one (the field
+// is not signed there).
+func TestCheckMaxMonitors(t *testing.T) {
+	priv := testPrivateKey(t)
+	ring := SingleKey(&priv.PublicKey)
+	now := time.Date(2026, 10, 28, 0, 0, 0, 0, time.UTC)
+	f := Sign(priv, File{Customer: "C", Licensee: LicenseeOrganization, Product: Product, License: TypePerpetual, MaxMonitors: 150})
+	if s := Check(ring, f, "1", now); !s.Registered || s.MaxMonitors != 150 {
+		t.Fatalf("v4 state: %+v", s)
+	}
+	g := f
+	g.MaxMonitors = 151
+	if Check(ring, g, "1", now).Registered {
+		t.Fatal("raised monitor limit accepted")
+	}
+	v3 := File{Version: 3, Customer: "C", Licensee: LicenseeOrganization, Product: Product, License: TypePerpetual, MaxMonitors: 5}
+	v3.KeyID = KeyID(&priv.PublicKey)
+	sig, err := formats[3].sign(priv, Message(v3))
+	if err != nil {
+		t.Fatal(err)
+	}
+	v3.Signature = b64.EncodeToString(sig)
+	if s := Check(ring, v3, "1", now); !s.Registered || s.MaxMonitors != 0 {
+		t.Fatalf("v3 state: %+v", s)
+	}
+}
+
 func TestCheckerInstall(t *testing.T) {
 	priv := testPrivateKey(t)
 	dir := t.TempDir()

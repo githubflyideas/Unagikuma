@@ -29,11 +29,11 @@ func TestVector(t *testing.T) {
 	priv := vectorKey(0)
 	exp := "2027-10-31"
 	f := Sign(priv, File{InstallationID: "12345678", Customer: "Example KK", Licensee: LicenseeOrganization, Product: Product,
-		License: TypeTrial, Expires: &exp, MaxUsers: 10})
+		License: TypeTrial, Expires: &exp, MaxUsers: 10, MaxMonitors: 250})
 	if f.Version != CurrentVersion {
 		t.Fatalf("version %d, want %d", f.Version, CurrentVersion)
 	}
-	const want = "unagikuma-license-v3\n80362f41\n12345678\nExample KK\norganization\nunagikuma\ntrial\n2027-10-31\nnull\n10\n"
+	const want = "unagikuma-license-v4\n80362f41\n12345678\nExample KK\norganization\nunagikuma\ntrial\n2027-10-31\nnull\n10\n250\n"
 	if got := string(Message(f)); got != want {
 		t.Fatalf("message:\n%q\nwant\n%q", got, want)
 	}
@@ -55,6 +55,50 @@ func TestVector(t *testing.T) {
 	g.Signature = other.Signature
 	if _, err := SingleKey(&priv.PublicKey).Verify(g); err != ErrSignature {
 		t.Fatalf("transplanted signature: %v", err)
+	}
+}
+
+// The monitor limit of a version 4 licence is signed: editing the
+// field in the file breaks the signature, like any other field.
+func TestVectorMonitorsSigned(t *testing.T) {
+	priv := vectorKey(0)
+	ring := SingleKey(&priv.PublicKey)
+	f := Sign(priv, File{Customer: "Example KK", Licensee: LicenseeOrganization, Product: Product,
+		License: TypePerpetual, MaxMonitors: 150})
+	if _, err := ring.Verify(f); err != nil {
+		t.Fatalf("v4 licence does not verify: %v", err)
+	}
+	f.MaxMonitors = 151
+	if _, err := ring.Verify(f); err != ErrSignature {
+		t.Fatalf("edited max_monitors: %v", err)
+	}
+}
+
+// Version 3 stays accepted: it signs the same fields as before, and a
+// max_monitors value in its file is not covered by its signature, so
+// it verifies but must never take effect (Check ignores it there).
+func TestVectorV3StillVerifies(t *testing.T) {
+	priv := vectorKey(0)
+	ring := SingleKey(&priv.PublicKey)
+	exp := "2027-10-31"
+	f := File{Version: 3, InstallationID: "12345678", Customer: "Example KK", Licensee: LicenseeOrganization,
+		Product: Product, License: TypeTrial, Expires: &exp, MaxUsers: 10}
+	f.KeyID = KeyID(&priv.PublicKey)
+	const want = "unagikuma-license-v3\n80362f41\n12345678\nExample KK\norganization\nunagikuma\ntrial\n2027-10-31\nnull\n10\n"
+	if got := string(Message(f)); got != want {
+		t.Fatalf("v3 message:\n%q\nwant\n%q", got, want)
+	}
+	sig, err := formats[3].sign(priv, Message(f))
+	if err != nil {
+		t.Fatalf("sign v3: %v", err)
+	}
+	f.Signature = b64.EncodeToString(sig)
+	if _, err := ring.Verify(f); err != nil {
+		t.Fatalf("v3 licence does not verify: %v", err)
+	}
+	f.MaxMonitors = 5 // not a signed field in version 3
+	if _, err := ring.Verify(f); err != nil {
+		t.Fatalf("v3 licence with a stray max_monitors does not verify: %v", err)
 	}
 }
 
