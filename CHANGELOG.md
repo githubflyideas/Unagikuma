@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+**Added**
+- In a cluster, the monitor list shows what every site sees next to each monitor — ✓ normal, ✗ failing, ⊘ no recent word — so it is clear at a glance whether one site's way to a target fails or the target itself. Before, it was only on the monitor's own page.
+
+**Changed**
+- A site's observation of a monitor counts as stale (⊘) after three missed checks and never sooner than three minutes, so a monitor checked every few seconds no longer flickers to unknown on a short network hiccup.
+
 ## v2.7.0 — 2026-11-25
 
 **Changed**

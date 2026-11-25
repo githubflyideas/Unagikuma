@@ -6,6 +6,16 @@ export function observationSummary(snapshot) {
  const rows = snapshot?.rows || [];
  return rows.map(r => r.node_id + ' ' + (r.stale ? '⊘' : r.status === 'up' ? '✓' : r.status === 'down' ? '✗' : '?')).join(', ');
 }
+// ObservationMarks is the compact form for a list row: each site with
+// ✓ (normal), ✗ (failing) or ⊘ (no recent word), coloured.
+export function ObservationMarks({ snapshot }) {
+ const rows = snapshot?.rows || [];
+ return html`<span class="tag obs nowrap" title=${observationSummary(snapshot)}>${rows.map((r, i) => {
+   const mark = r.stale ? '⊘' : r.status === 'up' ? '✓' : r.status === 'down' ? '✗' : '?';
+   const cls = r.stale ? 'muted' : r.status === 'up' ? 'ok-text' : r.status === 'down' ? 'err-text' : 'muted';
+   return html`${i > 0 ? ' ' : ''}${r.node_id} <b class=${cls}>${mark}</b>`;
+ })}</span>`;
+}
 export function ObservationCell({ value: r }) {
  if (!r) return html`<span class="muted">?</span>`;
  const status = r.stale ? 'unknown' : r.status === 'up' ? 'ok' : r.status === 'down' ? 'critical' : 'unknown';

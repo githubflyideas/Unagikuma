@@ -232,12 +232,20 @@ func (s *Store) SiteObservationSnapshot(monitor, defhash string, sites []string,
 			o = observation.Row{NodeID: site, MonitorID: monitor, Status: "unknown", Stale: true}
 		} else {
 			age := o.AgeMS + max(int64(0), now.Sub(o.ReceivedAt).Milliseconds())
-			o.Stale = o.IntervalMS <= 0 || age > 3*o.IntervalMS || o.ReceivedAt.After(now.Add(time.Second))
+			// Stale after three checks it should have made, and never
+			// sooner than ObservationStaleFloor: a 10 s check must not
+			// flicker to unknown on a short network hiccup.
+			limit := max(3*o.IntervalMS, ObservationStaleFloor.Milliseconds())
+			o.Stale = o.IntervalMS <= 0 || age > limit || o.ReceivedAt.After(now.Add(time.Second))
 		}
 		out.Rows = append(out.Rows, o)
 	}
 	return out, nil
 }
+
+// ObservationStaleFloor is the least time without word from a site before
+// its observation of a monitor counts as stale.
+const ObservationStaleFloor = 3 * time.Minute
 
 func (s *Store) PruneObservationConfig(monitors map[string]string, sites map[string]bool) error {
 	rows, err := s.core.Query("SELECT node,monitor,data FROM site_observations")

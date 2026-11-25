@@ -50,7 +50,13 @@ func TestObservationDeltaAndStaleness(t *testing.T) {
 	if err := dst.ApplySiteObservationDelta("a", d); err == nil {
 		t.Fatal("cursor regression accepted")
 	}
+	// Three missed checks of a 1 s monitor are not enough: a short
+	// hiccup must not make it unknown before ObservationStaleFloor.
 	dc.t = dc.t.Add(4 * time.Second)
+	if fresh, _ := dst.SiteObservationSnapshot("web", "v1", []string{"a"}, dc.t); fresh.Rows[0].Stale {
+		t.Fatal("stale before the floor", fresh)
+	}
+	dc.t = dc.t.Add(ObservationStaleFloor)
 	stale, _ := dst.SiteObservationSnapshot("web", "v1", []string{"a"}, dc.t)
 	if !stale.Rows[0].Stale {
 		t.Fatal("not stale", stale)
@@ -147,7 +153,7 @@ func TestObservationSourceClockSkew(t *testing.T) {
 	if err != nil || snap.Rows[0].Stale || !snap.Rows[0].ReceivedAt.Equal(dc.t) {
 		t.Fatal(snap, err)
 	}
-	dc.t = dc.t.Add(4 * time.Second)
+	dc.t = dc.t.Add(ObservationStaleFloor + 4*time.Second)
 	snap, err = dst.SiteObservationSnapshot("web", "v1", []string{"a"}, dc.t)
 	if err != nil || !snap.Rows[0].Stale {
 		t.Fatal("future source timestamp concealed stale row", snap, err)

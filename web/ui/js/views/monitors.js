@@ -5,6 +5,7 @@ import { html, Fragment, useState, useEffect, useMemo, useRef } from '../lib.js'
 import { t, tn, fmtNum } from '../i18n.js';
 import { get, post, me } from '../api.js';
 import { onLive } from '../live.js';
+import { ObservationMarks } from '../observations.js';
 import { useFetch, useLive, Loading, ErrorBox, Empty, Pill, Beats, Ago, Seg, pct, msText, reasonText, enc, go, toast, toastError, confirmDialog, useDocTitle, replaceRoute, monitorsPath, Modal, Field, teamTitle, teamLabel, regionTitle } from '../ui.js';
 import { QuickAdd } from './editor.js';
 import { Hive, Legend } from './overview.js';
@@ -219,7 +220,7 @@ export function Monitors({ query }) {
                 ${r.flags.includes('held') && html`<span class="tag" title=${t('ui.flag.held_hint')}>${t('ui.flag.held')}</span>`}
                 ${r.incident && r.incident.acked && html`<span class="tag">${t('ui.inc.acked_short')}</span>`}
               </div>
-              <div class="sub ellipsis"><span class="tag">${r.written_type}</span>${r.team && multiTeam ? html` <span class="tag" title=${t('ui.team.field')}>${teamLabel(r.team)}</span>` : ''} <span class="ltr">${r.target}</span>
+              <div class="sub ellipsis">${r.observations && r.observations.rows && r.observations.rows.length > 0 && html`<${ObservationMarks} snapshot=${r.observations} /> `}<span class="tag">${r.written_type}</span>${r.team && multiTeam ? html` <span class="tag" title=${t('ui.team.field')}>${teamLabel(r.team)}</span>` : ''} <span class="ltr">${r.target}</span>
                 ${r.status !== 'ok' && r.reason ? html` · <span class=${r.status === 'critical' ? 'err-text' : ''}>${reasonText(r.reason, r.detail)}</span>` : ''}</div>
             </td>
             <td class="hide-sm" style=${{ minWidth: '180px' }}><${Beats} cells=${beats.data && beats.data.items[r.name]} /></td>
