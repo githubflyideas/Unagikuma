@@ -1,4 +1,6 @@
 {
+"ui.import.area_where": "Node mana yang memeriksa monitor yang diimpor.",
+"ui.user.contact_optional": "Opsional. Dengan e-mail atau nomor telepon, pengguna ini juga menerima peringatan; jika tidak, akan ditanyakan berikutnya.",
 "ui.user.area_region": "Wilayah {name}",
 "ui.user.area_node": "Node {name}",
 "ui.user.areas_pick_hint": "Klik untuk memilih; \"semua\" berarti semua bagian dan konfigurasi bersama.",

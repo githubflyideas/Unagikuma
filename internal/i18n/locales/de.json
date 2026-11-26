@@ -1,4 +1,6 @@
 {
+"ui.import.area_where": "Welche Knoten die importierten Monitore prüfen.",
+"ui.user.contact_optional": "Optional. Mit E-Mail-Adresse oder Telefonnummer erhält dieser Benutzer auch Alarme; sonst wird danach gefragt.",
 "ui.user.area_region": "Region {name}",
 "ui.user.area_node": "Knoten {name}",
 "ui.user.areas_pick_hint": "Zum Auswählen anklicken; „alle“ heißt alle Abschnitte und die gemeinsame Konfiguration.",

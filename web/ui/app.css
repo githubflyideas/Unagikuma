@@ -143,7 +143,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 /* ---- shell ---- */
 .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; transition: grid-template-columns .15s; }
 .shell.mini { grid-template-columns: 64px 1fr; }
-.side { background: var(--panel); border-inline-end: 1px solid var(--border); padding: 14px 10px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 4px; }
+.side { background: var(--panel); border-inline-end: 1px solid var(--border); padding: 14px 10px; position: sticky; top: 0; height: calc(100vh / var(--zoom, 1)); overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 .brand { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 8px 16px; font-weight: 750; font-size: 18px; letter-spacing: .2px; color: var(--text); text-align: center; }
 .brand img { width: 84px; height: 84px; object-fit: contain; }
 .brand .edition { font-weight: 500; font-size: 13px; letter-spacing: 0; margin-top: 2px; }
@@ -356,7 +356,7 @@ td .rdot, h3 .rdot { margin-top: 0; }
 
 /* ---- modal ---- */
 .modal-bg { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); display: grid; place-items: center; z-index: 40; padding: 16px; }
-.modal { background: var(--panel); border-radius: 10px; width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: auto; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); }
+.modal { background: var(--panel); border-radius: 10px; width: min(640px, 100%); max-height: calc(100vh / var(--zoom, 1) - 32px); overflow: auto; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); }
 .modal.wide { width: min(980px, 100%); }
 .modal .hd { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); gap: 10px; }
 .modal .bd { padding: 16px 18px; }
@@ -792,7 +792,7 @@ body.summarypage { background: var(--bg); }
    scrolls inside its card, so the scrollbar starts at the first record
    and the top bar, tabs and toolbar stay in place. */
 @media (min-width: 861px) {
-  .main:has(> .page.list) { height: 100vh; overflow: hidden; }
+  .main:has(> .page.list) { height: calc(100vh / var(--zoom, 1)); overflow: hidden; }
   .page.list { flex: 1 1 auto; min-height: 0; padding-bottom: 18px; }
   .page.list .col:has(.card.scroll) { flex: 1 1 auto; min-height: 0; }
   .page.list .card.scroll { flex: 1 1 auto; min-height: 160px; display: flex; flex-direction: column; overflow: hidden; }

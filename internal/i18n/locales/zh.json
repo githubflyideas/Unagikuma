@@ -1,4 +1,6 @@
 {
+"ui.import.area_where": "导入的监控项由哪些节点检查。",
+"ui.user.contact_optional": "选填。填了邮箱或手机，这个用户就能收到告警；不填的话，保存后会接着让你补。",
 "ui.user.area_region": "区域 {name}",
 "ui.user.area_node": "节点 {name}",
 "ui.user.areas_pick_hint": "点击选择；“全部”表示所有段落及共享配置。",

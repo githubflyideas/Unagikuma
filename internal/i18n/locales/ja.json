@@ -1,4 +1,6 @@
 {
+"ui.import.area_where": "取り込んだ監視をどのノードで実行するか。",
+"ui.user.contact_optional": "任意。メールか電話番号を入れると、このユーザーも通知を受け取ります。入れなければ保存後に続けて尋ねます。",
 "ui.user.area_region": "リージョン {name}",
 "ui.user.area_node": "ノード {name}",
 "ui.user.areas_pick_hint": "クリックで選択。「全部」はすべてのセクションと共有設定です。",

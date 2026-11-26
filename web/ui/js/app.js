@@ -68,6 +68,9 @@ onStyleLoaded(() => scaleBreakpoints(zoomFactor()));
 function applyZoom(v) {
   const z = zoomOf(v);
   document.documentElement.style.zoom = z === 100 ? '' : String(z / 100);
+  // Viewport units do not shrink with the zoom: sizes that must fit the
+  // window divide by it.
+  document.documentElement.style.setProperty('--zoom', String(z / 100));
   scaleBreakpoints(z / 100);
 }
 

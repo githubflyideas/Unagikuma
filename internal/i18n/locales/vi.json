@@ -1,4 +1,6 @@
 {
+"ui.import.area_where": "Những nút nào kiểm tra các mục được nhập.",
+"ui.user.contact_optional": "Không bắt buộc. Có e-mail hoặc số điện thoại thì người dùng này cũng nhận cảnh báo; nếu không sẽ được hỏi tiếp sau khi lưu.",
 "ui.user.area_region": "Vùng {name}",
 "ui.user.area_node": "Nút {name}",
 "ui.user.areas_pick_hint": "Nhấn để chọn; \"tất cả\" là mọi phần và cấu hình dùng chung.",

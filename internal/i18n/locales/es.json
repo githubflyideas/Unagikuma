@@ -1,4 +1,6 @@
 {
+"ui.import.area_where": "Qué nodos comprueban los monitores importados.",
+"ui.user.contact_optional": "Opcional. Con un correo o un teléfono este usuario también recibe alertas; si no, se piden a continuación.",
 "ui.user.area_region": "Región {name}",
 "ui.user.area_node": "Nodo {name}",
 "ui.user.areas_pick_hint": "Haz clic para elegir; «todo» significa todas las secciones y la configuración compartida.",

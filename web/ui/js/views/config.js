@@ -174,8 +174,6 @@ function ImportTab() {
   // A node of a cluster cannot change the shared one.
   const [target, setTarget] = useState(me.member ? 'local' : 'global');
   const [role, setRole] = useState('operator');
-  const [manager, setManager] = useState('');
-  const users = useFetch(() => get('/users').catch(() => ({ items: [] })), []);
   const mons = useFetch(() => get('/monitors'), []);
   const regionList = useFetch(() => get('/regions').catch(() => ({ items: [] })), []);
   const nodeList = useFetch(() => get('/nodes').catch(() => ({ items: [] })), []);
@@ -189,7 +187,7 @@ function ImportTab() {
     setBusy(true);
     try {
       const local = target === 'local';
-      const q = new URLSearchParams({ area: local ? '' : area.trim(), role, manager: !local && (source === 'kuma' || source === 'nagios') ? manager : '' });
+      const q = new URLSearchParams({ area: local ? '' : area.trim(), role });
       if (local) q.set('target', 'local');
       if (apply) q.set('apply', '1');
       const r = await fetch('/api/v1/import/' + source + '?' + q, { method: 'POST', credentials: 'same-origin', headers: { 'X-Unagikuma-CSRF': getCSRF() }, body: file });
@@ -233,18 +231,11 @@ function ImportTab() {
           <option value="global" disabled=${me.member}>${t('ui.import.target_global')}</option>
           <option value="local">${t('ui.import.target_local')}</option>
         </select><//>`}
-      ${target === 'global' && html`<div class="two">
-        <${Field} label=${t('ui.import.area')} hint=${t('ui.import.area_hint')}>
-          <select value=${area} onChange=${(e) => { setArea(e.target.value); reset(); }}>
-            <option value="">${t('ui.import.area_global')}</option>
-            ${[...new Set([...areas, ...(area ? [area] : [])])].map(a => html`<option value=${a}>${a}</option>`)}
-          </select><//>
-        <${Field} label=${t('ui.import.manager')} hint=${t('ui.import.manager_hint')}>
-          <select value=${manager} disabled=${!area.trim() || source === 'checkmate' || source === 'gatus' || source === 'unagikuma'} onChange=${(e) => setManager(e.target.value)}>
-            <option value="">—</option>
-            ${((users.data && users.data.items) || []).map(u => html`<option value=${u.username}>${u.username} (${t('ui.user.role.' + u.role)})</option>`)}
-          </select><//>
-      </div>`}
+      ${me.cluster && target === 'global' && html`<${Field} label=${t('ui.import.area')} hint=${t('ui.import.area_where')}>
+        <select value=${area} onChange=${(e) => { setArea(e.target.value); reset(); }}>
+          <option value="">${t('ui.import.area_global')}</option>
+          ${[...new Set([...areas, ...(area ? [area] : [])])].map(a => html`<option value=${a}>${a}</option>`)}
+        </select><//>`}
       ${source === 'kuma' && html`<${Field} label=${t('ui.import.role')} hint=${t('ui.import.role_hint')}>
         <select value=${role} onChange=${(e) => setRole(e.target.value)}>
           ${['operator', 'viewer', 'admin'].map(r => html`<option value=${r}>${t('ui.user.role.' + r)}</option>`)}

@@ -7,14 +7,15 @@ import { get, post, put, del } from '../api.js';
 import { useFetch, Field, Modal, toast, toastError, confirmDialog, teamTitle, Pick } from '../ui.js';
 
 const ROLES = ['admin', 'operator', 'viewer'];
+const splitList = (v) => String(v || '').split(/[\s,;]+/).filter(Boolean);
 
 // LoginForm creates a login (initial.id unset; initial.username may be
 // suggested) or changes one; onDeleted is offered for an existing one.
-export function LoginForm({ initial, onClose, onSaved, onDeleted }) {
+export function LoginForm({ initial, onClose, onSaved, onDeleted, channels }) {
   const teams = useFetch(() => get('/teams'), []);
   const regions = useFetch(() => get('/regions').catch(() => ({ items: [] })), []);
   const nodes = useFetch(() => get('/nodes').catch(() => ({ items: [] })), []);
-  const init = { username: '', password: '', role: 'operator', areas: [], teams: [], ...initial };
+  const init = { username: '', password: '', role: 'operator', areas: [], teams: [], name: '', emails: '', phones: '', ...initial };
   if (!Array.isArray(init.areas)) init.areas = String(init.areas || '').split(/[\s,]+/).filter(Boolean);
   const [form, setForm] = useState(init);
   // The parts an operator may be limited to: every region and every node.
@@ -30,11 +31,24 @@ export function LoginForm({ initial, onClose, onSaved, onDeleted }) {
     const body = { role: form.role, areas: form.role === 'operator' ? form.areas : [] };
     if (multi) body.teams = form.teams;
     if (form.password) body.password = form.password;
+    let filled = false;
     try {
       if (form.id) await put('/users/' + form.id, body);
-      else await post('/users', { ...body, username: form.username.trim(), person: form.person || 0 });
+      else {
+        await post('/users', { ...body, username: form.username.trim(), person: form.person || 0 });
+        // A new login that is nobody yet gets a contact of its own; the
+        // name and addresses given here fill it in at once.
+        const emails = splitList(form.emails), phones = splitList(form.phones);
+        if (!form.person && (emails.length || phones.length)) {
+          const p = ((await get('/people')).people || []).find(x => x.username === form.username.trim());
+          const has = { email: emails.length > 0, phone: phones.length > 0 };
+          if (p) await put('/people/' + p.id, { handle: p.handle, name: form.name.trim() || p.name, emails, phones, username: p.username, note: p.note || '',
+            notify: (channels || []).filter(c => has[c.contact]).map(c => c.name) });
+          filled = emails.length > 0 || phones.length > 0;
+        }
+      }
       toast(t('ui.saved'));
-      onSaved(form.username.trim());
+      onSaved(form.username.trim(), filled);
     } catch (e2) { toastError(e2); }
   };
   const remove = async () => {
@@ -44,6 +58,12 @@ export function LoginForm({ initial, onClose, onSaved, onDeleted }) {
   return html`<${Modal} title=${form.id ? t('ui.user.login_of', { name: form.username }) : t('ui.user.add')} onClose=${onClose}>
     <form class="form" onSubmit=${save}>
       ${!form.id && html`<${Field} label=${t('ui.user.username')} hint=${t('ui.user.username_hint')}><input type="text" class="ltr" required value=${form.username} autocomplete="off" onInput=${(e) => setForm({ ...form, username: e.target.value })} /><//>`}
+      ${!form.id && !form.person && html`<${Field} label=${t('ui.dir.name')}><input type="text" value=${form.name} onInput=${(e) => setForm({ ...form, name: e.target.value })} placeholder=${form.username} /><//>
+        <div class="two">
+          <${Field} label=${t('ui.dir.emails')}><input type="text" class="ltr" value=${form.emails} onInput=${(e) => setForm({ ...form, emails: e.target.value })} placeholder="li@example.com" /><//>
+          <${Field} label=${t('ui.dir.phones')}><input type="text" class="ltr" value=${form.phones} onInput=${(e) => setForm({ ...form, phones: e.target.value })} placeholder="+8613800000000" /><//>
+        </div>
+        <p class="small muted" style=${{ margin: '-6px 0 0' }}>${t('ui.user.contact_optional')}</p>`}
       <${Field} label=${t('ui.user.password')} hint=${form.id ? t('ui.user.password_keep') : t('ui.setup.short')}>
         <input type="password" autocomplete="new-password" minlength="8" required=${!form.id} value=${form.password} onInput=${(e) => setForm({ ...form, password: e.target.value })} /><//>
       <${Field} label=${t('ui.user.role')} hint=${t('ui.user.role.' + form.role + '_hint')}>

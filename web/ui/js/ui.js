@@ -199,7 +199,9 @@ export function Modal({ title, onClose, children, footer, wide }) {
   // The dialog sits over the page content, not over the menu beside it.
   const main = document.querySelector('.main');
   const r = main && main.getBoundingClientRect();
-  const pad = r && r.width < innerWidth - 100 ? { paddingLeft: r.left + 16 + 'px', paddingRight: Math.max(16, innerWidth - r.right + 16) + 'px' } : null;
+  // Measured in window pixels; the page may be zoomed, so convert back.
+  const z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1;
+  const pad = r && r.width < innerWidth / z - 100 ? { paddingLeft: r.left + 16 + 'px', paddingRight: Math.max(16, innerWidth / z - r.right + 16) + 'px' } : null;
   return html`<div class="modal-bg" style=${pad} onMouseDown=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
     <div class=${'modal' + (wide ? ' wide' : '')} role="dialog" aria-modal="true">
       <div class="hd"><h2>${title}</h2><div class="spacer"></div><button class="btn ghost sm" onClick=${onClose} aria-label=${t('ui.close')}>✕</button></div>

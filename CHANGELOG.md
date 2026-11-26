@@ -5,10 +5,12 @@
 **Changed**
 - The ISP style is redrawn as a network operations centre: a dark blueprint grid, a slim icon rail that opens over the page instead of a hidden drawer, panels with bracketed corners, monospaced figures, and failing rows and the problem count that pulse until handled. The Starship bridge style turns violet so the two dark styles no longer look alike, and the Retail chain table header is readable again.
 - Every style keeps the page centred on a wide screen, with the navigation beside it.
-- Fewer things to type. Adding or changing a user: the role is a drop-down, teams are clicked, and an operator's sections are picked from the regions and nodes instead of typed as names separated by commas (on a single machine the choice is not shown). A channel group's members are clicked from the existing channels. An import's section is chosen from a list.
+- Fewer things to type. Adding or changing a user: the role is a drop-down, teams are clicked, and an operator's sections are picked from the regions and nodes instead of typed as names separated by commas (on a single machine the choice is not shown). A channel group's members are clicked from the existing channels. An import's section is chosen from a list and shown only in a cluster; the import's "section manager" choice is gone (give an operator sections when editing the user instead).
+- Adding a user asks for the name, e-mail address and phone number in the same form, so the user can receive alerts at once.
 - The Small business, Data centre and Modern dashboard styles are gone. An installation or account set to one of them falls back to classic.
 
 **Fixed**
+- At a zoom of 125% or more, a dialog (such as adding a channel) and the menu ran past the bottom of the window; they now fit and scroll.
 - On a phone, the ISP, Retail chain, Starship bridge and Atelier styles lost their menu: the menu button was hidden and the navigation spilled over the page. Every style now uses the usual menu drawer on a phone.
 
 ## v2.7.1 — 2026-11-26

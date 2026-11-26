@@ -142,13 +142,13 @@ export function ContactsTab() {
     setLogin(u ? { initial: { id: u.id, username: u.username, password: '', role: u.role, areas: u.areas || [], teams: u.teams || [] }, person: p }
       : { initial: { username: p.handle }, person: p });
   };
-  const loginSaved = async (username) => {
+  const loginSaved = async (username, filled) => {
     const fresh = login && !login.initial.id && !login.person;
     setLogin(null);
     users.reload();
     d.reload();
     // A new login goes on to its person's addresses.
-    if (fresh && username) {
+    if (fresh && username && !filled) {
       try { const p = (await get('/people')).people.find(x => x.username === username); if (p) setEdit(p); } catch { /* the list shows it */ }
     }
   };
@@ -194,7 +194,7 @@ export function ContactsTab() {
         <button class="btn primary choice" onClick=${() => { setChoose(false); setLogin({ initial: {} }); }}><b>${t('ui.dir.add_login')}</b><span class="small">${t('ui.dir.add_login_hint')}</span></button>
         <button class="btn choice" onClick=${() => { setChoose(false); setEdit({}); }}><b>${t('ui.dir.add_contact')}</b><span class="small">${t('ui.dir.add_contact_hint')}</span></button>
       </div><//>`}
-    ${login && html`<${LoginForm} initial=${{ ...login.initial, person: login.person && login.person.id }} onClose=${() => setLogin(null)}
+    ${login && html`<${LoginForm} channels=${personal} initial=${{ ...login.initial, person: login.person && login.person.id }} onClose=${() => setLogin(null)}
       onSaved=${loginSaved} onDeleted=${loginSaved} />`}
     ${nUnknown > 0 && html`<div class="banner warning row">
       <span class="rdot"></span><span class="spacer">${tn('ui.dir.unknown_banner', nUnknown)}

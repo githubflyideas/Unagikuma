@@ -1,4 +1,6 @@
 {
+"ui.import.area_where": "Quels nœuds vérifient les sondes importées.",
+"ui.user.contact_optional": "Facultatif. Avec une adresse e-mail ou un numéro, cet utilisateur reçoit aussi les alertes ; sinon ils sont demandés ensuite.",
 "ui.user.area_region": "Région {name}",
 "ui.user.area_node": "Nœud {name}",
 "ui.user.areas_pick_hint": "Cliquez pour choisir ; « tout » signifie toutes les sections et la configuration partagée.",
