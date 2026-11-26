@@ -1,7 +1,7 @@
 // monitors.conf: the file (read-only), its history and imports.
 import { html, useState } from '../lib.js';
 import { t, tn, fmtTime, detailText } from '../i18n.js';
-import { api, get, post, del, getCSRF } from '../api.js';
+import { api, get, post, del, getCSRF, me } from '../api.js';
 import { useFetch, useLive, Loading, ErrorBox, Empty, Field, Modal, Card, PRODUCT, toast, toastError, confirmDialog, useDocTitle } from '../ui.js';
 
 // diffRows turns the line diff ("  " same, "- " old only, "+ " new only)
@@ -170,6 +170,9 @@ function ImportTab() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
   const [area, setArea] = useState('');
+  // Where the monitors go: the shared configuration, or this site's own.
+  // A node of a cluster cannot change the shared one.
+  const [target, setTarget] = useState(me.member ? 'local' : 'global');
   const [role, setRole] = useState('operator');
   const [manager, setManager] = useState('');
   const users = useFetch(() => get('/users').catch(() => ({ items: [] })), []);
@@ -179,7 +182,9 @@ function ImportTab() {
   const send = async (apply) => {
     setBusy(true);
     try {
-      const q = new URLSearchParams({ area: area.trim(), role, manager: source === 'kuma' || source === 'nagios' ? manager : '' });
+      const local = target === 'local';
+      const q = new URLSearchParams({ area: local ? '' : area.trim(), role, manager: !local && (source === 'kuma' || source === 'nagios') ? manager : '' });
+      if (local) q.set('target', 'local');
       if (apply) q.set('apply', '1');
       const r = await fetch('/api/v1/import/' + source + '?' + q, { method: 'POST', credentials: 'same-origin', headers: { 'X-Unagikuma-CSRF': getCSRF() }, body: file });
       const body = await r.json();
@@ -217,7 +222,12 @@ function ImportTab() {
           setFile(fs.length ? new Blob(fs.flatMap(f => [f, '\n']), { type: 'text/plain' }) : null);
           reset();
         }} />`}
-      <div class="two">
+      ${me.cluster && html`<${Field} label=${t('ui.import.target')} hint=${me.member ? t('ui.member.shared_on_master', { name: me.masterName }) : t('ui.import.target_hint')}>
+        <select value=${target} onChange=${(e) => { setTarget(e.target.value); reset(); }}>
+          <option value="global" disabled=${me.member}>${t('ui.import.target_global')}</option>
+          <option value="local">${t('ui.import.target_local')}</option>
+        </select><//>`}
+      ${target === 'global' && html`<div class="two">
         <${Field} label=${t('ui.import.area')} hint=${t('ui.import.area_hint')}>
           <input type="text" class="ltr" list="import-areas" value=${area} placeholder="region:north" onInput=${(e) => { setArea(e.target.value); reset(); }} />
           <datalist id="import-areas">${areas.map(a => html`<option value=${a} />`)}</datalist><//>
@@ -226,7 +236,7 @@ function ImportTab() {
             <option value="">—</option>
             ${((users.data && users.data.items) || []).map(u => html`<option value=${u.username}>${u.username} (${t('ui.user.role.' + u.role)})</option>`)}
           </select><//>
-      </div>
+      </div>`}
       ${source === 'kuma' && html`<${Field} label=${t('ui.import.role')} hint=${t('ui.import.role_hint')}>
         <select value=${role} onChange=${(e) => setRole(e.target.value)}>
           ${['operator', 'viewer', 'admin'].map(r => html`<option value=${r}>${t('ui.user.role.' + r)}</option>`)}

@@ -14,6 +14,10 @@ export function setMe(s) {
   me.version = (s && s.version) || '';
   me.registered = !!(s && s.registered);
   me.cluster = !!(s && s.cluster);
+  // A node of a cluster: the shared configuration is changed on the master.
+  me.member = !!(s && s.member);
+  me.masterURL = (s && s.master_url) || '';
+  me.masterName = (s && s.master_name) || '';
 }
 export function getCSRF() { return csrf; }
 export function onUnauthorized(f) { onAuthLost = f; }

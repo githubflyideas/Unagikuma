@@ -240,8 +240,11 @@ export function Monitors({ query }) {
       ${me.role === 'admin' && html`<button class="btn" onClick=${() => setMoving({ team: '', region: '' })} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.move')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>`}
       <button class="btn danger" onClick=${remove} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.delete')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
       <//>`}
-      <button class="btn primary" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
-      <a class="btn" href="#/monitors/new">${t('ui.mon.add')}</a>
+      ${me.member
+        ? html`<button class="btn primary" disabled title=${t('ui.member.shared_on_master', { name: me.masterName })}>${t('ui.mon.quick_add')}</button>
+          <button class="btn" disabled title=${t('ui.member.shared_on_master', { name: me.masterName })}>${t('ui.mon.add')}</button>`
+        : html`<button class="btn primary" onClick=${() => setQuick(true)}>${t('ui.mon.quick_add')}</button>
+          <a class="btn" href="#/monitors/new">${t('ui.mon.add')}</a>`}
     </div>
     <div class="row filters">
       <div class="chips">
@@ -272,7 +275,7 @@ export function Monitors({ query }) {
     <//>`}
     <${ErrorBox} error=${list.error} retry=${list.reload} />
     <div class="card scroll"><div class="bd flush tbl-wrap">
-      ${!list.data ? html`<${Loading} />` : !total ? html`<${Empty} title=${t('ui.mon.none')}><p>${t('ui.mon.none_hint')}</p><a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a><//>` :
+      ${!list.data ? html`<${Loading} />` : !total ? html`<${Empty} title=${t('ui.mon.none')}><p>${t('ui.mon.none_hint')}</p>${me.member ? html`<p class="small muted">${t('ui.member.shared_on_master', { name: me.masterName })}</p>` : html`<a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a>`}<//>` :
         !rows.length ? html`<${Empty} title=${t('ui.mon.no_match')} /> ` :
         view === 'hive' ? html`<div class="row" style=${{ padding: '12px 16px 0' }}><${Legend} /></div><${Hive} rows=${rows} />` :
         html`<table class="tbl">

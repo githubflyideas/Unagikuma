@@ -174,7 +174,8 @@ func (s *Server) kumaImport(w http.ResponseWriter, r *http.Request) (any, error)
 		return nil, Errorf(http.StatusRequestEntityTooLarge, CodeTooLarge, "the upload exceeds the source size limit (%d bytes)", limit)
 	}
 	q := r.URL.Query()
-	o := app.KumaOptions{Area: strings.TrimSpace(q.Get("area")), Role: q.Get("role"), Manager: q.Get("manager"), Source: r.PathValue("source")}
+	o := app.KumaOptions{Area: strings.TrimSpace(q.Get("area")), Role: q.Get("role"), Manager: q.Get("manager"), Source: r.PathValue("source"),
+		Local: q.Get("target") == "local"}
 	if o.Source == "kuma" {
 		o.Source = ""
 	}

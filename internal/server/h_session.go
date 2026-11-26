@@ -91,6 +91,17 @@ func (s *Server) sessionGet(w http.ResponseWriter, r *http.Request) (any, error)
 		"version": s.app.Version(), "registered": s.app.License().State().Registered,
 		// One machine: no site to choose in the history.
 		"cluster": s.app.ReplicaStatus().Replica || len(s.app.EffectiveConfig().Nodes) > 0}
+	// On a node of a cluster the shared configuration is changed on the
+	// master: the UI says so and points there instead of failing on save.
+	if s.app.IsMember() {
+		out["member"] = true
+		if m := s.app.Agent().Member; m != nil {
+			out["master_url"] = m.Server
+		}
+		if c := s.app.EffectiveConfig(); c != nil {
+			out["master_name"] = c.MName
+		}
+	}
 	// A team member works within their teams: the UI shows them only what
 	// those teams own.
 	if ai.team != nil {

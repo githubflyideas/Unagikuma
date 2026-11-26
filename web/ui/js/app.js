@@ -287,6 +287,10 @@ function Shell({ user, onLogout, onLang }) {
       ${ov.data && ov.data.storage && ov.data.storage.failing && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner error">
         <div class="spacer">${t('ui.storage_failing', { since: fmtTime(ov.data.storage.since), lost: ov.data.storage.lost })}
           ${ov.data.storage.error && html`<div class="small ltr">${ov.data.storage.error}</div>`}</div></div></div>`}
+      ${me.member && me.role === 'admin' && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner info">
+        <div class="spacer">${t('ui.member.banner', { name: me.masterName })}</div>
+        ${me.masterURL && html`<a class="btn sm" href=${me.masterURL} target="_blank" rel="noopener">${t('ui.member.open_master')}</a>`}
+        <a class="btn sm" href="#/nodes">${t('ui.member.local')}</a></div></div>`}
       ${ov.data && ov.data.superseded && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner error"><div class="spacer">
         ${t('ui.ha.superseded', { term: ov.data.superseded.term, by: ov.data.superseded.by || '?', at: fmtTime(ov.data.superseded.at) })}</div></div></div>`}
       ${ov.data && ov.data.monitor_over && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner warning">

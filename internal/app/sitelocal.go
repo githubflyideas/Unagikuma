@@ -122,6 +122,12 @@ func withFileHeader(text string) string {
 // SetSiteLocal validates and saves the zone ("" removes it), then applies.
 // It returns the text as saved: a missing $FILE line is added.
 func (a *App) SetSiteLocal(text, author string) (string, []config.Diagnostic, error) {
+	return a.setSiteLocal(text, author, false)
+}
+
+// setSiteLocal is SetSiteLocal; imported skips the everyday monitor limit,
+// which an import's ceiling has already held.
+func (a *App) setSiteLocal(text, author string, imported bool) (string, []config.Diagnostic, error) {
 	if strings.TrimSpace(text) == "" {
 		text = ""
 	} else {
@@ -136,7 +142,7 @@ func (a *App) SetSiteLocal(text, author string) (string, []config.Diagnostic, er
 		if config.HasErrors(diags) {
 			return text, diags, errors.New("the site-local configuration has errors")
 		}
-		if d := a.siteLocalCapDiag(next); d != nil {
+		if d := a.siteLocalCapDiag(next); d != nil && !imported {
 			return text, []config.Diagnostic{*d}, errors.New(d.Msg)
 		}
 		if err := os.WriteFile(a.siteLocalPath()+".tmp", []byte(text), 0o600); err != nil {
@@ -145,6 +151,8 @@ func (a *App) SetSiteLocal(text, author string) (string, []config.Diagnostic, er
 		if err := os.Rename(a.siteLocalPath()+".tmp", a.siteLocalPath()); err != nil {
 			return text, nil, err
 		}
+		// Checked above: it is what runs from now on.
+		_ = a.store.SetSetting(siteLocalAppliedKey, text)
 	}
 	_ = a.store.Audit(store.AuditEntry{Actor: author, Action: "config.site_local", Target: "site-local"})
 	a.Reapply()

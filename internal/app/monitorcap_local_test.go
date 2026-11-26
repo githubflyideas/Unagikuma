@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -101,5 +102,49 @@ func TestFirstStartTakesUpToTheImportCeiling(t *testing.T) {
 	b.cfg.check()
 	if got := len(b.Config().Config.Monitors); got != 200 {
 		t.Fatalf("after cutting to 200: %d", got)
+	}
+}
+
+func gatusFile(n int) []byte {
+	var b strings.Builder
+	b.WriteString("endpoints:\n")
+	for i := 1; i <= n; i++ {
+		fmt.Fprintf(&b, "  - name: imp%03d\n    url: http://10.40.%d.%d/\n    interval: 60s\n    conditions:\n      - \"[STATUS] == 200\"\n", i, i/250, i%250+1)
+	}
+	return []byte(b.String())
+}
+
+// An import can go to this site's own zone: the shared file is untouched,
+// the monitors run here, and the import ceiling (200), not the everyday
+// limit, holds the count.
+func TestImportIntoSiteLocal(t *testing.T) {
+	a, _, _, _ := newApp(t, capConfig(95))
+	defer a.Store().Close()
+	before := a.Config().Text
+	if _, res, _, err := a.ImportKuma(gatusFile(20), "test", KumaOptions{Source: "gatus", Local: true}); err != nil || res.Monitors != 20 {
+		t.Fatalf("import into the site's zone: %v %+v", err, res)
+	}
+	if a.Config().Text != before {
+		t.Fatal("the shared configuration changed")
+	}
+	if !strings.Contains(a.SiteLocal(), "imp020") {
+		t.Fatalf("zone: %q", a.SiteLocal())
+	}
+	if got := a.MonitorCount(a.Config().Config); got != 115 {
+		t.Fatalf("count after importing 20 locally: %d, want 115 (past 100, within the ceiling)", got)
+	}
+}
+
+// On a node of a cluster a shared import is refused at once, before
+// anything is stored; one into the site's own zone works.
+func TestImportOnNodeIsLocalOnly(t *testing.T) {
+	a, _, _, _ := newApp(t, capConfig(5))
+	defer a.Store().Close()
+	a.am.member = &Membership{Node: "b", Server: "https://master.invalid"}
+	if _, _, _, err := a.ImportKuma(gatusFile(3), "test", KumaOptions{Source: "gatus"}); !errors.Is(err, ErrMember) {
+		t.Fatalf("shared import on a node: %v", err)
+	}
+	if _, res, _, err := a.ImportKuma(gatusFile(3), "test", KumaOptions{Source: "gatus", Local: true}); err != nil || res.Monitors != 3 {
+		t.Fatalf("local import on a node: %v", err)
 	}
 }

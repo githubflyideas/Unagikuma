@@ -3,6 +3,8 @@
 ## Unreleased
 
 **Added**
+- On a node of a cluster, the console says that the shared configuration is changed on the master and links to it, and the buttons that would change it (quick add, add monitor) are greyed out instead of failing on save. This site's own monitors are still edited on the node.
+- An import can go into this site's own configuration instead of the shared one ("Import into" in a cluster). On a node it is the only choice; a shared import there is refused at once, before anything is stored. An import into the site's own configuration is held by the same 200-monitor import ceiling.
 - In a cluster, a monitor that other sites check too asks them to check it at once the moment it first fails here, before the failure is confirmed. When the alert goes out after the retries, its site line says for each other site whether it was checked after the failure or gives that site's last word and how long before the failure it was — so it shows whether the target is down or only this site's way to it. Nothing ever waits for the other sites; an unreachable or slow site just shows its last word. Each monitor asks at most once in five minutes, many failures at once go to each site as one request, and only sites that prove their identity are heard.
 - In a cluster, the monitor list shows what every site sees next to each monitor — ✓ normal, ✗ failing, ⊘ no recent word — so it is clear at a glance whether one site's way to a target fails or the target itself. Before, it was only on the monitor's own page.
 
