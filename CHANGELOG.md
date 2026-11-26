@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.0.0 — 2026-11-26
 
 **Changed**
 - Teams are gone; groups take their place, and the code behind both is much simpler. Every alert goes to the **alert channels**, set under Alerting › Channels (a monitor can still name its own policy). A user can be given monitor groups (`group=` on a monitor): they then see, and as an operator change, only those monitors; a user given no groups sees everything. To keep departments entirely apart, run a second installation in another directory. The first start of this release rewrites a file with `TEAM` records so that nobody sees or receives anything different (the old file is kept as `monitors.conf.before-groups`): the admin team's channels become the alert channels, another team's channels a policy its monitors name, its monitors get `group=<team>`, and its members those groups. The daily and weekly reports cover every monitor and go to the alert channels. Advanced › Teams, the teams API and `notify.daily-report-teams` are gone.
