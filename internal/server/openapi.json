@@ -21282,6 +21282,311 @@
         ],
         "x-token-scope": "admin"
       }
+    },
+    "/api/v1/system/port": {
+      "get": {
+        "operationId": "portGet",
+        "summary": "The port in use and the one saved for the next start (admin).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "current": {},
+                    "next": {},
+                    "missed": {},
+                    "fixed": {},
+                    "master": {},
+                    "data_dir": {},
+                    "can_restart": {}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Login required (unauthorized), or setup_required before the first account exists."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
+          },
+          "405": {
+            "description": "Method not allowed on this path."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Internal error (internal)."
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerToken": []
+          }
+        ],
+        "tags": [
+          "system"
+        ],
+        "x-token-scope": "admin"
+      },
+      "put": {
+        "operationId": "portPut",
+        "summary": "Save a port for the next start; it must be free now (admin).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "current": {},
+                    "next": {},
+                    "missed": {},
+                    "fixed": {},
+                    "master": {},
+                    "data_dir": {},
+                    "can_restart": {}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Login required (unauthorized), or setup_required before the first account exists."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
+          },
+          "405": {
+            "description": "Method not allowed on this path."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Internal error (internal)."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "port": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
+            "in": "header",
+            "name": "X-Unagikuma-CSRF",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "system"
+        ],
+        "x-token-scope": "admin"
+      }
+    },
+    "/api/v1/system/restart": {
+      "post": {
+        "operationId": "restart",
+        "summary": "Restart the program (admin; where it comes back by itself).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "restarting": {}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Login required (unauthorized), or setup_required before the first account exists."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
+          },
+          "405": {
+            "description": "Method not allowed on this path."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Internal error (internal)."
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
+            "in": "header",
+            "name": "X-Unagikuma-CSRF",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "system"
+        ],
+        "x-token-scope": "admin"
+      }
     }
   },
   "servers": [

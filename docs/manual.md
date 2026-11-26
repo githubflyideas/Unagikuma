@@ -615,6 +615,8 @@ Behind a reverse proxy that serves the app under a path prefix (for example `htt
 
 **Several installations on one machine.** Each installation is a data directory of its own: start the program in another directory (or give it another `--data`) and it is a separate installation, with its own monitors, accounts and alerts. Without `--listen` it takes port 8077, or the first free one up to 8099 when that is taken, remembers it in `<data>/listen.port` and keeps it on later starts; the address is printed at start. A second server on a data directory that is already running is refused. With `--listen` the port is exactly the one given.
 
+The port can also be changed under **Settings › System › Port**: the new one is checked to be free and takes effect at the next start (a **Restart now** button is offered where the program comes back by itself: always on Linux and macOS, as a service on Windows). If the new port is taken by then, the program stays on the one before and the page says so, so the console never ends up out of reach. A port given with `--listen` is changed where the program is started, and so is the port of a cluster's master, whose nodes keep its address.
+
 ## Data and backups
 
 The data directory holds `monitors.conf`, `core.db` (users, incidents, notification log, configuration history, encrypted secrets), `history.db` (check results and uptime) and `unagikuma.key`, the key that encrypts the secrets. `cluster-ca.*` and `cluster.*` are the certificate authority the other machines of a cluster pin; keep them with the key so they keep trusting a restored master.

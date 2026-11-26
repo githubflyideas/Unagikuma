@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/githubflyideas/unagikuma/internal/app"
 	"net"
 	"os"
 	"path/filepath"
@@ -19,7 +20,9 @@ var heldLock *os.File // the data directory's lock, held until exit
 
 const (
 	lockFile     = "unagikuma.lock"
-	portFile     = "listen.port" // the port this installation found for itself
+	portFile     = app.PortFile // the port this installation found for itself
+	portPrevFile = app.PortPrevFile
+	portMissFile = app.PortMissFile
 	defaultPort  = 8077
 	lastAutoPort = 8099
 )
@@ -40,9 +43,13 @@ func listenAuto(data, addr string, explicit bool) (net.Listener, error) {
 	if h, _, err := net.SplitHostPort(addr); err == nil {
 		host = h
 	}
+	// The saved port first, then the one before it (a port changed in the
+	// web UI that is taken by now must not leave the console out of reach),
+	// then the first free one.
+	wanted := readPortFile(filepath.Join(data, portFile))
 	var tries []int
-	if b, err := os.ReadFile(filepath.Join(data, portFile)); err == nil {
-		if p, err := strconv.Atoi(strings.TrimSpace(string(b))); err == nil && p > 0 && p < 65536 {
+	for _, p := range []int{wanted, readPortFile(filepath.Join(data, portPrevFile))} {
+		if p > 0 && p < 65536 {
 			tries = append(tries, p)
 		}
 	}
@@ -57,9 +64,23 @@ func listenAuto(data, addr string, explicit bool) (net.Listener, error) {
 		if p != defaultPort || fileExists(filepath.Join(data, portFile)) {
 			_ = os.WriteFile(filepath.Join(data, portFile), []byte(strconv.Itoa(p)+"\n"), 0o600)
 		}
+		if wanted > 0 && p != wanted {
+			_ = os.WriteFile(filepath.Join(data, portMissFile), []byte(strconv.Itoa(wanted)+"\n"), 0o600)
+		} else {
+			_ = os.Remove(filepath.Join(data, portMissFile))
+		}
 		return l, nil
 	}
 	return nil, fmt.Errorf("ports %d to %d are all in use: choose an address with --listen", defaultPort, lastAutoPort)
+}
+
+func readPortFile(p string) int {
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return 0
+	}
+	n, _ := strconv.Atoi(strings.TrimSpace(string(b)))
+	return n
 }
 
 func fileExists(p string) bool { _, err := os.Stat(p); return err == nil }

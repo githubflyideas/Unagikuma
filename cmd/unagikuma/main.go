@@ -253,7 +253,7 @@ func runServer(args []string) error {
 	}
 	a, err := app.New(app.Options{
 		DataDir: *data, ConfigPath: *cfgPath, Instance: *instance, BaseURL: *baseURL, HeartbeatURL: *heartbeat,
-		AllowEnv: env, Log: log, Version: version, Listen: *listen, AuditRetention: auditKeep, GatewayMonitors: true,
+		AllowEnv: env, Log: log, Version: version, Listen: *listen, PortFixed: explicit, CanRestart: canRestart(), AuditRetention: auditKeep, GatewayMonitors: true,
 	})
 	if err != nil {
 		var ie *app.InvalidError
@@ -323,7 +323,7 @@ func runServer(args []string) error {
 	err = <-runDone
 	if restart {
 		srv.Close()
-		log.Info("restarting to take over as master")
+		log.Info("restarting")
 		return reexec()
 	}
 	return err

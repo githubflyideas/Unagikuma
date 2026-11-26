@@ -456,6 +456,47 @@ function Keywords() {
   </div>`;
 }
 
+// PortCard changes the port for the next start (never while running) and
+// can restart the program, then opens the console at the new address.
+function PortCard() {
+  const d = useFetch(() => get('/system/port'), []);
+  const [port, setPort] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!d.data) return d.error ? html`<${ErrorBox} error=${d.error} />` : html`<${Loading} />`;
+  const p = d.data;
+  const next = p.next || p.current;
+  const urlFor = (n) => location.protocol + '//' + location.hostname + ':' + n + location.pathname;
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try { await put('/system/port', { port: Number(port) }); setPort(''); toast(t('ui.saved')); d.reload(); } catch (err) { toastError(err); }
+    setBusy(false);
+  };
+  const restart = async () => {
+    if (!await confirmDialog(t('ui.port.restart_confirm', { url: urlFor(next) }))) return;
+    try { await post('/system/restart', {}); } catch (err) { toastError(err); return; }
+    setBusy(true);
+    toast(t('ui.port.restarting'));
+    setTimeout(() => { location.href = urlFor(next); }, 4000);
+  };
+  return html`<${Card} title=${t('ui.port.title')}>
+    <dl class="kv">
+      <dt>${t('ui.port.current')}</dt><dd class="mono ltr">${p.current}</dd>
+      <dt>${t('ui.port.data_dir')}</dt><dd class="mono ltr">${p.data_dir}</dd>
+    </dl>
+    ${p.missed > 0 && html`<div class="banner warning small">${t('ui.port.missed', { port: p.missed, current: p.current })}</div>`}
+    ${p.fixed ? html`<p class="small muted">${t('ui.port.fixed')}</p>`
+      : p.master ? html`<p class="small muted">${t('ui.port.master')}</p>`
+      : html`<form class="form" onSubmit=${save}>
+        <${Field} label=${t('ui.port.new')} hint=${t('ui.port.hint')}>
+          <div class="row" style=${{ gap: '8px' }}><input type="number" min="1024" max="65535" class="ltr" value=${port} placeholder=${String(next)} onInput=${(e) => setPort(e.target.value)} style=${{ maxWidth: '140px' }} />
+          <button class="btn" disabled=${busy || !port}>${t('ui.save')}</button></div><//>
+      </form>`}
+    ${p.next > 0 && html`<div class="banner info small"><div class="spacer">${t('ui.port.pending', { port: p.next, url: urlFor(p.next) })}</div>
+      ${p.can_restart && html`<button class="btn sm primary" disabled=${busy} onClick=${restart}>${t('ui.port.restart')}</button>`}</div>`}
+  <//>`;
+}
+
 function System() {
   const s = useFetch(() => get('/system'), []);
   if (!s.data) return s.error ? html`<${ErrorBox} error=${s.error} />` : html`<${Loading} />`;
@@ -473,6 +514,7 @@ function System() {
       </dl>
       ${d.ui_plaintext && html`<div class="banner warning small" style=${{ marginTop: '10px' }}>${t('ui.sys.ui_plaintext')}</div>`}
     <//>
+    ${me.role === 'admin' && html`<${PortCard} />`}
     <${Card} title=${t('ui.sys.storage')}>
       <dl class="kv">
         <dt>core.db</dt><dd>${bytes(d.storage.core_bytes)}</dd>

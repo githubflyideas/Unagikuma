@@ -118,3 +118,10 @@ func runService(args []string) error {
 	}
 	return nil
 }
+
+// canRestart: a restart ends the process, so only a service (restarted by
+// the service manager) comes back by itself.
+func canRestart() bool {
+	ok, err := svc.IsWindowsService()
+	return err == nil && ok
+}

@@ -49,10 +49,15 @@ type Options struct {
 	// can only make it longer.
 	AuditRetention time.Duration
 	// Listen is the address the server listens on; peers check it.
-	Listen   string
-	Location *time.Location
-	Log      *slog.Logger
-	Version  string
+	Listen string
+	// PortFixed: the port was given (--listen or UNAGIKUMA_LISTEN), so the
+	// web UI cannot change it.
+	PortFixed bool
+	// CanRestart: the program comes back by itself after a restart.
+	CanRestart bool
+	Location   *time.Location
+	Log        *slog.Logger
+	Version    string
 	// GatewayMonitors adds a ping monitor for the LAN gateway and the
 	// internet gateway (the program sets it; tests leave it off).
 	GatewayMonitors bool
