@@ -33,6 +33,8 @@ Add a monitor in the UI, use **Quick add monitors** to paste a list of targets, 
 
 ### As a service (Linux, systemd)
 
+A ready-to-copy unit is in [`contrib/systemd/unagikuma.service`](../contrib/systemd/unagikuma.service):
+
 ```ini
 # /etc/systemd/system/unagikuma.service
 [Unit]
@@ -51,6 +53,16 @@ AmbientCapabilities=CAP_NET_RAW
 WantedBy=multi-user.target
 ```
 
+Several installations on one machine use the template unit [`contrib/systemd/unagikuma@.service`](../contrib/systemd/unagikuma@.service). Each instance name is its own data directory under `/var/lib/unagikuma/`:
+
+```sh
+# /etc/systemd/system/unagikuma@.service  (copy from contrib/systemd)
+systemctl enable --now unagikuma@shop    # data in /var/lib/unagikuma/shop
+systemctl enable --now unagikuma@ops     # data in /var/lib/unagikuma/ops
+```
+
+The first installation takes port 8077; the next takes the next free port (see [Several installations on one machine](#command-line)). Pass `--listen` in `ExecStart` if you want a fixed address.
+
 `CAP_NET_RAW` is only needed for ICMP ping on systems where unprivileged ping sockets are disabled (`net.ipv4.ping_group_range`). Without either (as on a stock Debian or Ubuntu), a ping check knocks on TCP ports 443, 80 and 22 instead: a host that accepts or refuses the connection is up, and the result says it was checked over TCP. If all three ports stay silent, the check reports that this host lacks the privilege rather than marking the target down. `fallback=off` turns the TCP knock off.
 
 ### As a service (Windows)
@@ -62,7 +74,12 @@ In an Administrator PowerShell, in the folder of `unagikuma.exe`:
 .\unagikuma.exe service uninstall
 ```
 
-The service starts automatically and is restarted if it stops.
+The service starts automatically and is restarted if it stops. A second installation needs its own service name and data directory:
+
+```powershell
+.\unagikuma.exe service install --name unagikuma-shop -- server --data C:\ProgramData\unagikuma-shop --listen 127.0.0.1:8078 --log-file C:\ProgramData\unagikuma-shop\unagikuma.log
+.\unagikuma.exe service uninstall --name unagikuma-shop
+```
 
 Windows is supported, with some checks possibly unsupported:
 
@@ -452,7 +469,7 @@ An operator can also be limited to some `$SCOPE` sections (`region:north`, `bj`)
 
 ### Groups
 
-A monitor can belong to a **group** (`group=` on the monitor, the Group field in its form). An account that is not an administrator can be given some groups when it is created or edited (**Alerting › Users**): it then sees, and as an operator changes, only the monitors in those groups. An account given no groups sees everything.
+A monitor can belong to a **group** (`group=` on the monitor, the Group field in its form). An account that is not an administrator can be given some groups when it is created or edited (**Settings › Users**): it then sees, and as an operator changes, only the monitors in those groups. An account given no groups sees no monitors. Monitors with no group are visible only to administrators.
 
 An account limited to groups:
 
@@ -604,6 +621,10 @@ Main server flags: `--data DIR` (or `UNAGIKUMA_DATA`), `--listen ADDR` (or `UNAG
 Behind a reverse proxy that serves the app under a path prefix (for example `https://ops.example.com/uk/` → `http://127.0.0.1:8077/`), have the proxy strip the prefix and send `X-Forwarded-Prefix: /uk` with each request, and list the proxy in `--trusted-proxy`. The console, the public status pages and the session cookie then stay inside the prefix; without the header the same proxy setup serves a console whose assets and API calls escape to the root. Links in notifications and status-page feeds come from `--base-url`, so include the prefix there as well.
 
 **Several installations on one machine.** Each installation is a data directory of its own: start the program in another directory (or give it another `--data`) and it is a separate installation, with its own monitors, accounts and alerts. Without `--listen` it takes port 8077, or the first free one up to 8099 when that is taken, remembers it in `<data>/listen.port` and keeps it on later starts; the address is printed at start. A second server on a data directory that is already running is refused. With `--listen` the port is exactly the one given.
+
+The session cookie and the browser's saved language, style and view are scoped to the installation number, so two consoles on the same host (different ports) do not share a login. After upgrading to 3.0.1 you may need to sign in once more. On Linux, use the `unagikuma@.service` template (see [As a service](#as-a-service-linux-systemd)); on Windows, `service install --name` with a distinct `--data`.
+
+The name shown in notifications, when you do not pass `--instance` and have not set one under Settings, is the host name plus the data directory's last component (for example `box-shop` for `--data /var/lib/unagikuma/shop`). If that component is a generic name such as `data` or `unagikuma`, the listen port is used instead when it is not 8077 (`box-8078`); a single installation on port 8077 keeps the host name alone, as before. The cluster node name in `monitors.conf` (the `$FILE master=` / SOA name, default `unagikuma`) is not changed automatically: give each installation its own node name if you will join them in a cluster or want alerts to name the node distinctly.
 
 The port can also be changed under **Settings › System › Port**: the new one is checked to be free and takes effect at the next start (a **Restart now** button is offered where the program comes back by itself: always on Linux and macOS, as a service on Windows). If the new port is taken by then, the program stays on the one before and the page says so, so the console never ends up out of reach. A port given with `--listen` is changed where the program is started, and so is the port of a cluster's master, whose nodes keep its address.
 

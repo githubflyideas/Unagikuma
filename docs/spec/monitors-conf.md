@@ -151,7 +151,7 @@ $TAG site:bj color=#2f80ed description="Beijing office"
 bj       IN NODE "Beijing office" region=north
 sh       IN NODE "Shanghai office" region=north
 ops      IN CHANNEL feishu url=${secret:ops_webhook} system=yes
-admin    IN TEAM channels=ops
+default  IN POLICY chain=ops
 
 $DEFAULT tags=site:bj
 gw       IN PING 10.1.0.1
@@ -174,11 +174,11 @@ upper case by convention and read in any case.
 | `HTTP`, `TCP`, `PING`, `UDP`, `DNS`, `NTP`, `SNMP`, `SYSLOG`, `PUSH`, `EXEC`, `REDIS`, `POSTGRES`, `MYSQL`, `GRPC`, `DOCKER`, `DOMAIN`, `APP` | monitor | what is checked (URL, `host:port`, address, script, domain name); `PUSH` has none |
 | `NODE` | probe node | display title |
 | `CHANNEL` | where notifications go | the channel kind (`feishu`, `email`, `group`, …) |
-| `POLICY` | which channels, how often (files from before 2.6; see below) | none |
+| `POLICY` | which channels an alert goes to, and how (`chain=`, `mode=`, …) | none |
 | `PERIOD` | weekly time ranges | the ranges, quoted |
 | `MAINT` | maintenance window | title |
 | `STATUSPAGE` | public status page | title |
-| `TEAM` | people who own monitors (`team=` on a monitor), and their channels | none |
+| `TEAM` | **deprecated** (removed in 3.0; still parsed and rewritten on start, see below) | none |
 
 Options common to all monitors and never sent to the check itself:
 `title`, `description`, `tags`, `group`, `device`, `handler`, `was`. The
@@ -189,45 +189,60 @@ which names an unknown option and the line it is on.
 reserved record types: a file using them is rejected with `needs_newer`, so
 it fails clearly on a release that does not know them yet.
 
-### Teams and regions
+### Groups and regions
 
-A `TEAM` record lists the members of a team by user name: `members=`
-(comma-separated); `title=`/`description=` describe it. A user can be in
-several teams. A monitor belongs to a team with `team=NAME` (also through
-`$DEFAULT`); monitors without one belong to the built-in `admin` team,
-which needs no record. `team=` naming a team that is not defined is an
-error (`unknown_team`). The older `managers=`, `operators=` and `viewers=`
-are read as members.
-
-`channels=` lists the team's channels in order: the first that succeeds
-is enough, or all are sent to with `mode=all`. Every monitor of the team
-uses them, except a monitor with `mute=yes` (nothing is sent) or
-`system-channel=yes` (sent to the system channels). Channels with
-`system=yes` are the system channels: they get the system's own notices,
-the problems of a team without channels, and those a team's channels
-failed to deliver; the team's administrators are told in those cases.
-A channel with `report=no` does not take the daily status report.
-
-A `POLICY` record (files from before 2.6) still works for whatever names
-it with `policy=`. When the server starts, policies that only list
-channels are turned into team channels, keeping a copy of the file as
-`monitors.conf.before-teams`.
+A monitor may name a **group** with `group=` (also through `$DEFAULT`).
+Groups are labels: the monitor list, status pages and imports already
+use them, and an account that is not an administrator can be given some
+groups so that it sees (and, as an operator, changes) only those
+monitors. Monitors with no group are visible only to administrators.
+To keep departments entirely apart (their own channels, people and
+settings), run a second installation in another data directory.
 
 `region=NAME` on a monitor has it checked by the nodes whose `NODE`
 record has that `region=`; `region=global` is every node, also inside a
 `$SCOPE`. `region=` and `nodes=` exclude each other.
 
+Alerts go to the installation's alert channels (`default IN POLICY
+chain=…`), unless a monitor names its own policy. Channels with
+`system=yes` are the system channels: they get the system's own notices.
+A channel with `report=no` does not take the daily status report.
+
 `tenant=` is reserved for a later edition and ignored.
 
 ```conf
 $FILE revision=2026110401
-bj    IN NODE region=north
+bj     IN NODE region=north
 web-im IN CHANNEL feishu url=${secret:web_webhook}
-web   IN TEAM title="Web team" members=li,wang channels=web-im
+default IN POLICY chain=web-im
 
-shop  IN HTTP https://shop.example.com/ team=web region=north
+shop  IN HTTP https://shop.example.com/ group=web region=north
 gw    IN PING 10.0.0.1 mute=yes
 ```
+
+### Files from before 3.0 (teams)
+
+Release 3.0 removed `TEAM` records and `team=` options. They are still
+**parsed** so that an un-upgraded file can be rewritten on the first
+start of 3.0 or later: do not add new `TEAM` records. The rewrite keeps
+a copy as `monitors.conf.before-groups` and is recorded in the audit
+log:
+
+- the admin team's channels become the default policy (`default IN
+  POLICY chain=…`);
+- another team's channels, when they differ, become a policy of the
+  team's name, named by `policy=` on that team's monitors;
+- a team's monitors without `group=` get `group=<team>`;
+- a member of teams (and not of the admin team) is given those groups;
+- `team=` options and `TEAM` records are removed, and selectors that
+  named a team (`team:web`) name the group instead.
+
+In a cluster, upgrade the other machines before the master.
+
+A `POLICY` record that only lists channels was, in releases before 3.0,
+first turned into team channels (copy kept as
+`monitors.conf.before-teams`). Those team records are then rewritten
+as above.
 
 ### Renaming
 

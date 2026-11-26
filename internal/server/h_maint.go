@@ -43,7 +43,7 @@ func (s *Server) maintList(w http.ResponseWriter, r *http.Request) (any, error) 
 	out := []maintJSON{}
 	for _, v := range s.app.Engine().Maintenance() {
 		if mt := byName[v.Name]; groupOf(r) != nil && (mt == nil || !seesAll(r, mt.Monitors)) {
-			continue // a team member sees the windows of their own monitors only
+			continue // an account limited to groups sees the windows of their own monitors only
 		}
 		j := maintJSON{MaintView: v, Start: timeOrNull(v.Start), End: timeOrNull(v.End), Next: timeOrNull(v.Next), NextEnd: timeOrNull(v.NextEnd)}
 		if mt := byName[v.Name]; mt != nil {

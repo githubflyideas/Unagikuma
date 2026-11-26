@@ -790,15 +790,6 @@
           "sent": {
             "type": "integer"
           },
-          "team": {
-            "type": "string"
-          },
-          "teams": {
-            "items": {
-              "$ref": "#/components/schemas/reportTeamJSON"
-            },
-            "type": "array"
-          },
           "title": {
             "type": "string"
           }
@@ -809,8 +800,6 @@
           "enabled",
           "ok",
           "policy",
-          "team",
-          "teams",
           "title"
         ],
         "type": "object"
@@ -1348,25 +1337,6 @@
         ],
         "type": "object"
       },
-      "reportTeamJSON": {
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "receives": {
-            "type": "boolean"
-          },
-          "title": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "receives",
-          "title"
-        ],
-        "type": "object"
-      },
       "rowJSON": {
         "properties": {
           "area": {
@@ -1490,9 +1460,6 @@
             "type": "array"
           },
           "target": {
-            "type": "string"
-          },
-          "team": {
             "type": "string"
           },
           "title": {
@@ -1641,70 +1608,6 @@
         ],
         "type": "object"
       },
-      "teamJSON": {
-        "properties": {
-          "builtin": {
-            "type": "boolean"
-          },
-          "channels": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "description": {
-            "type": "string"
-          },
-          "etag": {
-            "type": "string"
-          },
-          "issue_channels": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "members": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "mode": {
-            "type": "string"
-          },
-          "monitors": {
-            "type": "integer"
-          },
-          "name": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "unknown": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "unreachable": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "channels",
-          "members",
-          "mode",
-          "monitors",
-          "name",
-          "title"
-        ],
-        "type": "object"
-      },
       "userReq": {
         "properties": {
           "areas": {
@@ -1722,14 +1625,14 @@
           "role": {
             "type": "string"
           },
-          "teams": {
+          "username": {
+            "type": "string"
+          },
+          "groups": {
             "items": {
               "type": "string"
             },
             "type": "array"
-          },
-          "username": {
-            "type": "string"
           }
         },
         "required": [
@@ -1737,7 +1640,6 @@
           "password",
           "person",
           "role",
-          "teams",
           "username"
         ],
         "type": "object"
@@ -10332,15 +10234,11 @@
                   },
                   "region": {
                     "type": "string"
-                  },
-                  "team": {
-                    "type": "string"
                   }
                 },
                 "required": [
                   "names",
-                  "region",
-                  "team"
+                  "region"
                 ],
                 "type": "object"
               }
@@ -16048,14 +15946,8 @@
           "content": {
             "application/json": {
               "schema": {
-                "properties": {
-                  "team": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "team"
-                ],
+                "properties": {},
+                "required": [],
                 "type": "object"
               }
             }
@@ -17388,7 +17280,6 @@
                     "registered": {},
                     "role": {},
                     "scopes": {},
-                    "teams": {},
                     "user": {},
                     "version": {}
                   },
@@ -20415,8 +20306,7 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "items": {},
-                    "multi_team": {}
+                    "items": {}
                   },
                   "type": "object"
                 }
