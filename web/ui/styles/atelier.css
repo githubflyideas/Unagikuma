@@ -49,10 +49,11 @@
 :root[data-style="atelier"] .side .foot button.linkish, :root[data-style="atelier"] .side .foot a { color: var(--accent); }
 :root[data-style="atelier"] .side .foot .btn { background: transparent; border: 1px solid var(--border-strong); color: var(--text); }
 /* the page title is a large italic head */
-:root[data-style="atelier"] .top { position: static; margin: 0 80px 0 110px; padding: 84px 12px 6px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
+:root[data-style="atelier"] .top { position: static; margin: 0 auto; width: 100%; max-width: 1180px; padding: 84px 12px 6px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
 :root[data-style="atelier"] .top > .btn.sm:first-child { display: none; }
 :root[data-style="atelier"] .top .crumbs { flex: 0 0 100%; order: -1; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 44px; line-height: 1.1; color: var(--accent); letter-spacing: .01em; margin-bottom: 6px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
-:root[data-style="atelier"] .page { margin: 0 80px 0 110px; width: auto; max-width: 1180px; padding: 18px 12px 80px; gap: 26px; }
+:root[data-style="atelier"] .main { padding-inline: 110px 80px; }
+:root[data-style="atelier"] .page { margin: 0 auto; width: 100%; max-width: 1180px; padding: 18px 12px 80px; gap: 26px; }
 /* ledger pages */
 :root[data-style="atelier"] .card, :root[data-style="atelier"] .modal { position: relative; outline: 0; border: 1px solid var(--border-strong); border-radius: 3px 10px 10px 3px; padding-inline-start: 46px; box-shadow: 0 2px 0 #fff8ec inset, 4px 6px 16px rgba(90, 60, 20, .16), 8px 12px 0 -4px #f3e7d2, 8px 12px 0 -3px var(--border-strong);
   background-color: var(--panel); background-image: radial-gradient(circle, #efe3cf 0 4.5px, #b99c72 5px 5.8px, transparent 6.4px), linear-gradient(to right, transparent 36px, rgba(185, 80, 13, .45) 36px 37.5px, transparent 37.5px), repeating-linear-gradient(to bottom, transparent 0 27px, rgba(120, 80, 30, .08) 27px 28px);
@@ -80,7 +81,7 @@
   :root[data-style="atelier"] .side .nav a, :root[data-style="atelier"] .side .nav a.on { width: auto !important; border-radius: 8px; }
   :root[data-style="atelier"] .side .foot { margin-top: auto; display: flex; flex-direction: column; }
   :root[data-style="atelier"] .brand, :root[data-style="atelier"] .brand .edition, :root[data-style="atelier"] .side .foot, :root[data-style="atelier"] .side .foot button.linkish { color: #fff6e8; }
-  :root[data-style="atelier"] .top, :root[data-style="atelier"] .page { margin: 0; }
+  :root[data-style="atelier"] .top, :root[data-style="atelier"] .page { margin: 0; } :root[data-style="atelier"] .main { padding-inline: 0; }
   :root[data-style="atelier"] .top { padding: 8px 12px; }
   :root[data-style="atelier"] .page { padding: 14px 12px 40px; max-width: none; }
 }

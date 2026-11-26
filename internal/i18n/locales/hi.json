@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "क्षेत्र {name}",
+"ui.user.area_node": "नोड {name}",
+"ui.user.areas_pick_hint": "चुनने के लिए क्लिक करें; \"सभी\" का अर्थ है सभी अनुभाग और साझा कॉन्फ़िगरेशन।",
+"ui.ch.members_pick_hint": "एक साथ सूचित होने वाले चैनल क्लिक करके चुनें।",
+"ui.import.area_global": "ग्लोबल (सभी नोड)",
 "ui.all": "सभी",
 "ui.attempts": "प्रयास",
 "ui.back": "वापस",

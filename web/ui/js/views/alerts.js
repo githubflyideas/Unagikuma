@@ -5,7 +5,7 @@ import { t, has, currentLang } from '../i18n.js';
 import { get, post, del, put, ifMatch, me } from '../api.js';
 import { ContactsTab, IssueDot, NewAddresses, addressKey } from './contacts.js';
 import { PeriodsTab } from './periods.js';
-import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle } from '../ui.js';
+import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, Pick } from '../ui.js';
 
 // kindLabel is a kind's name in the reader's language where it has one.
 function kindLabel(k) {
@@ -222,6 +222,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
   const [query, setQuery] = useState('');
   const people = useFetch(() => get('/people').catch(() => ({ people: [] })), []);
   const periods = useFetch(() => get('/periods').catch(() => ({ items: [] })), []);
+  const allChannels = useFetch(() => get('/channels').catch(() => []), []);
   const found = kinds.find(k => k.kind === kind);
   // E-mail goes to an SMTP server or through this machine's sendmail
   // command; each way shows only its own fields.
@@ -302,6 +303,12 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
         if (f.key === 'template') return html`<${TemplateField} label=${label} value=${v.replace(/\\n/g, '\n')} onChange=${(x) => set('template', x)} />`;
         if (f.key === 'at') return html`<${AtField} label=${label} kind=${kind} value=${v} onChange=${(x) => set('at', x)} people=${people.data && people.data.people} />`;
         if (f.key === 'prefix') return html`<${PrefixField} label=${label} value=${v} onChange=${(x) => set('prefix', x)} />`;
+        if (f.key === 'members') {
+          const others = (Array.isArray(allChannels.data) ? allChannels.data : (allChannels.data && allChannels.data.items) || [])
+            .filter(c => c.name !== name && c.name !== (initial && initial.name) && c.kind !== 'group').map(c => ({ value: c.name, label: c.name }));
+          return html`<${Field} label=${label} hint=${t('ui.ch.members_pick_hint')}>
+            <${Pick} options=${others} value=${v.split(/[\s,]+/).filter(Boolean)} onChange=${(x) => set('members', x.join(','))} /><//>`;
+        }
         if (f.key === 'period') return html`<${PeriodField} label=${label} value=${v} onChange=${(x) => set('period', x)} periods=${(periods.data && periods.data.items) || []} />`;
         if (f.type === 'select') {
           return html`<${Field} label=${label}><select value=${v} onChange=${(e) => set(f.key, e.target.value)}>${['', ...(f.options || [])].map(o => html`<option value=${o}>${o || '–'}</option>`)}</select><//>`;

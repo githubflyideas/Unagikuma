@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "リージョン {name}",
+"ui.user.area_node": "ノード {name}",
+"ui.user.areas_pick_hint": "クリックで選択。「全部」はすべてのセクションと共有設定です。",
+"ui.ch.members_pick_hint": "まとめて通知するチャネルをクリックで選択。",
+"ui.import.area_global": "グローバル（全ノード）",
 "ui.all": "すべて",
 "ui.attempts": "試行回数",
 "ui.back": "戻る",

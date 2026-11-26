@@ -139,7 +139,7 @@ export function ContactsTab() {
   const userOf = (p) => p.username && ((users.data && users.data.items) || []).find(u => u.username === p.username);
   const openLogin = (p) => {
     const u = userOf(p);
-    setLogin(u ? { initial: { id: u.id, username: u.username, password: '', role: u.role, areas: u.areas.join(', '), teams: u.teams || [] }, person: p }
+    setLogin(u ? { initial: { id: u.id, username: u.username, password: '', role: u.role, areas: u.areas || [], teams: u.teams || [] }, person: p }
       : { initial: { username: p.handle }, person: p });
   };
   const loginSaved = async (username) => {

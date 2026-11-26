@@ -91,7 +91,7 @@
 :root[data-style="starbridge"] .side .foot .row { flex-wrap: nowrap; }
 :root[data-style="starbridge"] .side .foot select { width: auto; max-width: 92px; font-size: 11px; padding: 3px 4px; }
 /* the top strip is only a title and a search */
-:root[data-style="starbridge"] .top { position: static; margin: 0 0 0 240px; padding: 14px 24px 4px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; }
+:root[data-style="starbridge"] .top { position: static; margin: 0 auto; width: 100%; max-width: 1380px; padding: 14px 24px 4px 240px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; }
 :root[data-style="starbridge"] .top > .btn.sm:first-child { display: none; }
 :root[data-style="starbridge"] .top .crumbs { font-size: 22px; font-weight: 200; letter-spacing: .38em; text-transform: uppercase; color: #fff; text-shadow: 0 0 18px rgba(192, 132, 252, .75); }
 :root[data-style="starbridge"] .top .crumbs::before { content: ""; }

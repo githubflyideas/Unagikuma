@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "Região {name}",
+"ui.user.area_node": "Nó {name}",
+"ui.user.areas_pick_hint": "Clique para escolher; «tudo» significa todas as secções e a configuração partilhada.",
+"ui.ch.members_pick_hint": "Clique nos canais a notificar em conjunto.",
+"ui.import.area_global": "Global (todos os nós)",
 "ui.all": "Todos",
 "ui.attempts": "Tentativas",
 "ui.back": "Voltar",

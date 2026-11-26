@@ -373,3 +373,18 @@ export function Combo({ value, onValue, options, placeholder, label }) {
     </select>
   </div>`;
 }
+
+// Pick chooses any number of values from a known list by clicking chips,
+// instead of typing names separated by commas. A chosen value the list
+// does not know (written by hand in the file) stays shown and can be
+// removed. options: [{ value, label }]; none: the label shown, chosen when
+// nothing is (e.g. "All").
+export function Pick({ options, value, onChange, none }) {
+  const known = new Set(options.map(o => o.value));
+  const all = [...options, ...value.filter(v => !known.has(v)).map(v => ({ value: v, label: v }))];
+  const toggle = (v) => onChange(value.includes(v) ? value.filter(x => x !== v) : [...value, v]);
+  return html`<div class="chips" role="group">
+    ${none && html`<button type="button" class=${'chip' + (value.length ? '' : ' on')} aria-pressed=${String(!value.length)} onClick=${() => onChange([])}>${none}</button>`}
+    ${all.map(o => html`<button type="button" class=${'chip' + (value.includes(o.value) ? ' on' : '')} aria-pressed=${String(value.includes(o.value))} onClick=${() => toggle(o.value)}>${value.includes(o.value) ? '✓ ' : ''}${o.label}</button>`)}
+  </div>`;
+}

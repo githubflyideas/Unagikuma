@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "Region {name}",
+"ui.user.area_node": "Knoten {name}",
+"ui.user.areas_pick_hint": "Zum Auswählen anklicken; „alle“ heißt alle Abschnitte und die gemeinsame Konfiguration.",
+"ui.ch.members_pick_hint": "Die Kanäle anklicken, die gemeinsam benachrichtigt werden.",
+"ui.import.area_global": "Global (alle Knoten)",
 "ui.all": "Alle",
 "ui.attempts": "Versuche",
 "ui.back": "Zurück",

@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "Регион {name}",
+"ui.user.area_node": "Узел {name}",
+"ui.user.areas_pick_hint": "Нажмите, чтобы выбрать; «все» — все разделы и общая конфигурация.",
+"ui.ch.members_pick_hint": "Выберите каналы, которые оповещаются вместе.",
+"ui.import.area_global": "Глобально (все узлы)",
 "ui.all": "Все",
 "ui.attempts": "Попытки",
 "ui.back": "Назад",

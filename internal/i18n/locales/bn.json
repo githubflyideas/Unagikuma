@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "অঞ্চল {name}",
+"ui.user.area_node": "নোড {name}",
+"ui.user.areas_pick_hint": "বাছতে ক্লিক করুন; \"সব\" মানে সব অংশ ও শেয়ার করা কনফিগারেশন।",
+"ui.ch.members_pick_hint": "একসাথে জানানোর চ্যানেলগুলো ক্লিক করে বাছুন।",
+"ui.import.area_global": "গ্লোবাল (সব নোড)",
 "ui.all": "সব",
 "ui.attempts": "চেষ্টা",
 "ui.back": "ফিরে যান",

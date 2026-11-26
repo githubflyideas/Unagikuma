@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "지역 {name}",
+"ui.user.area_node": "노드 {name}",
+"ui.user.areas_pick_hint": "클릭해 선택하세요. \"전체\"는 모든 구역과 공유 설정입니다.",
+"ui.ch.members_pick_hint": "함께 알릴 채널을 클릭해 선택하세요.",
+"ui.import.area_global": "전역 (모든 노드)",
 "ui.all": "전체",
 "ui.attempts": "시도 횟수",
 "ui.back": "뒤로",

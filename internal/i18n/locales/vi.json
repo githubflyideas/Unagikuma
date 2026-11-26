@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "Vùng {name}",
+"ui.user.area_node": "Nút {name}",
+"ui.user.areas_pick_hint": "Nhấn để chọn; \"tất cả\" là mọi phần và cấu hình dùng chung.",
+"ui.ch.members_pick_hint": "Nhấn chọn các kênh được báo cùng lúc.",
+"ui.import.area_global": "Toàn cục (mọi nút)",
 "ui.all": "Tất cả",
 "ui.attempts": "Số lần thử",
 "ui.back": "Quay lại",

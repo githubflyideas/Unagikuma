@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "Wilayah {name}",
+"ui.user.area_node": "Node {name}",
+"ui.user.areas_pick_hint": "Klik untuk memilih; \"semua\" berarti semua bagian dan konfigurasi bersama.",
+"ui.ch.members_pick_hint": "Klik saluran yang diberi tahu bersama.",
+"ui.import.area_global": "Global (semua node)",
 "ui.all": "Semua",
 "ui.attempts": "Percobaan",
 "ui.back": "Kembali",

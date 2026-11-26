@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "Region {name}",
+"ui.user.area_node": "Node {name}",
+"ui.user.areas_pick_hint": "Click to choose; \"all\" means every section and the shared configuration.",
+"ui.ch.members_pick_hint": "Click the channels to notify together.",
+"ui.import.area_global": "Global (every node)",
 "lang.name": "English",
 "status.ok": "OK",
 "status.degraded": "DEGRADED",

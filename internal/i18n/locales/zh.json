@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "区域 {name}",
+"ui.user.area_node": "节点 {name}",
+"ui.user.areas_pick_hint": "点击选择；“全部”表示所有段落及共享配置。",
+"ui.ch.members_pick_hint": "点击选择要一起通知的通道。",
+"ui.import.area_global": "全局（所有节点）",
 "lang.name": "中文",
 "status.ok": "正常",
 "status.degraded": "变慢",

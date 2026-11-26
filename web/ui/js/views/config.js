@@ -177,7 +177,13 @@ function ImportTab() {
   const [manager, setManager] = useState('');
   const users = useFetch(() => get('/users').catch(() => ({ items: [] })), []);
   const mons = useFetch(() => get('/monitors'), []);
-  const areas = [...new Set(((mons.data && mons.data.items) || []).map(m => m.area).filter(Boolean))].sort();
+  const regionList = useFetch(() => get('/regions').catch(() => ({ items: [] })), []);
+  const nodeList = useFetch(() => get('/nodes').catch(() => ({ items: [] })), []);
+  const areas = [...new Set([
+    ...((mons.data && mons.data.items) || []).map(m => m.area),
+    ...((regionList.data && regionList.data.items) || []).filter(r => !r.builtin).map(r => 'region:' + r.name),
+    ...((nodeList.data && (nodeList.data.items || nodeList.data.nodes)) || []).map(n => n.name),
+  ].filter(Boolean))].sort();
   const reset = () => { setPrev(null); setDone(null); };
   const send = async (apply) => {
     setBusy(true);
@@ -229,8 +235,10 @@ function ImportTab() {
         </select><//>`}
       ${target === 'global' && html`<div class="two">
         <${Field} label=${t('ui.import.area')} hint=${t('ui.import.area_hint')}>
-          <input type="text" class="ltr" list="import-areas" value=${area} placeholder="region:north" onInput=${(e) => { setArea(e.target.value); reset(); }} />
-          <datalist id="import-areas">${areas.map(a => html`<option value=${a} />`)}</datalist><//>
+          <select value=${area} onChange=${(e) => { setArea(e.target.value); reset(); }}>
+            <option value="">${t('ui.import.area_global')}</option>
+            ${[...new Set([...areas, ...(area ? [area] : [])])].map(a => html`<option value=${a}>${a}</option>`)}
+          </select><//>
         <${Field} label=${t('ui.import.manager')} hint=${t('ui.import.manager_hint')}>
           <select value=${manager} disabled=${!area.trim() || source === 'checkmate' || source === 'gatus' || source === 'unagikuma'} onChange=${(e) => setManager(e.target.value)}>
             <option value="">—</option>

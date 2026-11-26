@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "علاقہ {name}",
+"ui.user.area_node": "نوڈ {name}",
+"ui.user.areas_pick_hint": "منتخب کرنے کے لیے کلک کریں؛ \"سب\" کا مطلب تمام حصے اور مشترکہ کنفیگریشن ہے۔",
+"ui.ch.members_pick_hint": "ایک ساتھ اطلاع دینے والے چینل کلک کر کے منتخب کریں۔",
+"ui.import.area_global": "عالمی (تمام نوڈ)",
 "ui.all": "سب",
 "ui.attempts": "کوششیں",
 "ui.back": "واپس",

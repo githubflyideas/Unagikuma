@@ -1,4 +1,9 @@
 {
+"ui.user.area_region": "المنطقة {name}",
+"ui.user.area_node": "العقدة {name}",
+"ui.user.areas_pick_hint": "انقر للاختيار؛ «الكل» يعني كل الأقسام والإعداد المشترك.",
+"ui.ch.members_pick_hint": "انقر القنوات التي تُبلَّغ معًا.",
+"ui.import.area_global": "عام (كل العقد)",
 "ui.all": "الكل",
 "ui.attempts": "المحاولات",
 "ui.back": "رجوع",
