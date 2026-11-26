@@ -95,4 +95,4 @@ Tapez le nouveau mot de passe deux fois (il ne s'affiche pas). Ajoutez `--genera
 
 ## Licence
 
-Business Source License 1.1, voir [LICENSE](LICENSE). L'utilisation en production est gratuite dans les limites gratuites (100 sondes, 5 comptes, un import peut porter le total à 200), sans les contourner et sans l'offrir comme service à des tiers ; au-delà, une licence commerciale est nécessaire. Chaque version passe sous Apache License 2.0 quatre ans après sa publication. Les versions jusqu'à v2.6.37 ont été publiées sous Apache License 2.0 et le restent.
+Business Source License 1.1, voir [LICENSE](LICENSE). L'utilisation en production est gratuite dans les limites gratuites (5 comptes ; 300 sondes pour une installation seule, en cluster 100 partagées plus 100 propres à chaque site), sans les contourner et sans l'offrir comme service à des tiers ; au-delà, une licence commerciale est nécessaire. Chaque version passe sous Apache License 2.0 quatre ans après sa publication. Les versions jusqu'à v2.6.37 ont été publiées sous Apache License 2.0 et le restent.

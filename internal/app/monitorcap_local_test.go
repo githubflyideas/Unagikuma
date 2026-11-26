@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/githubflyideas/unagikuma/internal/cluster"
 	"github.com/githubflyideas/unagikuma/internal/config"
 )
 
@@ -20,17 +19,17 @@ func localZone(n int, prefix string) string {
 	return b.String()
 }
 
-// This site's own monitors count toward the monitor limit like the shared
-// ones: a zone that would pass it is refused, and with the zone in place a
-// shared monitor past the limit is refused too.
+// In a single installation this site's own monitors count toward the
+// limit like the shared ones: a zone that would pass it is refused, and
+// with the zone in place a shared monitor past the limit is refused too.
 func TestSiteLocalCountsTowardLimit(t *testing.T) {
-	a, _, _, dir := newApp(t, capConfig(95))
+	a, _, _, dir := newApp(t, capConfig(295))
 	defer a.Store().Close()
 	if _, _, err := a.SetSiteLocal(localZone(5, "loc"), "test"); err != nil {
 		t.Fatalf("five local within the limit: %v", err)
 	}
-	if got := a.MonitorCount(a.Config().Config); got != 100 {
-		t.Fatalf("count with the zone: %d, want 100", got)
+	if got := a.MonitorCount(a.Config().Config); got != 300 {
+		t.Fatalf("count with the zone: %d, want 300", got)
 	}
 	if _, diags, err := a.SetSiteLocal(localZone(6, "loc"), "test"); err == nil || len(diags) != 1 || diags[0].Code != "monitor_limit" {
 		t.Fatalf("sixth local past the limit: %v %v", err, diags)
@@ -49,20 +48,41 @@ func TestSiteLocalCountsTowardLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.Reapply()
-	if got := a.MonitorCount(a.Config().Config); got != 100 {
-		t.Fatalf("count after a hand edit past the limit: %d, want 100", got)
+	if got := a.MonitorCount(a.Config().Config); got != 300 {
+		t.Fatalf("count after a hand edit past the limit: %d, want 300", got)
 	}
 	if b := a.Banner(); b == nil || b.Code != "monitor_limit" {
 		t.Fatalf("banner: %+v", b)
 	}
 }
 
+// In a cluster the shared configuration has its limit and each site's own
+// zone its own, judged apart.
+func TestClusterLimitsApart(t *testing.T) {
+	a, _, _, _ := newApp(t, capConfig(100)+"b IN NODE Beijing\n")
+	defer a.Store().Close()
+	if _, err := a.EditConfig("test", "add", func(f *config.File) error {
+		return f.UpsertRecord(config.RecordSpec{Name: "one-more", Type: "PING", Target: "10.9.9.9"})
+	}); err == nil {
+		t.Fatal("a 101st shared monitor was accepted")
+	}
+	if _, _, err := a.SetSiteLocal(localZone(99, "loc"), "test"); err != nil {
+		t.Fatalf("99 of the site's own next to 100 shared: %v", err)
+	}
+	if _, diags, err := a.SetSiteLocal(localZone(99, "loc")+"loc-x IN PING 10.30.0.1\nloc-y IN PING 10.30.0.2\n", "test"); err == nil || len(diags) != 1 || diags[0].Code != "monitor_limit" {
+		t.Fatalf("101 of the site's own accepted: %v", err)
+	}
+	if c := a.MonitorCap(); c.Used != 100 || c.Limit != 100 || c.SiteUsed != 99 || c.SiteLimit != 100 {
+		t.Fatalf("standing: %+v", c)
+	}
+}
+
 // The limit holds at startup: a file grown past it while the program was
 // stopped is not applied, the last version runs on.
 func TestStartupHoldsMonitorLimit(t *testing.T) {
-	a, _, _, dir := newApp(t, capConfig(100))
+	a, _, _, dir := newApp(t, capConfig(300))
 	a.Store().Close()
-	grown := strings.Replace(capConfig(110), "2026102301", "2026102302", 1)
+	grown := strings.Replace(capConfig(310), "2026102301", "2026102302", 1)
 	if err := os.WriteFile(filepath.Join(dir, "monitors.conf"), []byte(grown), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -71,38 +91,24 @@ func TestStartupHoldsMonitorLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer b.Store().Close()
-	if got := len(b.Config().Config.Monitors); got != 100 {
-		t.Fatalf("monitors after a restart past the limit: %d, want the last 100", got)
+	if got := len(b.Config().Config.Monitors); got != 300 {
+		t.Fatalf("monitors after a restart past the limit: %d, want the last 300", got)
 	}
 	if bn := b.Banner(); bn == nil || bn.Code != "monitor_limit" {
 		t.Fatalf("banner: %+v", bn)
 	}
 }
 
-// A first start takes the file like an import: up to 200 it runs, past
-// that nothing is monitored until it is cut down or registered.
-func TestFirstStartTakesUpToTheImportCeiling(t *testing.T) {
-	a, _, _, _ := newApp(t, capConfig(150))
-	if got := len(a.Config().Config.Monitors); got != 150 {
-		t.Fatalf("150 on a first start: %d", got)
+// A first start has nothing to compare with: the file runs as it is, past
+// the limit too, and the standing says it is over.
+func TestFirstStartRunsEverything(t *testing.T) {
+	a, _, _, _ := newApp(t, capConfig(350))
+	defer a.Store().Close()
+	if got := len(a.Config().Config.Monitors); got != 350 {
+		t.Fatalf("350 on a first start ran %d", got)
 	}
-	a.Store().Close()
-	b, _, _, dir := newApp(t, capConfig(250))
-	defer b.Store().Close()
-	if got := len(b.Config().Config.Monitors); got != 0 {
-		t.Fatalf("250 on a first start ran %d monitors", got)
-	}
-	if bn := b.Banner(); bn == nil || bn.Code != "monitor_limit_first" {
-		t.Fatalf("banner: %+v", bn)
-	}
-	// Cut down to 200 with a higher revision: monitoring starts.
-	cut := strings.Replace(capConfig(200), "2026102301", "2026102302", 1)
-	if err := os.WriteFile(filepath.Join(dir, "monitors.conf"), []byte(cut), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	b.cfg.check()
-	if got := len(b.Config().Config.Monitors); got != 200 {
-		t.Fatalf("after cutting to 200: %d", got)
+	if c := a.MonitorCap(); !c.Over || c.Used != 350 {
+		t.Fatalf("standing: %+v", c)
 	}
 }
 
@@ -116,23 +122,22 @@ func gatusFile(n int) []byte {
 }
 
 // An import can go to this site's own zone: the shared file is untouched,
-// the monitors run here, and the import ceiling (200), not the everyday
-// limit, holds the count.
+// the monitors run here, and the monitor limit holds the count.
 func TestImportIntoSiteLocal(t *testing.T) {
-	a, _, _, _ := newApp(t, capConfig(95))
+	a, _, _, _ := newApp(t, capConfig(285))
 	defer a.Store().Close()
 	before := a.Config().Text
-	if _, res, _, err := a.ImportKuma(gatusFile(20), "test", KumaOptions{Source: "gatus", Local: true}); err != nil || res.Monitors != 20 {
+	if _, res, _, err := a.ImportKuma(gatusFile(20), "test", KumaOptions{Source: "gatus", Local: true}); err != nil || res.Monitors != 15 {
 		t.Fatalf("import into the site's zone: %v %+v", err, res)
 	}
 	if a.Config().Text != before {
 		t.Fatal("the shared configuration changed")
 	}
-	if !strings.Contains(a.SiteLocal(), "imp020") {
+	if !strings.Contains(a.SiteLocal(), "imp015") || strings.Contains(a.SiteLocal(), "imp016") {
 		t.Fatalf("zone: %q", a.SiteLocal())
 	}
-	if got := a.MonitorCount(a.Config().Config); got != 115 {
-		t.Fatalf("count after importing 20 locally: %d, want 115 (past 100, within the ceiling)", got)
+	if got := a.MonitorCount(a.Config().Config); got != 300 {
+		t.Fatalf("count after the import: %d, want 300", got)
 	}
 }
 
@@ -150,9 +155,8 @@ func TestImportOnNodeIsLocalOnly(t *testing.T) {
 	}
 }
 
-// The master keeps what a node says about its own configuration: a copy of
-// its text (never applied) and its monitors, counted toward the limit for
-// the nodes the configuration still has.
+// The master keeps a copy of a node's own configuration (never applied,
+// counted toward no limit).
 func TestMasterKeepsSiteLocalReports(t *testing.T) {
 	a, _, _, dir := newApp(t, capConfig(50)+"b IN NODE Beijing\n")
 	defer a.Store().Close()
@@ -161,45 +165,7 @@ func TestMasterKeepsSiteLocalReports(t *testing.T) {
 	if b, err := os.ReadFile(filepath.Join(dir, "sites", "b."+SiteLocalFile)); err != nil || string(b) != text {
 		t.Fatalf("copy: %v %q", err, b)
 	}
-	if got := a.MonitorCount(a.Config().Config); got != 80 {
-		t.Fatalf("count with b's own monitors: %d, want 80", got)
-	}
-	// A node the configuration no longer has is not counted.
-	a.onSiteLocalReport("gone", 40, "h2", nil)
-	if got := a.MonitorCount(a.Config().Config); got != 80 {
-		t.Fatalf("count with a removed node: %d", got)
-	}
-	// The shared configuration can now grow only to 100 with b's 30.
-	if _, err := a.EditConfig("test", "add", func(f *config.File) error {
-		for i := 0; i < 21; i++ {
-			if err := f.UpsertRecord(config.RecordSpec{Name: fmt.Sprintf("x%02d", i), Type: "PING", Target: "10.9.9.9"}); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err == nil {
-		t.Fatal("101 with b's own monitors accepted")
-	}
-}
-
-// A node judges additions to its own configuration by the master's word on
-// the cluster's standing; with no limit there, nothing is refused.
-func TestNodeJudgesLocalByClusterUsage(t *testing.T) {
-	a, _, _, _ := newApp(t, capConfig(5))
-	defer a.Store().Close()
-	a.am.member = &Membership{Node: "b", Server: "https://master.invalid"}
-	a.setClusterUsage(cluster.Usage{Used: 98, Limit: 100})
-	if _, diags, err := a.SetSiteLocal(localZone(3, "loc"), "test"); err == nil || len(diags) != 1 || diags[0].Code != "monitor_limit" {
-		t.Fatalf("101 in the cluster accepted: %v", err)
-	}
-	if _, _, err := a.SetSiteLocal(localZone(2, "loc"), "test"); err != nil {
-		t.Fatalf("100 in the cluster refused: %v", err)
-	}
-	if c := a.MonitorCap(); c.Limit != 100 || c.Used != 98 {
-		t.Fatalf("the node shows its own standing, not the cluster's: %+v", c)
-	}
-	a.setClusterUsage(cluster.Usage{Used: 500, Limit: 0})
-	if _, _, err := a.SetSiteLocal(localZone(50, "loc"), "test"); err != nil {
-		t.Fatalf("a registered cluster refused: %v", err)
+	if got := a.MonitorCount(a.Config().Config); got != 50 {
+		t.Fatalf("count: %d, want 50", got)
 	}
 }

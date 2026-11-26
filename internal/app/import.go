@@ -33,14 +33,14 @@ type KumaOptions struct {
 func (a *App) convert(data []byte, o KumaOptions) (*importer.Result, error) {
 	opts := importer.Options{Area: o.Area, File: "upload", SecretExists: a.secrets.Has, Existing: a.Config().File,
 		UserExists: func(name string) bool { _, err := a.store.UserID(name); return err == nil }}
-	// The import ceiling: an import may take the counted total to
-	// importer.ImportCeiling. It binds only when the imported monitors
-	// land in the master's running set; monitors placed on other nodes
-	// are counted there, not here.
-	cfg := a.Config().Config
-	opts.TotalNow = a.MonitorCount(cfg)
-	if o.Local || AreaInMasterSet(o.Area, cfg) {
-		opts.TotalLimit = importer.ImportCeiling
+	// An import is held to the same limit as any other addition: in a
+	// single installation the total, in a cluster the shared
+	// configuration's, or this site's own zone's when it goes there.
+	st := a.License().State()
+	cfg := a.EffectiveConfig()
+	opts.TotalNow, opts.TotalLimit = a.MonitorCount(cfg), LimitFor(st, cfg)
+	if o.Local && IsCluster(cfg) {
+		opts.TotalNow, opts.TotalLimit = a.localMonitorCount(cfg, a.appliedSiteLocal()), SiteLimit(st)
 	}
 	switch o.Source {
 	case "nagios":
@@ -227,7 +227,7 @@ func (a *App) importSiteLocal(res *importer.Result, author string) error {
 	if err := f.AppendBlock(res.Render(f.EndArea())); err != nil {
 		return err
 	}
-	_, diags, err := a.setSiteLocal(string(f.Bytes()), author, true)
+	_, diags, err := a.setSiteLocal(string(f.Bytes()), author)
 	if err != nil && len(diags) > 0 {
 		return &InvalidError{Diags: diags}
 	}

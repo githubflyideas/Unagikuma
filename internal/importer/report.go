@@ -115,7 +115,7 @@ func (r *Result) applyCeiling() {
 		}
 		it.Status = StatusLeftOut
 		it.ceiling = true
-		it.Why = fmt.Sprintf("the import limit is %d monitors in total and %d are already here", r.totalLimit, r.totalNow)
+		it.Why = fmt.Sprintf("the monitor limit is %d and %d are already here", r.totalLimit, r.totalNow)
 		it.Todo = "Remove monitors first, or register for a higher limit, then import this one again."
 		capped = append(capped, it.Name)
 	}
@@ -143,7 +143,7 @@ func (r *Result) applyCeiling() {
 		r.Monitors -= len(capped)
 	}
 	r.TotalAfter = r.totalNow + kept
-	r.Info = append(r.Info, fmt.Sprintf("Monitors after this import: %d. An import may take the total to at most %d.", r.TotalAfter, r.totalLimit))
+	r.Info = append(r.Info, fmt.Sprintf("Monitors after this import: %d. The monitor limit is %d.", r.TotalAfter, r.totalLimit))
 }
 
 // secretRefs lists the ${secret:NAME} references in an option value.

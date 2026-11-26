@@ -12,12 +12,14 @@ Additional Use Grant: You may make production use of the Licensed Work,
 
                       (1) Your use stays within the limits that the Licensed
                       Work enforces when no licence file issued by the
-                      Licensor is installed — no more than 100 monitors, not
-                      counting the gateway monitors the Licensed Work adds by
-                      itself, and no more than 5 user accounts, where an
-                      import or a restore may bring the number of monitors up
-                      to 200 — or within the limits stated in a licence file
-                      the Licensor issued to You;
+                      Licensor is installed — no more than 5 user accounts;
+                      on a single installation no more than 300 monitors; in
+                      a cluster no more than 100 monitors in the shared
+                      configuration and no more than 100 in each site's own
+                      configuration; in each case not counting the gateway
+                      monitors the Licensed Work adds by itself — or within
+                      the limits stated in a licence file the Licensor issued
+                      to You;
 
                       (2) You do not modify, disable or circumvent those
                       limits, the licence checks or the trial periods of the

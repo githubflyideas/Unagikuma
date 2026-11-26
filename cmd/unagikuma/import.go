@@ -78,6 +78,7 @@ type importJob struct {
 	file        *config.File
 	cfg         *config.Config
 	st          *store.Store
+	lic         license.State // the data directory's licence (zero: none)
 	sec         *store.Secrets
 	extra       []string
 	firstAdmin  string
@@ -257,6 +258,7 @@ func (j *importJob) openStore() error {
 	// data directory, or the free number without one.
 	if lic, err := license.OpenWith(j.data, license.Release()); err == nil {
 		st.UserLimit = func() int { return app.UserLimit(lic.State()) }
+		j.lic = lic.State()
 	} else {
 		st.UserLimit = func() int { return license.FreeUsers }
 	}
@@ -274,26 +276,22 @@ func (j *importJob) openStore() error {
 }
 
 // countedTotal is the target installation's monitor count against
-// the limit, counted the server's way (see app.CountMasterMonitors).
+// the limit, counted the server's way (see app.CountMonitors).
 func (j *importJob) countedTotal() int {
 	if j.cfg == nil {
 		return 0
 	}
 	if j.st == nil {
-		return app.CountMasterMonitors(j.cfg, nil)
+		return app.CountMonitors(j.cfg, nil)
 	}
-	return app.CountMasterMonitors(j.cfg, func(name string) bool { return app.GatewaySeeded(j.st.Setting, name) })
+	return app.CountMonitors(j.cfg, func(name string) bool { return app.GatewaySeeded(j.st.Setting, name) })
 }
 
 func (j *importJob) convert() (*importer.Result, error) {
 	o := importer.Options{Area: j.area, SecretExists: func(n string) bool { return j.sec != nil && j.sec.Has(n) },
 		UserExists: func(n string) bool { return j.st != nil && userExists(j.st, n) }}
-	// The import ceiling, as on the server: it binds when the imported
-	// monitors land in the master's running set.
-	o.TotalNow = j.countedTotal()
-	if app.AreaInMasterSet(j.area, j.cfg) {
-		o.TotalLimit = importer.ImportCeiling
-	}
+	// The monitor limit, as on the server.
+	o.TotalNow, o.TotalLimit = j.countedTotal(), app.LimitFor(j.lic, j.cfg)
 	switch j.source {
 	case "gatus", "checkmate":
 		res, err := j.runAdapter(j.cfg, o)

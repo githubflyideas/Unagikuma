@@ -22,7 +22,7 @@ func capConfig(n int) string {
 	return b.String()
 }
 
-func TestCountMasterMonitors(t *testing.T) {
+func TestCountMonitors(t *testing.T) {
 	a, _, _, _ := newApp(t, testConfig+`bj IN NODE "北京" region=north
 sh IN NODE "上海" region=east
 only-bj     IN PING 10.10.0.1 nodes=bj
@@ -32,15 +32,9 @@ north-mon   IN PING 10.10.0.3
 $SCOPE *
 `)
 	defer a.Store().Close()
-	// web, dns (global), backup (push: received at the master) and
-	// only-master count; only-bj and north-mon run elsewhere.
-	if got := a.MonitorCount(a.Config().Config); got != 4 {
-		t.Fatalf("count: %d, want 4", got)
-	}
-	if !AreaInMasterSet("", a.Config().Config) || !AreaInMasterSet("*", a.Config().Config) ||
-		AreaInMasterSet("region:north", a.Config().Config) || !AreaInMasterSet("unagikuma", a.Config().Config) ||
-		AreaInMasterSet("bj", a.Config().Config) {
-		t.Fatal("area placement")
+	// In a cluster every shared monitor counts, wherever it runs.
+	if got := a.MonitorCount(a.Config().Config); got != 6 {
+		t.Fatalf("count: %d, want 6", got)
 	}
 	// The seeded gateway monitors are not the user's: with their
 	// markers set, records of their names stop counting.
@@ -56,14 +50,14 @@ $SCOPE *
 		t.Fatal(err)
 	}
 	// internet-gateway has no marker yet, so it counts; lan-gateway does not.
-	if got := a.MonitorCount(a.Config().Config); got != 5 {
-		t.Fatalf("count with gateways: %d, want 5", got)
+	if got := a.MonitorCount(a.Config().Config); got != 7 {
+		t.Fatalf("count with gateways: %d, want 7", got)
 	}
 	if err := a.Store().SetSetting("auto_monitor_internet_gateway", "203.0.113.1"); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.MonitorCount(a.Config().Config); got != 4 {
-		t.Fatalf("count with both gateways seeded: %d, want 4", got)
+	if got := a.MonitorCount(a.Config().Config); got != 6 {
+		t.Fatalf("count with both gateways seeded: %d, want 6", got)
 	}
 }
 
@@ -74,8 +68,8 @@ func TestMonitorLimitValues(t *testing.T) {
 	if got := MonitorLimit(license.State{Registered: true}); got != 0 {
 		t.Fatalf("registered, no field: %d (want no limit)", got)
 	}
-	if got := MonitorLimit(license.State{Registered: true, MaxMonitors: 150}); got != 150 {
-		t.Fatalf("registered 150: %d", got)
+	if got := MonitorLimit(license.State{Registered: true, MaxMonitors: 400}); got != 400 {
+		t.Fatalf("registered 400: %d", got)
 	}
 	if got := MonitorLimit(license.State{Registered: true, MaxMonitors: 50}); got != license.FreeMonitors {
 		t.Fatalf("a licence never gives fewer than free: %d", got)
@@ -87,9 +81,9 @@ func TestMonitorLimitValues(t *testing.T) {
 // (as an import can leave an installation) edits and removals pass,
 // growth does not, and at the limit growth opens again below it.
 func TestMonitorCapRatchet(t *testing.T) {
-	a, _, _, _ := newApp(t, capConfig(100))
+	a, _, _, _ := newApp(t, capConfig(300))
 	defer a.Store().Close()
-	if got := a.MonitorCount(a.Config().Config); got != 100 {
+	if got := a.MonitorCount(a.Config().Config); got != 300 {
 		t.Fatalf("count: %d", got)
 	}
 	add := func(name string) error {
@@ -99,7 +93,7 @@ func TestMonitorCapRatchet(t *testing.T) {
 		return err
 	}
 	if err := add("one-more"); err == nil {
-		t.Fatal("101st monitor accepted")
+		t.Fatal("301st monitor accepted")
 	} else {
 		var ie *InvalidError
 		if !errors.As(err, &ie) || len(ie.Diags) != 1 || ie.Diags[0].Code != "monitor_limit" {
@@ -113,12 +107,12 @@ func TestMonitorCapRatchet(t *testing.T) {
 		t.Fatalf("in-place edit at the limit: %v", err)
 	}
 	// The diag itself, over the limit: 120 running.
-	_, cfg120, d := config.Load("monitors.conf", []byte(capConfig(120)), config.Options{})
+	_, cfg120, d := config.Load("monitors.conf", []byte(capConfig(320)), config.Options{})
 	if config.HasErrors(d) {
 		t.Fatalf("load 120: %v", d)
 	}
-	_, cfg121, _ := config.Load("monitors.conf", []byte(capConfig(121)), config.Options{})
-	_, cfg119, _ := config.Load("monitors.conf", []byte(capConfig(119)), config.Options{})
+	_, cfg121, _ := config.Load("monitors.conf", []byte(capConfig(321)), config.Options{})
+	_, cfg119, _ := config.Load("monitors.conf", []byte(capConfig(319)), config.Options{})
 	if got := a.monitorCapDiag(cfg120, cfg121); got == nil || got.Code != "monitor_limit" {
 		t.Fatalf("grow past cap and current: %+v", got)
 	}
@@ -132,7 +126,7 @@ func TestMonitorCapRatchet(t *testing.T) {
 		t.Fatal("grow back to 120 from 119 accepted")
 	}
 	// Down at the limit, room opens below it.
-	if _, err := a.EditConfig("test", "del", func(f *config.File) error { return f.DeleteRecord("m100") }); err != nil {
+	if _, err := a.EditConfig("test", "del", func(f *config.File) error { return f.DeleteRecord("m300") }); err != nil {
 		t.Fatalf("delete at the limit: %v", err)
 	}
 	if err := add("back"); err != nil {

@@ -95,4 +95,4 @@ Escribe la nueva contraseña dos veces (no se muestra). Añade `--generate` para
 
 ## Licencia
 
-Business Source License 1.1, consulta [LICENSE](LICENSE). El uso en producción es gratuito dentro de los límites gratuitos (100 monitores, 5 cuentas, una importación puede llevar el total a 200), sin eludirlos y sin ofrecerlo como servicio a terceros; por encima hace falta una licencia comercial. Cada versión pasa a Apache License 2.0 cuatro años después de publicarse. Las versiones hasta la v2.6.37 se publicaron con la Apache License 2.0 y siguen bajo ella.
+Business Source License 1.1, consulta [LICENSE](LICENSE). El uso en producción es gratuito dentro de los límites gratuitos (5 cuentas; 300 monitores en una instalación única, en un clúster 100 compartidos más 100 propios por sitio), sin eludirlos y sin ofrecerlo como servicio a terceros; por encima hace falta una licencia comercial. Cada versión pasa a Apache License 2.0 cuatro años después de publicarse. Las versiones hasta la v2.6.37 se publicaron con la Apache License 2.0 y siguen bajo ella.

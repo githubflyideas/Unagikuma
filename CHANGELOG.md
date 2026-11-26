@@ -3,19 +3,20 @@
 ## Unreleased
 
 **Added**
-- In a cluster, each site's own configuration reaches the master: a copy of it is kept there (never applied, never sent on), so a site's own monitors survive the loss of its disk, and its monitors count toward the cluster's monitor limit. The master sends every site the cluster's standing against the limit; a site judges additions to its own configuration by it, and its registration page shows it. Without word from the master, a site keeps to the last standing it had.
+- In a cluster, each site's own configuration reaches the master as a copy (`<data>/sites/<node>.local.monitors.conf`, never applied, never sent on), so a site's own monitors survive the loss of its disk.
 - On a node of a cluster, the console says that the shared configuration is changed on the master and links to it, and the buttons that would change it (quick add, add monitor) are greyed out instead of failing on save. This site's own monitors are still edited on the node.
-- An import can go into this site's own configuration instead of the shared one ("Import into" in a cluster). On a node it is the only choice; a shared import there is refused at once, before anything is stored. An import into the site's own configuration is held by the same 200-monitor import ceiling.
+- An import can go into this site's own configuration instead of the shared one ("Import into" in a cluster). On a node it is the only choice; a shared import there is refused at once, before anything is stored. An import is held by the same monitor limit as any other addition.
 - In a cluster, a monitor that other sites check too asks them to check it at once the moment it first fails here, before the failure is confirmed. When the alert goes out after the retries, its site line says for each other site whether it was checked after the failure or gives that site's last word and how long before the failure it was — so it shows whether the target is down or only this site's way to it. Nothing ever waits for the other sites; an unreachable or slow site just shows its last word. Each monitor asks at most once in five minutes, many failures at once go to each site as one request, and only sites that prove their identity are heard.
 - In a cluster, the monitor list shows what every site sees next to each monitor — ✓ normal, ✗ failing, ⊘ no recent word — so it is clear at a glance whether one site's way to a target fails or the target itself. Before, it was only on the monitor's own page.
 
 **Changed**
+- Simpler monitor limits without a licence. A single installation may have up to 300 monitors in all — the shared configuration and the site-local one together, however they were added. In a cluster the shared configuration may have up to 100, and each site's own configuration up to 100 of its own, judged at that site alone. An import is held to the same limits; the separate 200-monitor import ceiling is gone. The registration page shows this site's own count in a cluster. The licence text and the READMEs say the same.
 - The sites' observations an alert carries are read where the alert is sent, not in the engine loop: a slow disk holds back that one alert for three seconds at most, then it goes without the site line, and the checks and other alerts never wait. Before, the read happened in the engine loop and could hold up everything for up to ten seconds.
 - A site's observation of a monitor counts as stale (⊘) after three missed checks and never sooner than three minutes, so a monitor checked every few seconds no longer flickers to unknown on a short network hiccup.
 
 **Fixed**
-- This site's own monitors (the site-local configuration) count toward the monitor limit like the shared ones. Before, they did not count at all, so an installation without a licence could add any number of monitors there. Saving a site-local configuration that would pass the limit is refused, and one changed by hand past it is not applied — the last one runs on.
-- The monitor limit now holds at startup too. A monitors.conf grown past the limit while the program was stopped is not applied; the last version runs on and a banner says why. A first start takes the file like an import, up to 200 monitors; with more, nothing is monitored until it is cut down to 200 or a licence is installed, which starts monitoring at once, without a restart.
+- On a single installation the site-local configuration counts toward the monitor limit like the shared one. Before, it did not count at all. Saving one that would pass the limit is refused, and one changed by hand past it is not applied — the last one runs on.
+- The monitor limit now holds at startup too. A monitors.conf grown past the limit while the program was stopped is not applied; the last version runs on and a banner says why. A first start has nothing to compare with: the file runs as it is, with the over-limit notice if it is over.
 
 ## v2.7.0 — 2026-11-25
 

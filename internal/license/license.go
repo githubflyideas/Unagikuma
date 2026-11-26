@@ -94,12 +94,17 @@ const (
 var Licensees = []string{LicenseeIndividual, LicenseeOrganization}
 
 // Free is what an installation without a licence gets: up to FreeUsers
-// accounts and up to FreeMonitors monitors; the audit log is
+// accounts; a single installation up to FreeSingle monitors, a cluster up
+// to FreeShared shared monitors plus FreeSite of each site's own; the audit log is
 // registered-only. Everything else is free. A licence never gives less
 // than this.
 const (
-	FreeUsers    = 5
-	FreeMonitors = 100
+	FreeUsers  = 5
+	FreeSingle = 300
+	FreeShared = 100
+	FreeSite   = 100
+	// FreeMonitors is the single-installation number, as the API reports it.
+	FreeMonitors = FreeSingle
 )
 
 // File is license.json. MaxUsers and MaxMonitors 0 mean no limit.

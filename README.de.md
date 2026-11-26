@@ -95,4 +95,4 @@ Geben Sie das neue Passwort zweimal ein (es wird nicht angezeigt). Mit `--genera
 
 ## Lizenz
 
-Business Source License 1.1, siehe [LICENSE](LICENSE). Der Produktiveinsatz ist innerhalb der kostenlosen Grenzen (100 Monitore, 5 Konten, ein Import darf die Zahl auf 200 bringen) frei, ohne sie zu umgehen und nicht als Dienst für andere; darüber hinaus ist eine kommerzielle Lizenz nötig. Jede Version wird vier Jahre nach ihrer Veröffentlichung zur Apache License 2.0. Versionen bis v2.6.37 wurden unter der Apache License 2.0 veröffentlicht und bleiben unter ihr.
+Business Source License 1.1, siehe [LICENSE](LICENSE). Der Produktiveinsatz ist innerhalb der kostenlosen Grenzen (5 Konten; einzeln 300 Monitore, im Cluster 100 gemeinsame plus 100 eigene je Standort) frei, ohne sie zu umgehen und nicht als Dienst für andere; darüber hinaus ist eine kommerzielle Lizenz nötig. Jede Version wird vier Jahre nach ihrer Veröffentlichung zur Apache License 2.0. Versionen bis v2.6.37 wurden unter der Apache License 2.0 veröffentlicht und bleiben unter ihr.

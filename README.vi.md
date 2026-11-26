@@ -95,4 +95,4 @@ Nhập mật khẩu mới hai lần (không hiển thị). Thêm `--generate` đ
 
 ## Giấy phép
 
-Business Source License 1.1, xem [LICENSE](LICENSE). Dùng cho sản xuất miễn phí trong giới hạn miễn phí (100 giám sát, 5 tài khoản, nhập khẩu có thể nâng lên 200), không lách giới hạn và không cung cấp như dịch vụ cho người khác; vượt quá cần giấy phép thương mại. Mỗi phiên bản chuyển sang Apache License 2.0 bốn năm sau khi phát hành. Các bản phát hành đến v2.6.37 được công bố theo Apache License 2.0 và vẫn theo giấy phép đó.
+Business Source License 1.1, xem [LICENSE](LICENSE). Dùng cho sản xuất miễn phí trong giới hạn miễn phí (5 tài khoản; 300 giám sát cho cài đặt đơn, trong cụm 100 dùng chung cộng 100 riêng của mỗi site), không lách giới hạn và không cung cấp như dịch vụ cho người khác; vượt quá cần giấy phép thương mại. Mỗi phiên bản chuyển sang Apache License 2.0 bốn năm sau khi phát hành. Các bản phát hành đến v2.6.37 được công bố theo Apache License 2.0 và vẫn theo giấy phép đó.

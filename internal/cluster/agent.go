@@ -78,8 +78,6 @@ type AgentOptions struct {
 	// Local reports this site's own configuration: how many monitors it
 	// runs, a hash of it and its text.
 	Local func() (count int, hash, text string)
-	// OnUsage is told the cluster's monitor usage the master sends.
-	OnUsage func(Usage)
 	// Replica: this node is a full server that keeps a copy of the
 	// master's state and checks on its own while the master is away.
 	Replica bool
@@ -476,9 +474,6 @@ func (s *agentSession) reader(ctx context.Context, r *bufio.Reader) error {
 				return err
 			}
 			s.a.apply(&cfg)
-			if cfg.Usage != nil && s.a.o.OnUsage != nil {
-				s.a.o.OnUsage(*cfg.Usage)
-			}
 			if cfg.Masters != nil {
 				s.a.setMasters(cfg.Masters)
 			}

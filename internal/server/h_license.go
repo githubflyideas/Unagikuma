@@ -38,6 +38,7 @@ func quotaError(err error) error {
 
 func (s *Server) licenseGet(w http.ResponseWriter, r *http.Request) (any, error) {
 	st := s.app.License().State()
+	cap := s.app.MonitorCap()
 	return struct {
 		license.State
 		Usage        app.Usage `json:"usage"`
@@ -45,7 +46,14 @@ func (s *Server) licenseGet(w http.ResponseWriter, r *http.Request) (any, error)
 		MonitorLimit int       `json:"monitor_limit"`
 		FreeUsers    int       `json:"free_users"`
 		FreeMonitors int       `json:"free_monitors"`
-	}{st, s.app.Usage(), app.UserLimit(st), s.app.MonitorCap().Limit, license.FreeUsers, license.FreeMonitors}, nil
+		// In a cluster: the shared configuration's free number, and each
+		// site's own; this site's own monitors and their limit.
+		FreeShared   int `json:"free_shared_monitors"`
+		FreeSite     int `json:"free_site_monitors"`
+		SiteMonitors int `json:"site_monitors"`
+		SiteLimit    int `json:"site_monitor_limit,omitempty"`
+	}{st, s.app.Usage(), app.UserLimit(st), cap.Limit, license.FreeUsers, license.FreeMonitors,
+		license.FreeShared, license.FreeSite, cap.SiteUsed, cap.SiteLimit}, nil
 }
 
 // licensePut installs a licence file (its JSON as the body); an invalid

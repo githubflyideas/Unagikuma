@@ -123,4 +123,4 @@ Type the new password twice (it is not shown). Add `--generate` to get a random 
 
 ## License
 
-Business Source License 1.1, see [LICENSE](LICENSE). Production use is free within the free limits (100 monitors, 5 accounts, an import may bring the count to 200), without getting around them, and not as a service for others; beyond that a commercial licence is needed. Each version becomes Apache License 2.0 four years after it is published. Releases up to v2.6.37 were published under the Apache License 2.0 and stay under it.
+Business Source License 1.1, see [LICENSE](LICENSE). Production use is free within the free limits (5 accounts; 300 monitors on a single installation, in a cluster 100 shared plus 100 of each site's own), without getting around them, and not as a service for others; beyond that a commercial licence is needed. Each version becomes Apache License 2.0 four years after it is published. Releases up to v2.6.37 were published under the Apache License 2.0 and stay under it.

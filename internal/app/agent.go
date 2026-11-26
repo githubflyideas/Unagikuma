@@ -84,7 +84,6 @@ func (a *App) startAgent() error {
 		OnState:   a.onStateNotice,
 		Synced:    a.replicaSynced,
 		Local:     a.localReport,
-		OnUsage:   a.setClusterUsage,
 		OnPromote: func(t uint64) {
 			if _, err := a.Promote(context.Background(), t, "handover"); err != nil {
 				a.log.Error("handover from the master failed", "err", err)
@@ -240,7 +239,6 @@ func (a *App) LeaveCluster() error {
 		<-a.am.done
 	}
 	a.am.agent, a.am.cancel, a.am.done, a.am.member = nil, nil, nil, nil
-	a.clusterUsage.Store(nil) // no longer a node: the master's word no longer applies
 	dir := a.opts.DataDir
 	_ = os.Remove(filepath.Join(dir, agentTokenFile))
 	return os.Remove(filepath.Join(dir, agentFile))

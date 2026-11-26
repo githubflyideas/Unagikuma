@@ -455,12 +455,7 @@ func (p *peer) send(typ string, v any) bool {
 
 // setConfig queues cfg; only the newest pending config is written.
 func (p *peer) setConfig(cfg *AgentConfig) {
-	// The cluster's monitor usage travels with the config: a change in it
-	// alone (a site's own monitors) is news too.
 	hash := cfg.Hash
-	if cfg.Usage != nil && hash != "" {
-		hash += fmt.Sprintf("|usage %d/%d", cfg.Usage.Used, cfg.Usage.Limit)
-	}
 	p.mu.Lock()
 	if hash != "" && hash == p.sentHash {
 		p.mu.Unlock()

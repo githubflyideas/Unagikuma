@@ -232,16 +232,6 @@ type AgentConfig struct {
 	Masters []string `json:"masters,omitempty"`
 	// Standby: this node keeps a copy of the master's state.
 	Standby bool `json:"standby,omitempty"`
-	// Usage is the cluster's standing against its monitor limit, every
-	// site's own monitors included: a node judges additions to its own
-	// configuration by it.
-	Usage *Usage `json:"usage,omitempty"`
-}
-
-// Usage is a monitor count against a limit (0 = no limit).
-type Usage struct {
-	Used  int `json:"used"`
-	Limit int `json:"limit"`
 }
 
 // AgentMonitor is one monitor as an agent runs it.
@@ -270,8 +260,8 @@ type Status struct {
 	Synced *bool `json:"synced,omitempty"`
 	// LocalMonitors is how many monitors this site's own configuration
 	// runs, LocalHash identifies that configuration, and LocalText is its
-	// text, sent when it changed: the master keeps a copy (never applied)
-	// and counts them toward the monitor limit.
+	// text, sent when it changed: the master keeps a copy (never applied,
+	// counted toward no limit).
 	LocalMonitors *int    `json:"local_monitors,omitempty"`
 	LocalHash     string  `json:"local_hash,omitempty"`
 	LocalText     *string `json:"local_text,omitempty"`

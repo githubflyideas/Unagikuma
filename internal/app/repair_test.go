@@ -87,12 +87,10 @@ func TestInvalidConfigWithHistoryKeepsLastGood(t *testing.T) {
 	}
 }
 
-// While a first start is still in repair mode, an intervening banner
-// must not rewrite history: a valid but over-limit fix attempt raises
-// the monitor-limit banner, and a broken edit after it must go back to
-// saying there is no earlier good version (invalid_first) — not claim
-// a previous version keeps running when none has ever loaded.
-func TestRepairBannerSurvivesMonitorLimitInterlude(t *testing.T) {
+// A fix made while a first start is still in repair mode is a first start
+// too: nothing has run to compare with, so it runs as it is, past the
+// monitor limit too.
+func TestRepairFixPastTheLimitRuns(t *testing.T) {
 	dir := t.TempDir()
 	conf := filepath.Join(dir, "monitors.conf")
 	if err := os.WriteFile(conf, []byte(brokenConfig), 0o600); err != nil {
@@ -106,31 +104,19 @@ func TestRepairBannerSurvivesMonitorLimitInterlude(t *testing.T) {
 	if b := a.Banner(); b == nil || b.Code != "invalid_first" {
 		t.Fatalf("banner = %+v, want invalid_first", b)
 	}
-	// A valid configuration past what a first start takes without a
-	// licence (the import ceiling, 200): refused, repair mode continues
-	// under the limit's banner.
 	var sb strings.Builder
 	sb.WriteString("@ IN SOA unagikuma. admin.localhost. ( 2026102302 1s 500ms 300ms 2 )\n")
-	for i := 1; i <= 205; i++ {
+	for i := 1; i <= 305; i++ {
 		sb.WriteString("bulk" + strconv.Itoa(i) + " IN PING 192.0.2.1\n")
 	}
 	if err := os.WriteFile(conf, []byte(sb.String()), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	a.cfg.check()
-	if b := a.Banner(); b == nil || b.Code != "monitor_limit" {
-		t.Fatalf("banner after over-limit fix = %+v, want monitor_limit", b)
+	if n := len(a.Config().Config.Monitors); n != 305 {
+		t.Fatalf("the fix ran %d monitors, want 305", n)
 	}
-	if n := len(a.Config().Config.Monitors); n != 0 {
-		t.Fatalf("over-limit fix applied %d monitors, want 0", n)
-	}
-	// A broken edit now: still no earlier good version exists.
-	broken2 := strings.Replace(brokenConfig, "2026102301", "2026102303", 1)
-	if err := os.WriteFile(conf, []byte(broken2), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	a.cfg.check()
-	if b := a.Banner(); b == nil || b.Code != "invalid_first" {
-		t.Fatalf("banner after second broken edit = %+v, want invalid_first (no previous version has ever run)", b)
+	if b := a.Banner(); b != nil && b.Kind == "error" {
+		t.Fatalf("banner after the fix = %+v", b)
 	}
 }

@@ -2,25 +2,24 @@ package app
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/githubflyideas/unagikuma/internal/config"
-	"github.com/githubflyideas/unagikuma/internal/importer"
 	"github.com/githubflyideas/unagikuma/internal/license"
 )
 
-// The monitor limit counts what runs on the master: the monitors every
-// node checks (global) and the ones placed on the master itself (its
-// region's, or named to it directly). The licence is judged there, so
-// the count is too. The two gateway monitors the installation seeds
-// for itself are not the user's and never count; a paused monitor
-// counts — it still holds a place. Nothing is ever switched off by
-// the limit: growth past it is refused, the status quo always stands.
+// The monitor limits. A single installation may have up to
+// license.FreeSingle monitors in all: the shared configuration and this
+// site's own zone together. In a cluster the shared configuration may
+// have up to license.FreeShared monitors, and each site's own zone up to
+// license.FreeSite, judged at that site alone. The two gateway monitors
+// the installation seeds for itself are not the user's and never count;
+// a paused monitor counts — it still holds a place. Nothing is ever
+// switched off by a limit: growth past it is refused, the status quo
+// always stands.
 
-// CountMasterMonitors counts cfg's monitors in the master's running
-// set. seeded reports whether a record is one of the seeded gateway
-// monitors.
-func CountMasterMonitors(cfg *config.Config, seeded func(name string) bool) int {
+// CountMonitors counts cfg's monitors. seeded reports whether a record is
+// one of the seeded gateway monitors.
+func CountMonitors(cfg *config.Config, seeded func(name string) bool) int {
 	if cfg == nil {
 		return 0
 	}
@@ -29,18 +28,35 @@ func CountMasterMonitors(cfg *config.Config, seeded func(name string) bool) int 
 		if seeded != nil && seeded(m.Name) {
 			continue
 		}
-		if len(m.Nodes) == 0 || containsStr(m.Nodes, cfg.MName) {
-			n++
-		}
+		n++
 	}
 	return n
 }
 
-// MonitorCount is the installation's monitor count against the limit,
-// for a configuration (the running one, or one about to be applied),
-// together with the monitors of this site's own zone that run.
+// IsCluster reports whether cfg describes a cluster: it has a node other
+// than this one.
+func IsCluster(cfg *config.Config) bool {
+	if cfg == nil {
+		return false
+	}
+	for _, n := range cfg.Nodes {
+		if n.Name != cfg.MName {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *App) seeded(name string) bool { return GatewaySeeded(a.store.Setting, name) }
+
+// MonitorCount is the count the shared configuration cfg is judged by: in
+// a single installation with this site's own zone, in a cluster without.
 func (a *App) MonitorCount(cfg *config.Config) int {
-	return CountMasterMonitors(cfg, func(name string) bool { return GatewaySeeded(a.store.Setting, name) }) + a.localMonitorCount(cfg, a.appliedSiteLocal()) + a.otherSitesLocal(cfg)
+	n := CountMonitors(cfg, a.seeded)
+	if !IsCluster(cfg) {
+		n += a.localMonitorCount(cfg, a.appliedSiteLocal())
+	}
+	return n
 }
 
 // localMonitorCount counts the monitors of a site-local zone that run
@@ -74,39 +90,31 @@ func GatewaySeeded(setting func(string) (string, error), name string) bool {
 	return false
 }
 
-// MonitorLimit is the number of monitors the installation may have
+// MonitorLimit is the number of monitors a single installation may have
 // (0 = no limit). A licence never gives fewer than the free number.
-func MonitorLimit(st license.State) int {
+func MonitorLimit(st license.State) int { return limitOf(st, license.FreeSingle) }
+
+// SharedLimit is the number of monitors a cluster's shared configuration
+// may have, and SiteLimit the number each site's own zone may have.
+func SharedLimit(st license.State) int { return limitOf(st, license.FreeShared) }
+func SiteLimit(st license.State) int   { return limitOf(st, license.FreeSite) }
+
+func limitOf(st license.State, free int) int {
 	if !st.Registered {
-		return license.FreeMonitors
+		return free
 	}
-	if st.MaxMonitors > 0 && st.MaxMonitors < license.FreeMonitors {
-		return license.FreeMonitors
+	if st.MaxMonitors > 0 && st.MaxMonitors < free {
+		return free
 	}
 	return st.MaxMonitors
 }
 
-// AreaInMasterSet reports whether monitors placed in the $SCOPE
-// section area land in the master's running set (and so count toward
-// the monitor limit and the import ceiling).
-func AreaInMasterSet(area string, cfg *config.Config) bool {
-	if cfg == nil {
-		return true
+// LimitFor is the limit the shared configuration cfg is judged by.
+func LimitFor(st license.State, cfg *config.Config) int {
+	if IsCluster(cfg) {
+		return SharedLimit(st)
 	}
-	switch area {
-	case "", "*":
-		return true
-	}
-	if r, ok := strings.CutPrefix(area, "region:"); ok {
-		n := cfg.FindNode(cfg.MName)
-		return n != nil && n.Region == r
-	}
-	for _, name := range strings.Split(area, ",") {
-		if strings.TrimSpace(name) == cfg.MName {
-			return true
-		}
-	}
-	return false
+	return MonitorLimit(st)
 }
 
 // MonitorCap is the installation's standing against the monitor
@@ -116,49 +124,49 @@ type MonitorCap struct {
 	Limit      int  `json:"limit"` // 0 = no limit
 	Over       bool `json:"over"`
 	Registered bool `json:"registered"`
+	// In a cluster: this site's own monitors and their limit.
+	SiteUsed  int `json:"site_used,omitempty"`
+	SiteLimit int `json:"site_limit,omitempty"`
 }
 
-// MonitorCap reports the current standing.
+// MonitorCap reports the current standing: in a cluster, of the shared
+// configuration, with this site's own zone apart.
 func (a *App) MonitorCap() MonitorCap {
 	st := a.License().State()
-	limit := MonitorLimit(st)
-	used := a.MonitorCount(a.Config().Config)
-	if u := a.clusterUsage.Load(); u != nil {
-		used, limit = u.Used, u.Limit
+	cfg := a.EffectiveConfig()
+	limit := LimitFor(st, cfg)
+	used := a.MonitorCount(cfg)
+	c := MonitorCap{Used: used, Limit: limit, Over: limit > 0 && used > limit, Registered: st.Registered}
+	if IsCluster(cfg) {
+		c.SiteUsed, c.SiteLimit = a.localMonitorCount(cfg, a.appliedSiteLocal()), SiteLimit(st)
 	}
-	return MonitorCap{Used: used, Limit: limit, Over: limit > 0 && used > limit, Registered: st.Registered}
+	return c
 }
 
 // monitorCapDiag is the refusal a configuration change gets when it
 // would raise the monitor count past the installation's limit and
 // past what is already running: only growth beyond the limit is
 // refused, never the status quo, and never a change that holds or
-// lowers the count.
+// lowers the count. Both are counted the way new is judged.
 func (a *App) monitorCapDiag(old, new *config.Config) *config.Diagnostic {
-	limit := MonitorLimit(a.License().State())
+	limit := LimitFor(a.License().State(), new)
 	if limit == 0 {
 		return nil
 	}
 	nn := a.MonitorCount(new)
-	if nn <= limit || nn <= a.MonitorCount(old) {
+	was := CountMonitors(old, a.seeded)
+	if !IsCluster(new) {
+		was += a.localMonitorCount(old, a.appliedSiteLocal())
+	}
+	if nn <= limit || nn <= was {
 		return nil
+	}
+	what := "monitors"
+	if IsCluster(new) {
+		what = "shared monitors"
 	}
 	return &config.Diagnostic{Pos: config.Pos{Line: 1, Col: 1}, Severity: config.SevError, Code: "monitor_limit",
-		Msg: fmt.Sprintf("this change would raise the number of monitors to %d, past this installation's limit of %d; to register, please contact the author (Settings › Registration)", nn, limit)}
-}
-
-// firstStartCapDiag is the refusal of a first start whose file holds more
-// monitors than an import may bring: the file is taken like an import.
-func (a *App) firstStartCapDiag(cfg *config.Config) *config.Diagnostic {
-	if MonitorLimit(a.License().State()) == 0 {
-		return nil
-	}
-	n := a.MonitorCount(cfg)
-	if n <= importer.ImportCeiling {
-		return nil
-	}
-	return &config.Diagnostic{Pos: config.Pos{Line: 1, Col: 1}, Severity: config.SevError, Code: "monitor_limit",
-		Msg: fmt.Sprintf("monitors.conf holds %d monitors; a first start takes at most %d without a licence, so nothing is monitored until there are %d or fewer, or the installation is registered (Settings › Registration)", n, importer.ImportCeiling, importer.ImportCeiling)}
+		Msg: fmt.Sprintf("this change would raise the number of %s to %d, past this installation's limit of %d; to register, please contact the author (Settings › Registration)", what, nn, limit)}
 }
 
 // ImportSHAKey is the store setting the import command uses to mark
@@ -184,10 +192,8 @@ func (a *App) forgetImportSHA() {
 	_ = a.store.DeleteSetting(ImportSHAKey)
 }
 
-// LicenseChanged re-judges what the monitor limit held back: a first start
-// past the limit starts monitoring once a licence allows it, and this
-// site's own zone is applied again.
+// LicenseChanged applies the configuration again: this site's own zone,
+// held back by the limit, may now run.
 func (a *App) LicenseChanged() {
-	a.cfg.retryCapRepair()
 	a.Reapply()
 }

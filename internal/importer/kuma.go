@@ -20,11 +20,6 @@ import (
 )
 
 // Result is a conversion: records to add, secrets to store, and the report.
-// ImportCeiling is the most monitors an import may take an
-// installation to, whatever its licence says: imports are how whole
-// installations move, so they get room the everyday limit does not.
-const ImportCeiling = 200
-
 type Result struct {
 	Blocked  bool                `json:"blocked,omitempty"` // bounded adapters: any unsupported item blocks apply
 	Records  []config.RecordSpec `json:"-"`
@@ -78,9 +73,8 @@ type Options struct {
 	// name (the Unagikuma source).
 	Existing *config.File
 	// TotalNow is the installation's counted monitor total before the
-	// import, and TotalLimit the most the import may take it to (the
-	// caller passes ImportCeiling when the imported monitors count
-	// toward the total; 0 = no ceiling).
+	// import, and TotalLimit the most the import may take it to: the
+	// installation's monitor limit (0 = no limit).
 	TotalNow, TotalLimit int
 }
 
