@@ -948,7 +948,7 @@
 "ui.node.version": "バージョン",
 "ui.node.token": "トークン",
 "ui.node.fingerprint": "このクラスタのノードが固定する CA フィンガープリント",
-"ui.node.name_hint": "monitors.conf で使う短い名前（例: bj）",
+"ui.node.name_hint": "monitors.conf で使う短い名前（例: bj）。英字・数字・「.」「_」「-」で最大 63 文字。2〜8 文字が見やすく、長い名前は監視一覧で省略されます。日本語や正式名は“{title}”に入れてください。",
 "ui.node.title": "説明",
 "ui.node.region": "地域",
 "ui.node.self": "このサーバー",

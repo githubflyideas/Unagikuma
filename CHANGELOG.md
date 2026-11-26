@@ -13,6 +13,7 @@
 - The Small business, Data centre and Modern dashboard styles are gone. An installation or account set to one of them falls back to classic.
 
 **Fixed**
+- A long site name no longer stretches a monitor row: it is cut short with the full name in the tooltip, and with more than four sites the row shows how many see ✓, ✗ and ⊘. The node form says names take up to 63 characters (letters, digits, `.`, `_`, `-`) and read best at 2 to 8.
 - At a zoom of 125% or more, a dialog (such as adding a channel) and the menu ran past the bottom of the window; they now fit and scroll.
 - On a phone, the ISP, Retail chain, Starship bridge and Atelier styles lost their menu: the menu button was hidden and the navigation spilled over the page. Every style now uses the usual menu drawer on a phone.
 

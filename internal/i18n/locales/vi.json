@@ -948,7 +948,7 @@
 "ui.node.version": "Phiên bản",
 "ui.node.token": "Token",
 "ui.node.fingerprint": "Dấu vân tay CA mà các nút của cụm này ghim",
-"ui.node.name_hint": "Tên ngắn dùng trong monitors.conf, ví dụ bj",
+"ui.node.name_hint": "Tên ngắn dùng trong monitors.conf, vd. bj. Tối đa 63 ký tự: chữ Latin, số, \".\", \"_\" và \"-\". Nên 2–8 ký tự; dài hơn sẽ bị rút gọn trong danh sách. Tên đầy đủ hãy ghi ở \"{title}\".",
 "ui.node.title": "Mô tả",
 "ui.node.region": "Khu vực",
 "ui.node.self": "máy chủ này",

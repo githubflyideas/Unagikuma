@@ -903,3 +903,5 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 /* Settings › Styles and branding: the stored logo and icon. */
 .brand-img img { height: 40px; max-width: 160px; object-fit: contain; border: 1px solid var(--border); border-radius: 8px; padding: 4px; background: var(--panel-2); }
 .brand-img .brand-none { min-width: 6em; }
+/* a site's name in a list row: long names are cut short */
+.obs-site { display: inline-block; max-width: 9ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }

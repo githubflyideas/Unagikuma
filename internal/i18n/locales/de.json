@@ -955,7 +955,7 @@
 "ui.node.version": "Version",
 "ui.node.token": "Token",
 "ui.node.fingerprint": "CA-Fingerabdruck, den die Knoten dieses Clusters festlegen",
-"ui.node.name_hint": "Kurzer Name in monitors.conf, z. B. bj",
+"ui.node.name_hint": "Der Kurzname in monitors.conf, z. B. bj. Bis zu 63 Zeichen: Buchstaben, Ziffern, „.“, „_“ und „-“. 2 bis 8 Zeichen lesen sich am besten – längere werden in der Monitorliste gekürzt. Einen vollen Namen unter \"{title}\" eintragen.",
 "ui.node.title": "Beschreibung",
 "ui.node.region": "Region",
 "ui.node.self": "dieser Server",

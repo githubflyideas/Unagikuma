@@ -948,7 +948,7 @@
 "ui.node.version": "版本",
 "ui.node.token": "令牌",
 "ui.node.fingerprint": "本集群各节点校验的 CA 指纹",
-"ui.node.name_hint": "在 monitors.conf 中使用的短名称，例如 bj",
+"ui.node.name_hint": "在 monitors.conf 中使用的短名称，例如 bj。最多 63 个字符，只能用英文字母、数字和 . _ -。建议 2～8 个字符：监控列表里超过 8 个字符会被截短显示。中文或完整名称请填在“{title}”里。",
 "ui.node.title": "描述",
 "ui.node.region": "地区",
 "ui.node.self": "本机",

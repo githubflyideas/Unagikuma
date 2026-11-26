@@ -129,7 +129,7 @@ function JoinForm({ d, onClose }) {
       <p class="small muted" style=${{ margin: 0 }}>${t('ui.join.intro')}</p>
       <${Field} label=${t('ui.join.paste')}><textarea class="ltr mono" rows="3" required value=${f.code} onInput=${set('code')} placeholder="nkjoin1.…"></textarea><//>
       <div class="two">
-        <${Field} label=${t('ui.name')} hint=${t('ui.node.name_hint')}><input type="text" class="ltr" required pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" value=${f.node} onInput=${set('node')} /><//>
+        <${Field} label=${t('ui.name')} hint=${t('ui.node.name_hint', { title: t('ui.node.title') })}><input type="text" class="ltr" required maxlength="63" pattern="[A-Za-z0-9][A-Za-z0-9_.\\-]{0,62}" value=${f.node} onInput=${set('node')} /><//>
         <${Field} label=${t('ui.node.region')}><input type="text" value=${f.region} onInput=${set('region')} /><//>
       </div>
       <${Field} label=${t('ui.node.title')}><input type="text" value=${f.title} onInput=${set('title')} /><//>
