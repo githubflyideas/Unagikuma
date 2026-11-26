@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+**Changed**
+- The ISP style is redrawn as a network operations centre: a dark blueprint grid, a slim icon rail that opens over the page instead of a hidden drawer, panels with bracketed corners, monospaced figures, and failing rows and the problem count that pulse until handled. The Starship bridge style turns violet so the two dark styles no longer look alike, and the Retail chain table header is readable again.
+- The Small business, Data centre and Modern dashboard styles are gone. An installation or account set to one of them falls back to classic.
+
+**Fixed**
+- On a phone, the ISP, Retail chain, Starship bridge and Atelier styles lost their menu: the menu button was hidden and the navigation spilled over the page. Every style now uses the usual menu drawer on a phone.
+
 ## v2.7.1 — 2026-11-26
 
 **Added**

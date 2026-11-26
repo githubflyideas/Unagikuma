@@ -1,18 +1,18 @@
 /* Starship bridge: the bridge of a ship at night — a starfield behind HUD
-   panels with corner brackets, neon cyan lines and glow, monospace
+   panels with corner brackets, neon violet lines and glow, monospace
    capitals. Brings its own (dark) colours. Registered. */
 :root[data-style="starbridge"] {
-  --bg: #04060f; --side: #070b1a; --panel: #0a1126; --panel-2: #0e1832; --border: #1b3a5c; --border-strong: #2b628f;
+  --bg: #04060f; --side: #070b1a; --panel: #0a1126; --panel-2: #0e1832; --border: #2e2350; --border-strong: #4c3a82;
   --text: #d8edff; --muted: #94b6d8; --faint: #86a8ca;
-  --accent: #29e0ff; --accent-soft: #0b2c40; --accent-text: #02121a; --link: #6eeaff;
+  --accent: #c084fc; --accent-soft: #2a1546; --accent-text: #14051f; --link: #e4c2ff;
   --ok: #3dffa0; --ok-soft: #0a2b22; --degraded: #ffc24a; --degraded-soft: #2e2410;
   --critical: #ff5272; --critical-soft: #3a111d; --unknown: #bba2ff; --unknown-soft: #1f1840;
   --pending: #93a9c0; --pending-soft: #142033; --maint: #62adff; --maint-soft: #102340;
   --on-status: #02070f; --on-degraded: #1d1600;
   --empty: #14213a; --stripe: transparent;
-  --shadow: 0 0 0 1px rgba(41, 224, 255, .10), 0 0 26px rgba(41, 224, 255, .07); --radius: 2px; --bg-image: none;
+  --shadow: 0 0 0 1px rgba(192, 132, 252, .10), 0 0 26px rgba(192, 132, 252, .07); --radius: 2px; --bg-image: none;
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --side-text: #d8edff; --side-muted: #94b6d8; --side-hover: rgba(41, 224, 255, .08); --side-on: rgba(41, 224, 255, .14); --side-on-text: #6eeaff; --side-mark: #29e0ff;
+  --side-text: #d8edff; --side-muted: #94b6d8; --side-hover: rgba(192, 132, 252, .08); --side-on: rgba(192, 132, 252, .14); --side-on-text: #e4c2ff; --side-mark: #c084fc;
   color-scheme: dark;
 }
 :root[data-style="starbridge"] .themes { display: none; }
@@ -71,18 +71,18 @@
 :root[data-style="starbridge"] .shell::after { display: none; }
 :root[data-style="starbridge"] .side { display: contents; }
 :root[data-style="starbridge"] .themes { display: none; }
-/* name badge: the mascot becomes a cyan hologram in a hexagon */
-:root[data-style="starbridge"] .brand { position: fixed; z-index: 60; inset-block-start: 12px; inset-inline-start: 18px; flex-direction: row; gap: 10px; padding: 0; align-items: center; text-align: start; font-family: var(--mono); font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); text-shadow: 0 0 12px rgba(41, 224, 255, .7); }
-:root[data-style="starbridge"] .brand img { width: 40px; height: 40px; clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); filter: grayscale(1) contrast(1.15) sepia(1) hue-rotate(150deg) saturate(5) brightness(1.1) drop-shadow(0 0 8px #29e0ff); background: rgba(41, 224, 255, .12); }
+/* name badge: the mascot becomes a violet hologram in a hexagon */
+:root[data-style="starbridge"] .brand { position: fixed; z-index: 60; inset-block-start: 12px; inset-inline-start: 18px; flex-direction: row; gap: 10px; padding: 0; align-items: center; text-align: start; font-family: var(--mono); font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); text-shadow: 0 0 12px rgba(192, 132, 252, .7); }
+:root[data-style="starbridge"] .brand img { width: 40px; height: 40px; clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); filter: grayscale(1) contrast(1.15) sepia(1) hue-rotate(230deg) saturate(4) brightness(1.1) drop-shadow(0 0 8px #c084fc); background: rgba(192, 132, 252, .12); }
 :root[data-style="starbridge"] .brand .edition { letter-spacing: .14em; font-size: 9.5px; color: var(--muted); text-shadow: none; }
 :root[data-style="starbridge"] .shell.mini .brand > div { display: revert; }
 /* the dock */
-:root[data-style="starbridge"] .nav { position: fixed; z-index: 60; inset-block-end: 16px; inset-inline-start: 0; inset-inline-end: 350px; margin-inline: auto; width: max-content; max-width: calc(100vw - 380px); display: flex; flex-direction: row; gap: 4px; padding: 8px 12px; border-radius: 22px; background: rgba(6, 14, 34, .72); border: 1px solid rgba(110, 234, 255, .35); backdrop-filter: blur(14px); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 10px 40px rgba(0, 0, 0, .6), 0 0 40px rgba(41, 224, 255, .18); overflow-x: auto; }
+:root[data-style="starbridge"] .nav { position: fixed; z-index: 60; inset-block-end: 16px; inset-inline-start: 0; inset-inline-end: 350px; margin-inline: auto; width: max-content; max-width: calc(100vw - 380px); display: flex; flex-direction: row; gap: 4px; padding: 8px 12px; border-radius: 22px; background: rgba(6, 14, 34, .72); border: 1px solid rgba(228, 194, 255, .35); backdrop-filter: blur(14px); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 10px 40px rgba(0, 0, 0, .6), 0 0 40px rgba(192, 132, 252, .18); overflow-x: auto; }
 :root[data-style="starbridge"] .side .nav a, :root[data-style="starbridge"] .shell.mini .nav a { flex-direction: column; justify-content: center; gap: 3px; width: 72px; padding: 8px 3px 7px; border-radius: 14px; text-align: center; position: relative; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; line-height: 1.15; }
-:root[data-style="starbridge"] .nav .ico { width: auto; font-size: 20px; opacity: 1; filter: drop-shadow(0 0 6px rgba(41, 224, 255, .8)); }
+:root[data-style="starbridge"] .nav .ico { width: auto; font-size: 20px; opacity: 1; filter: drop-shadow(0 0 6px rgba(192, 132, 252, .8)); }
 :root[data-style="starbridge"] .shell.mini .nav .lbl { display: revert; }
-:root[data-style="starbridge"] .side .nav a:hover { background: rgba(41, 224, 255, .1); transform: translateY(-3px); transition: transform .12s; }
-:root[data-style="starbridge"] .side .nav a.on { background: radial-gradient(circle at 50% 0, rgba(41, 224, 255, .3), rgba(41, 224, 255, .06) 70%); box-shadow: inset 0 0 0 1px rgba(110, 234, 255, .6), 0 0 22px rgba(41, 224, 255, .4); color: #fff; }
+:root[data-style="starbridge"] .side .nav a:hover { background: rgba(192, 132, 252, .1); transform: translateY(-3px); transition: transform .12s; }
+:root[data-style="starbridge"] .side .nav a.on { background: radial-gradient(circle at 50% 0, rgba(192, 132, 252, .3), rgba(192, 132, 252, .06) 70%); box-shadow: inset 0 0 0 1px rgba(228, 194, 255, .6), 0 0 22px rgba(192, 132, 252, .4); color: #fff; }
 :root[data-style="starbridge"] .nav .count { position: absolute; inset-block-start: 2px; inset-inline-end: 8px; margin: 0; border-radius: 9px; min-width: 16px; font-size: 10px; padding: 0 4px; }
 :root[data-style="starbridge"] .nav .rdot { position: absolute; inset-block-start: 6px; inset-inline-end: 12px; margin: 0 !important; }
 /* account tools */
@@ -93,11 +93,11 @@
 /* the top strip is only a title and a search */
 :root[data-style="starbridge"] .top { position: static; margin: 0 0 0 240px; padding: 14px 24px 4px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; }
 :root[data-style="starbridge"] .top > .btn.sm:first-child { display: none; }
-:root[data-style="starbridge"] .top .crumbs { font-size: 22px; font-weight: 200; letter-spacing: .38em; text-transform: uppercase; color: #fff; text-shadow: 0 0 18px rgba(41, 224, 255, .75); }
+:root[data-style="starbridge"] .top .crumbs { font-size: 22px; font-weight: 200; letter-spacing: .38em; text-transform: uppercase; color: #fff; text-shadow: 0 0 18px rgba(192, 132, 252, .75); }
 :root[data-style="starbridge"] .top .crumbs::before { content: ""; }
 :root[data-style="starbridge"] .page { padding: 8px 28px 130px; gap: 22px; max-width: 1380px; margin-inline: auto; }
 /* glass holograms */
-:root[data-style="starbridge"] .card, :root[data-style="starbridge"] .tile, :root[data-style="starbridge"] .modal, :root[data-style="starbridge"] .kpi, :root[data-style="starbridge"] .sum-now { border-radius: 22px; border: 1px solid rgba(110, 234, 255, .24); background: linear-gradient(155deg, rgba(24, 48, 92, .5), rgba(6, 12, 30, .55)); backdrop-filter: blur(12px); background-image: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 24px 60px rgba(0, 0, 0, .5), 0 0 34px rgba(41, 224, 255, .08); }
+:root[data-style="starbridge"] .card, :root[data-style="starbridge"] .tile, :root[data-style="starbridge"] .modal, :root[data-style="starbridge"] .kpi, :root[data-style="starbridge"] .sum-now { border-radius: 22px; border: 1px solid rgba(228, 194, 255, .24); background: linear-gradient(155deg, rgba(24, 48, 92, .5), rgba(6, 12, 30, .55)); backdrop-filter: blur(12px); background-image: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 24px 60px rgba(0, 0, 0, .5), 0 0 34px rgba(192, 132, 252, .08); }
 :root[data-style="starbridge"] .card > .hd { border-bottom: 0; padding: 16px 24px 4px; }
 :root[data-style="starbridge"] .card > .hd h2::before, :root[data-style="starbridge"] .card > .hd h3::before { content: "◈ "; opacity: .8; }
 :root[data-style="starbridge"] .card > .hd h2, :root[data-style="starbridge"] .card > .hd h3 { font-weight: 300; font-size: 13px; letter-spacing: .3em; }
@@ -105,15 +105,28 @@
 :root[data-style="starbridge"] .tile { text-align: center; padding: 18px 12px; }
 :root[data-style="starbridge"] .tile b { font-weight: 200; font-size: 40px; }
 :root[data-style="starbridge"] .card.scroll, :root[data-style="starbridge"] .page.list .card.scroll { background: linear-gradient(155deg, rgba(24, 48, 92, .45), rgba(6, 12, 30, .5)); }
-:root[data-style="starbridge"] .tbl th { font-weight: 300; letter-spacing: .24em; border-bottom: 1px solid rgba(110, 234, 255, .4); }
-:root[data-style="starbridge"] .tbl td { border-bottom: 1px solid rgba(110, 234, 255, .08); }
+:root[data-style="starbridge"] .tbl th { font-weight: 300; letter-spacing: .24em; border-bottom: 1px solid rgba(228, 194, 255, .4); }
+:root[data-style="starbridge"] .tbl td { border-bottom: 1px solid rgba(228, 194, 255, .08); }
 :root[data-style="starbridge"] .btn, :root[data-style="starbridge"] .search, :root[data-style="starbridge"] .chip, :root[data-style="starbridge"] .seg, :root[data-style="starbridge"] input[type=text], :root[data-style="starbridge"] input[type=password], :root[data-style="starbridge"] input[type=number], :root[data-style="starbridge"] input[type=url], :root[data-style="starbridge"] input[type=email], :root[data-style="starbridge"] select, :root[data-style="starbridge"] textarea { border-radius: 999px; }
 :root[data-style="starbridge"] textarea { border-radius: 16px; }
 :root[data-style="starbridge"] .pill, :root[data-style="starbridge"] .pill.ok, :root[data-style="starbridge"] .pill.degraded, :root[data-style="starbridge"] .pill.critical, :root[data-style="starbridge"] .pill.unknown, :root[data-style="starbridge"] .pill.maintenance { border-radius: 999px; }
-@media (max-width: 860px) {
-  :root[data-style="starbridge"] .brand { position: static; } :root[data-style="starbridge"] .nav { position: static; width: auto; max-width: none; flex-direction: column; margin: 0; padding: 8px; border-radius: 0; }
-  :root[data-style="starbridge"] .side .nav a { flex-direction: row; width: auto; font-size: 12px; justify-content: flex-start; padding: 9px 12px; }
-  :root[data-style="starbridge"] .side { display: flex; } :root[data-style="starbridge"] .side .foot { position: static; }
-  :root[data-style="starbridge"] .top { margin: 0; } :root[data-style="starbridge"] .page { padding-bottom: 40px; }
-}
 @media (prefers-reduced-motion: reduce) { :root[data-style="starbridge"] .nav a, :root[data-style="starbridge"] .side .nav a:hover { transition: none; transform: none; } }
+
+/* a phone: the usual drawer behind the menu button */
+@media (max-width: 860px) {
+  :root[data-style="starbridge"] .shell, :root[data-style="starbridge"] .shell.mini { display: block; }
+  :root[data-style="starbridge"] .top > .btn.sm:first-child { display: inline-flex; }
+  :root[data-style="starbridge"] .side { display: flex; flex-direction: column; position: fixed; inset-block: 0; inset-inline-start: 0; width: 260px; z-index: 40; overflow-y: auto; padding: 14px 10px; background: #0b0820; transform: translateX(-105%); transition: transform .15s; box-shadow: 12px 0 40px rgba(0, 0, 0, .35); }
+  [dir="rtl"]:root[data-style="starbridge"] .side, :root[dir="rtl"][data-style="starbridge"] .side { transform: translateX(105%); }
+  :root[data-style="starbridge"] .side.open { transform: none; }
+  :root[data-style="starbridge"] .brand, :root[data-style="starbridge"] .nav, :root[data-style="starbridge"] .side .foot { position: static; inset: auto; width: auto; height: auto; max-width: none; margin: 0; transform: none; }
+  :root[data-style="starbridge"] .nav { display: flex; flex-direction: column; gap: 4px; padding: 0; background: none; box-shadow: none; border: 0; }
+  :root[data-style="starbridge"] .side .nav a, :root[data-style="starbridge"] .side .nav a:hover { flex-direction: row; justify-content: flex-start; width: auto; height: auto; min-height: 0; padding: 10px 12px; font-size: 14px; transform: none; }
+  :root[data-style="starbridge"] .side .nav .lbl { display: inline; opacity: 1 !important; }
+  :root[data-style="starbridge"] .nav { align-items: stretch; }
+  :root[data-style="starbridge"] .side .nav a, :root[data-style="starbridge"] .side .nav a.on { width: auto !important; border-radius: 8px; }
+  :root[data-style="starbridge"] .side .foot { margin-top: auto; display: flex; flex-direction: column; }
+  :root[data-style="starbridge"] .top, :root[data-style="starbridge"] .page { margin: 0; }
+  :root[data-style="starbridge"] .top { padding: 8px 12px; }
+  :root[data-style="starbridge"] .page { padding: 14px 12px 40px; max-width: none; }
+}

@@ -15,9 +15,8 @@ import (
 // Styles are built-in layouts of the console: how pages are laid out
 // (cards, tables, spacing, type), independent of the colour theme. They
 // are listed in styles/styles.json of the web files; every style but
-// "classic" has its own styles/<id>.css. The only styles are the four
-// scenario styles (office, datacenter, retail, noc) and edge,
-// starbridge and atelier, and they are
+// "classic" has its own styles/<id>.css. The only styles are noc,
+// retail, starbridge and atelier, and they are
 // registered — with a free trial: an unregistered installation may use
 // them for seven days from the first time one is switched on (see
 // app.StyleTrial); while the trial runs or has not started they can be

@@ -64,9 +64,23 @@
 :root[data-style="atelier"] .card.scroll { padding-inline-start: 46px; }
 :root[data-style="atelier"] .tile { border-radius: 6px 6px 18px 18px; }
 :root[data-style="atelier"] .tbl td, :root[data-style="atelier"] .tbl th { background: transparent; }
+
+/* a phone: the usual drawer behind the menu button */
 @media (max-width: 860px) {
-  :root[data-style="atelier"] .brand { position: static; } :root[data-style="atelier"] .nav { position: static; align-items: stretch; }
-  :root[data-style="atelier"] .side .nav a { width: auto; height: auto; padding: 10px 14px; border-radius: 0; } :root[data-style="atelier"] .side .nav a:hover { width: auto; }
-  :root[data-style="atelier"] .side { display: flex; background: var(--side); } :root[data-style="atelier"] .side .foot { position: static; }
-  :root[data-style="atelier"] .top, :root[data-style="atelier"] .page { margin: 0; } :root[data-style="atelier"] .top .crumbs { font-size: 30px; }
+  :root[data-style="atelier"] .shell, :root[data-style="atelier"] .shell.mini { display: block; }
+  :root[data-style="atelier"] .top > .btn.sm:first-child { display: inline-flex; }
+  :root[data-style="atelier"] .side { display: flex; flex-direction: column; position: fixed; inset-block: 0; inset-inline-start: 0; width: 260px; z-index: 40; overflow-y: auto; padding: 14px 10px; background: #b9500d; transform: translateX(-105%); transition: transform .15s; box-shadow: 12px 0 40px rgba(0, 0, 0, .35); }
+  [dir="rtl"]:root[data-style="atelier"] .side, :root[dir="rtl"][data-style="atelier"] .side { transform: translateX(105%); }
+  :root[data-style="atelier"] .side.open { transform: none; }
+  :root[data-style="atelier"] .brand, :root[data-style="atelier"] .nav, :root[data-style="atelier"] .side .foot { position: static; inset: auto; width: auto; height: auto; max-width: none; margin: 0; transform: none; }
+  :root[data-style="atelier"] .nav { display: flex; flex-direction: column; gap: 4px; padding: 0; background: none; box-shadow: none; border: 0; }
+  :root[data-style="atelier"] .side .nav a, :root[data-style="atelier"] .side .nav a:hover { flex-direction: row; justify-content: flex-start; width: auto; height: auto; min-height: 0; padding: 10px 12px; font-size: 14px; transform: none; }
+  :root[data-style="atelier"] .side .nav .lbl { display: inline; opacity: 1 !important; }
+  :root[data-style="atelier"] .nav { align-items: stretch; }
+  :root[data-style="atelier"] .side .nav a, :root[data-style="atelier"] .side .nav a.on { width: auto !important; border-radius: 8px; }
+  :root[data-style="atelier"] .side .foot { margin-top: auto; display: flex; flex-direction: column; }
+  :root[data-style="atelier"] .brand, :root[data-style="atelier"] .brand .edition, :root[data-style="atelier"] .side .foot, :root[data-style="atelier"] .side .foot button.linkish { color: #fff6e8; }
+  :root[data-style="atelier"] .top, :root[data-style="atelier"] .page { margin: 0; }
+  :root[data-style="atelier"] .top { padding: 8px 12px; }
+  :root[data-style="atelier"] .page { padding: 14px 12px 40px; max-width: none; }
 }
