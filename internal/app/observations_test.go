@@ -121,7 +121,9 @@ func TestObservationPullDrainsMultiplePages(t *testing.T) {
 		fmt.Fprintf(&extra, "check-%03d IN HTTP http://127.0.0.1/\n", i)
 	}
 	makeSite := func(node string) *App {
-		a, _, _, _ := newApp(t, testConfig+extra.String())
+		// 600 monitors on a first start need a licence: registering
+		// starts monitoring without a restart.
+		a := newRegisteredApp(t, testConfig+extra.String())
 		a.am.member = &Membership{Node: node, Server: "https://master.invalid"}
 		a.replica.cfg = a.applied.Load()
 		a.replica.local = true

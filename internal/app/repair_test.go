@@ -106,11 +106,12 @@ func TestRepairBannerSurvivesMonitorLimitInterlude(t *testing.T) {
 	if b := a.Banner(); b == nil || b.Code != "invalid_first" {
 		t.Fatalf("banner = %+v, want invalid_first", b)
 	}
-	// A valid configuration past the free monitor limit: refused by
-	// the ratchet, repair mode continues under the limit's banner.
+	// A valid configuration past what a first start takes without a
+	// licence (the import ceiling, 200): refused, repair mode continues
+	// under the limit's banner.
 	var sb strings.Builder
 	sb.WriteString("@ IN SOA unagikuma. admin.localhost. ( 2026102302 1s 500ms 300ms 2 )\n")
-	for i := 1; i <= 105; i++ {
+	for i := 1; i <= 205; i++ {
 		sb.WriteString("bulk" + strconv.Itoa(i) + " IN PING 192.0.2.1\n")
 	}
 	if err := os.WriteFile(conf, []byte(sb.String()), 0o600); err != nil {

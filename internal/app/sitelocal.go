@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -35,11 +36,50 @@ func (a *App) SiteLocal() string {
 	return string(b)
 }
 
+// siteLocalAppliedKey keeps the text of the zone last applied: a zone
+// that grows past the monitor limit is not applied, the last one runs on.
+const siteLocalAppliedKey = "site_local.applied"
+
+// appliedSiteLocal is the zone as last applied (nil when there is none).
+func (a *App) appliedSiteLocal() *config.Config {
+	v, _ := a.store.Setting(siteLocalAppliedKey)
+	if v == "" {
+		return nil
+	}
+	_, cfg, diags := config.Load(a.siteLocalPath(), []byte(v), a.validators())
+	if config.HasErrors(diags) {
+		return nil
+	}
+	return cfg
+}
+
+// siteLocalCapDiag refuses a zone that would take the installation past
+// its monitor limit and past what already runs: like any other change,
+// only growth beyond the limit is refused.
+func (a *App) siteLocalCapDiag(next *config.Config) *config.Diagnostic {
+	limit := MonitorLimit(a.License().State())
+	if limit == 0 {
+		return nil
+	}
+	global := a.Config().Config
+	shared := CountMasterMonitors(global, func(name string) bool { return GatewaySeeded(a.store.Setting, name) })
+	was := shared + a.localMonitorCount(global, a.appliedSiteLocal())
+	now := shared + a.localMonitorCount(global, next)
+	if now <= limit || now <= was {
+		return nil
+	}
+	return &config.Diagnostic{Pos: config.Pos{Line: 1, Col: 1}, Severity: config.SevError, Code: "monitor_limit",
+		Msg: fmt.Sprintf("this site's own monitors would raise the number of monitors to %d, past this installation's limit of %d; to register, please contact the author (Settings › Registration)", now, limit)}
+}
+
 // loadSiteLocal parses the zone; nil when there is none or it has errors
-// (they are logged, the rest of the configuration still applies).
+// (they are logged, the rest of the configuration still applies). A zone
+// changed by hand past the monitor limit is not applied: the last applied
+// one runs on, and a banner says why.
 func (a *App) loadSiteLocal() *config.Config {
 	b, err := os.ReadFile(a.siteLocalPath())
 	if err != nil || len(b) == 0 {
+		_ = a.store.DeleteSetting(siteLocalAppliedKey)
 		return nil
 	}
 	_, cfg, diags := config.Load(a.siteLocalPath(), b, a.validators())
@@ -47,6 +87,18 @@ func (a *App) loadSiteLocal() *config.Config {
 		a.log.Warn("the site-local configuration has errors; it is not applied", "file", a.siteLocalPath())
 		return nil
 	}
+	applied, _ := a.store.Setting(siteLocalAppliedKey)
+	if applied == string(b) {
+		return cfg
+	}
+	if applied != "" { // the first zone seen (an upgrade) is the status quo
+		if d := a.siteLocalCapDiag(cfg); d != nil {
+			a.log.Warn("the site-local configuration grew past the monitor limit; the last applied one runs on", "file", a.siteLocalPath())
+			a.cfg.setBanner(&Banner{Kind: "error", Code: "monitor_limit", Message: d.Msg, Diags: []config.Diagnostic{*d}})
+			return a.appliedSiteLocal()
+		}
+	}
+	_ = a.store.SetSetting(siteLocalAppliedKey, string(b))
 	return cfg
 }
 
@@ -80,9 +132,12 @@ func (a *App) SetSiteLocal(text, author string) (string, []config.Diagnostic, er
 			return text, nil, err
 		}
 	} else {
-		_, _, diags := config.Load(a.siteLocalPath(), []byte(text), a.validators())
+		_, next, diags := config.Load(a.siteLocalPath(), []byte(text), a.validators())
 		if config.HasErrors(diags) {
 			return text, diags, errors.New("the site-local configuration has errors")
+		}
+		if d := a.siteLocalCapDiag(next); d != nil {
+			return text, []config.Diagnostic{*d}, errors.New(d.Msg)
 		}
 		if err := os.WriteFile(a.siteLocalPath()+".tmp", []byte(text), 0o600); err != nil {
 			return text, nil, err

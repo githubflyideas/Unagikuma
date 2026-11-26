@@ -88,6 +88,7 @@
 "ui.banner.open": "Voir la configuration",
 "ui.banner.invalid": "monitors.conf contient des erreurs ; la dernière version correcte reste active.",
 "ui.banner.monitor_limit": "Ce changement dépasserait la limite de moniteurs ; la dernière version valide continue de fonctionner.",
+"ui.banner.monitor_limit_first": "monitors.conf contient plus de sondes qu'un premier démarrage n'en accepte sans licence (200) ; rien n'est encore surveillé. Réduisez à 200 et augmentez la révision, ou enregistrez-vous.",
 "ui.banner.serial_not_bumped": "monitors.conf a été modifié mais sa révision n’a pas été augmentée : la modification n’est pas encore appliquée.",
 "ui.banner.serial_lower": "La révision de monitors.conf ({serial}) est inférieure à celle en service ; la modification est ignorée.",
 "ui.banner.applied": "Configuration {serial} appliquée.",

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/githubflyideas/unagikuma/internal/config"
+	"github.com/githubflyideas/unagikuma/internal/importer"
 	"github.com/githubflyideas/unagikuma/internal/license"
 )
 
@@ -36,9 +37,27 @@ func CountMasterMonitors(cfg *config.Config, seeded func(name string) bool) int 
 }
 
 // MonitorCount is the installation's monitor count against the limit,
-// for a configuration (the running one, or one about to be applied).
+// for a configuration (the running one, or one about to be applied),
+// together with the monitors of this site's own zone that run.
 func (a *App) MonitorCount(cfg *config.Config) int {
-	return CountMasterMonitors(cfg, func(name string) bool { return GatewaySeeded(a.store.Setting, name) })
+	return CountMasterMonitors(cfg, func(name string) bool { return GatewaySeeded(a.store.Setting, name) }) + a.localMonitorCount(cfg, a.appliedSiteLocal())
+}
+
+// localMonitorCount counts the monitors of a site-local zone that run
+// next to cfg: a name the shared configuration already uses runs as the
+// shared one and is not counted twice.
+func (a *App) localMonitorCount(cfg *config.Config, local *config.Config) int {
+	if local == nil {
+		return 0
+	}
+	n := 0
+	for _, m := range local.Monitors {
+		if cfg != nil && cfg.FindMonitor(m.Name) != nil {
+			continue
+		}
+		n++
+	}
+	return n
 }
 
 // GatewaySeeded reports whether the store markers identify name as
@@ -125,6 +144,20 @@ func (a *App) monitorCapDiag(old, new *config.Config) *config.Diagnostic {
 		Msg: fmt.Sprintf("this change would raise the number of monitors to %d, past this installation's limit of %d; to register, please contact the author (Settings › Registration)", nn, limit)}
 }
 
+// firstStartCapDiag is the refusal of a first start whose file holds more
+// monitors than an import may bring: the file is taken like an import.
+func (a *App) firstStartCapDiag(cfg *config.Config) *config.Diagnostic {
+	if MonitorLimit(a.License().State()) == 0 {
+		return nil
+	}
+	n := a.MonitorCount(cfg)
+	if n <= importer.ImportCeiling {
+		return nil
+	}
+	return &config.Diagnostic{Pos: config.Pos{Line: 1, Col: 1}, Severity: config.SevError, Code: "monitor_limit",
+		Msg: fmt.Sprintf("monitors.conf holds %d monitors; a first start takes at most %d without a licence, so nothing is monitored until there are %d or fewer, or the installation is registered (Settings › Registration)", n, importer.ImportCeiling, importer.ImportCeiling)}
+}
+
 // ImportSHAKey is the store setting the import command uses to mark
 // the configuration file it just wrote, so the running server applies
 // it under the import ceiling instead of refusing it as a hand edit
@@ -146,4 +179,12 @@ func (a *App) consumeImportSHA(sha string) bool {
 // named has long been applied or replaced).
 func (a *App) forgetImportSHA() {
 	_ = a.store.DeleteSetting(ImportSHAKey)
+}
+
+// LicenseChanged re-judges what the monitor limit held back: a first start
+// past the limit starts monitoring once a licence allows it, and this
+// site's own zone is applied again.
+func (a *App) LicenseChanged() {
+	a.cfg.retryCapRepair()
+	a.Reapply()
 }

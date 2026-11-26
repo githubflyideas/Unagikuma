@@ -10,6 +10,10 @@
 - The sites' observations an alert carries are read where the alert is sent, not in the engine loop: a slow disk holds back that one alert for three seconds at most, then it goes without the site line, and the checks and other alerts never wait. Before, the read happened in the engine loop and could hold up everything for up to ten seconds.
 - A site's observation of a monitor counts as stale (⊘) after three missed checks and never sooner than three minutes, so a monitor checked every few seconds no longer flickers to unknown on a short network hiccup.
 
+**Fixed**
+- This site's own monitors (the site-local configuration) count toward the monitor limit like the shared ones. Before, they did not count at all, so an installation without a licence could add any number of monitors there. Saving a site-local configuration that would pass the limit is refused, and one changed by hand past it is not applied — the last one runs on.
+- The monitor limit now holds at startup too. A monitors.conf grown past the limit while the program was stopped is not applied; the last version runs on and a banner says why. A first start takes the file like an import, up to 200 monitors; with more, nothing is monitored until it is cut down to 200 or a licence is installed, which starts monitoring at once, without a restart.
+
 ## v2.7.0 — 2026-11-25
 
 **Changed**

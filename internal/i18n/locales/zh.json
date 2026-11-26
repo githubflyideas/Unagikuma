@@ -285,6 +285,7 @@
 "ui.banner.open": "查看配置",
 "ui.banner.invalid": "monitors.conf 有错误，仍在运行上一个正确的版本。",
 "ui.banner.monitor_limit": "此更改会超过监控项上限；上一个正常版本继续运行。",
+"ui.banner.monitor_limit_first": "monitors.conf 中的监控项超过了未注册时首次启动允许的数量（200），因此目前尚未监控任何目标。请删减到 200 以内并提高版本号，或注册。",
 "ui.banner.serial_not_bumped": "monitors.conf 已修改但版本号没有增加，修改尚未生效。",
 "ui.banner.serial_lower": "monitors.conf 的版本号（{serial}）低于正在运行的版本，修改被忽略。",
 "ui.banner.applied": "配置 {serial} 已生效。",

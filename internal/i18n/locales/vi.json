@@ -88,6 +88,7 @@
 "ui.banner.open": "Xem cấu hình",
 "ui.banner.invalid": "monitors.conf có lỗi; phiên bản đúng gần nhất vẫn đang chạy.",
 "ui.banner.monitor_limit": "Thay đổi này sẽ vượt quá giới hạn mục giám sát; phiên bản tốt cuối cùng vẫn tiếp tục chạy.",
+"ui.banner.monitor_limit_first": "monitors.conf có nhiều giám sát hơn mức lần khởi động đầu tiên chấp nhận khi chưa có giấy phép (200), nên chưa giám sát gì. Hãy giảm xuống 200 và tăng số phiên bản, hoặc đăng ký.",
 "ui.banner.serial_not_bumped": "monitors.conf đã được sửa nhưng số phiên bản chưa được tăng, nên thay đổi chưa được áp dụng.",
 "ui.banner.serial_lower": "Số phiên bản trong monitors.conf ({serial}) thấp hơn bản đang chạy; thay đổi bị bỏ qua.",
 "ui.banner.applied": "Đã áp dụng cấu hình {serial}.",

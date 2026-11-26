@@ -88,6 +88,7 @@
 "ui.banner.open": "Ver configuração",
 "ui.banner.invalid": "monitors.conf tem erros; a última versão válida continua em execução.",
 "ui.banner.monitor_limit": "Esta alteração ultrapassaria o limite de monitores; a última versão válida continua a funcionar.",
+"ui.banner.monitor_limit_first": "monitors.conf tem mais monitores do que um primeiro arranque aceita sem licença (200), por isso ainda nada é monitorizado. Reduza para 200 e aumente a revisão, ou registe-se.",
 "ui.banner.serial_not_bumped": "monitors.conf foi editado, mas a revisão não foi aumentada; a alteração ainda não foi aplicada.",
 "ui.banner.serial_lower": "A revisão em monitors.conf ({serial}) é menor que a em execução; a alteração é ignorada.",
 "ui.banner.applied": "Configuração {serial} aplicada.",

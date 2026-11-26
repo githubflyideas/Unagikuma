@@ -88,6 +88,7 @@
 "ui.banner.open": "عرض الإعدادات",
 "ui.banner.invalid": "في monitors.conf أخطاء؛ تستمر آخر نسخة سليمة في العمل.",
 "ui.banner.monitor_limit": "سيتجاوز هذا التغيير حدّ عناصر المراقبة؛ وستستمر النسخة الصالحة الأخيرة في العمل.",
+"ui.banner.monitor_limit_first": "يحتوي monitors.conf على مراقبات أكثر مما يقبله التشغيل الأول دون ترخيص (200)، لذا لا تتم مراقبة شيء بعد. قلّصه إلى 200 وارفع رقم المراجعة، أو سجّل.",
 "ui.banner.serial_not_bumped": "عُدِّل monitors.conf لكن رقم المراجعة لم يُزَد، لذا لم يُطبَّق التغيير بعد.",
 "ui.banner.serial_lower": "رقم المراجعة في monitors.conf ({serial}) أقل من الإصدار العامل؛ تم تجاهل التغيير.",
 "ui.banner.applied": "طُبّقت الإعدادات {serial}.",

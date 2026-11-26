@@ -60,6 +60,7 @@ func (s *Server) licensePut(w http.ResponseWriter, r *http.Request) (any, error)
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 	}
 	auditOf(r).note("customer", st.Customer).note("fingerprint", st.Fingerprint).target = license.FileName
+	s.app.LicenseChanged()
 	return st, nil
 }
 

@@ -88,6 +88,7 @@
 "ui.banner.open": "구성 보기",
 "ui.banner.invalid": "monitors.conf에 오류가 있습니다. 마지막으로 정상이던 버전으로 실행 중입니다.",
 "ui.banner.monitor_limit": "이 변경은 모니터 한도를 초과합니다. 마지막 정상 버전이 계속 실행됩니다.",
+"ui.banner.monitor_limit_first": "monitors.conf의 모니터 수가 라이선스 없는 첫 시작에서 받을 수 있는 수(200)를 넘어 아직 아무것도 모니터링하지 않습니다. 200개 이하로 줄이고 리비전을 올리거나 등록하세요.",
 "ui.banner.serial_not_bumped": "monitors.conf가 수정되었지만 리비전이 올라가지 않아 아직 적용되지 않았습니다.",
 "ui.banner.serial_lower": "monitors.conf의 리비전({serial})이 실행 중인 것보다 낮아 변경이 무시되었습니다.",
 "ui.banner.applied": "설정 {serial}이(가) 적용되었습니다.",

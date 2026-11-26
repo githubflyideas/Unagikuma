@@ -101,8 +101,9 @@ $FILE revision=%d master=unagikuma interval=1m retry=15s timeout=5s attempts=3
 // snapshot, or created from the starter template; an invalid file keeps the
 // last good snapshot running and raises a banner.
 func (cm *configManager) load() error {
-	cm.app.forgetImportSHA()
 	text, err := os.ReadFile(cm.path)
+	imported := err == nil && cm.app.consumeImportSHA(shaOf(text))
+	cm.app.forgetImportSHA()
 	if errors.Is(err, os.ErrNotExist) {
 		if snaps, _ := cm.app.store.Snapshots(1); len(snaps) > 0 {
 			sn, _ := cm.app.store.SnapshotText(snaps[0].Serial)
@@ -137,6 +138,31 @@ func (cm *configManager) load() error {
 		cm.touchStamp()
 		return nil
 	}
+	// The monitor limit holds at startup as it does while running: a file
+	// changed while the program was stopped is a hand edit like any other.
+	// Grown past the limit and past what last ran, it is not applied — the
+	// last version runs on. On a first start the file is taken like an
+	// import, up to the import ceiling; beyond it nothing is monitored
+	// until it is cut down or the installation is registered.
+	if !imported {
+		if snaps, _ := cm.app.store.Snapshots(1); len(snaps) > 0 {
+			sn, _ := cm.app.store.SnapshotText(snaps[0].Serial)
+			if sn.Text != string(text) {
+				f2, cfg2, d2 := config.Load(cm.path, []byte(sn.Text), cm.app.validators())
+				if !config.HasErrors(d2) {
+					if d := cm.app.monitorCapDiag(cfg2, cfg); d != nil {
+						cm.cur = ConfigState{Text: sn.Text, SHA: shaOf([]byte(sn.Text)), Serial: cfg2.Serial, File: f2, Config: cfg2}
+						cm.banner = &Banner{Kind: "error", Code: "monitor_limit", Message: d.Msg + "; the last version runs on", Diags: []config.Diagnostic{*d}}
+						cm.app.log.Error("monitors.conf grew past the monitor limit while stopped; running the last version", "err", d.Msg)
+						cm.touchStamp()
+						return nil
+					}
+				}
+			}
+		} else if d := cm.app.firstStartCapDiag(cfg); d != nil {
+			return cm.repairCap(text, *d)
+		}
+	}
 	cm.cur = ConfigState{Text: string(text), SHA: shaOf(text), Serial: cfg.Serial, File: f, Config: cfg}
 	cm.touchStamp()
 	return cm.snapshot("startup", "", "")
@@ -153,6 +179,15 @@ func (cm *configManager) load() error {
 // fix lands here again. The running serial is the broken file's own,
 // so the serial rules treat the fix like any other edit.
 func (cm *configManager) repair(text []byte, diags []config.Diagnostic) error {
+	return cm.repairWith(text, diags, &Banner{Kind: "error", Code: "invalid_first", Message: "monitors.conf has errors and there is no earlier good version, so nothing is being monitored yet — fix the configuration to start", Diags: diags})
+}
+
+// repairCap is repair mode for a first start past the monitor limit.
+func (cm *configManager) repairCap(text []byte, d config.Diagnostic) error {
+	return cm.repairWith(text, []config.Diagnostic{d}, &Banner{Kind: "error", Code: "monitor_limit_first", Message: d.Msg, Diags: []config.Diagnostic{d}})
+}
+
+func (cm *configManager) repairWith(text []byte, diags []config.Diagnostic, banner *Banner) error {
 	sf, scfg, d := config.Load(cm.path, starter(cm.app.now()), cm.app.validators())
 	if config.HasErrors(d) {
 		return &InvalidError{Diags: diags} // cannot happen: the starter is valid
@@ -165,7 +200,7 @@ func (cm *configManager) repair(text []byte, diags []config.Diagnostic) error {
 	}
 	cm.cur = ConfigState{Text: string(text), SHA: shaOf(text), Serial: serial, File: sf, Config: scfg}
 	cm.inRepair = true
-	cm.banner = &Banner{Kind: "error", Code: "invalid_first", Message: "monitors.conf has errors and there is no earlier good version, so nothing is being monitored yet — fix the configuration to start", Diags: diags}
+	cm.banner = banner
 	cm.app.log.Error("REPAIR MODE: monitors.conf has errors and there is no earlier good version; the web UI is running so the configuration can be fixed, and nothing is being monitored until it is")
 	for _, dg := range diags {
 		cm.app.log.Error("monitors.conf: " + dg.Error())
@@ -347,7 +382,13 @@ func (cm *configManager) check() {
 		// held it, so the monitor limit does not refuse it here.
 		_ = cm.apply(text, f, cfg, "file", "", "", nil, nil)
 	default:
-		if d := cm.app.monitorCapDiag(cm.cur.Config, cfg); d != nil {
+		// Still on a first start, the file is judged like one: up to the
+		// import ceiling, not the everyday limit.
+		d := cm.app.monitorCapDiag(cm.cur.Config, cfg)
+		if cm.inRepair {
+			d = cm.app.firstStartCapDiag(cfg)
+		}
+		if d != nil {
 			cm.setBanner(&Banner{Kind: "error", Code: "monitor_limit", Message: d.Msg, Diags: []config.Diagnostic{*d}})
 		} else {
 			_ = cm.apply(text, f, cfg, "file", "", "", nil, nil)
@@ -504,4 +545,24 @@ func recordText(st ConfigState, name string) string {
 		t = t[:2000] + "…"
 	}
 	return t
+}
+
+// retryCapRepair applies the file again when a first start was held back
+// only by the monitor limit, after something changed it (a licence was
+// installed): monitoring starts without a restart.
+func (cm *configManager) retryCapRepair() {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	if !cm.inRepair || cm.banner == nil || cm.banner.Code != "monitor_limit_first" {
+		return
+	}
+	text, err := os.ReadFile(cm.path)
+	if err != nil {
+		return
+	}
+	f, cfg, diags := config.Load(cm.path, text, cm.app.validators())
+	if config.HasErrors(diags) || cm.app.firstStartCapDiag(cfg) != nil {
+		return
+	}
+	_ = cm.apply(text, f, cfg, "file", "", "licence installed", nil, nil)
 }

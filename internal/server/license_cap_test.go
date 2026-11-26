@@ -73,3 +73,25 @@ func TestLicenseMonitorCap(t *testing.T) {
 		t.Fatalf("uncapped licence surface: %d %+v", c, lic)
 	}
 }
+
+// A first start past the import ceiling monitors nothing; installing a
+// licence starts monitoring at once, without a restart.
+func TestFirstStartPastCeilingStartsOnRegistration(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("@ IN SOA unagikuma. admin.localhost. ( 2026102301 1s 500ms 300ms 2 )\n")
+	for i := 1; i <= 250; i++ {
+		fmt.Fprintf(&b, "m%03d IN PING 10.0.%d.%d\n", i, i/250, i%250+1)
+	}
+	e := newEnv(t, b.String(), nil)
+	e.setup()
+	if n := len(e.app.Config().Config.Monitors); n != 0 {
+		t.Fatalf("first start past the ceiling ran %d monitors", n)
+	}
+	f := license.Sign(testLicenseKey, license.File{Customer: "Test KK", Licensee: license.LicenseeOrganization, Product: license.Product, License: license.TypePerpetual})
+	if c := e.do("PUT", "/api/v1/license", f, nil); c != 200 {
+		t.Fatalf("install: %d", c)
+	}
+	if n := len(e.app.Config().Config.Monitors); n != 250 {
+		t.Fatalf("after registering: %d monitors, want 250", n)
+	}
+}
