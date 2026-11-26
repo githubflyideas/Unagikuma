@@ -709,8 +709,8 @@ func (a *App) EditConfigFrom(author, message string, client map[string]any, chan
 }
 
 // editConfigCapExempt is EditConfig for a change the monitor limit
-// does not govern: an import (the import already held it to the monitor limit,
-// result) or the gateway seeding (its monitors never count, so adding
+// does not govern: an import (it already held its result to the monitor
+// limit) or the gateway seeding (its monitors never count, so adding
 // one cannot pass the limit either).
 func (a *App) editConfigCapExempt(author, message string, change func(f *config.File) error) (ConfigState, error) {
 	if err := a.editable(); err != nil {
@@ -721,8 +721,8 @@ func (a *App) editConfigCapExempt(author, message string, change func(f *config.
 	return a.cfg.edit(author, message, nil, change)
 }
 
-// editConfigImport is EditConfig for an import: the monitor limit
-// already held the result, so the monitor limit does not refuse it.
+// editConfigImport is EditConfig for an import: the import already held
+// its result to the monitor limit.
 func (a *App) editConfigImport(author, message string, change func(f *config.File) error) (ConfigState, error) {
 	return a.editConfigCapExempt(author, message, change)
 }
