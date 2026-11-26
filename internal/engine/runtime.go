@@ -171,7 +171,6 @@ type Config struct {
 	Maints []MaintSpec
 }
 
-
 // AnchorSpec is an explicit anchor address.
 type AnchorSpec struct {
 	Kind AnchorKind // lan | wan

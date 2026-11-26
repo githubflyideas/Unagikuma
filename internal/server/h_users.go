@@ -23,7 +23,6 @@ type userReq struct {
 	Person int64 `json:"person"`
 }
 
-
 // cleanAreas keeps sections only for operators: other roles see or change
 // everything they are allowed to.
 func (q *userReq) cleanAreas() []string {

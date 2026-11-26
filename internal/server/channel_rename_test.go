@@ -28,7 +28,7 @@ func TestChannelRenameFollowsReferences(t *testing.T) {
 	}
 	b, _ := os.ReadFile(e.app.ConfigPath())
 	file := string(b)
-	for _, want := range []string{"members=renamed,other", "chain=other,renamed", "escalate=30m:renamed+other" } {
+	for _, want := range []string{"members=renamed,other", "chain=other,renamed", "escalate=30m:renamed+other"} {
 		if !strings.Contains(file, want) {
 			t.Errorf("%q missing from:\n%s", want, file)
 		}

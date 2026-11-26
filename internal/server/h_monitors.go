@@ -60,7 +60,7 @@ type rowJSON struct {
 	Area    string   `json:"area,omitempty"`
 	Nodes   []string `json:"nodes,omitempty"`
 	Parents []string `json:"parents,omitempty"`
-	Host    string   `json:"host"`           // the host it is listed under
+	Host    string   `json:"host"` // the host it is listed under
 	Region  string   `json:"region,omitempty"`
 	Mute    bool     `json:"mute,omitempty"`
 	SysChan bool     `json:"system_channel,omitempty"`
