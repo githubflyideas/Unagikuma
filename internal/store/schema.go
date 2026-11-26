@@ -159,7 +159,7 @@ var coreMigrations = []string{
  CREATE INDEX deliveries_source ON deliveries(site,source_epoch,original_id);
  CREATE INDEX evidence_source ON evidence(site,source_epoch,original_id);
  CREATE INDEX acks_source ON acks(site,source_epoch,original_id);`,
-	// Reserved for a later multi-tenant edition: always NULL for now.
+	// tenant_id was reserved and unused; a later migration drops it.
 	`ALTER TABLE users ADD COLUMN tenant_id TEXT;
  ALTER TABLE people ADD COLUMN tenant_id TEXT;
  ALTER TABLE monitors ADD COLUMN tenant_id TEXT;
@@ -180,12 +180,19 @@ var coreMigrations = []string{
  CREATE INDEX value_samples_monitor_at ON value_samples(monitor, at);`,
 	// A sample belongs to the definition that produced it (a redefined
 	// monitor starts over; a deleted or renamed one leaves nothing
-	// behind), and the new tables keep the reserved tenant_id like the rest.
+	// behind).
 	`ALTER TABLE value_samples ADD COLUMN def_hash TEXT NOT NULL DEFAULT '';
  ALTER TABLE value_samples ADD COLUMN tenant_id TEXT;
  ALTER TABLE saved_alerts ADD COLUMN tenant_id TEXT;`,
-	// The groups of monitors an account sees ('' = all of them).
+	// The groups of monitors an account is assigned.
 	`ALTER TABLE users ADD COLUMN groups TEXT NOT NULL DEFAULT '';`,
+	// Drop the unused tenant_id reservation: there is no multi-tenant edition.
+	`ALTER TABLE users DROP COLUMN tenant_id;
+ ALTER TABLE people DROP COLUMN tenant_id;
+ ALTER TABLE monitors DROP COLUMN tenant_id;
+ ALTER TABLE incidents DROP COLUMN tenant_id;
+ ALTER TABLE value_samples DROP COLUMN tenant_id;
+ ALTER TABLE saved_alerts DROP COLUMN tenant_id;`,
 }
 
 var historyMigrations = []string{

@@ -234,14 +234,8 @@ func (s *Server) catalog(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(b)
 }
 
-// setSessionCookie writes this installation's session cookie and expires
-// a leftover cookie under the old name, so a previous installation on the
-// same host cannot keep overwriting the login.
 func (s *Server) setSessionCookie(w http.ResponseWriter, r *http.Request, value string, maxAge int) {
 	path := s.urlPrefix(r) + "/"
 	http.SetCookie(w, &http.Cookie{Name: s.sessionCookie(), Value: value, Path: path, HttpOnly: true, SameSite: http.SameSiteStrictMode,
 		Secure: s.opts.SecureCookies, MaxAge: maxAge})
-	if s.sessionCookie() != legacySessionCookie {
-		http.SetCookie(w, &http.Cookie{Name: legacySessionCookie, Value: "", Path: path, MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
-	}
 }

@@ -342,8 +342,8 @@ func (e *Engine) notDelivered(in *Intent, now time.Time) bool {
 }
 
 // tellOnFail sends a notice that could not be delivered to each of the
-// policy's OnFail chains (a team's: the system channels, and the team's
-// administrators), saying so.
+// policy's OnFail chains (the system channels, and the administrators),
+// saying so.
 func (e *Engine) tellOnFail(in *Intent, now time.Time) {
 	pol := e.policy(in.Policy)
 	if len(pol.OnFail) == 0 || in.Message.DryRun || len(in.Chain) > 0 {
@@ -355,7 +355,7 @@ func (e *Engine) tellOnFail(in *Intent, now time.Time) {
 		tell := &Intent{IncidentID: in.IncidentID, Seq: in.Seq, Kind: in.Kind, Policy: in.Policy, Message: msg,
 			CreatedAt: now, DueAt: now, System: true, Chain: chain}
 		if e.enqueue(tell) {
-			e.decideIntent(tell, LedQueued, "team channels failed")
+			e.decideIntent(tell, LedQueued, "alert channels failed")
 		}
 	}
 }

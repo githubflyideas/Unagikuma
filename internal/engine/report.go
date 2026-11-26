@@ -201,8 +201,7 @@ func (e *Engine) reportPolicy() string {
 			return p
 		}
 	}
-	// The alert channels, as the admin team's channels were before 3.0;
-	// without any, the system channels.
+	// The alert channels; without any, the system channels.
 	if p, ok := e.cfg.Policies["default"]; ok && len(p.Chain) > 0 {
 		return "default"
 	}

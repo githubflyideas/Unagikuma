@@ -20,7 +20,7 @@ func TestSessionCookiesDoNotClashAcrossInstallations(t *testing.T) {
 	if an == bn {
 		t.Fatalf("two installations share a cookie name %q", an)
 	}
-	if !strings.HasPrefix(an, legacySessionCookie+"_") || !strings.HasPrefix(bn, legacySessionCookie+"_") {
+	if !strings.HasPrefix(an, sessionCookiePrefix+"_") || !strings.HasPrefix(bn, sessionCookiePrefix+"_") {
 		t.Fatalf("cookie names %q and %q are not scoped to an installation", an, bn)
 	}
 

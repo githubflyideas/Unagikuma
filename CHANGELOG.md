@@ -4,7 +4,9 @@
 
 **Changed**
 - Monitors with no group are visible only to administrators. An operator or viewer sees only the monitors in the groups they were given; with no groups assigned they see no monitors. (In 3.0, an account given no groups saw every monitor.)
-- The session cookie is named `unagikuma_session_<installation-number>`, so two installations on the same host no longer share a login. A leftover cookie under the old name (`unagikuma_session`) is ignored; sign in once more after upgrading. The console's saved language, style and view in the browser are scoped the same way.
+- `TEAM` records, the `team=` option and the `team:` selector are no longer accepted (breaking). There is no rewrite of old files on start. Put monitors in a group with `group=` and assign that group to a user, or run a second installation.
+- `tenant=` is no longer accepted, and the unused `tenant_id` columns are dropped from new and existing databases. There is no multi-tenant edition.
+- The session cookie is named `unagikuma_session_<installation-number>`, so two installations on the same host no longer share a login. The console's saved language, style and view in the browser are scoped the same way.
 - Without `--instance` (and without a name under Settings), the name shown in notifications is the host name plus the data directory's last component (`box-shop` for `--data /var/lib/unagikuma/shop`). A generic directory name such as `data` keeps the host name on port 8077, and uses `hostname-port` on another port. The cluster node name in `monitors.conf` is not changed automatically.
 - `contrib/systemd/unagikuma@.service` runs a second installation (`systemctl enable --now unagikuma@shop`). On Windows, `service install --name` now starts the service under that name.
 
@@ -13,7 +15,7 @@
 - A Windows `.exe` built locally had been committed to the source tree; it is no longer in the repository.
 
 **Docs**
-- `docs/spec/monitors-conf.md` describes groups as current, and `TEAM` records only as what 3.0 still parses and rewrites on the first start. The user manual covers several installations, the systemd template, and Windows `--name`.
+- `docs/spec/monitors-conf.md` and the user manual no longer document `TEAM` records, `team=` or `tenant=`. The user manual covers several installations, the systemd template, and Windows `--name`.
 
 
 ## v3.0.0 — 2026-11-26

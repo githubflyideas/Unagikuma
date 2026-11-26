@@ -14,7 +14,7 @@ func TestPushRefusesCheckOptions(t *testing.T) {
 			t.Errorf("%q accepted: %v", line, d)
 		}
 	}
-	_, _, d := Load("monitors.conf", []byte("$FILE revision=1\np IN PUSH period=1m grace=30s title=\"Backup\" team=admin\n"), Options{})
+	_, _, d := Load("monitors.conf", []byte("$FILE revision=1\np IN PUSH period=1m grace=30s title=\"Backup\"\n"), Options{})
 	if HasErrors(d) {
 		t.Fatalf("plain push refused: %v", d)
 	}

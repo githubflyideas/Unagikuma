@@ -227,9 +227,9 @@ ops-im    IN CHANNEL feishu url=${secret:feishu_ops}
 oncall    IN CHANNEL aliyun-sms access-key-id=LTAI… access-key-secret=${secret:ali} sign-name=Ops template-code=SMS_123 phones=13800000000
 manager   IN CHANNEL email host=smtp.example.com from=alerts@example.com to=boss@example.com
 office    IN PERIOD "mon-fri 09:00-18:00; sat 10:00-12:00"
-team      IN CHANNEL group members=ops-im,oncall
+ops-all   IN CHANNEL group members=ops-im,oncall
 night-sms IN CHANNEL aliyun-sms … period=!office
-default   IN POLICY chain=team,night-sms mode=all
+default   IN POLICY chain=ops-all,night-sms mode=all
 ```
 
 ### Channel kinds
@@ -296,8 +296,8 @@ Functions: `upper`, `lower`, `trunc 20 .Name`, `join ", " .Tags`, `json .Tags`, 
 
 - **Length.** Each service takes messages up to a size (WeCom 2048 bytes, Telegram 4096 characters, Discord 2000, Pushover 1024, …). A longer message, usually the daily report, is cut at a line and its last line says how many lines are left out.
 - **Rate.** A channel sends at most `notify.channel-rate` (20 a minute; `rate=6/m` on a channel changes it), and never more than its service takes from one robot in a minute (`notify.service-limits`: DingTalk, WeCom and Telegram 20, Discord 30, Slack 60, Feishu 100). What cannot go yet waits, and a long queue becomes one summary.
-- **Retries.** A failed delivery is tried again twice (`notify.channel-retries`, `retries=` on a channel, `retries=0` for none), after 2 and 5 seconds. A failure that will repeat (a wrong token, a refused message) is not tried again. A service that asks to wait (HTTP 429 with `Retry-After`, or its own "too fast" answer) is asked again after that long; if it asks for more than `notify.retry-after-max` (30s) the next channel of the team takes the alert.
-- **When every channel fails.** The alert does not count towards `notify.max` and is sent again after `notify.failed-retry` (2 minutes, then 4, 8, … up to the repeat interval) until someone gets it or the problem is over. The system channels and the team's administrators are told once that the team's channels failed.
+- **Retries.** A failed delivery is tried again twice (`notify.channel-retries`, `retries=` on a channel, `retries=0` for none), after 2 and 5 seconds. A failure that will repeat (a wrong token, a refused message) is not tried again. A service that asks to wait (HTTP 429 with `Retry-After`, or its own "too fast" answer) is asked again after that long; if it asks for more than `notify.retry-after-max` (30s) the next channel of the policy takes the alert.
+- **When every channel fails.** The alert does not count towards `notify.max` and is sent again after `notify.failed-retry` (2 minutes, then 4, 8, … up to the repeat interval) until someone gets it or the problem is over. The system channels and the administrators are told once that the alert channels failed.
 - **Daily report.** SMS and voice channels take it only with `report=yes`; every other channel takes it unless `report=no`.
 
 - **E-mail.** An `email` channel sends either to an SMTP server (`host=`, `port=`, `tls=starttls|tls|none`, `username=`, `password=`, `from=`) or, with `via=sendmail`, through this machine's own mail system, the way Nagios and cron do:
@@ -491,10 +491,6 @@ Where notifications go:
 - The **alert channels** (**Alerting › Channels**) are tried in order until one succeeds, or all are sent to with *Send to all*. Every monitor uses them, unless it names its own policy (`policy=`).
 - A monitor may have one of two exceptions: `mute=yes` (problems are recorded, nothing is sent) or `system-channel=yes` (it goes to the system channels instead).
 - **System channels** are channels with `system=yes`. They receive the system's own notices, every alert while there are no alert channels, and the problems the alert channels failed to deliver.
-
-Releases before 2.6 used `POLICY` records. When the server starts, a policy that only lists channels (`chain=`, `mode=`) becomes the channels of the teams that used it: the `default` policy those of the admin team and of teams without a policy, and the channels of the `system` policy (or, without one, of `default`) get `system=yes`. `policy=system` on a monitor becomes `system-channel=yes`. The file is kept as `monitors.conf.before-teams` and the change is in the audit log. Policies with other options (`repeat=`, `escalate=`, …) stay and keep working for whatever names them; edit them in the file.
-
-Release 3.0 removed teams. At the first start a file with `TEAM` records is rewritten so that nobody sees or receives anything different: the admin team's channels become the alert channels (`default IN POLICY chain=…`); another team's channels, when they differ, become a policy of the team's name that its monitors name with `policy=`; a team's monitors get `group=<team>` when they have no group; a member of teams (and not of the admin team) is given the groups of those teams' monitors; `team=` options and `TEAM` records are removed, and maintenance or status page selectors naming a team (`team:web`) name the group. The file is kept as `monitors.conf.before-groups` and the change is in the audit log. In a cluster, upgrade the other machines before the master.
 
 **Settings › Audit** lists every change to accounts, roles and sections (before and after), tokens, secrets (names only), nodes and the configuration, with the person or token, the section, and the source address; configuration edits made in the file on disk are listed too (each record as it was and as it is now), and so are sign-ins and failed logins, backups, restores, imports, password resets, and what the system did by itself (holds during a local outage and their release, restarts, crashes, clock jumps, upgrades). High-risk entries are highlighted and can be filtered by risk, person, source address, sign-in and time. `GET /api/v1/audit?actor=&action=&area=&session=` serves the same to administrators.
 

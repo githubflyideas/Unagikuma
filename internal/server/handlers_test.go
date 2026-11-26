@@ -127,7 +127,7 @@ func (e *env) setup() {
 func TestSetupShownDespiteAnOldSessionCookie(t *testing.T) {
 	e := newEnv(t, testBind, nil)
 	u, _ := url.Parse(e.ts.URL)
-	e.c.Jar.SetCookies(u, []*http.Cookie{{Name: legacySessionCookie, Value: "left-by-an-earlier-installation", Path: "/"}})
+	e.c.Jar.SetCookies(u, []*http.Cookie{{Name: sessionCookiePrefix, Value: "left-by-an-earlier-installation", Path: "/"}})
 	var er struct{ Code string }
 	if code := e.do("GET", "/api/v1/session", nil, &er); code != 401 || er.Code != CodeSetupRequired {
 		t.Fatalf("with an old cookie: %d %s", code, er.Code)

@@ -100,19 +100,17 @@ func authOf(r *http.Request) *authInfo {
 	return a
 }
 
-// legacySessionCookie is the name used before 3.0.1. A leftover of it is
-// ignored (the person signs in again) and cleared when a new session starts.
-const legacySessionCookie = "unagikuma_session"
+// sessionCookiePrefix is the stem of the session cookie. The installation
+// number is appended so two instances on the same host (browsers do not
+// isolate cookies by port) do not share a login.
+const sessionCookiePrefix = "unagikuma_session"
 
-// sessionCookie is the session cookie for this installation. It includes
-// the installation number so two instances on the same host (browsers do
-// not isolate cookies by port) do not share a login.
 func (s *Server) sessionCookie() string {
 	id := s.app.License().InstallationID()
 	if id == "" {
-		return legacySessionCookie
+		return sessionCookiePrefix
 	}
-	return legacySessionCookie + "_" + id
+	return sessionCookiePrefix + "_" + id
 }
 
 // New builds the server and starts publishing live events.

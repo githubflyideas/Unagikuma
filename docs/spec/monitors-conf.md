@@ -178,7 +178,6 @@ upper case by convention and read in any case.
 | `PERIOD` | weekly time ranges | the ranges, quoted |
 | `MAINT` | maintenance window | title |
 | `STATUSPAGE` | public status page | title |
-| `TEAM` | **deprecated** (removed in 3.0; still parsed and rewritten on start, see below) | none |
 
 Options common to all monitors and never sent to the check itself:
 `title`, `description`, `tags`, `group`, `device`, `handler`, `was`. The
@@ -208,8 +207,6 @@ chain=…`), unless a monitor names its own policy. Channels with
 `system=yes` are the system channels: they get the system's own notices.
 A channel with `report=no` does not take the daily status report.
 
-`tenant=` is reserved for a later edition and ignored.
-
 ```conf
 $FILE revision=2026110401
 bj     IN NODE region=north
@@ -219,30 +216,6 @@ default IN POLICY chain=web-im
 shop  IN HTTP https://shop.example.com/ group=web region=north
 gw    IN PING 10.0.0.1 mute=yes
 ```
-
-### Files from before 3.0 (teams)
-
-Release 3.0 removed `TEAM` records and `team=` options. They are still
-**parsed** so that an un-upgraded file can be rewritten on the first
-start of 3.0 or later: do not add new `TEAM` records. The rewrite keeps
-a copy as `monitors.conf.before-groups` and is recorded in the audit
-log:
-
-- the admin team's channels become the default policy (`default IN
-  POLICY chain=…`);
-- another team's channels, when they differ, become a policy of the
-  team's name, named by `policy=` on that team's monitors;
-- a team's monitors without `group=` get `group=<team>`;
-- a member of teams (and not of the admin team) is given those groups;
-- `team=` options and `TEAM` records are removed, and selectors that
-  named a team (`team:web`) name the group instead.
-
-In a cluster, upgrade the other machines before the master.
-
-A `POLICY` record that only lists channels was, in releases before 3.0,
-first turned into team channels (copy kept as
-`monitors.conf.before-teams`). Those team records are then rewritten
-as above.
 
 ### Renaming
 
@@ -298,8 +271,9 @@ message}`. The codes are part of version 1 and keep their meaning:
 | `invalid_option` | an option a monitor's type does not accept, or a value it cannot use (the message names which) |
 | `unknown_secret`, `env_not_allowed` | a `${secret:…}` that does not exist, or an `${env:…}` that is not allowed |
 | `invalid_name`, `duplicate_name`, `duplicate_option` | names and options |
-| `unknown_policy`, `unknown_team`, `unknown_parent`, `unknown_node` | a reference to something not defined |
+| `unknown_policy`, `unknown_parent`, `unknown_node` | a reference to something not defined |
 | `unknown_type`, `unknown_directive`, `unknown_option` | names this release does not know |
+| `removed` | `TEAM` records, `team=` or `tenant=` (removed; not accepted) |
 | `needs_newer`, `unsupported_version` | reserved for, or written for, a later release |
 | `duplicate_directive`, `directive_order`, `duplicate_tunable`, `invalid_tunable` | directives |
 

@@ -213,8 +213,8 @@ func TestGroupIsolationWrites(t *testing.T) {
 	if c := put(bob, "pg", "db"); c != 403 {
 		t.Errorf("bob (viewer) changes pg: %d", c)
 	}
-	// carol operates both teams: she moves a monitor between them, and
-	// must say which when saving without team=.
+	// carol operates both groups: she moves a monitor between them, and
+	// must say which when saving without group=.
 	if c := put(carol, "pg", "db"); c != 200 {
 		t.Errorf("carol changes a db monitor: %d", c)
 	}
@@ -230,7 +230,7 @@ func TestGroupIsolationWrites(t *testing.T) {
 	if c := put(carol, "shop", "web"); c != 200 {
 		t.Errorf("carol moves shop back: %d", c)
 	}
-	// alice has one team: team= is filled in.
+	// alice has one group.
 	if c := put(alice, "shop", ""); c != 200 {
 		t.Errorf("alice saves shop without group= (kept in her only group): %d", c)
 	}

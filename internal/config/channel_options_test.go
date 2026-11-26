@@ -12,7 +12,7 @@ func TestChannelOptionsAreRememberedAsWritten(t *testing.T) {
 a IN CHANNEL feishu url=https://example.com/h retries=0 rate=6/m
 b IN CHANNEL feishu url=https://example.com/h report=yes
 c IN CHANNEL feishu url=https://example.com/h
-admin IN TEAM channels=a,b,c
+default IN POLICY chain=a,b,c
 `)
 	if len(errorsOf(ds)) != 0 {
 		t.Fatal(errorsOf(ds))
@@ -34,7 +34,7 @@ func TestTemplateProblemsAreWarnings(t *testing.T) {
 		}
 		return nil
 	}}
-	_, cfg, ds := Load("monitors.conf", []byte("$FILE revision=2026111201\na IN CHANNEL feishu url=https://example.com/h template=\"{{.Owner}}\"\nadmin IN TEAM channels=a\n"), opt)
+	_, cfg, ds := Load("monitors.conf", []byte("$FILE revision=2026111201\na IN CHANNEL feishu url=https://example.com/h template=\"{{.Owner}}\"\ndefault IN POLICY chain=a\n"), opt)
 	if len(errorsOf(ds)) != 0 || cfg.FindChannel("a") == nil {
 		t.Fatalf("the file must load: %v", ds)
 	}

@@ -152,16 +152,10 @@ func Unagikuma(data []byte, existing *config.Config, o Options) (*Result, error)
 		for _, op := range p.rec.Opts {
 			has[op.Key] = true
 			v := op.Value
-			// Who belongs to a team is decided here, not by the other
-			// installation's file: the same user name may be someone else.
-			if p.kind == "team" && (op.Key == "members" || op.Key == "managers" || op.Key == "operators" || op.Key == "viewers") {
-				it.attention("Its members ("+v+") are not carried over: accounts here with those names may be other people.", "Add the members under Advanced › Teams.")
-				continue
-			}
-			// A team or policy that already exists here receives these
-			// monitors' alerts: its channels and people, not the other file's.
-			if p.kind == "monitor" && (op.Key == "team" || op.Key == "policy") && here[v].Name != "" && !used[v] {
-				it.attention("Its alerts go to the "+op.Key+" "+v+" that is already here, and to its channels and people.", "")
+			// A policy that already exists here receives these monitors'
+			// alerts: its channels, not the other file's.
+			if p.kind == "monitor" && op.Key == "policy" && here[v].Name != "" && !used[v] {
+				it.attention("Its alerts go to the policy "+v+" that is already here, and to its channels.", "")
 			}
 			if op.Key == "parent" && p.kind == "monitor" {
 				v = remapList(v, rename)
@@ -229,7 +223,7 @@ func Unagikuma(data []byte, existing *config.Config, o Options) (*Result, error)
 }
 
 // recordKinds names the records that are not monitors.
-var recordKinds = map[string]string{"CHANNEL": "channel", "PERIOD": "period", "TEAM": "team", "STATUSPAGE": "status page"}
+var recordKinds = map[string]string{"CHANNEL": "channel", "PERIOD": "period", "STATUSPAGE": "status page"}
 
 // autoMonitors are added by every installation for its own gateways.
 var autoMonitors = map[string]bool{"lan-gateway": true, "internet-gateway": true}
@@ -263,8 +257,6 @@ func sectionOf(kind string) (title string, shared bool) {
 		return "Channels", true
 	case "period":
 		return "Periods", true
-	case "team":
-		return "Teams", true
 	}
 	return "Status pages", true
 }

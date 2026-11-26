@@ -135,8 +135,8 @@ type PolicySpec struct {
 	// Mute: nothing is sent (mute=yes on a monitor).
 	Mute bool
 	// OnFail are chains each sent the notice on their own when it could not
-	// be delivered through the policy's chain: a team's are the system
-	// channels and the team's administrators.
+	// be delivered through the policy's chain: usually the system
+	// channels and the administrators.
 	OnFail [][]string
 }
 

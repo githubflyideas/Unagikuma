@@ -38,7 +38,7 @@ type selVal struct {
 
 var selectorKeys = map[string]bool{
 	"name": true, "title": true, "type": true, "svc": true, "port": true, "host": true, "cidr": true,
-	"tag": true, "group": true, "policy": true, "node": true, "area": true, "device": true, "team": true, "region": true,
+	"tag": true, "group": true, "policy": true, "node": true, "area": true, "device": true, "region": true,
 }
 
 // ParseSelector parses a selector; "" selects nothing.
@@ -50,6 +50,9 @@ func ParseSelector(s string) (*Selector, error) {
 			t.neg, f = true, f[1:]
 		}
 		key, val, ok := strings.Cut(f, ":")
+		if ok && strings.EqualFold(key, "team") {
+			return nil, fmt.Errorf("team: was removed: use group:%s instead", val)
+		}
 		if ok && !selectorKeys[strings.ToLower(key)] {
 			if strings.Contains("status flag latency uptime changed acked paused", strings.ToLower(key)) {
 				return nil, fmt.Errorf("%s changes at run time and cannot select monitors here", key)
@@ -183,8 +186,6 @@ func (t selTerm) matchOne(m *Monitor, v selVal) bool {
 	case "cidr":
 		a, err := netip.ParseAddr(strings.Trim(m.Host(), "[]"))
 		return err == nil && v.cidr.Contains(a.Unmap())
-	case "team":
-		return v.is(m.Team) || v.is(m.TeamOf())
 	case "node":
 		return matchNode(m, v)
 	case "tag":
