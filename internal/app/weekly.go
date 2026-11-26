@@ -59,18 +59,14 @@ func (a *App) location() *time.Location {
 	return time.Local
 }
 
-// WeeklyReports renders the weekly report of each team receiving reports.
+// WeeklyReports renders the weekly report, sent like the daily one.
 func (a *App) WeeklyReports(now time.Time) []engine.Report {
-	var out []engine.Report
-	for _, tg := range a.engine.ReportTargets() {
-		r := a.weeklyReport(now, tg.Team)
-		r.Policy = tg.Policy
-		out = append(out, r)
-	}
-	return out
+	r := a.weeklyReport(now)
+	r.Policy = a.engine.ReportPolicy()
+	return []engine.Report{r}
 }
 
-func (a *App) weeklyReport(now time.Time, team string) engine.Report {
+func (a *App) weeklyReport(now time.Time) engine.Report {
 	lang := a.messageLang()
 	loc := a.location()
 	from := now.Add(-7 * 24 * time.Hour)
@@ -82,7 +78,7 @@ func (a *App) weeklyReport(now time.Time, team string) engine.Report {
 	var sum, down float64
 	mine := map[string]bool{}
 	for _, m := range a.EffectiveConfig().Monitors {
-		if m.Disabled || (team != "" && m.Team != team) {
+		if m.Disabled {
 			continue
 		}
 		mine[m.Name] = true
@@ -107,7 +103,7 @@ func (a *App) weeklyReport(now time.Time, team string) engine.Report {
 		}
 	}
 	saved := 0
-	if team == "" { // held back across the installation, not per team
+	{
 		if days, err := a.store.DailyCounters(from); err == nil {
 			for _, d := range days {
 				for k, n := range d {
@@ -128,7 +124,7 @@ func (a *App) weeklyReport(now time.Time, team string) engine.Report {
 		mean = sum / float64(len(list))
 	}
 	span := from.In(loc).Format("01-02") + " – " + now.In(loc).Format("01-02")
-	r := engine.Report{Team: team, OK: problems == 0}
+	r := engine.Report{OK: problems == 0}
 	r.Title = i18n.T(lang, "sys.weekly_title", "span", span, "avail", pct(mean), "n", problems)
 	lines := []string{
 		i18n.T(lang, "sys.weekly_avail", "avail", pct(mean), "monitors", len(list)),

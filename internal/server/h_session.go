@@ -107,10 +107,9 @@ func (s *Server) sessionGet(w http.ResponseWriter, r *http.Request) (any, error)
 			out["master_name"] = c.MName
 		}
 	}
-	// A team member works within their teams: the UI shows them only what
-	// those teams own.
-	if ai.team != nil {
-		out["teams"] = ai.team.roles
+	// An account limited to groups: the UI shows only their monitors.
+	if ai.group != nil {
+		out["groups"] = ai.groups
 	}
 	return out, nil
 }

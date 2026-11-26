@@ -10,43 +10,38 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
 
-// Teams are isolated from each other: a member of one or more teams (who
-// is not an administrator) sees only what those teams own, and changes it
-// only as an operator. Monitors of other teams are not shown to them,
-// except the state of a monitor their own monitors depend on.
+// Groups: an account given monitor groups (and not an administrator) sees
+// only the monitors in those groups (group= on a monitor), and changes
+// them only as an operator. Other monitors are not shown to it, except the
+// state of a monitor its own depend on. An account given no groups sees
+// everything, as before.
 //
-// Isolation is deny by default: a team member may only call the routes in
-// teamRoutes, each of which filters what it returns. A route added later
-// stays closed to team members until it is reviewed and listed here.
+// Limiting is deny by default: such an account may only call the routes in
+// groupRoutes, each of which filters what it returns. A route added later
+// stays closed to it until it is reviewed and listed here.
 
-type teamScope struct {
-	roles      map[string]string // team -> role (operator, viewer)
-	visible    map[string]bool   // monitors of the member's teams
-	statusOnly map[string]bool   // monitors they depend on: state only
+type groupScope struct {
+	groups     map[string]bool // the account's groups
+	operator   bool            // may change monitors in them
+	visible    map[string]bool // monitors in the groups
+	statusOnly map[string]bool // monitors they depend on: state only
 }
 
-var errTeamOnly = Errorf(http.StatusForbidden, CodeForbidden, "not available to team members: ask an administrator")
+var errGroupOnly = Errorf(http.StatusForbidden, CodeForbidden, "not available to an account limited to some groups: ask an administrator")
 
-// teamScopeFor builds the scope of a user with an account role from the
-// configuration: nil for an administrator, and for everyone while there
-// are no teams besides the built-in admin team (it owns every monitor).
-// Otherwise the user works within their teams, with the role of their
-// account; a user in no team is in the admin team.
-func teamScopeFor(cfg *config.Config, user, role string) *teamScope {
-	if role == store.RoleAdmin || !cfg.MultiTeam() {
+// groupScopeFor builds the scope of an account: nil for an administrator
+// or an account given no groups (it sees everything).
+func groupScopeFor(cfg *config.Config, role string, groups []string) *groupScope {
+	if role == store.RoleAdmin || len(groups) == 0 {
 		return nil
 	}
-	ts := &teamScope{roles: map[string]string{}, visible: map[string]bool{}, statusOnly: map[string]bool{}}
-	teamRole := "viewer"
-	if role == store.RoleOperator {
-		teamRole = "operator"
-	}
-	for _, t := range cfg.TeamsOf(user) {
-		ts.roles[t] = teamRole
+	gs := &groupScope{groups: map[string]bool{}, operator: role == store.RoleOperator, visible: map[string]bool{}, statusOnly: map[string]bool{}}
+	for _, g := range groups {
+		gs.groups[g] = true
 	}
 	for _, m := range cfg.Monitors {
-		if ts.roles[m.TeamOf()] != "" {
-			ts.visible[m.Name] = true
+		if gs.groups[m.Group] {
+			gs.visible[m.Name] = true
 		}
 	}
 	// What their monitors depend on, all the way up: its state explains
@@ -54,29 +49,29 @@ func teamScopeFor(cfg *config.Config, user, role string) *teamScope {
 	var up func(m *config.Monitor)
 	up = func(m *config.Monitor) {
 		for _, p := range m.Parents {
-			if ts.visible[p] || ts.statusOnly[p] {
+			if gs.visible[p] || gs.statusOnly[p] {
 				continue
 			}
 			if pm := cfg.FindMonitor(p); pm != nil {
-				ts.statusOnly[p] = true
+				gs.statusOnly[p] = true
 				up(pm)
 			}
 		}
 	}
-	for name := range ts.visible {
+	for name := range gs.visible {
 		up(cfg.FindMonitor(name))
 	}
-	return ts
+	return gs
 }
 
 // list is the monitors a member may see, for store queries; nil for a
 // caller who sees everything.
-func (ts *teamScope) list() *[]string {
-	if ts == nil {
+func (gs *groupScope) list() *[]string {
+	if gs == nil {
 		return nil
 	}
-	out := make([]string, 0, len(ts.visible))
-	for m := range ts.visible {
+	out := make([]string, 0, len(gs.visible))
+	for m := range gs.visible {
 		out = append(out, m)
 	}
 	sort.Strings(out)
@@ -84,58 +79,53 @@ func (ts *teamScope) list() *[]string {
 }
 
 // sees reports whether the member may see a monitor (not just its state).
-func (ts *teamScope) sees(monitor string) bool { return ts.visible[monitor] }
+func (gs *groupScope) sees(monitor string) bool { return gs.visible[monitor] }
 
-// writes reports whether the member may change monitors of a team ("" is
-// the built-in admin team).
-func (ts *teamScope) writes(team string) bool {
-	if team == "" {
-		team = config.AdminTeam
-	}
-	return ts.roles[team] == "operator"
-}
+// writes reports whether the account may change monitors of a group.
+func (gs *groupScope) writes(group string) bool { return gs.operator && gs.groups[group] }
 
-// writableTeams lists the teams whose monitors the member may change.
-func (ts *teamScope) writableTeams() []string {
+// writableGroups lists the groups whose monitors the account may change.
+func (gs *groupScope) writableGroups() []string {
 	var out []string
-	for t := range ts.roles {
-		if ts.writes(t) {
-			out = append(out, t)
+	for g := range gs.groups {
+		if gs.writes(g) {
+			out = append(out, g)
 		}
 	}
+	sort.Strings(out)
 	return out
 }
 
-// scopes are the API scopes of a team member: reading, and acknowledging
-// and changing for an operator. What they may change is then limited per
+// scopes are the API scopes of such an account: reading, and acknowledging
+// and changing for an operator. What it may change is then limited per
 // monitor.
-func (ts *teamScope) scopes() map[string]bool {
-	if len(ts.writableTeams()) > 0 {
+func (gs *groupScope) scopes() map[string]bool {
+	if gs.operator {
 		return map[string]bool{"read": true, "ack": true, "write": true}
 	}
 	return map[string]bool{"read": true}
 }
 
 // seesMonitor reports whether the caller may see a monitor: always, unless
-// they are a team member and it is not their teams'. Anything they may not
+// they are limited to groups and it is in none of theirs. Anything they may not
 // see answers 404, as if it did not exist.
 func seesMonitor(r *http.Request, name string) bool {
 	ai := authOf(r)
-	return ai == nil || ai.team == nil || ai.team.sees(name)
+	return ai == nil || ai.group == nil || ai.group.sees(name)
 }
 
 // seesIncident reports whether the caller may see an incident: one of a
 // monitor they may see.
 func (s *Server) seesIncident(r *http.Request, id int64) bool {
-	if teamOf(r) == nil {
+	if groupOf(r) == nil {
 		return true
 	}
 	inc, err := s.app.Store().Incident(id)
 	return err == nil && inc != nil && seesMonitor(r, inc.Monitor)
 }
 
-// incidentGate allows acting on an incident: 404 for one a team member may
-// not see, 403 for one outside an account's sections or teams.
+// incidentGate allows acting on an incident: 404 for one the caller may
+// not see, 403 for one outside an account's sections or groups.
 func (s *Server) incidentGate(r *http.Request, id int64) error {
 	if !s.seesIncident(r, id) {
 		return notFound("incident")
@@ -157,54 +147,41 @@ func seesAll(r *http.Request, names []string) bool {
 	return len(names) > 0
 }
 
-// teamOf is the caller's team scope, nil when they see everything.
-func teamOf(r *http.Request) *teamScope {
+// groupOf is the caller's group scope, nil when they see everything.
+func groupOf(r *http.Request) *groupScope {
 	if ai := authOf(r); ai != nil {
-		return ai.team
+		return ai.group
 	}
 	return nil
 }
 
-var errTeamChoice = Errorf(http.StatusForbidden, CodeForbidden, "choose one of your teams for this monitor: you may only add and change monitors of your own teams")
+var errGroupChoice = Errorf(http.StatusForbidden, CodeForbidden, "choose one of your groups for this monitor: you may only add and change monitors of your own groups")
 
-// teamOfNewRecord makes sure a team member writes monitors only into one
-// of their teams: team= must name one, and is filled in when they have
-// exactly one. Others are not limited; without team= a monitor goes to
-// the built-in admin team. team=admin is written as no team= at all.
-func teamOfNewRecord(ai *authInfo, spec *config.RecordSpec) error {
-	idx := -1
-	for i, o := range spec.Opts {
-		if o.Key == "team" {
-			idx = i
-		}
+// groupOfNewRecord makes sure an account limited to groups writes monitors
+// only into one of them: group= must name one, and is filled in when it
+// has exactly one. Others are not limited.
+func groupOfNewRecord(ai *authInfo, spec *config.RecordSpec) error {
+	if ai == nil || ai.group == nil {
+		return nil
 	}
-	defer func() {
-		for i, o := range spec.Opts {
-			if o.Key == "team" && (o.Value == config.AdminTeam || o.Value == "") {
-				spec.Opts = append(spec.Opts[:i], spec.Opts[i+1:]...)
-				break
+	for _, o := range spec.Opts {
+		if o.Key == "group" {
+			if !ai.group.writes(o.Value) {
+				return errGroupChoice
 			}
+			return nil
 		}
-	}()
-	if ai == nil || ai.team == nil {
-		return nil
 	}
-	if idx < 0 {
-		w := ai.team.writableTeams()
-		if len(w) != 1 {
-			return errTeamChoice
-		}
-		spec.Opts = append(spec.Opts, config.Opt{Key: "team", Value: w[0]})
-		return nil
+	w := ai.group.writableGroups()
+	if len(w) != 1 {
+		return errGroupChoice
 	}
-	if !ai.team.writes(spec.Opts[idx].Value) {
-		return errTeamChoice
-	}
+	spec.Opts = append(spec.Opts, config.Opt{Key: "group", Value: w[0]})
 	return nil
 }
 
-// teamRoutes are the routes open to team members; each filters by team.
-var teamRoutes = map[string]bool{
+// groupRoutes are the routes open to accounts limited to groups; each filters.
+var groupRoutes = map[string]bool{
 	// Their own session and preferences.
 	"GET /api/v1/session":          true,
 	"GET /api/v1/saved-alerts":     true,
@@ -248,17 +225,16 @@ var teamRoutes = map[string]bool{
 	"GET /api/v1/maintenance":           true,
 	"POST /api/v1/maintenance":          true,
 	"DELETE /api/v1/maintenance/{name}": true,
-	// Their overview, and the teams they are in.
+	// Their overview.
 	"GET /api/v1/overview": true,
-	"GET /api/v1/teams":    true,
 	"GET /api/v1/regions":  true,
 }
 
-// teamOverview is the overview a team member gets: their monitors and
+// groupOverview is the overview an account limited to groups gets: their monitors and
 // problems, and this host's own network state (which says whether a
 // failure is on this side); nothing about channels, nodes, people or
-// other teams.
-func (s *Server) teamOverview(r *http.Request) map[string]any {
+// other groups.
+func (s *Server) groupOverview(r *http.Request) map[string]any {
 	ov := s.app.Engine().Overview()
 	now := s.now()
 	counts := map[string]int{"total": 0}
@@ -326,28 +302,28 @@ func (s *Server) teamOverview(r *http.Request) map[string]any {
 		"instance": s.app.Instance(), "serial": ov.Serial, "layout": "single", "counts": counts, "unhandled": unhandled,
 		"degraded": degraded, "health": health, "channels": []any{}, "expiring": expiring, "open_system": 0,
 		"alerting_configured": true, "nodes": []any{}, "paths": []any{}, "tactical": s.tactical(r), "script_problems": 0,
-		"contact_issues": 0, "people": 0, "status_pages": 0, "team": true,
+		"contact_issues": 0, "people": 0, "status_pages": 0, "limited": true,
 	}
 }
 
-// teamStream filters the live stream for a team member: events about
+// groupStream filters the live stream for an account limited to groups: events about
 // monitors they may not see are left out, and events about no monitor
 // (a configuration change, a banner) keep their type but lose their data,
 // so the page knows to refresh without learning anything else. The scope
 // follows configuration changes.
-func (s *Server) teamStream(user, role string) sseFilter {
+func (s *Server) groupStream(role string, groups []string) sseFilter {
 	var mu sync.Mutex
 	serial := s.app.EffectiveConfig().Serial
-	ts := teamScopeFor(s.app.EffectiveConfig(), user, role)
+	ts := groupScopeFor(s.app.EffectiveConfig(), role, groups)
 	return func(ev sseEvent) (sseEvent, bool) {
 		mu.Lock()
 		if cur := s.app.EffectiveConfig(); cur.Serial != serial {
-			serial, ts = cur.Serial, teamScopeFor(cur, user, role)
+			serial, ts = cur.Serial, groupScopeFor(cur, role, groups)
 		}
 		scope := ts
 		mu.Unlock()
 		if scope == nil {
-			return ev, true // no longer in any team: sees everything again
+			return ev, true // sees everything
 		}
 		if ev.monitor != "" {
 			return ev, scope.sees(ev.monitor)

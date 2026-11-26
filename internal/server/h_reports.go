@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/githubflyideas/unagikuma/internal/config"
 	"net/http"
 	"sort"
 	"time"
@@ -98,88 +97,29 @@ func (s *Server) availability(w http.ResponseWriter, r *http.Request) (any, erro
 }
 
 type dailyJSON struct {
-	Team    string `json:"team"`
 	Title   string `json:"title"`
 	Body    string `json:"body"`
 	Policy  string `json:"policy"`
 	OK      bool   `json:"ok"`
 	Enabled bool   `json:"enabled"`
 	At      string `json:"at"`
-	// Teams lists every team and whether it receives the report.
-	Teams []reportTeamJSON `json:"teams"`
-	Sent  int              `json:"sent,omitempty"`
+	Sent    int    `json:"sent,omitempty"`
 }
 
-type reportTeamJSON struct {
-	Name     string `json:"name"`
-	Title    string `json:"title"`
-	Receives bool   `json:"receives"`
+func (s *Server) daily(r engine.Report) dailyJSON {
+	ts := s.app.EffectiveConfig().Tunables
+	return dailyJSON{Title: r.Title, Body: r.Body, Policy: r.Policy, OK: r.OK, Enabled: ts.Bool("notify.daily-report"), At: ts.Raw("notify.daily-report-at")}
 }
 
-func (s *Server) daily(team string, r engine.Report) dailyJSON {
-	cfg := s.app.EffectiveConfig()
-	ts := cfg.Tunables
-	if team == "" {
-		team = config.AdminTeam
-	}
-	out := dailyJSON{Team: team, Title: r.Title, Body: r.Body, Policy: r.Policy, OK: r.OK, Enabled: ts.Bool("notify.daily-report"), At: ts.Raw("notify.daily-report-at"), Teams: []reportTeamJSON{}}
-	receives := map[string]bool{}
-	for _, n := range s.app.Engine().ReportTeams() {
-		receives[n] = true
-	}
-	for _, t := range cfg.AllTeams() {
-		title := t.Title
-		if title == "" {
-			title = t.Name
-		}
-		out.Teams = append(out.Teams, reportTeamJSON{Name: t.Name, Title: title, Receives: receives[t.Name]})
-	}
-	return out
-}
-
-// reportTeam reads the team a report is asked for ("" = the admin team).
-func (s *Server) reportTeam(team string) (string, error) {
-	if team == "" {
-		return config.AdminTeam, nil
-	}
-	if s.app.EffectiveConfig().FindTeam(team) == nil {
-		return "", notFound("team")
-	}
-	return team, nil
-}
-
-// dailyReport previews a team's daily status report as it would be sent now.
+// dailyReport previews the daily status report as it would be sent now.
 func (s *Server) dailyReport(w http.ResponseWriter, r *http.Request) (any, error) {
-	team, err := s.reportTeam(r.URL.Query().Get("team"))
-	if err != nil {
-		return nil, err
-	}
-	return s.daily(team, s.app.Engine().DailyReport(team)), nil
+	return s.daily(s.app.Engine().DailyReport()), nil
 }
 
-// sendDailyReport sends a team's daily status report now, or every
-// team's that receives one when none is named.
+// sendDailyReport sends the daily status report now.
 func (s *Server) sendDailyReport(w http.ResponseWriter, r *http.Request) (any, error) {
-	var req struct {
-		Team string `json:"team"`
-	}
-	if r.ContentLength != 0 {
-		if err := decodeJSON(r, s.maxBody(), &req); err != nil {
-			return nil, err
-		}
-	}
-	if req.Team != "" {
-		if _, err := s.reportTeam(req.Team); err != nil {
-			return nil, err
-		}
-	}
-	sent := s.app.Engine().SendDailyReport(req.Team)
-	var first engine.Report
-	if len(sent) > 0 {
-		first = sent[0]
-	}
-	out := s.daily(req.Team, first)
-	out.Sent = len(sent)
+	out := s.daily(s.app.Engine().SendDailyReport())
+	out.Sent = 1
 	return out, nil
 }
 

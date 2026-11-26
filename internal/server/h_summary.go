@@ -242,7 +242,7 @@ func (b *summaryBuild) responseTimes() {
 // recent lists the last eight real incidents of the monitors this reader
 // sees.
 func (b *summaryBuild) recent(r *http.Request) {
-	page, err := b.st.IncidentsOf("all", "", teamOf(r).list(), 0, 40, b.s.historySite(r))
+	page, err := b.st.IncidentsOf("all", "", groupOf(r).list(), 0, 40, b.s.historySite(r))
 	if err != nil {
 		return
 	}

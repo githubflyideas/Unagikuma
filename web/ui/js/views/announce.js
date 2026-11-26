@@ -6,11 +6,11 @@ import { get, post, put, me, ifMatch } from '../api.js';
 import { NoticesTab } from './notices.js';
 import { useFetch, Loading, ErrorBox, toast, toastError, useDocTitle, Copy, Field } from '../ui.js';
 
-// viaText names where a report goes: a team's channels or the system ones
-// (a policy name only for a file written before teams had channels).
+// viaText names where a report goes: the alert channels, the system ones,
+// or a policy named in the settings.
 function viaText(policy) {
-  if (!policy || policy === 'system' || policy === 'default') return t('ui.report.via_system');
-  if (policy.startsWith('team:')) return t('ui.report.via_team', { team: policy.slice(5) });
+  if (policy === 'default') return t('ui.report.via_alert');
+  if (!policy || policy === 'system') return t('ui.report.via_system');
   return policy;
 }
 
@@ -49,14 +49,13 @@ function WeeklySettings() {
     </div></div>`;
 }
 
-// ReportSettings sets when the report goes out, to which teams, and
-// through which of a team's channels; a person can still switch it off for
-// themselves in the user list.
+// ReportSettings sets when the report goes out and through which of the
+// channels it goes to; a person can still switch it off for themselves in
+// the user list.
 function ReportSettings({ r, onChange }) {
   const tun = useFetch(() => get('/tunables'), []);
-  const tms = useFetch(() => get('/teams'), []);
   const chs = useFetch(() => get('/channels'), []);
-  if (!tun.data || !tms.data || !chs.data) return null;
+  if (!tun.data || !chs.data) return null;
   const val = (k) => (tun.data.find(x => x.key === k) || {}).value || '';
   const setTun = async (set) => {
     try { await put('/tunables', { set, unset: [] }); tun.reload(); onChange(); } catch (e) { toastError(e); }
@@ -65,11 +64,8 @@ function ReportSettings({ r, onChange }) {
   const times = (val('notify.daily-report-at') || '10:00').split(',').map(x => x.trim()).filter(Boolean);
   const setTimes = (list) => setTun({ 'notify.daily-report-at': [...new Set(list)].sort().join(',') });
   const spread = (n) => n <= times.length ? times.slice(0, n) : [...times, ...SPREAD[n].filter(x => !times.includes(x))].slice(0, n);
-  const teams = r.teams || [];
-  const receives = teams.filter(x => x.receives).map(x => x.name);
-  const setReceives = (name, on) => setTun({ 'notify.daily-report-teams': teams.filter(x => (x.name === name ? on : x.receives)).map(x => x.name).join(',') });
-  const team = (tms.data.items || []).find(x => x.name === r.team);
-  const chans = ((team && team.channels) || []).map(n => chs.data.find(c => c.name === n)).filter(Boolean);
+  // The channels of the policy the report goes through.
+  const chans = chs.data.filter(c => r.policy === 'default' ? c.alert : r.policy === 'system' ? c.system : c.used_by.includes(r.policy));
   const takes = (c) => /-(sms|voice)$/.test(c.kind) ? c.opts.report === 'yes' : c.opts.report !== 'no';
   const setTakes = async (c, on) => {
     const opts = { ...c.opts };
@@ -87,47 +83,30 @@ function ReportSettings({ r, onChange }) {
       ${times.map((tm, i) => html`<input type="time" value=${tm} aria-label=${t('ui.report.at')} style=${{ width: 'auto' }}
         onChange=${(e) => e.target.value && setTimes(times.map((x, j) => j === i ? e.target.value : x))} />`)}
     </div>
-    <${Field} label=${t('ui.report.teams')}>
-      <div class="row" style=${{ gap: '14px', flexWrap: 'wrap' }}>${teams.map(x => html`<label class="switch"><input type="checkbox" checked=${receives.includes(x.name)} onChange=${(e) => setReceives(x.name, e.target.checked)} /> ${x.title}</label>`)}</div><//>
-    <${Field} label=${t('ui.report.channels', { team: (teams.find(x => x.name === r.team) || {}).title || r.team })} hint=${chans.length ? t('ui.report.channels_hint') : ''}>
+    <${Field} label=${t('ui.report.channels_of')} hint=${chans.length ? t('ui.report.channels_hint') : ''}>
       ${chans.length ? html`<div class="row" style=${{ gap: '14px', flexWrap: 'wrap' }}>${chans.map(c => html`<label class="switch"><input type="checkbox" checked=${takes(c)} onChange=${(e) => setTakes(c, e.target.checked)} /> <span class="ltr">${c.name}</span></label>`)}</div>`
         : html`<span class="small muted">${t('ui.report.channels_none')}</span>`}<//>
   </div></div>`;
 }
 
-// ReportTab previews each team's daily status report. Admins choose which
-// teams receive one (the admin team's covers every monitor); people and
+// ReportTab previews the daily status report, on every monitor; people and
 // channels can switch it off for themselves (Contacts, the channel form).
 function ReportTab() {
-  const [team, setTeam] = useState('admin');
-  const rep = useFetch(() => get('/reports/daily?team=' + encodeURIComponent(team)), [team]);
+  const rep = useFetch(() => get('/reports/daily'), []);
   const [busy, setBusy] = useState(false);
   const send = async () => {
     setBusy(true);
-    try { await post('/reports/daily/send', { team }); toast(t('ui.report.sent')); } catch (e) { toastError(e); }
+    try { await post('/reports/daily/send', {}); toast(t('ui.report.sent')); } catch (e) { toastError(e); }
     setBusy(false);
   };
   if (!rep.data) return rep.error ? html`<${ErrorBox} error=${rep.error} />` : html`<${Loading} />`;
   const r = rep.data;
-  const teams = r.teams || [];
-  const receives = teams.filter(x => x.receives).map(x => x.name);
-  const setReceives = async (name, on) => {
-    const next = teams.filter(x => (x.name === name ? on : x.receives)).map(x => x.name);
-    try { await put('/tunables', { set: { 'notify.daily-report-teams': next.join(',') }, unset: [] }); rep.reload(); } catch (e) { toastError(e); }
-  };
-  const mine = teams.find(x => x.name === r.team);
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${r.enabled
       ? t('ui.report.intro', { at: r.at.split(',').join(', '), via: viaText(r.policy) })
       : html`<span class="warn-text">${t('ui.report.off', { where: t('ui.nav.advanced') + ' › ' + t('ui.set.tab.tunables') })}</span>`}</p>
       <button class="btn" onClick=${rep.reload}>${t('ui.report.refresh')}</button>
-      <button class="btn primary" onClick=${send} disabled=${busy || !(mine && mine.receives)}>${t('ui.report.send')}</button></div>
-    ${teams.length > 1 && html`<div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }}>
-      <label class="small">${t('ui.report.team')} <select value=${team} onChange=${(e) => setTeam(e.target.value)}>
-        ${teams.map(x => html`<option value=${x.name}>${x.title}</option>`)}</select></label>
-      ${me.role === 'admin' && mine && html`<label class="switch"><input type="checkbox" checked=${mine.receives} onChange=${(e) => setReceives(mine.name, e.target.checked)} /> ${t('ui.report.team_receives')}</label>`}
-      <span class="small muted spacer">${receives.length ? t('ui.report.receiving', { teams: teams.filter(x => x.receives).map(x => x.title).join(', ') }) : t('ui.report.receiving_none')}</span>
-    </div>`}
+      <button class="btn primary" onClick=${send} disabled=${busy || !r.enabled}>${t('ui.report.send')}</button></div>
     ${me.role === 'admin' && html`<${ReportSettings} r=${r} onChange=${rep.reload} />`}
     <p class="small muted" style=${{ margin: 0 }}>${t('ui.report.opt_out_hint')}</p>
     <div class="card"><div class="hd"><h3 class=${r.ok ? '' : 'crit-text'}>${r.title}</h3></div>

@@ -6,7 +6,7 @@ import { t, tn, fmtNum } from '../i18n.js';
 import { get, post, me } from '../api.js';
 import { onLive } from '../live.js';
 import { ObservationMarks } from '../observations.js';
-import { useFetch, useLive, Loading, ErrorBox, Empty, Pill, Beats, Ago, Seg, pct, msText, reasonText, enc, go, toast, toastError, confirmDialog, useDocTitle, replaceRoute, monitorsPath, Modal, Field, teamTitle, teamLabel, regionTitle } from '../ui.js';
+import { useFetch, useLive, Loading, ErrorBox, Empty, Pill, Beats, Ago, Seg, pct, msText, reasonText, enc, go, toast, toastError, confirmDialog, useDocTitle, replaceRoute, monitorsPath, Modal, Field, regionTitle } from '../ui.js';
 import { QuickAdd } from './editor.js';
 import { Hive, Legend } from './overview.js';
 
@@ -43,9 +43,7 @@ export function Monitors({ query }) {
   const [sort, setSort] = useState(query.get('sort') || 'status');
   const [quick, setQuick] = useState(false);
   const [sel, setSel] = useState(new Set());
-  const teams = useFetch(() => get('/teams'), []);
   const regions = useFetch(() => get('/regions'), []);
-  const multiTeam = !!(teams.data && teams.data.items.length > 1);
   const [view, setView] = useState(savedView());
   const changeView = (v) => { setView(v); try { localStorage.setItem('unagikuma.monview', v); } catch { /* unavailable */ } };
   // "-latency" is the latency order reversed.
@@ -116,7 +114,6 @@ export function Monitors({ query }) {
           case 'group': hit = (r.group || '').toLowerCase().includes(v); break;
           case 'depth': hit = r.depth.toLowerCase() === v; break;
           case 'policy': hit = (r.policy || '').toLowerCase() === v; break;
-          case 'team': hit = (r.team || '').toLowerCase() === v; break;
           case 'region': hit = (r.region || '').toLowerCase() === v; break;
           case 'flag': hit = r.flags.includes(v); break;
           case 'attempts': hit = cmpNum(r.max_attempts, v); break;
@@ -129,19 +126,20 @@ export function Monitors({ query }) {
     });
   }, [list.data, status, rest]);
 
-  // The team, region and tag filters are terms of the search.
+  // The group, region and tag filters are terms of the search.
   const termOf = (k) => { const m = q.match(new RegExp('(^|\\s)' + k + ':(\\S+)')); return m ? m[2] : ''; };
   const setTerm = (k, v) => {
     const next = (q.replace(new RegExp('(^|\\s)' + k + ':\\S+', 'g'), ' ') + (v ? ' ' + k + ':' + v : '')).replace(/\s+/g, ' ').trim();
     setQ(next);
     replaceRoute(monitorsPath(next, sort));
   };
+  const groupNames = useMemo(() => [...new Set(((list.data && list.data.items) || []).map(r => r.group).filter(Boolean))].sort(), [list.data]);
   const tagKeys = useMemo(() => [...new Set(((list.data && list.data.items) || []).flatMap(r => r.tags.map(tg => tg.k)))].sort(), [list.data]);
   const [moving, setMoving] = useState(null);
   const move = async (e) => {
     e.preventDefault();
     try {
-      const res = await post('/monitors/move', { names: picked.map(r => r.name), team: moving.team, region: moving.region });
+      const res = await post('/monitors/move', { names: picked.map(r => r.name), ...(moving.group.trim() ? { group: moving.group.trim() } : {}), region: moving.region });
       toast(tn('ui.mon.moved_n', res.moved));
       setMoving(null);
       setSel(new Set());
@@ -220,7 +218,7 @@ export function Monitors({ query }) {
                 ${r.flags.includes('held') && html`<span class="tag" title=${t('ui.flag.held_hint')}>${t('ui.flag.held')}</span>`}
                 ${r.incident && r.incident.acked && html`<span class="tag">${t('ui.inc.acked_short')}</span>`}
               </div>
-              <div class="sub ellipsis">${r.observations && r.observations.rows && r.observations.rows.length > 0 && html`<${ObservationMarks} snapshot=${r.observations} /> `}<span class="tag">${r.written_type}</span>${r.team && multiTeam ? html` <span class="tag" title=${t('ui.team.field')}>${teamLabel(r.team)}</span>` : ''} <span class="ltr">${r.target}</span>
+              <div class="sub ellipsis">${r.observations && r.observations.rows && r.observations.rows.length > 0 && html`<${ObservationMarks} snapshot=${r.observations} /> `}<span class="tag">${r.written_type}</span>${r.group ? html` <span class="tag" title=${t('ui.group')}>${r.group}</span>` : ''} <span class="ltr">${r.target}</span>
                 ${r.status !== 'ok' && r.reason ? html` · <span class=${r.status === 'critical' ? 'err-text' : ''}>${reasonText(r.reason, r.detail)}</span>` : ''}</div>
             </td>
             <td class="hide-sm" style=${{ minWidth: '180px' }}><${Beats} cells=${beats.data && beats.data.items[r.name]} /></td>
@@ -228,7 +226,7 @@ export function Monitors({ query }) {
             <td class="right nowrap" title=${r.uptime_24h == null && r.coverage_24h > 0 ? t('ui.uptime.coverage', { pct: pct(r.coverage_24h, 0) }) : ''}>${r.uptime_24h == null && r.status !== 'paused' ? html`<span class="faint small">${t('ui.uptime.collecting')}</span>` : pct(r.uptime_24h)}</td>
             <td class="nowrap small muted hide-sm"><${Ago} at=${r.last_change} /></td>
             <td class="right nowrap"><a class="btn sm" href=${'#/monitors/' + enc(r.name) + '/edit'} onClick=${(e) => e.stopPropagation()}>${t('ui.edit')}</a></td>
-          </tr>`), [visible, beats.data, sel, multiTeam]);
+          </tr>`), [visible, beats.data, sel]);
   return html`<div class="page list">
     <${MonitorTabs} tab="list" />
     <div class="row" style=${{ flexWrap: 'wrap' }}>
@@ -237,7 +235,7 @@ export function Monitors({ query }) {
       <button class="btn" onClick=${() => pauseAll(true)} disabled=${picked.length === nPaused} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.pause')}${picked.length > nPaused ? ' (' + fmtNum(picked.length - nPaused) + ')' : ''}</button>
       <button class="btn" onClick=${() => pauseAll(false)} disabled=${!nPaused} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.resume')}${nPaused ? ' (' + fmtNum(nPaused) + ')' : ''}</button>
       <button class="btn" onClick=${checkNow} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.check_all')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
-      ${me.role === 'admin' && html`<button class="btn" onClick=${() => setMoving({ team: '', region: '' })} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.move')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>`}
+      ${me.role === 'admin' && html`<button class="btn" onClick=${() => setMoving({ group: '', region: '' })} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.mon.move')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>`}
       <button class="btn danger" onClick=${remove} disabled=${!picked.length} title=${picked.length ? '' : t('ui.mon.select_first')}>${t('ui.delete')}${picked.length ? ' (' + fmtNum(picked.length) + ')' : ''}</button>
       <//>`}
       ${me.member
@@ -252,9 +250,9 @@ export function Monitors({ query }) {
         ${CHIPS.filter(s => counts[s]).map(s => html`<button class=${'chip' + (status === s ? ' on' : '')} onClick=${() => setStatus(s)}>${t('status.' + s)} <b>${fmtNum(counts[s])}</b></button>`)}
       </div>
       <${Seg} value=${view} onChange=${changeView} options=${[['list', t('ui.mon.view_list')], ['hive', t('ui.mon.view_hive')]]} />
-      ${teams.data && teams.data.items.length > 1 && html`<select value=${termOf('team')} onChange=${(e) => setTerm('team', e.target.value)} aria-label=${t('ui.team.field')}>
-        <option value="">${t('ui.mon.all_teams')}</option>
-        ${teams.data.items.map(tm => html`<option value=${tm.name}>${teamTitle(tm)}</option>`)}</select>`}
+      ${groupNames.length > 1 && html`<select value=${termOf('group')} onChange=${(e) => setTerm('group', e.target.value)} aria-label=${t('ui.group')}>
+        <option value="">${t('ui.mon.all_groups')}</option>
+        ${groupNames.map(g => html`<option value=${g.toLowerCase()}>${g}</option>`)}</select>`}
       ${regions.data && regions.data.items.length > 1 && html`<select value=${termOf('region')} onChange=${(e) => setTerm('region', e.target.value)} aria-label=${t('ui.region.field')}>
         <option value="">${t('ui.mon.all_regions')}</option>
         ${regions.data.items.map(rg => html`<option value=${rg.name}>${regionTitle(rg.name)}</option>`)}</select>`}
@@ -264,13 +262,12 @@ export function Monitors({ query }) {
     </div>
     ${moving && html`<${Modal} title=${tn('ui.mon.move_title', picked.length)} onClose=${() => setMoving(null)}>
       <form class="form" onSubmit=${move}>
-        <${Field} label=${t('ui.team.field')}><select value=${moving.team} onChange=${(e) => setMoving({ ...moving, team: e.target.value })}>
-          <option value="">${t('ui.mon.move_keep')}</option>
-          ${((teams.data && teams.data.items) || []).map(tm => html`<option value=${tm.name}>${teamTitle(tm)}</option>`)}</select><//>
+        <${Field} label=${t('ui.group')} hint=${t('ui.mon.move_group_hint')}><input type="text" list="move-groups" value=${moving.group} onInput=${(e) => setMoving({ ...moving, group: e.target.value })} />
+          <datalist id="move-groups">${groupNames.map(g => html`<option value=${g} />`)}</datalist><//>
         <${Field} label=${t('ui.region.field')}><select value=${moving.region} onChange=${(e) => setMoving({ ...moving, region: e.target.value })}>
           <option value="">${t('ui.mon.move_keep')}</option>
           ${((regions.data && regions.data.items) || []).map(rg => html`<option value=${rg.name}>${regionTitle(rg.name)}</option>`)}</select><//>
-        <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!moving.team && !moving.region}>${t('ui.mon.move')}</button></div>
+        <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!moving.group.trim() && !moving.region}>${t('ui.mon.move')}</button></div>
       </form>
     <//>`}
     ${me.siteView && !me.registered && html`<div class=${'banner ' + (me.siteView.allowed ? 'info' : 'warning')}>
@@ -293,6 +290,6 @@ export function Monitors({ query }) {
           <button class="btn" onClick=${() => setShown(rows.length)}>${t('ui.mon.show_all', { n: fmtNum(rows.length) })}</button></div>` : ''}`}
     </div></div>
     <p class="small muted">${t('ui.mon.query_help')}</p>
-    ${quick && html`<${QuickAdd} onClose=${() => setQuick(false)} onDone=${() => { setQuick(false); list.reload(); beats.reload(); }} team=${termOf('team')} region=${termOf('region')} />`}
+    ${quick && html`<${QuickAdd} onClose=${() => setQuick(false)} onDone=${() => { setQuick(false); list.reload(); beats.reload(); }} region=${termOf('region')} />`}
   </div>`;
 }

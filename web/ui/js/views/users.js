@@ -1,10 +1,10 @@
 // Logins: the account part of a person in the user list — the name they
-// sign in with, the password, the role, the teams and, for operators, the
-// parts of the configuration they may edit.
+// sign in with, the password, the role, the monitor groups they see and,
+// for operators, the parts of the configuration they may edit.
 import { html, useState } from '../lib.js';
 import { t } from '../i18n.js';
 import { get, post, put, del } from '../api.js';
-import { useFetch, Field, Modal, toast, toastError, confirmDialog, teamTitle, Pick } from '../ui.js';
+import { useFetch, Field, Modal, toast, toastError, confirmDialog, Pick } from '../ui.js';
 
 const ROLES = ['admin', 'operator', 'viewer'];
 const splitList = (v) => String(v || '').split(/[\s,;]+/).filter(Boolean);
@@ -12,10 +12,10 @@ const splitList = (v) => String(v || '').split(/[\s,;]+/).filter(Boolean);
 // LoginForm creates a login (initial.id unset; initial.username may be
 // suggested) or changes one; onDeleted is offered for an existing one.
 export function LoginForm({ initial, onClose, onSaved, onDeleted, channels }) {
-  const teams = useFetch(() => get('/teams'), []);
+  const mons = useFetch(() => get('/monitors').catch(() => ({ items: [] })), []);
   const regions = useFetch(() => get('/regions').catch(() => ({ items: [] })), []);
   const nodes = useFetch(() => get('/nodes').catch(() => ({ items: [] })), []);
-  const init = { username: '', password: '', role: 'operator', areas: [], teams: [], name: '', emails: '', phones: '', ...initial };
+  const init = { username: '', password: '', role: 'operator', areas: [], groups: [], name: '', emails: '', phones: '', ...initial };
   if (!Array.isArray(init.areas)) init.areas = String(init.areas || '').split(/[\s,]+/).filter(Boolean);
   const [form, setForm] = useState(init);
   // The parts an operator may be limited to: every region and every node.
@@ -23,13 +23,11 @@ export function LoginForm({ initial, onClose, onSaved, onDeleted, channels }) {
     ...((regions.data && regions.data.items) || []).filter(r => !r.builtin).map(r => ({ value: 'region:' + r.name, label: t('ui.user.area_region', { name: r.name }) })),
     ...((nodes.data && (nodes.data.items || nodes.data.nodes)) || []).map(n => n.name).filter(Boolean).map(n => ({ value: n, label: t('ui.user.area_node', { name: n }) })),
   ];
-  const teamItems = (teams.data && teams.data.items) || [];
-  const multi = teamItems.length > 1;
+  // The groups monitors are in (group= on a monitor).
+  const groupNames = [...new Set(((mons.data && mons.data.items) || []).map(m => m.group).filter(Boolean))].sort();
   const save = async (e) => {
     e.preventDefault();
-    if (multi && !form.teams.length) { toastError(new Error(t('ui.user.teams_required'))); return; }
-    const body = { role: form.role, areas: form.role === 'operator' ? form.areas : [] };
-    if (multi) body.teams = form.teams;
+    const body = { role: form.role, areas: form.role === 'operator' ? form.areas : [], groups: form.role === 'admin' ? [] : form.groups };
     if (form.password) body.password = form.password;
     let filled = false;
     try {
@@ -69,9 +67,8 @@ export function LoginForm({ initial, onClose, onSaved, onDeleted, channels }) {
       <${Field} label=${t('ui.user.role')} hint=${t('ui.user.role.' + form.role + '_hint')}>
         <select value=${form.role} onChange=${(e) => setForm({ ...form, role: e.target.value })}>
           ${ROLES.map(r => html`<option value=${r}>${t('ui.user.role.' + r)}</option>`)}</select><//>
-      ${multi ? html`<${Field} label=${t('ui.user.teams')} hint=${t('ui.user.teams_hint')}>
-        <${Pick} options=${teamItems.map(tm => ({ value: tm.name, label: teamTitle(tm) }))} value=${form.teams} onChange=${(v) => setForm({ ...form, teams: v })} /><//>`
-        : html`<p class="small muted">${t('ui.user.admin_team_only')}</p>`}
+      ${form.role !== 'admin' && (groupNames.length > 0 || form.groups.length > 0) && html`<${Field} label=${t('ui.user.groups')} hint=${t('ui.user.groups_hint')}>
+        <${Pick} options=${groupNames.map(g => ({ value: g, label: g }))} value=${form.groups} onChange=${(v) => setForm({ ...form, groups: v })} none=${t('ui.user.all_groups')} /><//>`}
       ${form.role === 'operator' && (areaOptions.length > 1 || form.areas.length > 0) && html`<${Field} label=${t('ui.user.areas')} hint=${t('ui.user.areas_pick_hint')}>
         <${Pick} options=${areaOptions} value=${form.areas} onChange=${(v) => setForm({ ...form, areas: v })} none=${t('ui.user.all')} /><//>`}
       <div class="row">

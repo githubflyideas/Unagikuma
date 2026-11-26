@@ -184,6 +184,8 @@ var coreMigrations = []string{
 	`ALTER TABLE value_samples ADD COLUMN def_hash TEXT NOT NULL DEFAULT '';
  ALTER TABLE value_samples ADD COLUMN tenant_id TEXT;
  ALTER TABLE saved_alerts ADD COLUMN tenant_id TEXT;`,
+	// The groups of monitors an account sees ('' = all of them).
+	`ALTER TABLE users ADD COLUMN groups TEXT NOT NULL DEFAULT '';`,
 }
 
 var historyMigrations = []string{

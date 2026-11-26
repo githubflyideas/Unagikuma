@@ -18,7 +18,7 @@ func (s *Server) savedAlerts(w http.ResponseWriter, r *http.Request) (any, error
 	if err != nil {
 		return nil, err
 	}
-	ts := teamOf(r)
+	ts := groupOf(r)
 	type day struct {
 		Day    string         `json:"day"`
 		Counts map[string]int `json:"counts"`

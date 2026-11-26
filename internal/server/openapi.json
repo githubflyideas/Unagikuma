@@ -19849,407 +19849,6 @@
         "x-token-scope": "read"
       }
     },
-    "/api/v1/teams": {
-      "get": {
-        "operationId": "teams",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "items": {
-                      "items": {
-                        "$ref": "#/components/schemas/teamJSON"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Teams",
-        "tags": [
-          "teams"
-        ],
-        "x-token-scope": "read"
-      },
-      "post": {
-        "operationId": "teamSave",
-        "parameters": [
-          {
-            "description": "The etag of the record being changed, from when it was read. If it no longer matches, the write fails with 412 (record_changed).",
-            "in": "header",
-            "name": "If-Match",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "channels": {
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "members": {
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "message": {
-                    "type": "string"
-                  },
-                  "mode": {
-                    "type": "string"
-                  },
-                  "name": {
-                    "type": "string"
-                  },
-                  "title": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "channels",
-                  "description",
-                  "members",
-                  "message",
-                  "mode",
-                  "name",
-                  "title"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "412": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "If-Match failed: the record changed since it was read (record_changed)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Team Save",
-        "tags": [
-          "teams"
-        ],
-        "x-token-scope": "admin"
-      }
-    },
-    "/api/v1/teams/{name}": {
-      "delete": {
-        "operationId": "teamDelete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "The etag of the record being changed, from when it was read. If it no longer matches, the write fails with 412 (record_changed).",
-            "in": "header",
-            "name": "If-Match",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The named record does not exist (not_found)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "412": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "If-Match failed: the record changed since it was read (record_changed)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Team Delete",
-        "tags": [
-          "teams"
-        ],
-        "x-token-scope": "admin"
-      }
-    },
     "/api/v1/tokens": {
       "get": {
         "operationId": "tokensList",
@@ -21584,6 +21183,228 @@
         ],
         "tags": [
           "system"
+        ],
+        "x-token-scope": "admin"
+      }
+    },
+    "/api/v1/alert-channels": {
+      "get": {
+        "operationId": "alertChannelsGet",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "channels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "mode": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Login required (unauthorized), or setup_required before the first account exists."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
+          },
+          "405": {
+            "description": "Method not allowed on this path."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Internal error (internal)."
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerToken": []
+          }
+        ],
+        "summary": "The alert channels: where every alert goes unless a monitor names its own policy.",
+        "tags": [
+          "channels"
+        ],
+        "x-token-scope": "read"
+      },
+      "put": {
+        "operationId": "alertChannelsPut",
+        "parameters": [
+          {
+            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
+            "in": "header",
+            "name": "X-Unagikuma-CSRF",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "mode": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "serial": {},
+                    "channels": {},
+                    "mode": {}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Login required (unauthorized), or setup_required before the first account exists."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
+          },
+          "405": {
+            "description": "Method not allowed on this path."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Internal error (internal)."
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerToken": []
+          }
+        ],
+        "summary": "Set the alert channels (in order) and their mode (fallback or all).",
+        "tags": [
+          "channels"
         ],
         "x-token-scope": "admin"
       }

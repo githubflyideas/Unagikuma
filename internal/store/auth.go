@@ -96,6 +96,9 @@ type User struct {
 	Prefs    string    `json:"-"`     // JSON
 	Role     string    `json:"role"`  // admin | operator | viewer
 	Areas    []string  `json:"areas"` // $SCOPE sections an operator may edit; empty = all
+	// Groups are the monitor groups (group= on a monitor) the account sees
+	// and, as an operator, changes; empty = all. Administrators see all.
+	Groups []string `json:"groups"`
 	Created  time.Time `json:"created_at"`
 	Disabled bool      `json:"disabled,omitempty"` // left: cannot log in, its tokens stop working
 }
@@ -215,7 +218,7 @@ func (s *Store) insertUser(username, hash, role string, areas []string) (int64, 
 
 // Users lists the accounts.
 func (s *Store) Users() ([]User, error) {
-	rows, err := s.core.Query(`SELECT id,username,role,areas,created_at,disabled FROM users ORDER BY username`)
+	rows, err := s.core.Query(`SELECT id,username,role,areas,groups,created_at,disabled FROM users ORDER BY username`)
 	if err != nil {
 		return nil, err
 	}
@@ -223,15 +226,31 @@ func (s *Store) Users() ([]User, error) {
 	out := []User{}
 	for rows.Next() {
 		var u User
-		var areas string
+		var areas, groups string
 		var created int64
-		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &areas, &created, &u.Disabled); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &areas, &groups, &created, &u.Disabled); err != nil {
 			return nil, err
 		}
-		u.Areas, u.Created = splitAreas(areas), fromMS(created)
+		u.Areas, u.Groups, u.Created = splitAreas(areas), splitAreas(groups), fromMS(created)
 		out = append(out, u)
 	}
 	return out, rows.Err()
+}
+
+// SetGroups sets the monitor groups an account sees (empty: all). Its
+// sessions end so the new view applies at once.
+func (s *Store) SetGroups(userID int64, groups []string) error {
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	res, err := s.core.Exec(`UPDATE users SET groups=? WHERE id=?`, strings.Join(groups, "\n"), userID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	_, err = s.core.Exec(`DELETE FROM sessions WHERE user_id=?`, userID)
+	return err
 }
 
 // ErrLastAdmin protects the only remaining administrator.
@@ -317,8 +336,8 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 	var u User
 	var hash string
 	var prefs sql.NullString
-	var areas string
-	err := s.core.QueryRow(`SELECT id,username,password,prefs,role,areas FROM users WHERE username=? AND disabled=0`, username).Scan(&u.ID, &u.Username, &hash, &prefs, &u.Role, &areas)
+	var areas, groups string
+	err := s.core.QueryRow(`SELECT id,username,password,prefs,role,areas,groups FROM users WHERE username=? AND disabled=0`, username).Scan(&u.ID, &u.Username, &hash, &prefs, &u.Role, &areas, &groups)
 	if errors.Is(err, sql.ErrNoRows) {
 		// Spend the same time as a real check so usernames cannot be probed.
 		CheckPassword(HashPassword("x"), password)
@@ -336,7 +355,7 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 		_, _ = s.core.Exec(`UPDATE users SET password=? WHERE id=?`, HashPassword(password), u.ID)
 		s.wmu.Unlock()
 	}
-	u.Prefs, u.Areas = prefs.String, splitAreas(areas)
+	u.Prefs, u.Areas, u.Groups = prefs.String, splitAreas(areas), splitAreas(groups)
 	return &u, nil
 }
 
@@ -362,16 +381,16 @@ func (s *Store) SessionByID(id string) (*Session, error) {
 	var se Session
 	var exp int64
 	var prefs sql.NullString
-	var areas string
-	err := s.core.QueryRow(`SELECT u.id,u.username,u.prefs,u.role,u.areas,s.csrf,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND u.disabled=0`, sha(id)).
-		Scan(&se.User.ID, &se.User.Username, &prefs, &se.User.Role, &areas, &se.CSRF, &exp)
+	var areas, groups string
+	err := s.core.QueryRow(`SELECT u.id,u.username,u.prefs,u.role,u.areas,u.groups,s.csrf,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.id_hash=? AND u.disabled=0`, sha(id)).
+		Scan(&se.User.ID, &se.User.Username, &prefs, &se.User.Role, &areas, &groups, &se.CSRF, &exp)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	se.Expires, se.User.Prefs, se.User.Areas = fromMS(exp), prefs.String, splitAreas(areas)
+	se.Expires, se.User.Prefs, se.User.Areas, se.User.Groups = fromMS(exp), prefs.String, splitAreas(areas), splitAreas(groups)
 	if s.now().After(se.Expires) {
 		return nil, ErrNotFound
 	}

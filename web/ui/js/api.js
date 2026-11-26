@@ -5,11 +5,12 @@ let onAuthLost = null;
 
 export function setCSRF(v) { csrf = v || ''; }
 
-// The signed-in account: teams is set for a member of one or more teams,
+// The signed-in account: groups is set for an account limited to some
+// monitor groups,
 // who works within them (the menu and pages show only what they own).
-export const me = { teams: null };
+export const me = { groups: null };
 export function setMe(s) {
-  me.teams = (s && s.teams) || null;
+  me.groups = (s && s.groups) || null;
   me.role = (s && s.role) || '';
   me.version = (s && s.version) || '';
   me.registered = !!(s && s.registered);

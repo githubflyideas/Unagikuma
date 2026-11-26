@@ -1565,19 +1565,6 @@ func (b *builder) implicitPolicies() {
 		m.Implicit, m.Mute = true, true
 		b.cfg.Policies = append(b.cfg.Policies, m)
 	}
-	// Each team with channels gets a policy of them: its monitors are
-	// notified through it.
-	for _, t := range b.cfg.AllTeams() {
-		if len(t.Channels) == 0 {
-			continue
-		}
-		p := b.newPolicy(TeamPolicy(t.Name))
-		p.Chain, p.Implicit, p.Team = t.Channels, true, t.Name
-		if t.Mode == "all" {
-			p.Mode = "all"
-		}
-		b.cfg.Policies = append(b.cfg.Policies, p)
-	}
 }
 
 // MutePolicy is the policy of muted monitors (mute=yes): nothing is sent.
@@ -1800,31 +1787,17 @@ func (b *builder) checkTeams() {
 		}
 	}
 	for _, m := range b.cfg.Monitors {
-		t := b.cfg.FindTeam(m.TeamOf())
-		if t == nil {
-			b.errf(m.Pos, "unknown_team", "%s: team %q is not defined (add: %s IN TEAM members=…)", m.Name, m.Team, m.Team)
-		}
-		// A team's monitors are notified through the team's channels. Files
-		// from before 2.6 may still name a policy (policy= on the record or
-		// through $DEFAULT, or on the team); it is kept until migrated.
-		_, own := m.Opts["policy"]
-		switch {
-		case t == nil || own:
-		case len(t.Channels) > 0:
-			m.Policy = TeamPolicy(t.Name)
-		case t.Policy != "":
-			m.Policy = t.Policy
-		}
-		// The two exceptions a monitor may have.
+		// A monitor is notified through its own policy (policy=, or its
+		// section's), else the default one: the installation's alert
+		// channels. The two exceptions a monitor may have.
 		switch {
 		case m.Mute:
 			m.Policy = MutePolicy
 		case m.SystemChannel:
 			m.Policy = "system"
 		}
-		// A team with no channels at all is notified through the system
-		// channels (and its administrators are told).
-		if p := b.cfg.FindPolicy(m.Policy); p != nil && len(p.Chain) == 0 && !p.Mute && t != nil && len(t.Channels) == 0 {
+		// With no alert channels at all, alerts go to the system channels.
+		if p := b.cfg.FindPolicy(m.Policy); p != nil && len(p.Chain) == 0 && !p.Mute {
 			if sys := b.cfg.FindPolicy("system"); sys != nil && len(sys.Chain) > 0 {
 				m.Policy, m.Unrouted = "system", true
 			}

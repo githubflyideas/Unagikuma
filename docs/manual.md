@@ -80,10 +80,10 @@ $FILE revision=2026102301 interval=1m retry=15s timeout=5s attempts=3
 
 $SET notify.repeat=30m
 
-; notification channels, and the admin team that uses them
+; notification channels, and the alert channels every alert goes to
 ops      IN CHANNEL feishu url=${secret:ops_webhook}
 mail     IN CHANNEL email host=smtp.example.com port=587 tls=starttls username=alerts@example.com password=${secret:smtp} from=alerts@example.com to=oncall@example.com system=yes
-admin    IN TEAM channels=ops,mail
+default  IN POLICY chain=ops,mail
 
 ; monitors: name [interval] IN TYPE target key=value...
 www      IN HTTP https://www.example.com/ title="Website" keyword="Welcome" cert-days=62 group=public
@@ -99,7 +99,7 @@ company  IN DOMAIN example.com days=45 critical-days=10
 main     IN STATUSPAGE "Service status" select="group:public"
 ```
 
-- After editing the file by hand, **increase the revision** on the `$FILE` line; Unagikuma then validates and applies it. Saving a monitor, channel or team in the web UI raises it for you. Files from earlier releases start with an `@ IN SOA … ( serial interval retry timeout attempts )` line instead; it still works the same way, and its first number is the revision. **Config & import › monitors.conf** shows the file read-only, with a copy button; edit it on the server. A file with errors is never applied: the last good version keeps running and the UI shows what is wrong. On a first start there is no last good version yet; instead of refusing to start, Unagikuma starts in a repair mode — the web UI runs, the banner shows the errors, and nothing is monitored until the configuration is fixed and saved, which starts normal operation without a restart.
+- After editing the file by hand, **increase the revision** on the `$FILE` line; Unagikuma then validates and applies it. Saving a monitor or channel in the web UI raises it for you. Files from earlier releases start with an `@ IN SOA … ( serial interval retry timeout attempts )` line instead; it still works the same way, and its first number is the revision. **Config & import › monitors.conf** shows the file read-only, with a copy button; edit it on the server. A file with errors is never applied: the last good version keeps running and the UI shows what is wrong. On a first start there is no last good version yet; instead of refusing to start, Unagikuma starts in a repair mode — the web UI runs, the banner shows the errors, and nothing is monitored until the configuration is fixed and saved, which starts normal operation without a restart.
 - Credentials never need to be in the file: store them under **Advanced › Secrets** and refer to them as `${secret:name}`. A secret the configuration still uses cannot be deleted: the refusal names the records that use it. Values from the environment can be used as `${env:NAME}` when the server is started with `--allow-env NAME`.
 - Monitors are grouped into hosts by the address they check; `device=core-sw1` groups monitors of several addresses under one name. A host with a PING monitor is UP or DOWN by that ping.
 - `parent=gw` (or `parent=sw1,gw`) declares a dependency: while a parent is down, a failing child is shown as UNREACHABLE and not notified. If the child is still down once its parents are back, it is notified as usual.
@@ -116,10 +116,10 @@ main     IN STATUSPAGE "Service status" select="group:public"
 - A PING check sends 3 echo requests and fails when more than `probe.ping-loss` (50%) of them go unanswered; less loss marks it degraded. `loss=` on a monitor sets its own threshold (`loss=0` fails only when every request is lost).
 - A UDP check that only shows the port is not closed (L1, marked *weak*: `SYSLOG`, `snmptrap`, unknown ports) counts silence as "probably open" only while the host itself answers a ping (or a TCP knock). If the host does not answer either, the check is UNKNOWN instead of OK; if it is reported unreachable, the check fails. `host-check=off` accepts silence alone, for hosts that answer nothing at all.
 - Pings and weak UDP checks of the same address start at least `probe.same-target-gap` (1s) apart on each node, because devices limit how many ICMP replies they send and a burst can look like packet loss or an open port. Checks that share a fixed source port (`src-port=`) take turns; if the port stays busy, or another program holds it, the check is UNKNOWN for that round instead of down.
-- Two monitors that check exactly the same thing (same type, target, options, timeout and nodes — typically one service watched by two teams) send every request twice. `unagikuma check` and the monitor form point this out; `share=yes` on one of them makes it use the result of the other's check from the last `probe.share-window` (10s) instead of checking again. Each monitor keeps its own thresholds, incidents and notifications.
+- Two monitors that check exactly the same thing (same type, target, options, timeout and nodes — typically one service added twice) send every request twice. `unagikuma check` and the monitor form point this out; `share=yes` on one of them makes it use the result of the other's check from the last `probe.share-window` (10s) instead of checking again. Each monitor keeps its own thresholds, incidents and notifications.
 - `DOMAIN` watches when a domain's registration expires, asking the registry over RDAP (or WHOIS where there is no RDAP), every 6 hours by default and at most hourly. Inside `days=` (30) it is degraded, inside `critical-days=` (7) it fails; if no registry answers it is UNKNOWN, never down. **Monitors › Expiry dates** lists every domain and TLS certificate, soonest first.
 - `unagikuma keywords` lists the UDP keywords and what each check proves.
-- Every day at 10:00 (`notify.daily-report-at`) a status report lists the hosts that are DOWN and UP and every service that is not OK; **Notices & status › Daily report** previews it and sends it on demand. Each team chosen there (the admin team by default, `notify.daily-report-teams`) gets a report on its own monitors through its channels; the admin team's covers every monitor. A person can be switched off in **Contacts**, a channel with `report=no`.
+- Every day at 10:00 (`notify.daily-report-at`) a status report lists the hosts that are DOWN and UP and every service that is not OK; **Notices & status › Daily report** previews it and sends it on demand. It covers every monitor and goes to the alert channels (the system channels while there are none). A person can be switched off in **Contacts**, a channel with `report=no`.
 
 ### Values: limits and sudden changes
 
@@ -203,7 +203,7 @@ conn   IN MYSQL    db2 user=monitor password=${secret:my} query="SELECT COUNT(*)
 Open the page only to the monitoring host. `select=label=value` narrows a metrics page to one proxy, topic or the like. The profiles are data files (`internal/appprofile/profiles/`). Each says the version of the application it was last run against (shown in the monitor form); `scripts/live/start.sh` starts those applications and `go test -tags live ./internal/probe` runs every profile against them. To add an application, see [value-types](value-types.md) for the types a field may have.
 ## Alerting
 
-Notifications go through **channels** (where a message is sent). Each team has an ordered list of them (see [Teams](#teams)); channels are records in `monitors.conf` with forms under **Alerting**, and a team's list is set under **Advanced › Teams**.
+Notifications go through **channels** (where a message is sent). The **alert channels** are an ordered list of them that every alert goes to, set under **Alerting › Channels** (the `default` policy's `chain=` in `monitors.conf`); channels are records in `monitors.conf` with forms under **Alerting**. A monitor can name another list with `policy=`.
 
 ```text
 ops-im    IN CHANNEL feishu url=${secret:feishu_ops}
@@ -212,7 +212,7 @@ manager   IN CHANNEL email host=smtp.example.com from=alerts@example.com to=boss
 office    IN PERIOD "mon-fri 09:00-18:00; sat 10:00-12:00"
 team      IN CHANNEL group members=ops-im,oncall
 night-sms IN CHANNEL aliyun-sms … period=!office
-admin     IN TEAM channels=team,night-sms mode=all
+default   IN POLICY chain=team,night-sms mode=all
 ```
 
 ### Channel kinds
@@ -307,13 +307,13 @@ Functions: `upper`, `lower`, `trunc 20 .Name`, `join ", " .Tags`, `json .Tags`, 
   - an address refused as nonexistent (unknown mailbox, invalid number) `contacts.bounce-threshold` times (3) is no longer sent to;
   - an address that is not in the directory is not sent to.
 
-  One left-out recipient never stops a message to the others. Each one is logged when the channel sends, and the channel, the teams using it and the **Alerting** menu get a red dot saying why. With **Tell the team's administrators** (`contacts.notify-admins`) on, they also get a message, once a day per channel.
+  One left-out recipient never stops a message to the others. Each one is logged when the channel sends, and the channel and the **Alerting** menu get a red dot saying why. With **Tell the administrators** (`contacts.notify-admins`) on, the system channels also get a message, once a day per channel.
 
   On the first start of 2.6, the addresses your channels already use are added to the directory as active, so nothing stops after the upgrade.
 
   Write `to=@li` or `phones=@li,@oncall` to use a person's addresses instead of typing them. Saving a channel with new addresses offers to add them to the directory, and so does an import that brings new ones; **Import them** adds every address your channels already use. `unagikuma check` reports the same problems when it can read the data directory.
 
-  Every contact can be reached: they need at least one valid e-mail address or phone number, and **Notify via** names the e-mail, SMS or voice channels through which the system reaches them directly (as a team administrator, for example), each matching an address they have. Contacts added from a channel are reached through it. A contact with no way chosen, or whose channel is gone or lacks their kind of address, has a red dot in the list.
+  Every contact can be reached: they need at least one valid e-mail address or phone number, and **Notify via** names the e-mail, SMS or voice channels through which the system reaches them directly, each matching an address they have. Contacts added from a channel are reached through it. A contact with no way chosen, or whose channel is gone or lacks their kind of address, has a red dot in the list.
 - **Every alert says what kind of failure it is.** A problem notice carries one line: a service failing on its own ("the service itself"), several monitors of one IP segment failing together ("probably that segment, its switch or uplink"), a single network-level failure that cannot be told apart yet ("uncertain"), or this host's own network. Webhooks get the same as `"class"`: `business`, `network`, `uncertain`, `channel_down` or `system`.
 - **No flood of messages.** Nobody is sent more than `notify.backstop-max` (20) alerts in `notify.backstop-window` (1 minute). A person is someone in the contact directory — their phone and e-mail are one person — or an address the directory does not know; a chat room or webhook is one recipient for everyone in it. An alert goes to everyone it is for at once: when anyone it goes to has had their share, the whole alert is held, and the held alerts go out together as one summary through the same channels a minute after the first of them, listing every one with its target, ordered by address, so nothing is left out and a run of neighbouring addresses shows a switch or a link. Problems, reminders, escalations and recoveries all count, each alert once per person however many channels carry it. Messages about the system itself always go out. `notify.backstop-max=0` turns this off.
 - **Why was I (not) notified?** The monitor drawer's **Notifications** section says it in words: maintenance, a parent is down, this host's own outage, only some nodes failing, still SOFT, acknowledged, silenced, muted, or the notification limit.
@@ -444,50 +444,40 @@ Every handover raises a **term**. Machines follow the highest term they have see
 
 **Settings › Users** manages accounts. There are three roles:
 
-- **Administrator**: everything — all teams, users, contacts, channels, regions and nodes; creates and deletes teams.
-- **Operator**: adds, changes, pauses, resumes and deletes the monitors of their own teams, acknowledges and silences their problems, and sets maintenance windows over them.
-- **Viewer**: reads their own teams.
+- **Administrator**: everything — all monitors, users, contacts, channels, regions and nodes.
+- **Operator**: adds, changes, pauses, resumes and deletes monitors, acknowledges and silences problems, and sets maintenance windows.
+- **Viewer**: reads.
 
 An operator can also be limited to some `$SCOPE` sections (`region:north`, `bj`): they then change only what is written in those sections.
 
-### Teams
+### Groups
 
-Every monitor belongs to one team. The built-in **admin** team (shown as “Default team”) always exists, cannot be renamed or deleted, and owns every monitor without `team=`. While it is the only team, everyone is in it and works as before.
+A monitor can belong to a **group** (`group=` on the monitor, the Group field in its form). An account that is not an administrator can be given some groups when it is created or edited (**Alerting › Users**): it then sees, and as an operator changes, only the monitors in those groups. An account given no groups sees everything.
 
-**Advanced › Teams** (administrators) adds teams and their members. Teams are `TEAM` records in monitors.conf, so they reach every node with the rest of the configuration:
+An account limited to groups:
 
-```text
-web   IN TEAM title="Web team" members=li,wang,zhang
-shop  IN HTTP https://shop.example.com/ team=web
-```
+- sees only the monitors in its groups, with their incidents, events, reports, hosts, expiry dates and maintenance windows; the live updates leave out the rest. Any other monitor answers as if it did not exist; only the state of a monitor its own ones depend on (`parent=`) is shown, next to the dependant.
+- puts a new monitor into its group (it chooses when it has several), and cannot move a monitor out of its groups.
+- has the menu Overview, Monitors, Problems and Events. Channels, contacts, regions, status pages and settings stay with administrators. An incident report lists only the configuration changes that touched that monitor.
+- API tokens are made by administrators and are not limited to groups.
 
-- With more than one team, a new user's teams are chosen when the account is created (one or more); administrators move people between teams and change roles later.
-- A new monitor goes into the user's team when they have one, and they choose when they have several; an administrator who chooses nothing puts it in admin.
-- A team is deleted only once its monitors are moved to another team.
-- Older files with `managers=`, `operators=` and `viewers=` still load: all of them count as members, and what each person may do now follows their account role.
-
-Teams are isolated from each other. A member who is not an administrator:
-
-- sees only their teams' monitors, with their incidents, events, reports, hosts, expiry dates and maintenance windows; the live updates leave out the rest. A monitor of another team answers as if it did not exist; only the state of a monitor their own ones depend on (`parent=`) is shown, next to the dependant.
-- has the menu Overview, Monitors, Problems and Events. Teams, channels, contacts, regions, status pages and settings stay with administrators. An incident report lists only the configuration changes that touched that monitor.
-- API tokens are made by administrators and are not limited to a team.
-
-Names are unique across the whole file, so a name another team uses cannot be taken again.
+To keep two departments entirely apart (their own channels, people and settings), run a second installation: see [Several installations on one machine](#command-line).
 
 ### Regions
 
-A region is a group of nodes (`region=` on `NODE` records). A monitor is checked by the nodes of its region (`region=north`); **global**, the default, is every node. **Advanced › Regions** (administrators) adds regions from nodes, changes their nodes, and deletes them: a deleted region's monitors move to global. Select monitors in the list and use **Move** to change their team or region in one change (administrators; it is in the audit log).
+A region is a group of nodes (`region=` on `NODE` records). A monitor is checked by the nodes of its region (`region=north`); **global**, the default, is every node. **Advanced › Regions** (administrators) adds regions from nodes, changes their nodes, and deletes them: a deleted region's monitors move to global. Select monitors in the list and use **Move** to change their group or region in one change (administrators; it is in the audit log).
 
-The monitor list filters by team, region and tag; the search accepts `team:web`, `region:north` and `tag:db` as well.
+The monitor list filters by group, region and tag; the search accepts `group:web`, `region:north` and `tag:db` as well.
 
-Notifications follow the teams too:
+Where notifications go:
 
-- Each team has an ordered list of channels (`channels=` on its `TEAM` record; administrators set it under **Advanced › Teams**). They are tried in order until one succeeds, or all are sent to with `mode=all`. Every monitor of the team uses them.
+- The **alert channels** (**Alerting › Channels**) are tried in order until one succeeds, or all are sent to with *Send to all*. Every monitor uses them, unless it names its own policy (`policy=`).
 - A monitor may have one of two exceptions: `mute=yes` (problems are recorded, nothing is sent) or `system-channel=yes` (it goes to the system channels instead).
-- **System channels** are channels with `system=yes`. They receive the system's own notices, the problems of a team with no channels, and the problems a team's channels failed to deliver. In both cases the team's administrators are told as well (the administrators in the team, or every administrator when it has none).
-- When a monitor of the shared infrastructure fails, the administrators of the teams it affects are told too: the teams with monitors that depend on it (`parent=`, directly or further up), or every team when none does. Each is reached at their own address through the channels chosen under **Notify via** in their contact entry, which must be linked to their login. This is sent right away, capped and logged, and not once the problem is acknowledged; they hear of the recovery too. **Advanced › Teams** names administrators who cannot be reached.
+- **System channels** are channels with `system=yes`. They receive the system's own notices, every alert while there are no alert channels, and the problems the alert channels failed to deliver.
 
-Releases before 2.6 used `POLICY` records. When the server starts, a policy that only lists channels (`chain=`, `mode=`) becomes the channels of the teams that used it: the `default` policy those of the admin team and of teams without a policy, and the channels of the `system` policy (or, without one, of `default`) get `system=yes`. `policy=system` on a monitor becomes `system-channel=yes`. The file is kept as `monitors.conf.before-teams` and the change is in the audit log. Policies with other options (`repeat=`, `escalate=`, …) stay and keep working for whatever names them; edit them in the file. In a cluster, upgrade the other machines before the master, because older releases do not read the new options.
+Releases before 2.6 used `POLICY` records. When the server starts, a policy that only lists channels (`chain=`, `mode=`) becomes the channels of the teams that used it: the `default` policy those of the admin team and of teams without a policy, and the channels of the `system` policy (or, without one, of `default`) get `system=yes`. `policy=system` on a monitor becomes `system-channel=yes`. The file is kept as `monitors.conf.before-teams` and the change is in the audit log. Policies with other options (`repeat=`, `escalate=`, …) stay and keep working for whatever names them; edit them in the file.
+
+Release 3.0 removed teams. At the first start a file with `TEAM` records is rewritten so that nobody sees or receives anything different: the admin team's channels become the alert channels (`default IN POLICY chain=…`); another team's channels, when they differ, become a policy of the team's name that its monitors name with `policy=`; a team's monitors get `group=<team>` when they have no group; a member of teams (and not of the admin team) is given the groups of those teams' monitors; `team=` options and `TEAM` records are removed, and maintenance or status page selectors naming a team (`team:web`) name the group. The file is kept as `monitors.conf.before-groups` and the change is in the audit log. In a cluster, upgrade the other machines before the master.
 
 **Settings › Audit** lists every change to accounts, roles and sections (before and after), tokens, secrets (names only), nodes and the configuration, with the person or token, the section, and the source address; configuration edits made in the file on disk are listed too (each record as it was and as it is now), and so are sign-ins and failed logins, backups, restores, imports, password resets, and what the system did by itself (holds during a local outage and their release, restarts, crashes, clock jumps, upgrades). High-risk entries are highlighted and can be filtered by risk, person, source address, sign-in and time. `GET /api/v1/audit?actor=&action=&area=&session=` serves the same to administrators.
 
@@ -540,7 +530,7 @@ The import adds what Unagikuma can run and lists everything else with the reason
 
 - a record already here, in effect (the same check, with its file's defaults filled in), is left alone, so importing the same file twice adds nothing;
 - a monitor whose name is taken by a different one is added under a free name (`web-2`), and the `parent=` of the monitors imported with it follows;
-- a channel, period, team or status page whose name is taken stays as it is here, because monitors name them;
+- a channel, period or status page whose name is taken stays as it is here, because monitors name them;
 - a monitor keeps the timing it had: the interval, retry, timeout and attempts from the other file's header are written into it when they differ from this file's;
 - the gateway monitors every installation adds for itself are left out; sections (`$SCOPE`) are not kept, the monitors go to the section you choose;
 - secret values are not in the file. A `${secret:NAME}` that does not exist here blocks the import until you add it under **Advanced › Secrets**, because a configuration naming a missing secret is refused;
@@ -623,7 +613,7 @@ The data directory holds `monitors.conf`, `core.db` (users, incidents, notificat
 
 Under **Config & import › Import and export**, with the **Unagikuma** source chosen (export and restore belong to that source; the other sources only import), there are two ways out:
 
-- **Configuration only** downloads `monitors.conf`: the monitors, channels, teams, periods and status pages. No accounts, no secret values, no history. Another Unagikuma imports it (see above).
+- **Configuration only** downloads `monitors.conf`: the monitors, channels, periods and status pages. No accounts, no secret values, no history. Another Unagikuma imports it (see above).
 - **Everything** downloads one archive, encrypted with a passphrase of at least 8 characters: accounts, secrets with their key, the cluster CA, settings and the check history. Restore it from the same page or with `unagikuma restore`.
 
 To restore from the page, open **Config & import › Import and export**, choose the **Unagikuma** source, then choose the archive under *Restore from a backup* (and give the passphrase if it is encrypted) and confirm. A running program cannot swap its own databases, so the archive is only checked and kept: a damaged file, a wrong passphrase or an archive without a database is refused and nothing is left behind. Stop the program and start it again and the backup is put in place; the files it replaces (databases, `monitors.conf`, keys) are moved to a `restore-before-<date>` folder in the data directory, and everyone signs in again with the accounts of the backup. The page shows a restore that is waiting and can cancel it. If putting it in place fails, everything is put back as it was and the staged restore is set aside in a `restore-failed-<date>` folder.

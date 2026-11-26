@@ -185,7 +185,7 @@ const NAV = [
   ['/nodes', 'ui.nav.runmode', '⛭'],
 ];
 
-const TEAM_NAV = new Set(['/', '/monitors', '/problems', '/events']);
+const LIMITED_NAV = new Set(['/', '/monitors', '/problems', '/events']);
 
 const OLD_ALERT_TABS = { notices: 'pages', report: 'report' };
 
@@ -233,7 +233,7 @@ function Shell({ user, onLogout, onLang }) {
     case 'incidents': view = p[1] ? html`<${IncidentReport} id=${p[1]} />` : html`<${Problems} tab="all" />`; break;
     // Changes, status pages and the report used to live under Alerting;
     // their old addresses still open them.
-    case 'alerts': view = OLD_ALERT_TABS[p[1]] || p[1] === 'changes' ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]] || 'pages'} />` : html`<${Alerts} tab=${['contacts', 'periods'].includes(p[1]) ? p[1] : 'channels'} />`; break; // policies went to the teams
+    case 'alerts': view = OLD_ALERT_TABS[p[1]] || p[1] === 'changes' ? html`<${Notices} tab=${OLD_ALERT_TABS[p[1]] || 'pages'} />` : html`<${Alerts} tab=${['contacts', 'periods'].includes(p[1]) ? p[1] : 'channels'} />`; break;
     // Change notices moved to Alerts and notifications; the old address opens them there.
     case 'notices': view = html`<${Notices} tab=${p[1] === 'changes' ? 'pages' : p[1] || 'pages'} />`; break;
     case 'config': view = html`<${ConfigView} tab=${p[1] || 'import'} />`; break;
@@ -249,9 +249,9 @@ function Shell({ user, onLogout, onLang }) {
   const banner = ov.data && ov.data.banner;
   // Run mode (single machine, two machines or a cluster, and its nodes)
   // has its own place in the sidebar.
-  // A team member works with their teams' monitors only.
+  // An account limited to groups works with their monitors only.
   // Everyone has Settings for their own account (password).
-  const nav = NAV.filter(([path]) => (!me.teams || TEAM_NAV.has(path)) && ((path !== '/advanced' && path !== '/settings') || me.role === 'admin'));
+  const nav = NAV.filter(([path]) => (!me.groups || LIMITED_NAV.has(path)) && ((path !== '/advanced' && path !== '/settings') || me.role === 'admin'));
   return html`<div class=${'shell' + (mini ? ' mini' : '')}>
     <aside class=${'side' + (open ? ' open' : '')}>
       <a class="brand" href="#/"><${Logo} /><div>${PRODUCT}

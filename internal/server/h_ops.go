@@ -50,8 +50,8 @@ func exitJSON(h engine.Health) map[string]any {
 }
 
 func (s *Server) overview(w http.ResponseWriter, r *http.Request) (any, error) {
-	if ts := teamOf(r); ts != nil {
-		return s.teamOverview(r), nil
+	if ts := groupOf(r); ts != nil {
+		return s.groupOverview(r), nil
 	}
 	ov := s.app.Engine().Overview()
 	now := s.now()
@@ -150,10 +150,10 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) (any, error) {
 		}
 	}
 	sort.Slice(expiring, func(i, j int) bool { return expiring[i].Days < expiring[j].Days })
-	// Problems reach someone: the admin team has channels, or there are
-	// system channels (or, in a file not yet migrated, a default policy).
+	// Problems reach someone: there are alert channels (the default
+	// policy) or system channels.
 	alerting := false
-	for _, name := range []string{config.TeamPolicy(config.AdminTeam), "system", "default"} {
+	for _, name := range []string{"default", "system"} {
 		if p := cfg.FindPolicy(name); p != nil && len(p.Chain) > 0 {
 			alerting = true
 		}
@@ -226,7 +226,7 @@ func (s *Server) incidents(w http.ResponseWriter, r *http.Request) (any, error) 
 	default:
 		state = "all"
 	}
-	return s.app.Store().IncidentsOf(state, r.URL.Query().Get("monitor"), teamOf(r).list(), qInt64(r, "before"), qInt(r, "limit", 100), s.historySite(r))
+	return s.app.Store().IncidentsOf(state, r.URL.Query().Get("monitor"), groupOf(r).list(), qInt64(r, "before"), qInt(r, "limit", 100), s.historySite(r))
 }
 
 func pathID(r *http.Request) (int64, error) {
@@ -344,7 +344,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) (any, error) {
 	if t := q.Get("type"); t != "" {
 		types = strings.Split(strings.ToUpper(t), ",")
 	}
-	return s.app.Store().Events(store.EventFilter{Site: s.historySite(r), Monitor: q.Get("monitor"), Only: teamOf(r).list(), Types: types, Severity: q.Get("severity"),
+	return s.app.Store().Events(store.EventFilter{Site: s.historySite(r), Monitor: q.Get("monitor"), Only: groupOf(r).list(), Types: types, Severity: q.Get("severity"),
 		Before: qInt64(r, "before"), Limit: qInt(r, "limit", 100)})
 }
 

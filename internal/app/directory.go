@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/directory"
 	"github.com/githubflyideas/unagikuma/internal/i18n"
 	"github.com/githubflyideas/unagikuma/internal/notify"
@@ -129,8 +128,8 @@ func (a *App) UnknownAddresses() map[string][]string {
 
 // noteLeftOut logs the recipients a channel leaves out (not active
 // contacts, or bouncing) each time it sends, and, with
-// contacts.notify-admins, tells the administrators of the monitor's team,
-// at most once a day per channel and team.
+// contacts.notify-admins, tells the administrators through the system
+// channels, at most once a day per channel.
 func (a *App) noteLeftOut(ch notify.Channel, m *notify.Message) {
 	lp := a.leftOut.Load()
 	if lp == nil || len((*lp)[ch.Name]) == 0 || m.DryRun {
@@ -146,15 +145,7 @@ func (a *App) noteLeftOut(ch notify.Channel, m *notify.Message) {
 	if cfg == nil || !cfg.Tunables.Bool("contacts.notify-admins") {
 		return
 	}
-	team := config.AdminTeam
-	if mon := cfg.FindMonitor(m.Monitor); mon != nil {
-		team = mon.TeamOf()
-	}
-	tp := a.teamAdmins.Load()
-	if tp == nil || len((*tp)[team]) == 0 {
-		return
-	}
-	key := ch.Name + "|" + team
+	key := ch.Name
 	now := a.now()
 	a.toldMu.Lock()
 	if a.told == nil {
@@ -167,10 +158,5 @@ func (a *App) noteLeftOut(ch notify.Channel, m *notify.Message) {
 	a.told[key] = now
 	a.toldMu.Unlock()
 	lang := a.messageLang()
-	msg := &notify.Message{Kind: "SYSTEM", Monitor: m.Monitor, Site: m.Site, Brand: m.Brand,
-		Title: i18n.T(lang, "sys.left_out_title", "channel", ch.Name),
-		Body:  i18n.T(lang, "sys.left_out_body", "channel", ch.Name, "recipients", strings.Join(list, ", "))}
-	for _, c := range (*tp)[team] {
-		go a.sender.Send(context.Background(), c, msg)
-	}
+	go a.engine.SystemNotice(i18n.T(lang, "sys.left_out_body", "channel", ch.Name, "recipients", strings.Join(list, ", ")))
 }

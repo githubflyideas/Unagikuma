@@ -87,9 +87,10 @@ type authInfo struct {
 	sessionTag string
 	role       string
 	areas      []string // $SCOPE sections a limited operator may change
-	// team is set for a member of one or more teams (not an administrator):
-	// it sees and changes only what its teams own.
-	team *teamScope
+	// group is set for an account limited to some monitor groups (not an
+	// administrator): it sees and changes only the monitors in them.
+	group  *groupScope
+	groups []string
 }
 
 type ctxKey struct{}
@@ -218,8 +219,8 @@ func (s *Server) handle(pattern, scope string, f apiFunc) {
 				writeErrorFor(w, r, Errorf(http.StatusForbidden, CodeForbidden, "this token lacks the %q scope", scope))
 				return
 			}
-			if ai.team != nil && !teamRoutes[pattern] {
-				writeErrorFor(w, r, errTeamOnly)
+			if ai.group != nil && !groupRoutes[pattern] {
+				writeErrorFor(w, r, errGroupOnly)
 				return
 			}
 			if ai.session && r.Method != http.MethodGet && r.Method != http.MethodHead {
@@ -328,9 +329,9 @@ func (s *Server) authenticate(r *http.Request) (*authInfo, error) {
 		return nil, errUnauthorized
 	}
 	ai := &authInfo{user: se.User.Username, userID: se.User.ID, csrf: se.CSRF, session: true, sessionTag: sessionTag(c.Value),
-		scopes: roleScopes(se.User.Role), role: se.User.Role, areas: se.User.Areas}
-	if ts := teamScopeFor(s.app.EffectiveConfig(), se.User.Username, se.User.Role); ts != nil {
-		ai.team, ai.scopes = ts, ts.scopes()
+		scopes: roleScopes(se.User.Role), role: se.User.Role, areas: se.User.Areas, groups: se.User.Groups}
+	if gs := groupScopeFor(s.app.EffectiveConfig(), se.User.Role, se.User.Groups); gs != nil {
+		ai.group, ai.scopes = gs, gs.scopes()
 	}
 	return ai, nil
 }

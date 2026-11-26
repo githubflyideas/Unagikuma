@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+**Changed**
+- Teams are gone; groups take their place, and the code behind both is much simpler. Every alert goes to the **alert channels**, set under Alerting › Channels (a monitor can still name its own policy). A user can be given monitor groups (`group=` on a monitor): they then see, and as an operator change, only those monitors; a user given no groups sees everything. To keep departments entirely apart, run a second installation in another directory. The first start of this release rewrites a file with `TEAM` records so that nobody sees or receives anything different (the old file is kept as `monitors.conf.before-groups`): the admin team's channels become the alert channels, another team's channels a policy its monitors name, its monitors get `group=<team>`, and its members those groups. The daily and weekly reports cover every monitor and go to the alert channels. Advanced › Teams, the teams API and `notify.daily-report-teams` are gone.
+
 **Added**
 - Several installations on one machine: start the program in another directory and it is a separate installation. Without `--listen` it takes 8077 or, when that is taken, the next free port up to 8099, and keeps it on later starts (`<data>/listen.port`); the address is printed at start. A second server on a data directory that is already running is refused instead of sharing its databases.
 - A live demo of the console on GitHub Pages: a three-site cluster with sample data, read-only, every page and style. It is built from a recording (`scripts/demo`) and published by the `demo` workflow. The READMEs link to it and show new screenshots.

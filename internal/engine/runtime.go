@@ -34,7 +34,6 @@ type MonitorSpec struct {
 	Handler string
 	Depth   string // L0..L3 as advertised
 	Policy  string // notification policy ("" = default)
-	Team    string // owning team ("" = the built-in admin team)
 
 	Interval        time.Duration
 	Retry           time.Duration // interval while SOFT failing
@@ -170,17 +169,8 @@ type Config struct {
 	Nodes []NodeSpec
 	// Maints are the maintenance windows.
 	Maints []MaintSpec
-	// ReportTeams receive the daily status report, each on the monitors
-	// it owns; empty: one report on everything, through ReportPolicy.
-	ReportTeams []ReportTeam
 }
 
-// ReportTeam is a team receiving the daily status report and the policy
-// it is sent through.
-type ReportTeam struct {
-	Name   string
-	Policy string
-}
 
 // AnchorSpec is an explicit anchor address.
 type AnchorSpec struct {

@@ -61,7 +61,6 @@ type rowJSON struct {
 	Nodes   []string `json:"nodes,omitempty"`
 	Parents []string `json:"parents,omitempty"`
 	Host    string   `json:"host"`           // the host it is listed under
-	Team    string   `json:"team,omitempty"` // the team that owns it (admin when none is written)
 	Region  string   `json:"region,omitempty"`
 	Mute    bool     `json:"mute,omitempty"`
 	SysChan bool     `json:"system_channel,omitempty"`
@@ -182,7 +181,7 @@ func (s *Server) rowBase(r engine.MonitorRow, cfg *config.Config, incs map[int64
 	}
 	if m := cfg.FindMonitor(r.Name); m != nil {
 		out.Policy, out.IntervalS, out.Written = m.Policy, int(m.Interval.Seconds()), m.Written
-		out.Area, out.Nodes, out.Parents, out.Host, out.Team = m.Area, m.Nodes, m.Parents, m.HostKey(), m.TeamOf()
+		out.Area, out.Nodes, out.Parents, out.Host = m.Area, m.Nodes, m.Parents, m.HostKey()
 		out.Region, out.Mute, out.SysChan = m.Region, m.Mute, m.SystemChannel
 		out.Target = m.Target
 		if m.UDP != nil && m.UDP.Keyword != "" {
@@ -367,7 +366,7 @@ func parseQuery(s string) query {
 		}
 		if k, v, ok := strings.Cut(f, ":"); ok && v != "" {
 			switch k {
-			case "status", "type", "tag", "group", "depth", "scope", "policy", "name", "flag", "area", "node", "host", "team", "region":
+			case "status", "type", "tag", "group", "depth", "scope", "policy", "name", "flag", "area", "node", "host", "region":
 				t.key, t.val = k, v
 				q = append(q, t)
 				continue
@@ -416,8 +415,6 @@ func (t queryTerm) match(r rowJSON) bool {
 		return strings.Contains(low(r.Area), t.val)
 	case "host":
 		return low(r.Host) == t.val
-	case "team":
-		return low(r.Team) == t.val
 	case "region":
 		return low(r.Region) == t.val
 	case "node":
@@ -498,7 +495,7 @@ func (s *Server) monitorDetail(w http.ResponseWriter, r *http.Request) (any, err
 		path["exit"] = exitJSON(h)
 	}
 	out["path"] = path
-	// The state of what it depends on, also for a team member who may not
+	// The state of what it depends on, also for an account limited to groups that may not
 	// open those monitors: it explains why this one is unreachable.
 	type parentState struct {
 		Name   string `json:"name"`
@@ -730,7 +727,7 @@ func (s *Server) monitorCreate(w http.ResponseWriter, r *http.Request) (any, err
 			return nil, errOutsideAreas
 		}
 	}
-	if err := teamOfNewRecord(authOf(r), &spec); err != nil {
+	if err := groupOfNewRecord(authOf(r), &spec); err != nil {
 		return nil, err
 	}
 	if s.app.EffectiveConfig().HasName(spec.Name) {
@@ -778,7 +775,7 @@ func (s *Server) monitorUpdate(w http.ResponseWriter, r *http.Request) (any, err
 	if ai := authOf(r); !s.allowsMonitor(ai, name) || (spec.MoveArea && !ai.allowsArea(spec.Area)) {
 		return nil, errOutsideAreas
 	}
-	if err := teamOfNewRecord(authOf(r), &spec); err != nil {
+	if err := groupOfNewRecord(authOf(r), &spec); err != nil {
 		return nil, err
 	}
 	st, err := s.editConfig(r, req.Message, s.guardExec(authOf(r), ifMatch(r, name, func(f *config.File) error {
@@ -1204,8 +1201,8 @@ func (s *Server) quickadd(w http.ResponseWriter, r *http.Request) (any, error) {
 			if d.Severity == config.SevError {
 				out.Errors = append(out.Errors, lineErr{i + 1, d.Msg})
 				bad = true
-			} else if d.Code == "same_check" && teamOf(r) != nil {
-				// It names a monitor the team member may not see.
+			} else if d.Code == "same_check" && groupOf(r) != nil {
+				// It names a monitor the caller may not see.
 				continue
 			} else {
 				rc.Warnings = append(rc.Warnings, d.Msg)

@@ -47,17 +47,6 @@ func TestContactDirectory(t *testing.T) {
 	if got := issues(); len(got["mail"]) != 1 || got["mail"][0] != "unknown_address" {
 		t.Fatalf("a new address: %v", got)
 	}
-	// The policy became the admin team's channels at startup.
-	var teams struct {
-		Items []struct {
-			Name          string
-			IssueChannels []string `json:"issue_channels"`
-		}
-	}
-	e.do("GET", "/api/v1/teams", nil, &teams)
-	if len(teams.Items) == 0 || teams.Items[0].Name != "admin" || len(teams.Items[0].IssueChannels) != 1 {
-		t.Fatalf("team red dot: %+v", teams)
-	}
 	var imp struct{ Created int }
 	if c := e.do("POST", "/api/v1/people/import", map[string]any{}, &imp); c != 200 || imp.Created != 1 {
 		t.Fatalf("import: %d %+v", c, imp)

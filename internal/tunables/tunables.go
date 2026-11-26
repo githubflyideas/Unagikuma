@@ -80,7 +80,7 @@ var defs = []Def{
 	{Key: "notify.daily-report-at", Kind: TimesOfDay, Default: "10:00", Desc: "local times of the daily status report, one to four, comma-separated (09:00,17:00)", DescZH: "每日状态日报的发送时间，1 到 4 个，逗号分隔（09:00,17:00）"},
 	{Key: "notify.weekly-report", Kind: Bool, Default: "off", Desc: "weekly report of the last seven days: availability, problems and downtime, the least available monitors, alerts held back", DescZH: "每周报告（最近 7 天）：可用率、故障次数与时长、可用率最低的监控、拦下的无效告警"},
 	{Key: "notify.weekly-report-at", Kind: WeekTime, Default: "mon 09:00", Desc: "day and local time of the weekly report (mon 09:00)", DescZH: "每周报告的发送日和时间（mon 09:00）"},
-	{Key: "notify.daily-report-teams", Kind: String, Default: "admin", Desc: "teams receiving the daily report, each on its own monitors (comma-separated)", DescZH: "接收日报的团队（逗号分隔），每个团队收到自己监控的日报"},
+	{Key: "notify.daily-report-teams", Kind: String, Default: "admin", Desc: "no longer used (before 3.0: the teams receiving the daily report); the report goes to the alert channels", DescZH: "已不再使用（3.0 以前：接收日报的团队）；日报发到告警通道"},
 	{Key: "notify.daily-report-policy", Kind: String, Default: "", Desc: "policy the daily report is sent through (empty = system policy)", DescZH: "日报使用的通知策略（留空 = 系统策略）"},
 	{Key: "notify.daily-report-max-items", Kind: Int, Default: "30", Min: "5", Max: "500", Desc: "entries listed per report section before the rest is counted", DescZH: "日报每节最多列出的条目数，其余只计数"},
 	{Key: "notify.degraded-max", Kind: Int, Default: "1", Min: "0", Max: "100", Desc: "notifications per low-priority (DEGRADED/regional) incident", DescZH: "低优先级故障（变慢、区域性故障）的通知上限"},

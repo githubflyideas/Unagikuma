@@ -374,6 +374,11 @@ func (e *Engine) systemNotice(now time.Time, body string) {
 		Message: notify.Message{Kind: "SYSTEM", Priority: "high", Title: noticeTitle(body, e.text("system_notice_title")), Body: body, Time: now, Instance: e.cfg.Instance, Lang: e.cfg.Lang}})
 }
 
+// SystemNotice sends a one-off message through the system policy.
+func (e *Engine) SystemNotice(body string) {
+	e.do(func() { e.systemNotice(e.now(), body) })
+}
+
 // noticeTitle is the first sentence of body, at most 90 characters.
 func noticeTitle(body, fallback string) string {
 	s, _, _ := strings.Cut(strings.TrimSpace(body), "\n")

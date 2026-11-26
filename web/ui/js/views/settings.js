@@ -3,10 +3,9 @@ import { html, useState, useEffect, useMemo } from '../lib.js';
 import { t, tn, dur, fmtTime, currentLang, langList } from '../i18n.js';
 import { get, post, put, del, setCSRF, getCSRF, me } from '../api.js';
 import { Nodes } from './nodes.js';
-import { ChannelList, DELIVERY_KEYS } from './alerts.js';
-import { IssueDot } from './contacts.js';
+import { DELIVERY_KEYS } from './alerts.js';
 import { Branding, MyStyle } from './branding.js';
-import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, regionTitle, msText } from '../ui.js';
+import { useFetch, Loading, ErrorBox, Empty, Field, Card, Modal, Copy, Ago, bytes, toast, toastError, errText, confirmDialog, useDocTitle, regionTitle, msText } from '../ui.js';
 
 const EXIT_KEY = 'localnet.exit-target';
 const DNS_KEY = 'probe.dns-servers';
@@ -229,83 +228,6 @@ function Tunables() {
 
 const SCOPES = ['read', 'ack', 'write', 'admin'];
 
-// Teams: who works on which monitors (team= on a monitor). They are TEAM
-// records in monitors.conf; the built-in admin team owns the rest.
-function Teams() {
-  const list = useFetch(() => get('/teams'), []);
-  const users = useFetch(() => get('/users'), []);
-  const admin = me.role === 'admin';
-  const chans = useFetch(() => (admin ? get('/channels') : Promise.resolve([])), [admin]);
-  const [form, setForm] = useState(null);
-  // #/advanced/teams?edit=admin opens that team's form (from the overview's
-  // first steps), once the list has loaded.
-  const [opened, setOpened] = useState(false);
-  useEffect(() => {
-    const m = /[?&]edit=([^&]+)/.exec(location.hash);
-    if (opened || !m || !list.data) return;
-    setOpened(true);
-    const name = decodeURIComponent(m[1]);
-    const tm = list.data.items.find(x => x.name === name || (name === 'admin' && x.builtin));
-    if (tm && admin) edit(tm);
-  }, [list.data]);
-  if (!list.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
-  const save = async (e) => {
-    e.preventDefault();
-    try {
-      await post('/teams', { name: form.name.trim(), title: form.title, description: form.description, members: form.members, channels: form.channels, mode: form.mode });
-      toast(t('ui.saved'));
-      setForm(null);
-      list.reload();
-    } catch (e2) { toastError(e2); }
-  };
-  const remove = async (tm) => {
-    if (!await confirmDialog(t('ui.team.delete_confirm', { name: tm.title }), { danger: true, ok: t('ui.delete') })) return;
-    try { await del('/teams/' + encodeURIComponent(tm.name)); list.reload(); } catch (e) { toastError(e); }
-  };
-  const edit = (tm) => setForm({ edit: true, builtin: tm.builtin, name: tm.name, title: tm.title === tm.name ? '' : tm.title, description: tm.description || '', members: tm.members.slice(),
-    channels: tm.channels.slice(), mode: tm.mode || 'fallback' });
-  const people = (l) => l.length ? l.join(', ') : html`<span class="faint">–</span>`;
-  const userList = (users.data && users.data.items) || [];
-  const userNames = userList.map(u => u.username);
-  const roleOf = (n) => (userList.find(u => u.username === n) || {}).role;
-  const toggle = (n) => setForm({ ...form, members: form.members.includes(n) ? form.members.filter(x => x !== n) : [...form.members, n] });
-  return html`<div class="col" style=${{ gap: '12px' }}>
-    <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.team.intro')}</p>
-      ${admin && html`<button class="btn primary" onClick=${() => setForm({ name: '', title: '', description: '', members: [], channels: [], mode: 'fallback' })}>${t('ui.team.add')}</button>`}</div>
-    <div class="card"><div class="bd flush tbl-wrap">
-      <table class="tbl">
-        <thead><tr><th>${t('ui.name')}</th><th>${t('ui.team.members')}</th><th>${t('ui.team.channels')}</th><th>${t('ui.team.monitors')}</th><th></th></tr></thead>
-        <tbody>${list.data.items.map(tm => html`<tr>
-          <td><div class="name">${teamTitle(tm)}</div><div class="sub mono ltr">${tm.name}${tm.builtin ? ' · ' + t('ui.team.builtin') : ''}</div>
-            ${tm.unknown && tm.unknown.length > 0 && html`<div class="small warn-text" title=${t('ui.team.unknown_hint')}>${t('ui.team.unknown', { names: tm.unknown.join(', ') })}</div>`}
-            ${tm.unreachable && tm.unreachable.length > 0 && html`<div class="small err-text"><span class="rdot"></span> ${t('ui.team.unreachable', { names: tm.unreachable.join(', ') })} <a href="#/alerts/contacts">${t('ui.team.unreachable_fix')}</a></div>`}</td>
-          <td class="small">${tm.builtin && !tm.members.length ? html`<span class="faint">${t('ui.team.admin_members')}</span>` : people(tm.members)}</td>
-          <td class="small ltr">${tm.channels.length ? tm.channels.join(tm.mode === 'all' ? ' + ' : ' → ') : html`<span class="warn-text">${t('ui.team.no_channels')}</span>`}
-            ${tm.issue_channels && html` <${IssueDot} issues=${tm.issue_channels} text=${t('ui.dir.policy_dot', { channels: tm.issue_channels.join(', ') })} />`}</td>
-          <td><a href=${'#/monitors?q=' + encodeURIComponent('team:' + tm.name)}>${tm.monitors}</a></td>
-          <td class="right nowrap">${admin && html`<button class="btn sm" onClick=${() => edit(tm)}>${t('ui.edit')}</button>`}
-            ${admin && !tm.builtin && html`${' '}<button class="btn sm danger" onClick=${() => remove(tm)} disabled=${tm.monitors > 0} title=${tm.monitors > 0 ? t('ui.team.move_first') : ''}>${t('ui.delete')}</button>`}</td>
-        </tr>`)}</tbody></table>
-    </div></div>
-    ${form && html`<${Modal} title=${form.edit ? form.name : t('ui.team.add')} onClose=${() => setForm(null)}>
-      <form class="form" onSubmit=${save}>
-        ${!form.edit && html`<${Field} label=${t('ui.name')} hint=${t('ui.team.name_hint')}><input type="text" class="ltr" required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}" value=${form.name} placeholder=${t('ui.team.name_ph')} onInput=${(e) => setForm({ ...form, name: e.target.value })} /><//>`}
-        <${Field} label=${t('ui.team.display_name')}><input type="text" value=${form.title} onInput=${(e) => setForm({ ...form, title: e.target.value })} placeholder=${form.builtin ? t('ui.team.admin') : t('ui.team.display_ph')} /><//>
-        <${Field} label=${t('ui.team.members_label')} hint=${t('ui.team.members_hint')}>
-          <div class="col">${userNames.map(n => html`<div class="row" style=${{ gap: '8px' }}><label class="switch"><input type="checkbox" checked=${form.members.includes(n)} onChange=${() => toggle(n)} /> ${n}</label>
-            ${roleOf(n) && html`<span class="tag" title=${t('ui.user.role.' + roleOf(n) + '_hint')}>${t('ui.user.role.' + roleOf(n))}</span>`}</div>`)}
-          ${userNames.length <= 1 && html`<div class="small muted">${t('ui.team.add_users_hint')} <a href="#/alerts/contacts">${t('ui.nav.alerts')} › ${t('ui.dir.tab')}</a></div>`}</div><//>
-        <${Field} label=${t('ui.team.channels')} hint=${t('ui.team.channels_hint')}>
-          <${ChannelList} value=${form.channels} channels=${chans.data || []} onChange=${(channels) => setForm({ ...form, channels })} /><//>
-        ${form.channels.length > 1 && html`<${Field} label=${t('ui.team.mode')}><select value=${form.mode} onChange=${(e) => setForm({ ...form, mode: e.target.value })}>
-          <option value="fallback">${t('ui.team.mode.fallback')}</option><option value="all">${t('ui.team.mode.all')}</option></select><//>`}
-        <${Field} label=${t('ui.description')}><textarea rows="2" value=${form.description} onInput=${(e) => setForm({ ...form, description: e.target.value })}></textarea><//>
-        <div class="row"><div class="spacer"></div><button class="btn primary">${t('ui.save')}</button></div>
-      </form>
-    <//>`}
-  </div>`;
-}
-
 // Regions: groups of nodes a monitor can be checked from. Global, the
 // default, is every node.
 function Regions() {
@@ -333,7 +255,7 @@ function Regions() {
       ${nodeNames.length > 1 ? html`<button class="btn primary" onClick=${() => setForm({ name: '', nodes: [] })}>${t('ui.region.add')}</button>`
         : html`<a class="small" href="#/nodes">${t('ui.region.no_nodes')}</a>`}</div>
     <div class="card"><div class="bd flush tbl-wrap"><table class="tbl">
-      <thead><tr><th>${t('ui.name')}</th><th>${t('ui.region.nodes')}</th><th>${t('ui.team.monitors')}</th><th></th></tr></thead>
+      <thead><tr><th>${t('ui.name')}</th><th>${t('ui.region.nodes')}</th><th>${t('ui.monitors')}</th><th></th></tr></thead>
       <tbody>${list.data.items.map(rg => html`<tr>
         <td class="name">${regionTitle(rg.name)}</td>
         <td class="small">${rg.builtin ? html`<span class="faint">${t('ui.region.all_nodes')}</span>` : rg.nodes.join(', ')}</td>
@@ -750,7 +672,7 @@ function Audit() {
 // Everyday settings, and the advanced ones that most installations set
 // once or never: they have their own place in the sidebar.
 const TABS = ['general', 'gateway', 'heartbeat', 'scripts', 'branding', 'audit', 'registration'];
-export const ADVANCED_TABS = ['teams', 'regions', 'tunables', 'tokens', 'secrets', 'keywords'];
+export const ADVANCED_TABS = ['regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
 export function Settings({ tab, user, advanced }) {
   useDocTitle(t(advanced ? 'ui.nav.advanced' : 'ui.nav.settings'));
@@ -763,7 +685,6 @@ export function Settings({ tab, user, advanced }) {
   let body;
   switch (tab) {
     case 'nodes': body = html`<${Nodes} embedded />`; break;
-    case 'teams': body = html`<${Teams} />`; break;
     case 'regions': body = html`<${Regions} />`; break;
     case 'audit': body = html`<${Audit} />`; break;
     case 'registration': body = html`<${Registration} />`; break;

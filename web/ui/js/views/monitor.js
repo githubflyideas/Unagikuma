@@ -7,12 +7,11 @@ import { ObservationTable } from '../observations.js';
 import { IncidentList } from './problems.js';
 import { EventRows } from './events.js';
 
-// routeText tells how a monitor's problems are sent: through its team's
-// channels, the system channels, not at all (muted), or (files from before
-// 2.6) a policy written in the configuration.
+// routeText tells how a monitor's problems are sent: through the alert
+// channels, the system channels, not at all (muted), or a policy of its own.
 function routeText(policy) {
   if (!policy) return '–';
-  if (policy.startsWith('team:')) return t('ui.mon.route_team');
+  if (policy === 'default') return t('ui.mon.route_alert');
   if (policy === 'mute') return t('ui.mon.route_mute');
   if (policy === 'system') return t('ui.mon.route_system');
   return policy;

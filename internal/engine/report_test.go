@@ -8,13 +8,13 @@ import (
 func TestDailyReport(t *testing.T) {
 	d := newDepEnv(t)
 	d.wait("both ok", func() bool { return d.status("gw") == "ok" && d.status("srv") == "ok" })
-	if r := d.e.DailyReport(""); !r.OK || !strings.Contains(r.Title, "2") || !strings.Contains(r.Body, "gw, srv") {
+	if r := d.e.DailyReport(); !r.OK || !strings.Contains(r.Title, "2") || !strings.Contains(r.Body, "gw, srv") {
 		t.Fatalf("all up: %+v", r)
 	}
 	d.set("gw", true)
 	d.set("srv", true)
 	d.wait("gw down", func() bool { return d.status("gw") == StatusCritical && d.status("srv") == StatusUnreachable })
-	r := d.e.DailyReport("")
+	r := d.e.DailyReport()
 	if r.OK || r.Policy != "system" {
 		t.Fatalf("report: %+v", r)
 	}

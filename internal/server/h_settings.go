@@ -57,7 +57,7 @@ func (s *Server) channels(w http.ResponseWriter, r *http.Request) (any, error) {
 		Opts    map[string]string `json:"opts"`
 		Retries int               `json:"retries"`
 		UsedBy  []string          `json:"used_by"` // policies written in the file
-		Teams   []string          `json:"teams"`   // teams notified through it
+		Alert   bool              `json:"alert"`   // an alert channel (in the default policy)
 		System  bool              `json:"system"`  // a system channel (system=yes)
 		ETag    string            `json:"etag"`
 		// Issues are recipients the contact directory flags (red dot).
@@ -93,13 +93,11 @@ func (s *Server) channels(w http.ResponseWriter, r *http.Request) (any, error) {
 				}
 			}
 		}
-		teams := []string{}
-		for _, t := range cfg.AllTeams() {
-			if slices.Contains(t.Channels, c.Name) {
-				teams = append(teams, t.Name)
-			}
+		alert := false
+		if p := cfg.FindPolicy("default"); p != nil {
+			alert = slices.Contains(p.Chain, c.Name)
 		}
-		out = append(out, chJSON{c.Name, c.Kind, opts, c.Retries, used, teams, c.System, s.recordETags()[c.Name], issues[c.Name]})
+		out = append(out, chJSON{c.Name, c.Kind, opts, c.Retries, used, alert, c.System, s.recordETags()[c.Name], issues[c.Name]})
 	}
 	return out, nil
 }
@@ -441,8 +439,8 @@ func (s *Server) policies(w http.ResponseWriter, r *http.Request) (any, error) {
 	cfg := s.app.EffectiveConfig()
 	out := []polJSON{}
 	for _, p := range cfg.Policies {
-		if p.Team != "" || p.Mute {
-			continue // made from a team's channels, or mute=yes
+		if p.Mute {
+			continue // mute=yes
 		}
 		n := 0
 		for _, m := range cfg.Monitors {
@@ -918,3 +916,58 @@ func (s *Server) restoreCancel(w http.ResponseWriter, r *http.Request) (any, err
 
 // errHandled tells handle() the response was already written.
 var errHandled = &APIError{Status: 0, Code: "handled"}
+
+// alertChannelsPut sets the installation's alert channels: the channels
+// every alert goes to, in order, unless a monitor names its own policy
+// (the "default" policy's chain). mode is fallback (stop at the first that
+// works) or all.
+func (s *Server) alertChannelsPut(w http.ResponseWriter, r *http.Request) (any, error) {
+	var req struct {
+		Channels []string `json:"channels"`
+		Mode     string   `json:"mode"`
+	}
+	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
+		return nil, err
+	}
+	chans := cleanList(req.Channels)
+	cfg := s.app.EffectiveConfig()
+	for _, c := range chans {
+		if cfg.FindChannel(c) == nil {
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "no channel %s", c)
+		}
+	}
+	mode := ""
+	if req.Mode == "all" {
+		mode = "all"
+	}
+	auditOf(r).note("channels", chans).note("mode", mode).target = "default"
+	st, err := s.editConfig(r, "alert channels: "+strings.Join(chans, ","), func(f *config.File) error {
+		if _, ok := f.Record("default"); ok {
+			return f.SetOpts("default", map[string]string{"chain": strings.Join(chans, ","), "mode": mode})
+		}
+		if len(chans) == 0 {
+			return nil
+		}
+		opts := []config.Opt{{Key: "chain", Value: strings.Join(chans, ",")}}
+		if mode != "" {
+			opts = append(opts, config.Opt{Key: "mode", Value: mode})
+		}
+		return f.UpsertRecord(config.RecordSpec{Name: "default", Type: "POLICY", Opts: opts})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"serial": st.Serial, "channels": chans, "mode": mode}, nil
+}
+
+// alertChannelsGet lists the alert channels and their mode.
+func (s *Server) alertChannelsGet(w http.ResponseWriter, r *http.Request) (any, error) {
+	out := map[string]any{"channels": []string{}, "mode": ""}
+	if p := s.app.EffectiveConfig().FindPolicy("default"); p != nil && len(p.Chain) > 0 {
+		out["channels"] = p.Chain
+		if p.Mode == "all" {
+			out["mode"] = "all"
+		}
+	}
+	return out, nil
+}

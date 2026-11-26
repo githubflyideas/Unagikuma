@@ -139,7 +139,7 @@ export function ContactsTab() {
   const userOf = (p) => p.username && ((users.data && users.data.items) || []).find(u => u.username === p.username);
   const openLogin = (p) => {
     const u = userOf(p);
-    setLogin(u ? { initial: { id: u.id, username: u.username, password: '', role: u.role, areas: u.areas || [], teams: u.teams || [] }, person: p }
+    setLogin(u ? { initial: { id: u.id, username: u.username, password: '', role: u.role, areas: u.areas || [], groups: u.groups || [] }, person: p }
       : { initial: { username: p.handle }, person: p });
   };
   const loginSaved = async (username, filled) => {
@@ -173,7 +173,7 @@ export function ContactsTab() {
   const setReport = async (p, receive) => {
     try { await post('/people/' + p.id + '/report', { receive }); d.reload(); } catch (e) { toastError(e); d.reload(); }
   };
-  // Optionally, a team's administrators hear of recipients left out.
+  // Optionally, the administrators hear of recipients left out.
   const tellKey = 'contacts.notify-admins';
   const tell = tun.data && tun.data.find(x => x.key === tellKey);
   const setTell = async (on) => {

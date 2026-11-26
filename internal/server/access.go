@@ -22,8 +22,8 @@ func roleScopes(role string) map[string]bool {
 }
 
 // restricted reports an account that may not change shared configuration:
-// one limited to some sections, or one that works within its teams.
-func (ai *authInfo) restricted() bool { return len(ai.areas) > 0 || ai.team != nil }
+// one limited to some sections, or one limited to some monitor groups.
+func (ai *authInfo) restricted() bool { return len(ai.areas) > 0 || ai.group != nil }
 
 // allowsArea reports whether the caller may change things in a section
 // ("" is the global section).
@@ -47,7 +47,7 @@ func (s *Server) allowsMonitor(ai *authInfo, name string) bool {
 		return true
 	}
 	m := s.app.EffectiveConfig().FindMonitor(name)
-	return m != nil && ai.allowsArea(m.Area) && (ai.team == nil || ai.team.writes(m.Team))
+	return m != nil && ai.allowsArea(m.Area) && (ai.group == nil || ai.group.writes(m.Group))
 }
 
 // allowsIncident reports whether the caller may act on an incident.

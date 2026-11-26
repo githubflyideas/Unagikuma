@@ -31,7 +31,7 @@ disk IN EXEC check_disk args="-p /data" device=db1
 	if r.Reason != probe.ReasonPluginCritical || r.Detail != "DISK CRITICAL - /data 3% free" || r.Metrics["perf./data"] != 97 {
 		t.Fatalf("row: %+v", r)
 	}
-	if rep := e.app.Engine().DailyReport(""); rep.OK {
+	if rep := e.app.Engine().DailyReport(); rep.OK {
 		t.Fatalf("report: %+v", rep)
 	}
 }

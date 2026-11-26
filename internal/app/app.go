@@ -95,12 +95,10 @@ type App struct {
 	// dir is the contact directory the channels are checked against.
 	dir       atomic.Pointer[directory.Directory]
 	dirReload atomic.Bool
-	// left out are the recipients each channel does not send to, and
-	// teamAdmins the channels that reach each team's administrators.
-	leftOut    atomic.Pointer[map[string][]directory.Issue]
-	teamAdmins atomic.Pointer[map[string][]notify.Channel]
-	toldMu     sync.Mutex
-	told       map[string]time.Time // channel|team → when the admins were last told
+	// left out are the recipients each channel does not send to.
+	leftOut atomic.Pointer[map[string][]directory.Issue]
+	toldMu  sync.Mutex
+	told    map[string]time.Time // channel → when the admins were last told
 	// applyMu orders configuration applies with directory re-applies.
 	applyMu sync.Mutex
 	// sitePauseMu guards read-modify-write of site-pauses.json.
@@ -287,7 +285,10 @@ func (a *App) migrateFiles() error {
 	if err := a.store.SetSetting(pushOptionsDone, "1"); err != nil {
 		return err
 	}
-	return a.migratePoliciesToTeams(a.opts.ConfigPath)
+	if err := a.migratePoliciesToTeams(a.opts.ConfigPath); err != nil {
+		return err
+	}
+	return a.migrateTeamsToGroups(a.opts.ConfigPath)
 }
 
 // loadState loads the membership, the replica copy and the configuration,

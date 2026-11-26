@@ -2,7 +2,7 @@
 import { html, useState, useEffect, useRef, useCallback, useLayoutEffect } from './lib.js';
 import { t, ago, fmtTime, fmtNum, detailText } from './i18n.js';
 import { onLive, onConnection } from './live.js';
-import { me, post } from './api.js';
+import { post } from './api.js';
 
 // The product's name, in titles and headers: the installation's own when
 // it has one (see styles.js).
@@ -319,19 +319,7 @@ export function openMonitor(name) { dispatchEvent(new CustomEvent('unagikuma:mon
 // state: then any failure counts.
 export function gwBad(g) { return g.state ? g.state === 'down' : !g.ok; }
 
-// Teams and regions. The built-in admin team and the global region are
-// shown by a translated name.
-export function teamTitle(tm) {
-  if (!tm) return '';
-  if (tm.name === 'admin' && (!tm.title || tm.title === 'admin')) return t('ui.team.admin');
-  return tm.title || tm.name;
-}
-
-// The name of a team known only by its record name (a monitor's team).
-export function teamLabel(name) {
-  return name === 'admin' ? t('ui.team.admin') : name;
-}
-
+// Regions: the global region is shown by a translated name.
 // An incident's number as people say it: "#5" for "unagikuma:81c7f8adec9b:5"
 // (the whole id is kept as the tooltip; it matters only between sites).
 export function shortId(gid) {
@@ -343,11 +331,6 @@ export function regionTitle(name) {
   return name === 'global' ? t('ui.region.global') : name;
 }
 
-// writableTeams are the teams the signed-in user may add monitors to.
-export function writableTeams(data) {
-  const items = (data && data.items) || [];
-  return me.teams ? items.filter(tm => me.teams[tm.name] === 'operator') : items;
-}
 
 // Common values offered for a duration or count field; any other value can
 // still be typed.

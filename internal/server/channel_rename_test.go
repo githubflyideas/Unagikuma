@@ -10,7 +10,6 @@ const renameBind = testBind + `old     IN CHANNEL log
 other   IN CHANNEL log
 both    IN CHANNEL group members=old,other
 default IN POLICY chain=other,old escalate=30m:old+other
-ops     IN TEAM members=admin channels=old
 `
 
 func TestChannelRenameFollowsReferences(t *testing.T) {
@@ -29,7 +28,7 @@ func TestChannelRenameFollowsReferences(t *testing.T) {
 	}
 	b, _ := os.ReadFile(e.app.ConfigPath())
 	file := string(b)
-	for _, want := range []string{"members=renamed,other", "chain=other,renamed", "escalate=30m:renamed+other", "channels=renamed"} {
+	for _, want := range []string{"members=renamed,other", "chain=other,renamed", "escalate=30m:renamed+other" } {
 		if !strings.Contains(file, want) {
 			t.Errorf("%q missing from:\n%s", want, file)
 		}

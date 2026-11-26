@@ -37,6 +37,11 @@ func (a *App) migratePoliciesToTeams(path string) error {
 	if c == nil || config.HasErrors(d) {
 		return nil
 	}
+	// Only a file that still has teams is of the 2.6 kind; a file of 3.0
+	// (no teams, alert channels in the default policy) is left alone.
+	if len(c.Teams) == 0 {
+		return nil
+	}
 	m := &policyMigration{f: f, c: c, written: map[string]*config.Policy{}, teamPolicy: map[string]string{}}
 	for _, p := range c.Policies {
 		if !p.Implicit && p.Team == "" && !p.Mute {

@@ -2,7 +2,7 @@
 import { html, useState, useEffect } from '../lib.js';
 import { t, has, detailText, currentLang } from '../i18n.js';
 import { get, post, put, ifMatch, newKey, me } from '../api.js';
-import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, teamTitle, regionTitle, writableTeams, Copy, Combo, PRESETS } from '../ui.js';
+import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, regionTitle, Copy, Combo, PRESETS } from '../ui.js';
 
 // Check types, grouped for the type menu.
 const TYPE_GROUPS = [
@@ -98,7 +98,7 @@ const OPT_EXAMPLE = {
 
 // Options shown as their own form fields rather than in the table
 // ("proto" is implied by the service types).
-const META = new Set(['title', 'description', 'tags', 'group', 'policy', 'team', 'region', 'proto', 'mute', 'system-channel']);
+const META = new Set(['title', 'description', 'tags', 'group', 'policy', 'region', 'proto', 'mute', 'system-channel']);
 const yes = (v) => ['yes', 'true', 'on', '1'].includes(String(v || '').toLowerCase());
 
 function secondsToInterval(s) {
@@ -128,7 +128,6 @@ const fieldLabel = (x) => (currentLang() === 'zh' && x.label_zh ? x.label_zh : x
 export function MonitorEditor({ name }) {
   useDocTitle(name ? t('ui.edit') + ' ' + name : t('ui.mon.add'));
   const editing = !!name;
-  const teams = useFetch(() => get('/teams'), []);
   const regions = useFetch(() => get('/regions'), []);
   const mons = useFetch(() => get('/monitors'), []);
   const optList = useFetch(() => get('/monitor-options'), []);
@@ -142,7 +141,7 @@ export function MonitorEditor({ name }) {
 
   useEffect(() => {
     if (!editing) {
-      setF({ key: newKey(), type: 'HTTP', name: '', title: '', target: '', port: '', interval: '', group: '', tags: '', policy: '', team: '', region: '', description: '', mute: false, sys: false, opts: [], message: '' });
+      setF({ key: newKey(), type: 'HTTP', name: '', title: '', target: '', port: '', interval: '', group: '', tags: '', policy: '', region: '', description: '', mute: false, sys: false, opts: [], message: '' });
       return;
     }
     get('/monitors/' + enc(name)).then(d => {
@@ -155,7 +154,7 @@ export function MonitorEditor({ name }) {
         if (port === DEFAULT_PORT[type]) port = '';
       }
       setF({ etag: d.row.etag, type, name, title: o.title || '', target, port, interval: secondsToInterval(d.row.interval_s), group: o.group || '', tags: o.tags || '',
-        policy: o.policy || '', team: o.team || 'admin', region: o.region || '', description: o.description || '',
+        policy: o.policy || '', region: o.region || '', description: o.description || '',
         mute: yes(o.mute), sys: yes(o['system-channel']), opts, message: '' });
     }, setErr);
   }, [name]);
@@ -171,13 +170,11 @@ export function MonitorEditor({ name }) {
     return () => clearTimeout(timer);
   }, [draftKey]);
 
-  // A new monitor goes to the only team the user can add to, or to the
-  // admin team for an administrator; someone in several teams chooses.
-  const writable = writableTeams(teams.data);
+  // An account limited to groups puts a new monitor into its only group;
+  // with several it chooses.
   useEffect(() => {
-    // Updated from the current form: the user may have typed meanwhile.
-    if (!editing && writable.length) setF((cur) => (cur && !cur.team ? { ...cur, team: me.teams ? (writable.length === 1 ? writable[0].name : '') : 'admin' } : cur));
-  }, [teams.data, !!f]);
+    if (!editing && me.groups && me.groups.length === 1) setF((cur) => (cur && !cur.group ? { ...cur, group: me.groups[0] } : cur));
+  }, [!!f]);
 
   if (!f) return html`<div class="page">${err ? html`<${ErrorBox} error=${err} />` : html`<${Loading} />`}</div>`;
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -199,7 +196,7 @@ export function MonitorEditor({ name }) {
   function record() {
     const opts = {};
     for (const o of f.opts) if (o.k.trim()) opts[o.k.trim()] = o.v;
-    for (const k of ['title', 'group', 'tags', 'policy', 'team', 'region', 'description']) if (f[k].trim()) opts[k] = f[k].trim();
+    for (const k of ['title', 'group', 'tags', 'policy', 'region', 'description']) if (f[k].trim()) opts[k] = f[k].trim();
     if (f.mute) opts.mute = 'yes';
     else if (f.sys) opts['system-channel'] = 'yes';
     let target = f.type === 'PUSH' ? '' : f.target.trim();
@@ -281,16 +278,14 @@ export function MonitorEditor({ name }) {
         </div>
         <div class="two">
           <${Field} label=${t('ui.group')} hint=${groups.length ? t('ui.mon.group_hint', { groups: groups.slice(0, 6).join(', ') + (groups.length > 6 ? ' …' : '') }) : t('ui.mon.group_hint_none')}>
-            <input type="text" list="groups" value=${f.group} onInput=${set('group')} placeholder=${groups[0] || 'public'} autocomplete="off" />
-            <datalist id="groups">${groups.map(g => html`<option value=${g} />`)}</datalist><//>
+            ${me.groups ? html`<select value=${f.group} onChange=${set('group')} required>
+              ${!f.group && html`<option value="">${t('ui.group.choose')}</option>`}
+              ${[...new Set([...me.groups, ...(f.group ? [f.group] : [])])].map(g => html`<option value=${g}>${g}</option>`)}</select>`
+            : html`<input type="text" list="groups" value=${f.group} onInput=${set('group')} placeholder=${groups[0] || 'public'} autocomplete="off" />
+            <datalist id="groups">${groups.map(g => html`<option value=${g} />`)}</datalist>`}<//>
           <${Field} label=${t('ui.tags')} hint=${t('ui.mon.tags_hint')}><input type="text" class="ltr" value=${f.tags} onInput=${set('tags')} placeholder="env:prod,db" /><//>
         </div>
         <div class="two">
-          ${teams.data && teams.data.items.length > 1 && html`<${Field} label=${t('ui.team.field')} hint=${t('ui.team.field_hint')}>
-            <select value=${f.team} onChange=${set('team')} required>
-              ${!f.team && html`<option value="">${t('ui.team.choose')}</option>`}
-              ${(writable.some(tm => tm.name === f.team) || !f.team ? writable : [...writable, { name: f.team, title: f.team }]).map(tm => html`<option value=${tm.name}>${teamTitle(tm)}</option>`)}
-            </select><//>`}
           ${regions.data && regions.data.items.length > 1 && html`<${Field} label=${t('ui.region.field')} hint=${t('ui.region.field_hint')}>
             <select value=${f.region || 'global'} onChange=${(e) => setF({ ...f, region: e.target.value === 'global' ? '' : e.target.value })}>
               ${regions.data.items.map(rg => html`<option value=${rg.name}>${regionTitle(rg.name)}</option>`)}
@@ -338,26 +333,21 @@ export function MonitorEditor({ name }) {
   </div>`;
 }
 
-// QuickAdd adds monitors from lines of text. Their team and region are
-// filled in: from the list's filter, else the user's only team, else the
-// admin team and global.
+// QuickAdd adds monitors from lines of text. Their region is filled in
+// from the list's filter, else global; an account limited to groups puts
+// them into one of its groups.
 // Lines the quick add understands, shown under the box for copying: one
 // item per line.
 const QUICK_EXAMPLES = [
   ['https://www.example.com', 'http'], ['http://1.3.5.7:8080', 'http'], ['ping 1.1.1.1', 'ping'], ['icmp 9.9.9.9', 'ping'],
   ['tcp 12.23.23.23:22', 'tcp'], ['10.0.0.5:5432', 'tcp'], ['udp 8.8.8.8:53', 'udp'], ['udp 10.0.0.1:ntp', 'udp_kw'],
   ['https://shop.example.com name=shop tags=env:prod', 'opts'],
-  ['https://pay.example.com name=pay title=支付网关 team=admin region=global scope=wan group=payments tags=env:prod,tier:1 policy=default', 'full'],
+  ['https://pay.example.com name=pay title=支付网关 region=global scope=wan group=payments tags=env:prod,tier:1 policy=default', 'full'],
 ];
 
-export function QuickAdd({ onClose, onDone, team = '', region = '' }) {
-  const teams = useFetch(() => get('/teams'), []);
+export function QuickAdd({ onClose, onDone, region = '' }) {
   const regions = useFetch(() => get('/regions'), []);
-  const writable = writableTeams(teams.data);
-  const [where, setWhere] = useState({ team, region });
-  useEffect(() => {
-    if (writable.length) setWhere((cur) => (cur.team ? cur : { ...cur, team: me.teams ? (writable.length === 1 ? writable[0].name : '') : 'admin' }));
-  }, [teams.data]);
+  const [where, setWhere] = useState({ group: me.groups && me.groups.length === 1 ? me.groups[0] : '', region });
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState(null);
   const [pick, setPick] = useState(new Set());
@@ -376,7 +366,7 @@ export function QuickAdd({ onClose, onDone, team = '', region = '' }) {
       if (!pick.has(i)) continue;
       try {
         const opts = { ...r.opts };
-        if (where.team) opts.team = where.team;
+        if (where.group) opts.group = where.group;
         if (where.region && where.region !== 'global') opts.region = where.region;
         await post('/monitors', { record: { name: r.name, type: r.type, target: r.target, opts }, message: 'quick add' });
         n++;
@@ -388,7 +378,7 @@ export function QuickAdd({ onClose, onDone, team = '', region = '' }) {
   };
   return html`<${Modal} wide title=${t('ui.mon.quick_add')} onClose=${onClose} footer=${parsed ? html`
       <button class="btn" onClick=${() => setParsed(null)}>${t('ui.back')}</button>
-      <button class="btn primary" disabled=${busy || !pick.size || (teams.data && teams.data.items.length > 1 && !where.team)} onClick=${add}>${t('ui.quick.add_n', { n: pick.size })}</button>` : html`
+      <button class="btn primary" disabled=${busy || !pick.size || (me.groups && !where.group)} onClick=${add}>${t('ui.quick.add_n', { n: pick.size })}</button>` : html`
       <button class="btn" onClick=${onClose}>${t('ui.cancel')}</button>
       <button class="btn primary" disabled=${!text.trim()} onClick=${parse}>${t('ui.quick.preview')}</button>`}>
     ${!parsed ? html`<div class="form">
@@ -403,10 +393,10 @@ export function QuickAdd({ onClose, onDone, team = '', region = '' }) {
       </div>
     </div>` : html`<div class="col">
       <div class="two">
-        ${teams.data && teams.data.items.length > 1 && html`<${Field} label=${t('ui.team.field')}>
-          <select value=${where.team} onChange=${(e) => setWhere({ ...where, team: e.target.value })}>
-            ${!where.team && html`<option value="">${t('ui.team.choose')}</option>`}
-            ${writable.map(tm => html`<option value=${tm.name}>${teamTitle(tm)}</option>`)}</select><//>`}
+        ${me.groups && me.groups.length > 1 && html`<${Field} label=${t('ui.group')}>
+          <select value=${where.group} onChange=${(e) => setWhere({ ...where, group: e.target.value })}>
+            ${!where.group && html`<option value="">${t('ui.group.choose')}</option>`}
+            ${me.groups.map(g => html`<option value=${g}>${g}</option>`)}</select><//>`}
         ${regions.data && regions.data.items.length > 1 && html`<${Field} label=${t('ui.region.field')}>
           <select value=${where.region || 'global'} onChange=${(e) => setWhere({ ...where, region: e.target.value })}>
             ${regions.data.items.map(rg => html`<option value=${rg.name}>${regionTitle(rg.name)}</option>`)}</select><//>`}

@@ -1,11 +1,11 @@
-// Alerting: notification channels and the contact directory. Teams choose
-// their channels (Settings > Teams).
+// Alerting: notification channels and the contact directory. The alert
+// channels are where every alert goes, unless a monitor names its own.
 import { html, useState, useEffect, useRef } from '../lib.js';
 import { t, has, currentLang } from '../i18n.js';
 import { get, post, del, put, ifMatch, me } from '../api.js';
 import { ContactsTab, IssueDot, NewAddresses, addressKey } from './contacts.js';
 import { PeriodsTab } from './periods.js';
-import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, teamTitle, Pick } from '../ui.js';
+import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, Pick } from '../ui.js';
 
 // kindLabel is a kind's name in the reader's language where it has one.
 function kindLabel(k) {
@@ -384,14 +384,15 @@ function ChannelsTab() {
   if (!list.data || !kinds.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
   return html`<div class="col" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.ch.intro')}</p><button class="btn primary" onClick=${() => setEdit({})}>${t('ui.ch.add')}</button></div>
+    <${AlertChannels} channels=${list.data} onSaved=${list.reload} />
     <${DeliveryRules} />
     <div class="card"><div class="bd flush tbl-wrap">
       ${!list.data.length ? html`<${Empty} title=${t('ui.ch.none')}>${t('ui.ch.none_hint')}<//>` : html`<table class="tbl">
-        <thead><tr><th>${t('ui.name')}</th><th>${t('ui.ch.kind')}</th><th>${t('ui.ch.teams')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('ui.name')}</th><th>${t('ui.ch.kind')}</th><th>${t('ui.ch.used')}</th><th></th></tr></thead>
         <tbody>${list.data.map(c => html`<tr>
           <td class="name ltr">${c.name} <${IssueDot} issues=${c.issues} />${c.system && html` <span class="tag">${t('ui.ch.system_tag')}</span>`}</td>
           <td>${kindLabel(kinds.data.find(k => k.kind === (c.opts.preset ? 'webhook:' + c.opts.preset : c.kind)) || { kind: c.kind, label: c.kind })}</td>
-          <td class="small">${c.teams.length || c.used_by.length || c.system ? [...c.teams.map(n => teamTitle({ name: n })), ...c.used_by].join(', ') : html`<span class="warn-text">${t('ui.ch.unused')}</span>`}</td>
+          <td class="small">${c.alert || c.used_by.length || c.system ? [...(c.alert ? [t('ui.ch.alert_tag')] : []), ...c.used_by.filter(n => n !== 'default')].join(', ') : html`<span class="warn-text">${t('ui.ch.unused')}</span>`}</td>
           <td class="right nowrap">
             <button class="btn sm" onClick=${() => test(c)}>${t('ui.ch.test')}</button>
             <button class="btn sm" onClick=${() => setEdit(c)}>${t('ui.edit')}</button>
@@ -404,8 +405,39 @@ function ChannelsTab() {
   </div>`;
 }
 
-// ChannelList edits an ordered list of channels: a team's primary channel
-// first, then its backups.
+// AlertChannels shows and sets the alert channels: where every alert goes,
+// in order (the next only when one fails) or all at once.
+function AlertChannels({ channels, onSaved }) {
+  const d = useFetch(() => get('/alert-channels'), [channels]);
+  const [form, setForm] = useState(null);
+  const [busy, setBusy] = useState(false);
+  if (!d.data) return null;
+  const cur = d.data;
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try { await put('/alert-channels', form); toast(t('ui.saved')); setForm(null); d.reload(); onSaved(); } catch (e2) { toastError(e2); }
+    setBusy(false);
+  };
+  return html`<div class="card"><div class="bd row small" style=${{ padding: '10px 14px' }}>
+      <b>${t('ui.ch.alert_title')}</b>
+      <span class="spacer ltr">${cur.channels.length ? cur.channels.join(cur.mode === 'all' ? ' + ' : ' → ') : html`<span class="warn-text">${t('ui.ch.alert_none')}</span>`}</span>
+      ${me.role === 'admin' && html`<button class="btn sm" onClick=${() => setForm({ channels: cur.channels.slice(), mode: cur.mode || 'fallback' })}>${t('ui.edit')}</button>`}</div>
+    ${form && html`<${Modal} title=${t('ui.ch.alert_title')} onClose=${() => setForm(null)}>
+      <form class="form" onSubmit=${save}>
+        <p class="small muted" style=${{ margin: 0 }}>${t('ui.ch.alert_intro')}</p>
+        <${ChannelList} value=${form.channels} channels=${channels} onChange=${(v) => setForm({ ...form, channels: v })} />
+        ${form.channels.length > 1 && html`<${Field} label=${t('ui.ch.alert_mode')}><select value=${form.mode} onChange=${(e) => setForm({ ...form, mode: e.target.value })}>
+          <option value="fallback">${t('ui.ch.alert_mode.fallback')}</option><option value="all">${t('ui.ch.alert_mode.all')}</option></select><//>`}
+        <div class="row"><div class="spacer"></div>
+          <button type="button" class="btn" onClick=${() => setForm(null)}>${t('ui.cancel')}</button>
+          <button class="btn primary" disabled=${busy}>${t('ui.save')}</button></div>
+      </form><//>`}
+  </div>`;
+}
+
+// ChannelList edits an ordered list of channels: the first, then the ones
+// tried when it fails.
 // DELIVERY_KEYS are the settings that govern how every channel delivers:
 // timeout, retries, waits and the fallback to the next channel. They are
 // tunables, edited here next to the channels they apply to.

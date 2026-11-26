@@ -142,23 +142,20 @@ func regionOpts(m *config.Monitor, region string) map[string]string {
 	return set
 }
 
-// monitorsMove moves monitors to another team and/or region in one
+// monitorsMove moves monitors to another group and/or region in one
 // configuration change (one audit entry).
 func (s *Server) monitorsMove(w http.ResponseWriter, r *http.Request) (any, error) {
 	var req struct {
 		Names  []string `json:"names"`
-		Team   string   `json:"team"`
+		Group  *string  `json:"group"` // "" takes them out of any group
 		Region string   `json:"region"`
 	}
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
 	cfg := s.app.EffectiveConfig()
-	if req.Team == "" && req.Region == "" {
-		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "choose a team or a region")
-	}
-	if req.Team != "" && cfg.FindTeam(req.Team) == nil {
-		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "no team %s", req.Team)
+	if req.Group == nil && req.Region == "" {
+		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "choose a group or a region")
 	}
 	if _, ok := regionNames(cfg)[req.Region]; req.Region != "" && req.Region != config.RegionGlobal && !ok {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "no region %s", req.Region)
@@ -175,8 +172,8 @@ func (s *Server) monitorsMove(w http.ResponseWriter, r *http.Request) (any, erro
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "no monitors")
 	}
 	var to []string
-	if req.Team != "" {
-		to = append(to, "team "+req.Team)
+	if req.Group != nil {
+		to = append(to, "group "+*req.Group)
 	}
 	if req.Region != "" {
 		to = append(to, "region "+req.Region)
@@ -188,11 +185,8 @@ func (s *Server) monitorsMove(w http.ResponseWriter, r *http.Request) (any, erro
 			if req.Region != "" {
 				set = regionOpts(m, req.Region)
 			}
-			if req.Team != "" {
-				set["team"] = req.Team
-				if req.Team == config.AdminTeam {
-					set["team"] = ""
-				}
+			if req.Group != nil {
+				set["group"] = *req.Group
 			}
 			if err := f.SetOpts(m.Name, set); err != nil {
 				return err
@@ -204,4 +198,17 @@ func (s *Server) monitorsMove(w http.ResponseWriter, r *http.Request) (any, erro
 		return nil, s.configError(err)
 	}
 	return map[string]any{"serial": st.Serial, "etag": st.ETag(), "moved": len(list)}, nil
+}
+
+// cleanList trims names and drops empty and repeated ones.
+func cleanList(names []string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, n := range names {
+		if n = strings.TrimSpace(n); n != "" && !seen[n] {
+			seen[n] = true
+			out = append(out, n)
+		}
+	}
+	return out
 }

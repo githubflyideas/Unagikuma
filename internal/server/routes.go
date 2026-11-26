@@ -87,9 +87,6 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/people/import", "admin", global(s.peopleImport))
 	s.handle("POST /api/v1/people/lookup", "read", s.peopleLookup)
 	s.handle("DELETE /api/v1/bounces", "admin", global(s.bounceClear))
-	s.handle("GET /api/v1/teams", "read", s.teams)
-	s.handle("POST /api/v1/teams", "admin", s.teamSave)
-	s.handle("DELETE /api/v1/teams/{name}", "admin", s.teamDelete)
 	s.handle("GET /api/v1/regions", "read", s.regions)
 	s.handle("POST /api/v1/regions", "admin", s.regionSave)
 	s.handle("DELETE /api/v1/regions/{name}", "admin", s.regionDelete)
@@ -107,6 +104,8 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/app-profiles", "read", s.appProfiles)
 	s.handle("GET /api/v1/saved-alerts", "read", s.savedAlerts)
 	s.handle("GET /api/v1/system", "read", s.system)
+	s.handle("GET /api/v1/alert-channels", "read", s.alertChannelsGet)
+	s.handle("PUT /api/v1/alert-channels", "admin", s.alertChannelsPut)
 	s.handle("GET /api/v1/system/port", "admin", s.portGet)
 	s.handle("PUT /api/v1/system/port", "admin", s.portPut)
 	s.handle("POST /api/v1/system/restart", "admin", s.restart)
@@ -199,7 +198,7 @@ func (s *Server) routes() {
 		// filter, which follows configuration changes: one added to a
 		// team while connected stops seeing other teams' events at once.
 		if ai.session && ai.role != store.RoleAdmin {
-			s.hub.ServeFiltered(w, r, s.teamStream(ai.user, ai.role))
+			s.hub.ServeFiltered(w, r, s.groupStream(ai.role, ai.groups))
 			return
 		}
 		s.hub.ServeHTTP(w, r)

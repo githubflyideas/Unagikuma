@@ -19,10 +19,10 @@ func (s *Server) incidentReport(w http.ResponseWriter, r *http.Request) (any, er
 	if !s.seesIncident(r, id) {
 		return nil, notFound("incident")
 	}
-	if teamOf(r) == nil && !s.allowsIncident(authOf(r), id) {
+	if groupOf(r) == nil && !s.allowsIncident(authOf(r), id) {
 		return nil, errOutsideAreas
 	}
-	rep, err := s.app.PostmortemFor(id, r.URL.Query().Get("lang"), teamOf(r) != nil)
+	rep, err := s.app.PostmortemFor(id, r.URL.Query().Get("lang"), groupOf(r) != nil)
 	if errors.Is(err, postmortem.ErrNotFound) {
 		return nil, notFound("incident")
 	}

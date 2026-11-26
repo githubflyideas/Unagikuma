@@ -12,7 +12,6 @@ import (
 // Report is the daily status report: what is down right now, what is
 // fine, rendered in the configured language.
 type Report struct {
-	Team   string // "" or the admin team: every monitor
 	Title  string
 	Body   string
 	Policy string
@@ -40,61 +39,20 @@ func (e *Engine) dailyReport(now time.Time) {
 	if !e.cfg.Tunables.Bool("notify.daily-report") {
 		return
 	}
-	for _, r := range e.reports(now, "") {
+	for _, r := range e.reports(now) {
 		e.sendReport(r, now)
 	}
 }
 
-// reports renders the report of each team that receives one (or of the
-// named team only).
-func (e *Engine) reports(now time.Time, team string) []Report {
-	if len(e.cfg.ReportTeams) == 0 {
-		if team != "" && team != "admin" {
-			return nil
-		}
-		return []Report{e.report(now, "", e.reportPolicy())}
-	}
-	var out []Report
-	for _, t := range e.cfg.ReportTeams {
-		if team == "" || team == t.Name {
-			out = append(out, e.report(now, t.Name, t.Policy))
-		}
-	}
-	return out
+// reports renders the report: every monitor, through the report policy.
+func (e *Engine) reports(now time.Time) []Report {
+	return []Report{e.report(now, e.reportPolicy())}
 }
 
-// ReportTeams are the teams receiving the daily report.
-func (e *Engine) ReportTeams() []string {
-	var out []string
-	e.do(func() {
-		for _, t := range e.cfg.ReportTeams {
-			out = append(out, t.Name)
-		}
-	})
-	return out
-}
-
-// ReportTarget is a team receiving the reports and the policy they go
-// through.
-type ReportTarget struct{ Team, Policy string }
-
-// ReportTargets lists who receives the reports: each report team, or the
-// admin team on every monitor.
-func (e *Engine) ReportTargets() []ReportTarget {
-	var out []ReportTarget
-	e.do(func() {
-		if len(e.cfg.ReportTeams) == 0 {
-			out = []ReportTarget{{Policy: e.reportPolicy()}}
-			return
-		}
-		for _, t := range e.cfg.ReportTeams {
-			team := t.Name
-			if team == "admin" {
-				team = ""
-			}
-			out = append(out, ReportTarget{Team: team, Policy: t.Policy})
-		}
-	})
+// ReportPolicy is the policy the reports go through.
+func (e *Engine) ReportPolicy() string {
+	var out string
+	e.do(func() { out = e.reportPolicy() })
 	return out
 }
 
@@ -109,34 +67,22 @@ func (e *Engine) sendReport(r Report, now time.Time) {
 		Message: notify.Message{Kind: "REPORT", Priority: "high", Title: r.Title, Body: r.Body, Time: now, Instance: e.cfg.Instance, Lang: e.cfg.Lang}})
 }
 
-// DailyReport renders a team's report as it would be sent now ("" = the
-// admin team's, on every monitor). A team not receiving one gets its
-// report rendered all the same, through no policy.
-func (e *Engine) DailyReport(team string) Report {
+// DailyReport renders the report as it would be sent now.
+func (e *Engine) DailyReport() Report {
 	var r Report
-	e.do(func() {
-		now := e.now()
-		if rs := e.reports(now, team); len(rs) > 0 {
-			r = rs[0]
-		} else {
-			r = e.report(now, team, "")
-		}
-	})
+	e.do(func() { r = e.reports(e.now())[0] })
 	return r
 }
 
-// SendDailyReport sends the team's report now, outside its schedule (""
-// = every team receiving one).
-func (e *Engine) SendDailyReport(team string) []Report {
-	var out []Report
+// SendDailyReport sends the report now, outside its schedule.
+func (e *Engine) SendDailyReport() Report {
+	var r Report
 	e.do(func() {
 		now := e.now()
-		out = e.reports(now, team)
-		for _, r := range out {
-			e.sendReport(r, now)
-		}
+		r = e.reports(now)[0]
+		e.sendReport(r, now)
 	})
-	return out
+	return r
 }
 
 // SystemMonitors are the monitors the installation adds for its own
@@ -144,10 +90,7 @@ func (e *Engine) SendDailyReport(team string) []Report {
 // services they count, the local-outage logic watches them.
 var SystemMonitors = map[string]bool{"lan-gateway": true, "internet-gateway": true}
 
-func (e *Engine) report(now time.Time, team, policy string) Report {
-	if team == "admin" {
-		team = ""
-	}
+func (e *Engine) report(now time.Time, policy string) Report {
 	max := e.cfg.Tunables.Int("notify.daily-report-max-items")
 	rows := map[string]MonitorRow{}
 	var svcs []hostview.Service
@@ -158,9 +101,6 @@ func (e *Engine) report(now time.Time, team, policy string) Report {
 		}
 		rows[n] = r
 		m := e.monitors[n]
-		if team != "" && m.Team != team {
-			continue
-		}
 		if SystemMonitors[n] {
 			continue
 		}
@@ -235,16 +175,13 @@ func (e *Engine) report(now time.Time, team, policy string) Report {
 	section("report_hosts_up", byState["up"])
 	b = append(b, "", e.text("report_summary", len(hosts), len(svcs), counts))
 
-	r := Report{Team: team, Policy: policy}
+	r := Report{Policy: policy}
 	down := len(byState["down"]) + len(byState["unreachable"])
 	r.OK = down == 0 && len(bad) == 0
 	if r.OK {
 		r.Title = e.text("report_title_ok", len(hosts), len(svcs))
 	} else {
 		r.Title = e.text("report_title", down, len(hosts), len(bad), len(svcs))
-	}
-	if team != "" {
-		r.Title = "[" + team + "] " + r.Title
 	}
 	// One blank line between blocks, however many sections were empty.
 	var lines []string
@@ -263,6 +200,11 @@ func (e *Engine) reportPolicy() string {
 		if _, ok := e.cfg.Policies[p]; ok {
 			return p
 		}
+	}
+	// The alert channels, as the admin team's channels were before 3.0;
+	// without any, the system channels.
+	if p, ok := e.cfg.Policies["default"]; ok && len(p.Chain) > 0 {
+		return "default"
 	}
 	return e.policy("system").Name
 }

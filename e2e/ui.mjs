@@ -111,34 +111,25 @@ await step('a second monitor of the same check offers to share it', async () => 
   if (errors.length) throw new Error(errors.join(' | '));
 });
 
-await step('a team is added and owns a monitor', async () => {
-  await page.goto(base + '/#/settings/teams');
-  await page.click('button:has-text("Add team")');
-  await page.fill('.modal input[pattern]', 'webteam');
-  await page.locator('.modal label.switch').filter({ hasText: /^\s*admin\s*$/ }).locator('input').check();
-  await page.click('.modal .btn.primary:has-text("Save")');
-  await page.waitForSelector('td:has-text("webteam")');
+await step('a monitor is put in a group', async () => {
   await page.goto(base + '/#/monitors/same-check-b/edit');
   await page.waitForSelector('form select >> nth=1');
-  const sel = page.locator('.field:has(label:text-is("Team")) select');
-  await sel.selectOption('webteam');
+  await page.fill('.field:has(label:text-is("Group")) input', 'web');
   await page.click('form button.primary');
-  await until('the monitor to join the team', async () => (await api('/monitors')).items.some((m) => m.name === 'same-check-b' && m.team === 'webteam'));
-  await page.goto(base + '/#/monitors?q=' + encodeURIComponent('team:webteam'));
-  await page.waitForSelector('.tag:has-text("webteam")');
+  await until('the monitor to join the group', async () => (await api('/monitors')).items.some((m) => m.name === 'same-check-b' && m.group === 'web'));
+  await page.goto(base + '/#/monitors?q=' + encodeURIComponent('group:web'));
+  await page.waitForSelector('.tag:has-text("web")');
   if (errors.length) throw new Error(errors.join(' | '));
 });
 
-await step('a team is notified through its channels, and a monitor can be muted', async () => {
+await step('the alert channels are chosen, and a monitor can be muted', async () => {
   await page.goto(base + '/#/alerts');
   await page.waitForSelector('.tabs');
   if (await page.locator('a[href="#/alerts/policies"]').count()) throw new Error('the policies tab is still there');
-  await page.goto(base + '/#/settings/teams');
-  await page.locator('tr:has(td:has-text("webteam")) button:has-text("Edit")').click();
-  await page.click('.modal .chip:has-text("+ alerts")');
+  await page.locator('.card:has-text("Alert channels") button:has-text("Edit")').click();
+  if (!(await page.locator('.modal li, .modal .row.nowrap:has-text("alerts")').count())) await page.click('.modal .chip:has-text("+ alerts")');
   await page.click('.modal .btn.primary:has-text("Save")');
-  await until('the team to have its channel', async () => (await api('/teams')).items.some((tm) => tm.name === 'webteam' && tm.channels.join() === 'alerts'));
-  await page.waitForSelector('td:has-text("alerts")');
+  await until('the alert channels to include it', async () => (await api('/alert-channels')).channels.includes('alerts'));
   await page.goto(base + '/#/monitors/same-check-b/edit');
   await page.locator('label.switch:has-text("Mute") input').check();
   await page.click('form button.primary');
@@ -146,16 +137,15 @@ await step('a team is notified through its channels, and a monitor can be muted'
   if (errors.length) throw new Error(errors.join(' | '));
 });
 
-await step('a team member sees only their team', async () => {
-  // The administrator adds an operator account in webteam.
+await step('an account limited to a group sees only it', async () => {
+  // The administrator adds an operator account limited to the web group.
   const ok = await page.evaluate(async () => {
     const csrf = (await (await fetch('/api/v1/session')).json()).csrf;
     const h = { 'Content-Type': 'application/json', 'X-Unagikuma-CSRF': csrf };
-    const none = await fetch('/api/v1/users', { method: 'POST', headers: h, body: JSON.stringify({ username: 'teamop', password: 'team-pass-1', role: 'operator' }) });
-    const u = await fetch('/api/v1/users', { method: 'POST', headers: h, body: JSON.stringify({ username: 'teamop', password: 'team-pass-1', role: 'operator', teams: ['webteam'] }) });
-    return none.status === 400 && u.ok;
+    const u = await fetch('/api/v1/users', { method: 'POST', headers: h, body: JSON.stringify({ username: 'teamop', password: 'team-pass-1', role: 'operator', groups: ['web'] }) });
+    return u.ok;
   });
-  if (!ok) throw new Error('could not set up the team member');
+  if (!ok) throw new Error('could not set up the account');
   const tctx = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: 'en-US' });
   const tp = await tctx.newPage();
   const terr = [];
@@ -178,21 +168,20 @@ await step('a team member sees only their team', async () => {
     try {
       await tp.waitForSelector(sel, { timeout: 8000 });
     } catch (e) {
-      await tp.screenshot({ path: `${out}/team-member-${route.replace(/\W+/g, '-')}.png`, fullPage: true }).catch(() => {});
+      await tp.screenshot({ path: `${out}/limited-${route.replace(/\W+/g, '-')}.png`, fullPage: true }).catch(() => {});
       throw new Error(route + ': ' + e.message.split('\n')[0] + (terr.length ? ' — script errors: ' + terr.join(' | ') : ''));
     }
   }
   if ((await tp.content()).includes('127.0.0.1-1')) throw new Error('another monitor is shown');
-  // Teams, channels and contacts are for administrators.
+  // Channels and users are for administrators.
   const r = await tp.evaluate(async () => {
     const csrf = (await (await fetch('/api/v1/session')).json()).csrf;
     const h = { 'Content-Type': 'application/json', 'X-Unagikuma-CSRF': csrf };
-    const list = (await (await fetch('/api/v1/teams')).json()).items.map((t) => t.name).join(',');
-    const save = (await fetch('/api/v1/teams', { method: 'POST', headers: h, body: JSON.stringify({ name: 'webteam', title: 'Web', members: ['teamop'] }) })).status;
-    return { list, save };
+    const read = (await fetch('/api/v1/alert-channels')).status;
+    const save = (await fetch('/api/v1/alert-channels', { method: 'PUT', headers: h, body: JSON.stringify({ channels: [] }) })).status;
+    return { read, save };
   });
-  if (r.list !== 'webteam') throw new Error('teams listed: ' + r.list);
-  if (r.save !== 403) throw new Error('a member saving a team: ' + r.save);
+  if (r.read !== 403 || r.save !== 403) throw new Error('alert channels for a limited account: ' + JSON.stringify(r));
   await tctx.close();
   if (terr.length) throw new Error(terr.join(' | '));
 });
@@ -286,18 +275,11 @@ await step('a change is announced and closed with a receipt', async () => {
   if (errors.length) throw new Error(errors.join(' | '));
 });
 
-await step('the daily report is chosen per team and can be switched off per person', async () => {
+await step('the daily report covers every monitor and can be switched off per person', async () => {
   await page.goto(base + '/#/notices/report');
   await page.waitForSelector('.card pre.report');
   const rep = await api('/reports/daily');
-  if (rep.team !== 'admin' || !rep.teams.some((x) => x.name === 'admin' && x.receives)) throw new Error('the admin team does not receive it: ' + JSON.stringify(rep.teams));
-  const other = rep.teams.find((x) => x.name !== 'admin');
-  if (other) {
-    await page.selectOption('label:has-text("Team") select', other.name);
-    await page.waitForSelector(`.card h3:has-text("[${other.name}]")`);
-    await page.check('label.switch:has-text("This team receives the daily report") input');
-    await until('the team to receive it', async () => (await api('/reports/daily?team=' + other.name)).teams.some((x) => x.name === other.name && x.receives));
-  }
+  if (!rep.title || 'teams' in rep) throw new Error('report: ' + JSON.stringify(rep).slice(0, 200));
   await page.goto(base + '/#/alerts/contacts');
   await page.waitForSelector('td:has-text("Li Lei")');
   await page.uncheck('tr:has-text("Li Lei") label.switch input');

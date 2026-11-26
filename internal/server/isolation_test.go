@@ -7,28 +7,25 @@ import (
 	"time"
 )
 
-// Two teams on one server besides the admin team: web (alice and carol,
-// operators) and db (bob, a viewer, and carol). A team member
-// sees and changes only what their teams own; anything else answers as if
-// it did not exist.
+// Two monitor groups: web (alice and carol, operators) and db (bob, a
+// viewer, and carol). An account limited to groups sees and changes only
+// the monitors in them; anything else answers as if it did not exist.
 const isolationBind = `$FILE revision=2026110401 interval=1s retry=500ms timeout=300ms attempts=1
 $SET engine.first-round-delay=0s suspend.recheck-spread=0s api.login-rate=100/s
 log     IN CHANNEL log
 default IN POLICY chain=log
-web     IN TEAM members=alice,carol
-db      IN TEAM members=bob,carol
 gw      IN TCP 10.0.0.1:1 title="Core gateway"
-shop    IN TCP 10.0.0.2:443 team=web parent=gw
-pg      IN TCP 10.0.0.3:1 team=db
-pushy   IN PUSH period=1h team=db
+shop    IN TCP 10.0.0.2:443 group=web parent=gw
+pg      IN TCP 10.0.0.3:1 group=db
+pushy   IN PUSH period=1h group=db
 `
 
 func isolationEnv(t *testing.T) (admin, alice, bob, carol *env) {
 	t.Helper()
 	admin = newEnv(t, isolationBind, nil)
 	admin.setup()
-	for u, role := range map[string]string{"alice": "operator", "bob": "viewer", "carol": "operator"} {
-		if c := admin.do("POST", "/api/v1/users", map[string]any{"username": u, "password": "secret123", "role": role}, nil); c != 200 {
+	for u, rg := range map[string][2]string{"alice": {"operator", "web"}, "bob": {"viewer", "db"}, "carol": {"operator", "web,db"}} {
+		if c := admin.do("POST", "/api/v1/users", map[string]any{"username": u, "password": "secret123", "role": rg[0], "groups": strings.Split(rg[1], ",")}, nil); c != 200 {
 			t.Fatalf("create %s: %d", u, c)
 		}
 	}
@@ -84,7 +81,7 @@ func same(got []string, want ...string) bool {
 	return true
 }
 
-func TestTeamIsolationReads(t *testing.T) {
+func TestGroupIsolationReads(t *testing.T) {
 	admin, alice, bob, carol := isolationEnv(t)
 	for _, c := range []struct {
 		who  *env
@@ -149,36 +146,30 @@ func TestTeamIsolationReads(t *testing.T) {
 		Counts    map[string]int
 		Unhandled int
 		Channels  []any
-		Team      bool
+		Limited   bool
 	}
 	alice.do("GET", "/api/v1/overview", nil, &ov)
-	if ov.Counts["total"] != 1 || ov.Unhandled != 0 || len(ov.Channels) != 0 || !ov.Team {
+	if ov.Counts["total"] != 1 || ov.Unhandled != 0 || len(ov.Channels) != 0 || !ov.Limited {
 		t.Errorf("alice overview: %+v", ov)
 	}
 	bob.do("GET", "/api/v1/overview", nil, &ov)
 	if ov.Counts["total"] != 2 || ov.Unhandled != 1 {
 		t.Errorf("bob overview: %+v", ov)
 	}
-	// Teams: their own; the session says which and with what role.
-	if got := names(t, carol, "/api/v1/teams", "name"); !same(got, "web", "db") {
-		t.Errorf("carol teams: %v", got)
-	}
-	if got := names(t, alice, "/api/v1/teams", "name"); !same(got, "web") {
-		t.Errorf("alice teams: %v", got)
-	}
-	var sess struct{ Teams map[string]string }
+	// The session says which groups.
+	var sess struct{ Groups []string }
 	carol.do("GET", "/api/v1/session", nil, &sess)
-	if sess.Teams["web"] != "operator" || sess.Teams["db"] != "operator" {
+	if !same(sess.Groups, "web", "db") {
 		t.Errorf("carol session: %+v", sess)
 	}
 }
 
-func TestTeamIsolationWrites(t *testing.T) {
+func TestGroupIsolationWrites(t *testing.T) {
 	_, alice, bob, carol := isolationEnv(t)
-	put := func(e *env, name, team string) int {
+	put := func(e *env, name, group string) int {
 		opts := map[string]string{}
-		if team != "" {
-			opts["team"] = team
+		if group != "" {
+			opts["group"] = group
 		}
 		return e.do("PUT", "/api/v1/monitors/"+name, map[string]any{"record": map[string]any{"type": "TCP", "target": "10.0.0.9:22", "opts": opts}}, nil)
 	}
@@ -231,33 +222,33 @@ func TestTeamIsolationWrites(t *testing.T) {
 		t.Errorf("carol moves shop to db: %d", c)
 	}
 	if c := put(carol, "shop", ""); c != 403 {
-		t.Errorf("carol saves shop without team=: %d", c)
+		t.Errorf("carol saves shop without group=: %d", c)
 	}
 	if c := put(carol, "shop", "admin"); c != 403 {
-		t.Errorf("carol moves shop to the admin team: %d", c)
+		t.Errorf("carol moves shop to a group not hers: %d", c)
 	}
 	if c := put(carol, "shop", "web"); c != 200 {
 		t.Errorf("carol moves shop back: %d", c)
 	}
 	// alice has one team: team= is filled in.
 	if c := put(alice, "shop", ""); c != 200 {
-		t.Errorf("alice saves shop without team= (kept in her only team): %d", c)
+		t.Errorf("alice saves shop without group= (kept in her only group): %d", c)
 	}
-	if m := alice.app.Config().Config.FindMonitor("shop"); m == nil || m.Team != "web" {
+	if m := alice.app.Config().Config.FindMonitor("shop"); m == nil || m.Group != "web" {
 		t.Errorf("shop left web: %+v", m)
 	}
 	// New monitors go into her team; another team is refused.
-	create := func(e *env, name, team string) int {
+	create := func(e *env, name, group string) int {
 		opts := map[string]string{}
-		if team != "" {
-			opts["team"] = team
+		if group != "" {
+			opts["group"] = group
 		}
 		return e.do("POST", "/api/v1/monitors", map[string]any{"record": map[string]any{"name": name, "type": "TCP", "target": "10.0.0.8:22", "opts": opts}}, nil)
 	}
 	if c := create(alice, "new1", ""); c != 200 {
 		t.Errorf("alice creates: %d", c)
 	}
-	if m := alice.app.Config().Config.FindMonitor("new1"); m == nil || m.Team != "web" {
+	if m := alice.app.Config().Config.FindMonitor("new1"); m == nil || m.Group != "web" {
 		t.Errorf("new1: %+v", m)
 	}
 	if c := create(alice, "new2", "db"); c != 403 {
@@ -282,14 +273,14 @@ func TestTeamIsolationWrites(t *testing.T) {
 }
 
 // Every API route a team member may call is reviewed for team isolation
-// and listed in teamRoutes; all others refuse them, including routes
+// and listed in groupRoutes; all others refuse them, including routes
 // added later.
-func TestTeamRoutesDenyByDefault(t *testing.T) {
+func TestGroupRoutesDenyByDefault(t *testing.T) {
 	admin, alice, _, _ := isolationEnv(t)
 	subst := strings.NewReplacer("{name}", "x", "{id}", "1", "{source}", "kuma", "{lang}", "en")
 	checked := 0
 	for _, rt := range admin.srv.routeList {
-		if rt.scope == "" || teamRoutes[rt.pattern] {
+		if rt.scope == "" || groupRoutes[rt.pattern] {
 			continue
 		}
 		method, path, _ := strings.Cut(rt.pattern, " ")
@@ -302,22 +293,22 @@ func TestTeamRoutesDenyByDefault(t *testing.T) {
 	if checked < 50 {
 		t.Fatalf("only %d routes checked", checked)
 	}
-	for p := range teamRoutes {
+	for p := range groupRoutes {
 		found := false
 		for _, rt := range admin.srv.routeList {
 			found = found || rt.pattern == p
 		}
 		if !found {
-			t.Errorf("teamRoutes lists %q, which is not a route", p)
+			t.Errorf("groupRoutes lists %q, which is not a route", p)
 		}
 	}
 }
 
 // The live stream leaves out other teams' monitors and strips events that
 // are about no monitor down to their type.
-func TestTeamStream(t *testing.T) {
+func TestGroupStream(t *testing.T) {
 	admin, _, _, _ := isolationEnv(t)
-	f := admin.srv.teamStream("alice", "operator")
+	f := admin.srv.groupStream("operator", []string{"web"})
 	for _, c := range []struct {
 		ev   sseEvent
 		keep bool
@@ -333,28 +324,23 @@ func TestTeamStream(t *testing.T) {
 			t.Errorf("%s %s: keep %v data %s", c.ev.typ, c.ev.monitor, keep, got.data)
 		}
 	}
-	// An administrator sees everything; someone in no team is in the
-	// admin team.
-	if _, keep := admin.srv.teamStream("root", "admin")(sseEvent{typ: "state", monitor: "pg"}); !keep {
+	// An administrator, and an account given no groups, see everything.
+	if _, keep := admin.srv.groupStream("admin", []string{"web"})(sseEvent{typ: "state", monitor: "pg"}); !keep {
 		t.Error("an administrator lost an event")
 	}
-	nobody := admin.srv.teamStream("nobody", "operator")
-	if _, keep := nobody(sseEvent{typ: "state", monitor: "gw"}); !keep {
-		t.Error("a user in no team lost an admin team event")
-	}
-	if _, keep := nobody(sseEvent{typ: "state", monitor: "pg"}); keep {
-		t.Error("a user in no team sees the db team")
+	if _, keep := admin.srv.groupStream("operator", nil)(sseEvent{typ: "state", monitor: "pg"}); !keep {
+		t.Error("an account given no groups lost an event")
 	}
 }
 
 // A team member's incident report lists only the configuration changes
 // that touched their monitor, not what was changed elsewhere.
-func TestTeamReportChanges(t *testing.T) {
+func TestGroupReportChanges(t *testing.T) {
 	admin, _, bob, _ := isolationEnv(t)
 	if c := admin.do("PUT", "/api/v1/monitors/gw", map[string]any{"record": map[string]any{"type": "TCP", "target": "10.0.0.1:1", "opts": map[string]string{"title": "Gateway renamed"}}}, nil); c != 200 {
 		t.Fatalf("change gw: %d", c)
 	}
-	if c := admin.do("POST", "/api/v1/monitors", map[string]any{"record": map[string]any{"name": "pg2", "type": "TCP", "target": "10.0.0.4:1", "opts": map[string]string{"team": "db"}}}, nil); c != 200 {
+	if c := admin.do("POST", "/api/v1/monitors", map[string]any{"record": map[string]any{"name": "pg2", "type": "TCP", "target": "10.0.0.4:1", "opts": map[string]string{"group": "db"}}}, nil); c != 200 {
 		t.Fatalf("create pg2: %d", c)
 	}
 	var id int64

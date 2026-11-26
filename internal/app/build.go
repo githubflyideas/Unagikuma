@@ -247,9 +247,6 @@ func (a *App) engineConfig(cfg *config.Config) engine.Config {
 	for _, p := range cfg.Policies {
 		ec.Policies[p.Name] = policySpec(p, degradedMax)
 	}
-	a.addManagerNotices(cfg, &ec)
-	a.addTeamFallbacks(cfg, &ec)
-	ec.ReportTeams = reportTeams(cfg, ec.Policies)
 	localAnchors(cfg, &ec)
 	return ec
 }
@@ -268,7 +265,7 @@ func monitorSpec(m *config.Monitor, cfg *config.Config, resolve func(string) (st
 		SlowAfter: m.Degraded, Paused: m.Disabled, DefHash: m.DefHash, Parents: m.Parents,
 		Host: m.HostKey(), Address: m.Host(), Area: m.Area, Ping: m.Type == "PING",
 		Quorum:  engine.QuorumRule{Spec: m.Quorum, OnNodeLoss: m.OnNodeLoss, OnInsufficient: m.OnInsufficient, Weak: weak},
-		Handler: m.Opts["handler"], Team: m.Team,
+		Handler: m.Opts["handler"],
 	}
 	if clustered && m.Type != "PUSH" {
 		ms.Nodes = append([]string(nil), sites...)
@@ -557,36 +554,4 @@ func ValidateChannel(kind string, opts map[string]string) error {
 		}
 	}
 	return notify.ValidateChannel(kind, opts)
-}
-
-// reportTeams are the teams receiving the daily status report
-// (notify.daily-report-teams), each through the policy its alerts go
-// through: the team's channels, else the system channels. The admin
-// team's report on every monitor keeps notify.daily-report-policy.
-func reportTeams(cfg *config.Config, pols map[string]engine.PolicySpec) []engine.ReportTeam {
-	var out []engine.ReportTeam
-	seen := map[string]bool{}
-	for _, name := range strings.Split(cfg.Tunables.Raw("notify.daily-report-teams"), ",") {
-		name = strings.TrimSpace(name)
-		t := cfg.FindTeam(name)
-		if t == nil || seen[name] {
-			continue
-		}
-		seen[name] = true
-		pol := "system"
-		if p := strings.TrimSpace(cfg.Tunables.Raw("notify.daily-report-policy")); p != "" && name == config.AdminTeam {
-			if _, ok := pols[p]; ok {
-				pol = p
-			}
-		}
-		if pol == "system" {
-			if _, ok := pols[config.TeamPolicy(name)]; ok {
-				pol = config.TeamPolicy(name)
-			} else if _, ok := pols[t.Policy]; ok && t.Policy != "" {
-				pol = t.Policy
-			}
-		}
-		out = append(out, engine.ReportTeam{Name: name, Policy: pol})
-	}
-	return out
 }

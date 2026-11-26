@@ -106,8 +106,8 @@ export function Events({ tab }) {
   return html`<div class="page list">
     <div class="tabs">
       <a href="#/events/events" class=${tab === 'events' ? 'on' : ''}>${t('ui.events.tab')}</a>
-      ${!me.teams && html`<a href="#/events/notifications" class=${tab === 'notifications' ? 'on' : ''}>${t('ui.notif.tab')}</a>`}
+      ${!me.groups && html`<a href="#/events/notifications" class=${tab === 'notifications' ? 'on' : ''}>${t('ui.notif.tab')}</a>`}
     </div>
-    ${tab === 'notifications' && !me.teams ? html`<${NotificationsTab} />` : html`<${EventsTab} />`}
+    ${tab === 'notifications' && !me.groups ? html`<${NotificationsTab} />` : html`<${EventsTab} />`}
   </div>`;
 }
