@@ -218,15 +218,30 @@ func runServer(args []string) error {
 		log.Info("restored from the backup staged in the web UI", "made", st.Created, "instance", st.Instance, "version", st.Version, "replaced_files_kept_in", before)
 		fmt.Fprintf(os.Stderr, "\n  Restored from the backup made %s. The files it replaced are in %s\n\n", st.Created.Format("2006-01-02 15:04"), before)
 	}
-	// Take the port first: when it is busy, nothing is created yet.
-	raw, err := net.Listen("tcp", *listen)
+	// One server per data directory: a second one on it is refused before
+	// anything is touched.
+	if err := os.MkdirAll(*data, 0o700); err != nil {
+		return err
+	}
+	if ok, err := lockDataDir(filepath.Join(*data, lockFile)); err != nil {
+		return err
+	} else if !ok {
+		return fmt.Errorf("Unagikuma is already running on the data directory %s: stop it first, or start this one in another directory (or with another --data) to run a second installation", *data)
+	}
+	// Then the port: the one asked for, or this installation's own.
+	explicit := os.Getenv("UNAGIKUMA_LISTEN") != ""
+	fs.Visit(func(f *flag.Flag) { explicit = explicit || f.Name == "listen" })
+	raw, err := listenAuto(*data, *listen, explicit)
 	if err != nil {
-		if errors.Is(err, syscall.EADDRINUSE) {
-			return fmt.Errorf("port %s is already in use (is Unagikuma already running?): stop the other program or choose another address with --listen", *listen)
-		}
 		return err
 	}
 	defer raw.Close()
+	if !explicit {
+		// The port found is the one to tell other machines about.
+		host, _, _ := net.SplitHostPort(*listen)
+		_, port, _ := net.SplitHostPort(raw.Addr().String())
+		*listen = net.JoinHostPort(host, port)
+	}
 	setScriptDirs(*scripts, filepath.Join(*data, "check-scripts"), log)
 	var env []string
 	if *allowEnv != "" {
@@ -278,6 +293,9 @@ func runServer(args []string) error {
 		ErrorLog: slog.NewLogLogger(log.Handler(), slog.LevelWarn),
 	}
 	ln := cluster.SniffListener(raw, a.PKI().TLSConfig(uiCert), 10*time.Second)
+	if _, port, _ := net.SplitHostPort(raw.Addr().String()); port != "" {
+		fmt.Fprintf(os.Stderr, "\n  Unagikuma is running: open http://localhost:%s/  (data: %s)\n\n", port, *data)
+	}
 	log.Info("unagikuma started", "version", version, "listen", raw.Addr().String(), "data", *data, "config", a.ConfigPath(),
 		"agent_ca", a.PKI().Fingerprint())
 	if *certFile == "" {

@@ -609,9 +609,11 @@ unagikuma version
 
 `unagikuma probe` exits 0 when the check is up, 1 when it is down and 2 for a warning (a certificate inside its warning days, loss above the threshold). It uses the default thresholds, not the server's `$SET` lines; pass `cert-days=` or `cert-critical-days=` for others.
 
-Main server flags: `--data DIR` (or `UNAGIKUMA_DATA`), `--listen ADDR` (or `UNAGIKUMA_LISTEN`, default `:8077`), `--tls-cert`/`--tls-key`, `--base-url` for links in notifications, `--heartbeat-url` for an external dead man's switch (for example healthchecks.io), `--trusted-proxy CIDR,...` when running behind a reverse proxy, `--audit-retention 730d` for how long the audit log is kept at least. The port answers plain HTTP and TLS; with `--tls-cert` the UI uses your certificate and plain requests are redirected to https.
+Main server flags: `--data DIR` (or `UNAGIKUMA_DATA`), `--listen ADDR` (or `UNAGIKUMA_LISTEN`; without it the port is found by itself, see below), `--tls-cert`/`--tls-key`, `--base-url` for links in notifications, `--heartbeat-url` for an external dead man's switch (for example healthchecks.io), `--trusted-proxy CIDR,...` when running behind a reverse proxy, `--audit-retention 730d` for how long the audit log is kept at least. The port answers plain HTTP and TLS; with `--tls-cert` the UI uses your certificate and plain requests are redirected to https.
 
 Behind a reverse proxy that serves the app under a path prefix (for example `https://ops.example.com/uk/` → `http://127.0.0.1:8077/`), have the proxy strip the prefix and send `X-Forwarded-Prefix: /uk` with each request, and list the proxy in `--trusted-proxy`. The console, the public status pages and the session cookie then stay inside the prefix; without the header the same proxy setup serves a console whose assets and API calls escape to the root. Links in notifications and status-page feeds come from `--base-url`, so include the prefix there as well.
+
+**Several installations on one machine.** Each installation is a data directory of its own: start the program in another directory (or give it another `--data`) and it is a separate installation, with its own monitors, accounts and alerts. Without `--listen` it takes port 8077, or the first free one up to 8099 when that is taken, remembers it in `<data>/listen.port` and keeps it on later starts; the address is printed at start. A second server on a data directory that is already running is refused. With `--listen` the port is exactly the one given.
 
 ## Data and backups
 

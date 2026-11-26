@@ -3,6 +3,7 @@
 ## Unreleased
 
 **Added**
+- Several installations on one machine: start the program in another directory and it is a separate installation. Without `--listen` it takes 8077 or, when that is taken, the next free port up to 8099, and keeps it on later starts (`<data>/listen.port`); the address is printed at start. A second server on a data directory that is already running is refused instead of sharing its databases.
 - A live demo of the console on GitHub Pages: a three-site cluster with sample data, read-only, every page and style. It is built from a recording (`scripts/demo`) and published by the `demo` workflow. The READMEs link to it and show new screenshots.
 
 **Changed**
