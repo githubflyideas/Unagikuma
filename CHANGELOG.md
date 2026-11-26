@@ -10,6 +10,7 @@
 - In a cluster, the monitor list shows what every site sees next to each monitor — ✓ normal, ✗ failing, ⊘ no recent word — so it is clear at a glance whether one site's way to a target fails or the target itself. Before, it was only on the monitor's own page.
 
 **Changed**
+- New logo: the eel and the bear in a green circle, in the console, the browser tab and the READMEs.
 - Simpler monitor limits without a licence. A single installation may have up to 300 monitors in all — the shared configuration and the site-local one together, however they were added. In a cluster the shared configuration may have up to 100, and each site's own configuration up to 100 of its own, judged at that site alone. An import is held to the same limits; the separate 200-monitor import ceiling is gone. The registration page shows this site's own count in a cluster. The licence text and the READMEs say the same.
 - The sites' observations an alert carries are read where the alert is sent, not in the engine loop: a slow disk holds back that one alert for three seconds at most, then it goes without the site line, and the checks and other alerts never wait. Before, the read happened in the engine loop and could hold up everything for up to ten seconds.
 - A site's observation of a monitor counts as stale (⊘) after three missed checks and never sooner than three minutes, so a monitor checked every few seconds no longer flickers to unknown on a short network hiccup.
