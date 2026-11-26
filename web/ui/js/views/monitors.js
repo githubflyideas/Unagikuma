@@ -225,7 +225,7 @@ export function Monitors({ query }) {
             </td>
             <td class="hide-sm" style=${{ minWidth: '180px' }}><${Beats} cells=${beats.data && beats.data.items[r.name]} /></td>
             <td class="right nowrap hide-sm">${msText(r.latency_ms)}</td>
-            <td class="right nowrap" title=${r.uptime_24h == null && r.coverage_24h > 0 ? t('ui.uptime.coverage', { pct: pct(r.coverage_24h, 0) }) : ''}>${pct(r.uptime_24h)}</td>
+            <td class="right nowrap" title=${r.uptime_24h == null && r.coverage_24h > 0 ? t('ui.uptime.coverage', { pct: pct(r.coverage_24h, 0) }) : ''}>${r.uptime_24h == null && r.status !== 'paused' ? html`<span class="faint small">${t('ui.uptime.collecting')}</span>` : pct(r.uptime_24h)}</td>
             <td class="nowrap small muted hide-sm"><${Ago} at=${r.last_change} /></td>
             <td class="right nowrap"><a class="btn sm" href=${'#/monitors/' + enc(r.name) + '/edit'} onClick=${(e) => e.stopPropagation()}>${t('ui.edit')}</a></td>
           </tr>`), [visible, beats.data, sel, multiTeam]);
@@ -273,6 +273,9 @@ export function Monitors({ query }) {
         <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!moving.team && !moving.region}>${t('ui.mon.move')}</button></div>
       </form>
     <//>`}
+    ${me.siteView && !me.registered && html`<div class=${'banner ' + (me.siteView.allowed ? 'info' : 'warning')}>
+      <div class="spacer">${me.siteView.allowed ? t('ui.siteview.trial', { days: me.siteView.days_left }) : t('ui.siteview.locked')}</div>
+      <a class="btn sm" href="#/settings/registration">${t('ui.set.tab.registration')}</a></div>`}
     <${ErrorBox} error=${list.error} retry=${list.reload} />
     <div class="card scroll"><div class="bd flush tbl-wrap">
       ${!list.data ? html`<${Loading} />` : !total ? html`<${Empty} title=${t('ui.mon.none')}><p>${t('ui.mon.none_hint')}</p>${me.member ? html`<p class="small muted">${t('ui.member.shared_on_master', { name: me.masterName })}</p>` : html`<a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a>`}<//>` :

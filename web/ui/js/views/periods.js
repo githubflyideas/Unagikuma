@@ -106,6 +106,10 @@ function humanRule(src) {
 
 export function PeriodsTab() {
   const list = useFetch(() => get('/periods'), []);
+  const chans = useFetch(() => get('/channels').catch(() => []), []);
+  // Which channels send only in (or outside) each period.
+  const usedBy = (name) => (Array.isArray(chans.data) ? chans.data : []).filter(c => c.opts && String(c.opts.period || '').replace(/^!/, '') === name)
+    .map(c => (String(c.opts.period).startsWith('!') ? '!' : '') + c.name);
   const [edit, setEdit] = useState(null);
   const admin = me.role === 'admin';
   const remove = async (p) => {
@@ -118,10 +122,11 @@ export function PeriodsTab() {
       ${admin && html`<button class="btn primary" onClick=${() => setEdit({})}>${t('ui.per.add')}</button>`}</div>
     <div class="card"><div class="bd flush tbl-wrap">
       ${!list.data.items.length ? html`<${Empty} title=${t('ui.per.none')} />` : html`<table class="tbl">
-        <thead><tr><th>${t('ui.name')}</th><th>${t('ui.per.rule')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('ui.name')}</th><th>${t('ui.per.rule')}</th><th>${t('ui.per.used_by')}</th><th></th></tr></thead>
         <tbody>${list.data.items.map(p => html`<tr>
           <td class="name ltr">${p.name}</td>
           <td>${humanRule(p.rule)}<div class="small muted ltr">${p.rule}</div></td>
+          <td class="small">${chans.data ? (usedBy(p.name).length ? html`<span class="ltr">${usedBy(p.name).map(n => n.startsWith('!') ? t('ui.per.outside', { name: n.slice(1) }) : n).join(', ')}</span>` : html`<span class="faint">${t('ui.per.unused')}</span>`) : ''}</td>
           <td class="right nowrap">${admin && html`<button class="btn sm" onClick=${() => setEdit(p)}>${t('ui.edit')}</button>
             <button class="btn sm danger" onClick=${() => remove(p)}>${t('ui.delete')}</button>`}</td>
         </tr>`)}</tbody></table>`}

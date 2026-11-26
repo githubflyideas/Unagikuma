@@ -159,6 +159,8 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .top { display: flex; align-items: center; gap: 12px; padding: 10px 22px; border-bottom: 1px solid var(--border); background: var(--panel); position: sticky; top: 0; z-index: 5; }
 .top .crumbs { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .top .crumbs a { color: var(--muted); }
+/* On a phone the page's name is in the menu; the bar keeps room for search and the verdict. */
+@media (max-width: 640px) { .top .crumbs { display: none; } }
 .top .spacer { flex: 1; }
 .live { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); display: inline-block; }

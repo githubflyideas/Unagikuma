@@ -363,10 +363,12 @@ function Onboarding({ d, reload }) {
     setBusy(false);
   };
   const dismiss = () => { try { localStorage.setItem('unagikuma.onboard', 'done'); } catch { /* unavailable */ } setHidden(true); };
-  const step = (i, title, hint, body) => html`<div class=${'ob-step' + (steps[i] ? ' done' : '')}>
+  // Done steps fold away: only what is left to do is shown.
+  const step = (i, title, hint, body) => steps[i] ? null : html`<div class=${'ob-step' + (steps[i] ? ' done' : '')}>
     <div class="ob-n" aria-label=${steps[i] ? t('ui.ob.done') : t('ui.ob.todo')} title=${steps[i] ? t('ui.ob.done') : t('ui.ob.todo')}>${steps[i] ? '✓' : '!'}</div>
     <div class="ob-b"><b>${title}</b><p class="muted small">${hint}</p>${!steps[i] && body}</div></div>`;
-  return html`<${Card} title=${t('ui.ob.title')} actions=${html`<button class="btn sm ghost" onClick=${dismiss}>${t('ui.ob.hide')}</button>`}>
+  const doneN = steps.filter(Boolean).length;
+  return html`<${Card} title=${doneN ? t('ui.ob.title') + ' · ' + t('ui.ob.progress', { done: doneN, n: steps.length }) : t('ui.ob.title')} actions=${html`<button class="btn sm ghost" onClick=${dismiss}>${t('ui.ob.hide')}</button>`}>
     <div class="ob">
       ${step(0, t('ui.ob.s1'), t('ui.ob.s1_hint'), html`<div class="col">
         <textarea class="ltr mono" rows="4" value=${text} onInput=${(e) => setText(e.target.value)} placeholder=${'https://www.example.com\n10.0.0.5:5432\n10.0.0.1:ntp\nping 192.168.1.1'}></textarea>

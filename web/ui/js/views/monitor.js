@@ -285,7 +285,7 @@ export function MonitorDetail({ name }) {
     </div></div>
 
     <div class="tiles">
-      ${['24h', '7d', '30d', '90d'].map(k => {
+      ${['24h', '7d', '30d', '90d'].every(k => uptime[k] == null && (d.data.uptime_partial || {})[k] == null) ? html`<div class="tile" style=${{ gridColumn: 'span 2' }}><b class="muted">${t('ui.uptime.collecting')}</b><span>${t('ui.uptime.collecting_hint')}</span></div>` : ['24h', '7d', '30d', '90d'].map(k => {
         // Too little of the window watched yet: the figure so far, and how
         // much of the window it covers.
         const cov = (d.data.coverage || {})[k];

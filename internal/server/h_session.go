@@ -91,6 +91,11 @@ func (s *Server) sessionGet(w http.ResponseWriter, r *http.Request) (any, error)
 		"version": s.app.Version(), "registered": s.app.License().State().Registered,
 		// One machine: no site to choose in the history.
 		"cluster": s.app.ReplicaStatus().Replica || len(s.app.EffectiveConfig().Nodes) > 0}
+	// In a cluster: whether the other sites' view is shown (registered or
+	// on trial), for the notice that says how to get it.
+	if out["cluster"] == true {
+		out["site_view"] = s.app.SiteView()
+	}
 	// On a node of a cluster the shared configuration is changed on the
 	// master: the UI says so and points there instead of failing on save.
 	if s.app.IsMember() {

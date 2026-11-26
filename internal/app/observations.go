@@ -151,7 +151,7 @@ func (a *App) ObservationSnapshot(name string) *observation.Snapshot {
 		return nil
 	}
 	m := cfg.FindMonitor(name)
-	if m == nil {
+	if m == nil || !a.SiteView().Allowed {
 		return nil
 	}
 	var probers []string

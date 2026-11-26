@@ -143,7 +143,7 @@ function PeriodField({ label, value, onChange, periods }) {
   const name = value.replace(/^!/, '');
   const names = periods.map(p => p.name);
   const known = !name || names.includes(name);
-  return html`<${Field} label=${label} hint=${periods.length ? t('ui.ch.period_hint2') : html`${t('ui.ch.period_none')} <a href="#/alerts/periods">${t('ui.per.add')}</a>`}>
+  return html`<${Field} label=${label} hint=${html`${periods.length ? t('ui.ch.period_hint2') : t('ui.ch.period_none')} <a href="#/alerts/periods" target="_blank" rel="noopener">${t('ui.per.add')}</a>`}>
     <div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }}>
       <select value=${name} onChange=${(e) => onChange(e.target.value ? (outside ? '!' : '') + e.target.value : '')} style=${{ flex: '1 1 200px' }}>
         <option value="">${t('ui.ch.period_always')}</option>

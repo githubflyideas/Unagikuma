@@ -317,7 +317,10 @@ function Verdict({ ov }) {
   else if ((ov.counts.unknown || 0) > 0) { cls = 'unknown'; text = t('ui.top.unknown', { n: ov.counts.unknown }); }
   const week = ov.value_week || {};
   const saved = heldCount(week);
-  const sub = [t('ui.top.monitors', { n: ov.counts.total || 0 }),
+  // The chip counts problems still to handle; the line beside it says how
+  // many monitors fail out of all, so the two numbers do not seem to clash.
+  const down = (ov.counts.critical || 0) + (ov.counts.degraded || 0);
+  const sub = [down ? t('ui.top.down_of', { down, n: ov.counts.total || 0 }) : t('ui.top.monitors', { n: ov.counts.total || 0 }),
     saved ? t('ui.top.saved', { n: saved }) : ''].filter(Boolean).join(' · ');
   return html`<a class=${'verdict ' + cls} href=${cls === 'critical' ? '#/problems' : '#/'}><i></i>${text}</a><span class="top-sub">${sub}</span>`;
 }
