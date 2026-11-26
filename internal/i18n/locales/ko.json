@@ -1,7 +1,7 @@
 {
 "ui.user.groups": "모니터 그룹",
-"ui.user.groups_hint": "이 사용자는 이 그룹들의 모니터만 봅니다(운영자는 변경도 가능). \"전체\"는 모든 모니터를 봅니다.",
-"ui.user.all_groups": "전체",
+"ui.user.groups_hint": "이 사용자는 이 그룹들의 모니터만 봅니다(운영자는 변경도 가능). 선택한 그룹이 없으면 모니터가 보이지 않습니다. 그룹이 없는 모니터는 관리자만 볼 수 있습니다.",
+"ui.user.no_groups": "없음",
 "ui.group.choose": "그룹 선택",
 "ui.mon.all_groups": "모든 그룹",
 "ui.mon.move_group_hint": "비워 두면 각 모니터의 그룹을 유지합니다.",

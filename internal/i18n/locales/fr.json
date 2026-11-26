@@ -1,7 +1,7 @@
 {
 "ui.user.groups": "Groupes de sondes",
-"ui.user.groups_hint": "L'utilisateur ne voit (et, comme opérateur, ne modifie) que les sondes de ces groupes. « Tous » voit toutes les sondes.",
-"ui.user.all_groups": "Tous",
+"ui.user.groups_hint": "L'utilisateur ne voit (et, comme opérateur, ne modifie) que les moniteurs de ces groupes. Sans sélection, il n'en voit aucun. Les moniteurs sans groupe ne sont visibles qu'aux administrateurs.",
+"ui.user.no_groups": "Aucun",
 "ui.group.choose": "Choisir un groupe",
 "ui.mon.all_groups": "Tous les groupes",
 "ui.mon.move_group_hint": "Laisser vide pour garder le groupe de chaque sonde.",

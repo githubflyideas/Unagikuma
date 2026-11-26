@@ -1,7 +1,7 @@
 {
 "ui.user.groups": "監視グループ",
-"ui.user.groups_hint": "このユーザーは、これらのグループの監視だけを見られます（オペレーターは変更も可）。「すべて」は全監視が見えます。",
-"ui.user.all_groups": "すべて",
+"ui.user.groups_hint": "このユーザーは、これらのグループの監視だけを見られます（オペレーターは変更も可）。未選択だと監視は見えません。グループのない監視は管理者だけが見られます。",
+"ui.user.no_groups": "なし",
 "ui.group.choose": "グループを選択",
 "ui.mon.all_groups": "すべてのグループ",
 "ui.mon.move_group_hint": "空欄なら各監視のグループはそのままです。",

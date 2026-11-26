@@ -67,8 +67,8 @@ export function LoginForm({ initial, onClose, onSaved, onDeleted, channels }) {
       <${Field} label=${t('ui.user.role')} hint=${t('ui.user.role.' + form.role + '_hint')}>
         <select value=${form.role} onChange=${(e) => setForm({ ...form, role: e.target.value })}>
           ${ROLES.map(r => html`<option value=${r}>${t('ui.user.role.' + r)}</option>`)}</select><//>
-      ${form.role !== 'admin' && (groupNames.length > 0 || form.groups.length > 0) && html`<${Field} label=${t('ui.user.groups')} hint=${t('ui.user.groups_hint')}>
-        <${Pick} options=${groupNames.map(g => ({ value: g, label: g }))} value=${form.groups} onChange=${(v) => setForm({ ...form, groups: v })} none=${t('ui.user.all_groups')} /><//>`}
+      ${form.role !== 'admin' && html`<${Field} label=${t('ui.user.groups')} hint=${t('ui.user.groups_hint')}>
+        <${Pick} options=${groupNames.map(g => ({ value: g, label: g }))} value=${form.groups} onChange=${(v) => setForm({ ...form, groups: v })} none=${t('ui.user.no_groups')} /><//>`}
       ${form.role === 'operator' && (areaOptions.length > 1 || form.areas.length > 0) && html`<${Field} label=${t('ui.user.areas')} hint=${t('ui.user.areas_pick_hint')}>
         <${Pick} options=${areaOptions} value=${form.areas} onChange=${(v) => setForm({ ...form, areas: v })} none=${t('ui.user.all')} /><//>`}
       <div class="row">

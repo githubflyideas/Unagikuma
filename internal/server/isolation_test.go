@@ -324,17 +324,20 @@ func TestGroupStream(t *testing.T) {
 			t.Errorf("%s %s: keep %v data %s", c.ev.typ, c.ev.monitor, keep, got.data)
 		}
 	}
-	// An administrator, and an account given no groups, see everything.
+	// An administrator sees everything; an account given no groups sees nothing.
 	if _, keep := admin.srv.groupStream("admin", []string{"web"})(sseEvent{typ: "state", monitor: "pg"}); !keep {
 		t.Error("an administrator lost an event")
 	}
-	if _, keep := admin.srv.groupStream("operator", nil)(sseEvent{typ: "state", monitor: "pg"}); !keep {
-		t.Error("an account given no groups lost an event")
+	if _, keep := admin.srv.groupStream("operator", nil)(sseEvent{typ: "state", monitor: "pg"}); keep {
+		t.Error("an operator given no groups saw another group's event")
+	}
+	if _, keep := admin.srv.groupStream("operator", []string{"web"})(sseEvent{typ: "state", monitor: "gw"}); keep {
+		t.Error("an operator saw an ungrouped monitor")
 	}
 }
 
-// A team member's incident report lists only the configuration changes
-// that touched their monitor, not what was changed elsewhere.
+// An account limited to groups sees in an incident report only the
+// configuration changes that touched their monitor, not what was changed elsewhere.
 func TestGroupReportChanges(t *testing.T) {
 	admin, _, bob, _ := isolationEnv(t)
 	if c := admin.do("PUT", "/api/v1/monitors/gw", map[string]any{"record": map[string]any{"type": "TCP", "target": "10.0.0.1:1", "opts": map[string]string{"title": "Gateway renamed"}}}, nil); c != 200 {
@@ -385,5 +388,44 @@ func TestGroupReportChanges(t *testing.T) {
 		if got := report(bob); strings.Contains(got, other) {
 			t.Errorf("bob's report shows a change to %s: %q", other, got)
 		}
+	}
+}
+
+// Monitors with no group are visible only to administrators. An operator
+// or viewer, even one given other groups, does not see them in lists and
+// gets 404 for their details. An account given no groups sees no monitors.
+func TestUngroupedMonitorsAdminOnly(t *testing.T) {
+	admin, alice, bob, _ := isolationEnv(t)
+	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "dana", "password": "secret123", "role": "operator"}, nil); c != 200 {
+		t.Fatalf("create dana: %d", c)
+	}
+	dana := admin.loginAs("dana", "secret123")
+
+	if got := names(t, admin, "/api/v1/monitors", "name"); !same(got, "gw", "shop", "pg", "pushy") {
+		t.Errorf("admin monitors: %v", got)
+	}
+	for who, label := range map[*env]string{alice: "alice", bob: "bob", dana: "dana"} {
+		got := names(t, who, "/api/v1/monitors", "name")
+		for _, n := range got {
+			if n == "gw" {
+				t.Errorf("%s sees ungrouped monitor gw: %v", label, got)
+			}
+		}
+	}
+	if got := names(t, dana, "/api/v1/monitors", "name"); len(got) != 0 {
+		t.Errorf("operator given no groups sees %v", got)
+	}
+	for _, p := range []string{"/api/v1/monitors/gw", "/api/v1/monitors/gw/latency", "/api/v1/monitors/shop"} {
+		if c := dana.do("GET", p, nil, nil); c != 404 {
+			t.Errorf("dana GET %s: %d", p, c)
+		}
+	}
+	if c := alice.do("GET", "/api/v1/monitors/gw", nil, nil); c != 404 {
+		t.Errorf("alice GET /api/v1/monitors/gw: %d", c)
+	}
+	// shop still depends on gw: alice may see gw's state only, next to shop.
+	var shop map[string]any
+	if c := alice.do("GET", "/api/v1/monitors/shop", nil, &shop); c != 200 {
+		t.Fatalf("alice GET shop: %d", c)
 	}
 }

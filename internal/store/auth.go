@@ -97,7 +97,8 @@ type User struct {
 	Role     string   `json:"role"`  // admin | operator | viewer
 	Areas    []string `json:"areas"` // $SCOPE sections an operator may edit; empty = all
 	// Groups are the monitor groups (group= on a monitor) the account sees
-	// and, as an operator, changes; empty = all. Administrators see all.
+	// and, as an operator, changes; empty = none. Administrators see all,
+	// including monitors with no group.
 	Groups   []string  `json:"groups"`
 	Created  time.Time `json:"created_at"`
 	Disabled bool      `json:"disabled,omitempty"` // left: cannot log in, its tokens stop working

@@ -24,9 +24,9 @@ func (e *env) loginAs(user, pass string) *env {
 const usersBind = `@ IN SOA unagikuma. admin.localhost. ( 2026102801 1m 15s 5s 2 )
 $SET api.login-rate=100/s
 bj  IN NODE region=north
-web IN HTTP http://192.168.1.10/
+web IN HTTP http://192.168.1.10/ group=ops
 $SCOPE region:north
-bj-core IN PING 10.10.0.1
+bj-core IN PING 10.10.0.1 group=ops
 $SCOPE *
 `
 
@@ -34,7 +34,7 @@ func TestRolesAndSections(t *testing.T) {
 	admin := newEnv(t, usersBind, nil)
 	admin.setup()
 	for _, u := range []map[string]any{
-		{"username": "bjops", "password": "secret123", "role": "operator", "areas": []string{"region:north"}},
+		{"username": "bjops", "password": "secret123", "role": "operator", "areas": []string{"region:north"}, "groups": []string{"ops"}},
 		{"username": "watch", "password": "secret123", "role": "viewer", "areas": []string{"ignored"}},
 	} {
 		if c := admin.do("POST", "/api/v1/users", u, nil); c != 200 {
@@ -128,7 +128,7 @@ func itoa(n int64) string { return fmt.Sprint(n) }
 func TestNoRecordInjectionThroughTheAPI(t *testing.T) {
 	admin := newEnv(t, usersBind, nil)
 	admin.setup()
-	admin.do("POST", "/api/v1/users", map[string]any{"username": "bjops", "password": "secret123", "role": "operator", "areas": []string{"region:north"}}, nil)
+	admin.do("POST", "/api/v1/users", map[string]any{"username": "bjops", "password": "secret123", "role": "operator", "areas": []string{"region:north"}, "groups": []string{"ops"}}, nil)
 	ops := admin.loginAs("bjops", "secret123")
 	before := admin.app.Config().Text
 	for _, rec := range []map[string]any{

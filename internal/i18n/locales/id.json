@@ -1,7 +1,7 @@
 {
 "ui.user.groups": "Grup monitor",
-"ui.user.groups_hint": "Pengguna hanya melihat (dan, sebagai operator, mengubah) monitor di grup ini. \"Semua\" melihat semua monitor.",
-"ui.user.all_groups": "Semua",
+"ui.user.groups_hint": "Pengguna hanya melihat (dan, sebagai operator, mengubah) monitor di grup ini. Jika tidak ada yang dipilih, ia tidak melihat monitor. Monitor tanpa grup hanya terlihat oleh administrator.",
+"ui.user.no_groups": "Tidak ada",
 "ui.group.choose": "Pilih grup",
 "ui.mon.all_groups": "Semua grup",
 "ui.mon.move_group_hint": "Kosongkan untuk mempertahankan grup tiap monitor.",

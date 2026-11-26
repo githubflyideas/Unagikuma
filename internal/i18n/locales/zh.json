@@ -1,7 +1,7 @@
 {
 "ui.user.groups": "监控组",
-"ui.user.groups_hint": "用户只能看到（操作员还能修改）这些组里的监控项。“全部”表示能看到所有监控项。",
-"ui.user.all_groups": "全部",
+"ui.user.groups_hint": "用户只能看到（操作员还能修改）这些组里的监控项。不选任何组则什么也看不到。未分组的监控项只有管理员能看。",
+"ui.user.no_groups": "无",
 "ui.group.choose": "选择一个组",
 "ui.mon.all_groups": "全部组",
 "ui.mon.move_group_hint": "留空则保持各自原来的组。",

@@ -1,7 +1,7 @@
 {
 "ui.user.groups": "Nhóm giám sát",
-"ui.user.groups_hint": "Người dùng chỉ thấy (và, nếu là người vận hành, sửa) các mục giám sát trong những nhóm này. \"Tất cả\" thấy mọi mục.",
-"ui.user.all_groups": "Tất cả",
+"ui.user.groups_hint": "Người dùng chỉ thấy (và, nếu là người vận hành, sửa) các mục trong các nhóm này. Không chọn nhóm nào thì không thấy mục nào. Mục không có nhóm chỉ quản trị viên xem được.",
+"ui.user.no_groups": "Không",
 "ui.group.choose": "Chọn một nhóm",
 "ui.mon.all_groups": "Tất cả nhóm",
 "ui.mon.move_group_hint": "Để trống để giữ nhóm hiện tại của từng mục.",

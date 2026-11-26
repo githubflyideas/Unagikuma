@@ -1,7 +1,7 @@
 {
 "ui.user.groups": "Grupos de monitores",
-"ui.user.groups_hint": "O utilizador só vê (e, como operador, altera) os monitores destes grupos. «Todos» vê todos.",
-"ui.user.all_groups": "Todos",
+"ui.user.groups_hint": "O utilizador só vê (e, como operador, altera) os monitores destes grupos. Sem nenhum selecionado, não vê nenhum. Monitores sem grupo só são visíveis aos administradores.",
+"ui.user.no_groups": "Nenhum",
 "ui.group.choose": "Escolha um grupo",
 "ui.mon.all_groups": "Todos os grupos",
 "ui.mon.move_group_hint": "Deixe vazio para manter o grupo de cada monitor.",
