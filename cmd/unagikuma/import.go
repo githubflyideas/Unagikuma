@@ -419,7 +419,7 @@ func (j *importJob) write(res *importer.Result, changed bool, ro *importer.Repor
 			}
 		}
 		// Mark the file before writing it, so a running server applies
-		// it under the import ceiling instead of refusing it as a hand
+		// it as the import left it instead of refusing it as a hand
 		// edit past the monitor limit.
 		if j.st != nil {
 			h := sha256.Sum256(j.file.Bytes())
