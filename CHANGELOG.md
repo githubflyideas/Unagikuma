@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v2.7.1 — 2026-11-26
 
 **Added**
 - In a cluster, each site's own configuration reaches the master as a copy (`<data>/sites/<node>.local.monitors.conf`, never applied, never sent on), so a site's own monitors survive the loss of its disk.
