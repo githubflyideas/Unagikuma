@@ -71,8 +71,7 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID int
 	if err != nil {
 		return nil, "", err
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: sid, Path: s.urlPrefix(r) + "/", HttpOnly: true, SameSite: http.SameSiteStrictMode,
-		Secure: s.opts.SecureCookies, MaxAge: int(sessionTTL.Seconds())})
+	s.setSessionCookie(w, r, sid, int(sessionTTL.Seconds()))
 	return map[string]any{"user": name, "csrf": csrf}, sessionTag(sid), nil
 }
 
@@ -141,13 +140,13 @@ func (s *Server) sessionLogin(w http.ResponseWriter, r *http.Request) (any, erro
 }
 
 func (s *Server) sessionLogout(w http.ResponseWriter, r *http.Request) (any, error) {
-	if c, err := r.Cookie(sessionCookie); err == nil {
+	if c, err := r.Cookie(s.sessionCookie()); err == nil {
 		_ = s.app.Store().DeleteSession(c.Value)
 	}
 	if ai := authOf(r); ai != nil {
 		_ = s.app.Store().Audit(store.AuditEntry{Actor: ai.user, Action: "session.logout", Addr: s.ip(r), Detail: withClient(nil, s.client(r, ai))})
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: s.urlPrefix(r) + "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
+	s.setSessionCookie(w, r, "", -1)
 	return nil, nil
 }
 
@@ -187,7 +186,7 @@ func (s *Server) prefsGet(w http.ResponseWriter, r *http.Request) (any, error) {
 }
 
 func (s *Server) sessionUser(r *http.Request) (string, error) {
-	c, err := r.Cookie(sessionCookie)
+	c, err := r.Cookie(s.sessionCookie())
 	if err != nil {
 		return "", err
 	}
@@ -233,4 +232,16 @@ func (s *Server) catalog(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
 	_, _ = w.Write(b)
+}
+
+// setSessionCookie writes this installation's session cookie and expires
+// a leftover cookie under the old name, so a previous installation on the
+// same host cannot keep overwriting the login.
+func (s *Server) setSessionCookie(w http.ResponseWriter, r *http.Request, value string, maxAge int) {
+	path := s.urlPrefix(r) + "/"
+	http.SetCookie(w, &http.Cookie{Name: s.sessionCookie(), Value: value, Path: path, HttpOnly: true, SameSite: http.SameSiteStrictMode,
+		Secure: s.opts.SecureCookies, MaxAge: maxAge})
+	if s.sessionCookie() != legacySessionCookie {
+		http.SetCookie(w, &http.Cookie{Name: legacySessionCookie, Value: "", Path: path, MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
+	}
 }

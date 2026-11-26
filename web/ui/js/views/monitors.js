@@ -4,6 +4,7 @@
 import { html, Fragment, useState, useEffect, useMemo, useRef } from '../lib.js';
 import { t, tn, fmtNum } from '../i18n.js';
 import { get, post, me } from '../api.js';
+import { storageGet, storageSet } from '../storage.js';
 import { onLive } from '../live.js';
 import { ObservationMarks } from '../observations.js';
 import { useFetch, useLive, Loading, ErrorBox, Empty, Pill, Beats, Ago, Seg, pct, msText, reasonText, enc, go, toast, toastError, confirmDialog, useDocTitle, replaceRoute, monitorsPath, Modal, Field, regionTitle } from '../ui.js';
@@ -11,7 +12,7 @@ import { QuickAdd } from './editor.js';
 import { Hive, Legend } from './overview.js';
 
 function savedView() {
-  try { return localStorage.getItem('unagikuma.monview') || 'list'; } catch { return 'list'; }
+  return storageGet('unagikuma.monview') || 'list';
 }
 
 const CHIPS = ['critical', 'degraded', 'unknown', 'ok', 'pending', 'paused'];
@@ -45,7 +46,7 @@ export function Monitors({ query }) {
   const [sel, setSel] = useState(new Set());
   const regions = useFetch(() => get('/regions'), []);
   const [view, setView] = useState(savedView());
-  const changeView = (v) => { setView(v); try { localStorage.setItem('unagikuma.monview', v); } catch { /* unavailable */ } };
+  const changeView = (v) => { setView(v); storageSet('unagikuma.monview', v); };
   // "-latency" is the latency order reversed.
   const sortKey = sort.replace(/^-/, ''), sortDesc = sort.startsWith('-');
   const list = useFetch(() => get('/monitors?sort=' + sortKey + (sortDesc ? '&order=desc' : '')), [sort]);

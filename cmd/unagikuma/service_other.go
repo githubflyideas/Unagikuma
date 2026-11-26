@@ -4,6 +4,8 @@ package main
 
 import "errors"
 
+func setServiceName(string) {}
+
 func runAsService(func() error) (bool, error) { return false, nil }
 
 func runService([]string) error {

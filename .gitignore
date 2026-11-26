@@ -1,4 +1,6 @@
 /unagikuma
+/unagikuma.exe
+*.exe
 /dist/
 /bin/
 *.db

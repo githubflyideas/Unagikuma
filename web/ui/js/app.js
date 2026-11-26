@@ -20,6 +20,7 @@ import { IncidentReport } from './views/incident.js';
 import { DrawerHost } from './views/drawer.js';
 import { PaletteHost, openPalette } from './views/palette.js';
 import { loadBrand, loadMyStyle, applyCachedStyle, onStyleLoaded, signedOut } from './styles.js';
+import { storageGet, storageSet } from './storage.js';
 
 // Five themes, each its own mood; Calm when none is chosen. Names stored
 // by earlier versions (and "auto", which there was) map to the nearest.
@@ -83,10 +84,8 @@ function ZoomSelect() {
 }
 
 function storage(k, v) {
-  try {
-    if (v === undefined) return localStorage.getItem(k);
-    localStorage.setItem(k, v);
-  } catch { /* unavailable */ }
+  if (v === undefined) return storageGet(k);
+  storageSet(k, v);
   return null;
 }
 

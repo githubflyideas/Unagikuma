@@ -100,7 +100,20 @@ func authOf(r *http.Request) *authInfo {
 	return a
 }
 
-const sessionCookie = "unagikuma_session"
+// legacySessionCookie is the name used before 3.0.1. A leftover of it is
+// ignored (the person signs in again) and cleared when a new session starts.
+const legacySessionCookie = "unagikuma_session"
+
+// sessionCookie is the session cookie for this installation. It includes
+// the installation number so two instances on the same host (browsers do
+// not isolate cookies by port) do not share a login.
+func (s *Server) sessionCookie() string {
+	id := s.app.License().InstallationID()
+	if id == "" {
+		return legacySessionCookie
+	}
+	return legacySessionCookie + "_" + id
+}
 
 // New builds the server and starts publishing live events.
 func New(a *app.App, o Options) *Server {
@@ -312,7 +325,7 @@ func (s *Server) authenticate(r *http.Request) (*authInfo, error) {
 		}
 		return ai, nil
 	}
-	c, err := r.Cookie(sessionCookie)
+	c, err := r.Cookie(s.sessionCookie())
 	if err != nil {
 		if n, _ := st.UserCount(); n == 0 {
 			return nil, Errorf(http.StatusUnauthorized, CodeSetupRequired, "setup required")

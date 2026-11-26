@@ -1,0 +1,18 @@
+# /etc/systemd/system/unagikuma@.service
+# A second installation on the same machine: give it its own data directory.
+#   systemctl enable --now unagikuma@shop
+# uses /var/lib/unagikuma/shop (and takes a free port unless you pass --listen).
+[Unit]
+Description=unagikuma monitoring (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/unagikuma server --data /var/lib/unagikuma/%i
+Restart=on-failure
+DynamicUser=yes
+StateDirectory=unagikuma/%i
+AmbientCapabilities=CAP_NET_RAW
+
+[Install]
+WantedBy=multi-user.target

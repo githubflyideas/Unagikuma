@@ -71,6 +71,8 @@ Run "unagikuma server -h" or "unagikuma agent -h" for their flags.
 
 func main() {
 	args := os.Args[1:]
+	name, args := peelServiceName(args)
+	setServiceName(name)
 	cmd := "server"
 	switch {
 	case len(args) > 0 && !strings.HasPrefix(args[0], "-"):
@@ -226,8 +228,9 @@ func runServer(args []string) error {
 	if ok, err := lockDataDir(filepath.Join(*data, lockFile)); err != nil {
 		return err
 	} else if !ok {
-		return fmt.Errorf("Unagikuma is already running on the data directory %s: stop it first, or start this one in another directory (or with another --data) to run a second installation", *data)
+		return fmt.Errorf("already running on the data directory %s: stop it first, or start this one in another directory (or with another --data) to run a second installation", *data)
 	}
+	defer closeDataLock()
 	// Then the port: the one asked for, or this installation's own.
 	explicit := os.Getenv("UNAGIKUMA_LISTEN") != ""
 	fs.Visit(func(f *flag.Flag) { explicit = explicit || f.Name == "listen" })
@@ -241,6 +244,10 @@ func runServer(args []string) error {
 		host, _, _ := net.SplitHostPort(*listen)
 		_, port, _ := net.SplitHostPort(raw.Addr().String())
 		*listen = net.JoinHostPort(host, port)
+	}
+	if *instance == "" {
+		h, _ := os.Hostname()
+		*instance = app.DefaultInstanceName(*data, *listen, h)
 	}
 	setScriptDirs(*scripts, filepath.Join(*data, "check-scripts"), log)
 	var env []string
