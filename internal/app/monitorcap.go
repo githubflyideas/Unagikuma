@@ -40,7 +40,7 @@ func CountMasterMonitors(cfg *config.Config, seeded func(name string) bool) int 
 // for a configuration (the running one, or one about to be applied),
 // together with the monitors of this site's own zone that run.
 func (a *App) MonitorCount(cfg *config.Config) int {
-	return CountMasterMonitors(cfg, func(name string) bool { return GatewaySeeded(a.store.Setting, name) }) + a.localMonitorCount(cfg, a.appliedSiteLocal())
+	return CountMasterMonitors(cfg, func(name string) bool { return GatewaySeeded(a.store.Setting, name) }) + a.localMonitorCount(cfg, a.appliedSiteLocal()) + a.otherSitesLocal(cfg)
 }
 
 // localMonitorCount counts the monitors of a site-local zone that run
@@ -123,6 +123,9 @@ func (a *App) MonitorCap() MonitorCap {
 	st := a.License().State()
 	limit := MonitorLimit(st)
 	used := a.MonitorCount(a.Config().Config)
+	if u := a.clusterUsage.Load(); u != nil {
+		used, limit = u.Used, u.Limit
+	}
 	return MonitorCap{Used: used, Limit: limit, Over: limit > 0 && used > limit, Registered: st.Registered}
 }
 

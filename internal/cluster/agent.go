@@ -75,6 +75,11 @@ type AgentOptions struct {
 	// Synced reports whether this node has its copy of the master's
 	// state; nil means it keeps none and is ready as soon as it connects.
 	Synced func() bool
+	// Local reports this site's own configuration: how many monitors it
+	// runs, a hash of it and its text.
+	Local func() (count int, hash, text string)
+	// OnUsage is told the cluster's monitor usage the master sends.
+	OnUsage func(Usage)
 	// Replica: this node is a full server that keeps a copy of the
 	// master's state and checks on its own while the master is away.
 	Replica bool
@@ -97,10 +102,11 @@ func (e *AuthError) Error() string { return e.Msg }
 
 // Agent is a running probe agent.
 type Agent struct {
-	o   AgentOptions
-	log *slog.Logger
-	pin string
-	eng *engine.Engine
+	localSent string // hash of this site's configuration last sent (under mu)
+	o         AgentOptions
+	log       *slog.Logger
+	pin       string
+	eng       *engine.Engine
 
 	smu     sync.Mutex
 	servers []string // master URLs, the one in use first after a failover
@@ -402,6 +408,9 @@ func (a *Agent) session(ctx context.Context) error {
 	go s.writer()
 	a.sessMu.Lock()
 	a.live = s
+	a.mu.Lock()
+	a.localSent = "" // a new session: send this site's configuration again
+	a.mu.Unlock()
 	a.sessMu.Unlock()
 	defer func() {
 		a.sessMu.Lock()
@@ -467,6 +476,9 @@ func (s *agentSession) reader(ctx context.Context, r *bufio.Reader) error {
 				return err
 			}
 			s.a.apply(&cfg)
+			if cfg.Usage != nil && s.a.o.OnUsage != nil {
+				s.a.o.OnUsage(*cfg.Usage)
+			}
 			if cfg.Masters != nil {
 				s.a.setMasters(cfg.Masters)
 			}
@@ -597,6 +609,15 @@ func (a *Agent) status() Status {
 	}
 	if a.o.Gateway != nil {
 		st.Gateway = a.o.Gateway()
+	}
+	if a.o.Local != nil {
+		n, hash, text := a.o.Local()
+		st.LocalMonitors, st.LocalHash = &n, hash
+		a.mu.Lock()
+		if hash != a.localSent {
+			st.LocalText, a.localSent = &text, hash
+		}
+		a.mu.Unlock()
 	}
 	return st
 }

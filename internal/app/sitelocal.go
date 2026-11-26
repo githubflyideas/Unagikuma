@@ -1,11 +1,14 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/githubflyideas/unagikuma/internal/cluster"
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/engine"
 	"github.com/githubflyideas/unagikuma/internal/store"
@@ -58,11 +61,20 @@ func (a *App) appliedSiteLocal() *config.Config {
 // only growth beyond the limit is refused.
 func (a *App) siteLocalCapDiag(next *config.Config) *config.Diagnostic {
 	limit := MonitorLimit(a.License().State())
+	global := a.Config().Config
+	shared := CountMasterMonitors(global, func(name string) bool { return GatewaySeeded(a.store.Setting, name) }) + a.otherSitesLocal(global)
+	if u := a.clusterUsage.Load(); u != nil {
+		// A node: the licence is the master's, and its standing covers the
+		// shared monitors and every site's own; this site's part is
+		// replaced by the new zone. Without word from the master yet, the
+		// node judges by its own licence and count.
+		limit = u.Limit
+		global = a.EffectiveConfig()
+		shared = u.Used - a.localMonitorCount(global, a.appliedSiteLocal())
+	}
 	if limit == 0 {
 		return nil
 	}
-	global := a.Config().Config
-	shared := CountMasterMonitors(global, func(name string) bool { return GatewaySeeded(a.store.Setting, name) })
 	was := shared + a.localMonitorCount(global, a.appliedSiteLocal())
 	now := shared + a.localMonitorCount(global, next)
 	if now <= limit || now <= was {
@@ -213,4 +225,91 @@ func siteLocalDefs(lc *config.Config) []store.MonitorDef {
 		out = append(out, store.MonitorDef{Name: m.Name, DefHash: m.DefHash})
 	}
 	return out
+}
+
+// ---- a site's own configuration in a cluster ----
+//
+// A node reports its own configuration to the master with its status: how
+// many monitors it runs (counted toward the cluster's monitor limit) and,
+// when it changed, its text — kept on the master as a copy, never applied,
+// never sent on, so that a site's own monitors survive the loss of its disk.
+// The master sends every node the cluster's standing against the limit, by
+// which a node judges additions to its own configuration; without word from
+// the master a node keeps to the last standing it had.
+
+const siteLocalCountsKey = "site_local.counts" // master: node -> monitors
+
+// localReport is this site's own configuration for the master.
+func (a *App) localReport() (int, string, string) {
+	text, _ := a.store.Setting(siteLocalAppliedKey)
+	return a.localMonitorCount(a.EffectiveConfig(), a.appliedSiteLocal()), shaOf([]byte(text)), text
+}
+
+// siteLocalCounts are the other sites' own monitors, as they last said.
+func (a *App) siteLocalCounts() map[string]int {
+	out := map[string]int{}
+	if v, _ := a.store.Setting(siteLocalCountsKey); v != "" {
+		_ = json.Unmarshal([]byte(v), &out)
+	}
+	return out
+}
+
+// otherSitesLocal is the sum of the other sites' own monitors, for the
+// nodes cfg still has.
+func (a *App) otherSitesLocal(cfg *config.Config) int {
+	if cfg == nil {
+		return 0
+	}
+	n := 0
+	for node, c := range a.siteLocalCounts() {
+		if node != cfg.MName && cfg.FindNode(node) != nil {
+			n += c
+		}
+	}
+	return n
+}
+
+// onSiteLocalReport keeps what a node says about its own configuration.
+func (a *App) onSiteLocalReport(node string, count int, hash string, text *string) {
+	if text != nil {
+		dir := a.dataPath("sites")
+		if err := os.MkdirAll(dir, 0o700); err == nil {
+			path := filepath.Join(dir, safeFileName(node)+"."+SiteLocalFile)
+			if err := os.WriteFile(path+".tmp", []byte(*text), 0o600); err == nil {
+				_ = os.Rename(path+".tmp", path)
+			}
+		}
+	}
+	a.siteLocalMu.Lock()
+	counts := a.siteLocalCounts()
+	changed := counts[node] != count
+	if changed {
+		counts[node] = count
+		b, _ := json.Marshal(counts)
+		_ = a.store.SetSetting(siteLocalCountsKey, string(b))
+	}
+	a.siteLocalMu.Unlock()
+	if changed {
+		go a.Reapply() // the nodes get the new standing
+	}
+}
+
+// safeFileName keeps letters, digits, '-', '_' and '.' of a node's name.
+func safeFileName(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r == '-' || r == '_' || r == '.' || r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('_')
+		}
+	}
+	return b.String()
+}
+
+// setClusterUsage keeps the master's word on the cluster's standing. Only
+// a node is told it, so having it means this server is a node; it is
+// dropped when the server leaves the cluster or becomes its master.
+func (a *App) setClusterUsage(u cluster.Usage) {
+	a.clusterUsage.Store(&u)
 }

@@ -36,6 +36,9 @@ type MasterOptions struct {
 	Now      func() time.Time
 	// Term is this master's term (0 before any handover).
 	Term func() uint64
+	// OnLocal is told what a node reports about its own configuration:
+	// how many monitors it runs, its hash, and its text when it changed.
+	OnLocal func(node string, count int, hash string, text *string)
 	// Superseded is told when an agent has served a newer master: this
 	// one was replaced and must stop.
 	Superseded func(term uint64, node string)
@@ -452,12 +455,17 @@ func (p *peer) send(typ string, v any) bool {
 
 // setConfig queues cfg; only the newest pending config is written.
 func (p *peer) setConfig(cfg *AgentConfig) {
+	// The cluster's monitor usage travels with the config: a change in it
+	// alone (a site's own monitors) is news too.
+	hash := cfg.Hash
+	if cfg.Usage != nil && hash != "" {
+		hash += fmt.Sprintf("|usage %d/%d", cfg.Usage.Used, cfg.Usage.Limit)
+	}
 	p.mu.Lock()
-	if cfg.Hash != "" && cfg.Hash == p.sentHash {
+	if hash != "" && hash == p.sentHash {
 		p.mu.Unlock()
 		return // unchanged (a re-apply that did not touch this node)
 	}
-	hash := cfg.Hash
 	cfg, skipped := p.supported(cfg)
 	p.pending, p.sentHash = cfg, hash
 	p.status.Unsupported = skipped
@@ -646,6 +654,10 @@ func (p *peer) reader(r *bufio.Reader, maxMsg int) error {
 				p.status.Online, p.status.Since = true, now
 			}
 			p.mu.Unlock()
+			// Outside the peer's lock: the app may push new configs.
+			if st.LocalMonitors != nil && p.m.o.OnLocal != nil {
+				p.m.o.OnLocal(p.node, *st.LocalMonitors, st.LocalHash, st.LocalText)
+			}
 			p.report()
 		case msgPong:
 			var pg Ping

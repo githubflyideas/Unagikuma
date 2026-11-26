@@ -45,7 +45,7 @@ func (s *Server) licenseGet(w http.ResponseWriter, r *http.Request) (any, error)
 		MonitorLimit int       `json:"monitor_limit"`
 		FreeUsers    int       `json:"free_users"`
 		FreeMonitors int       `json:"free_monitors"`
-	}{st, s.app.Usage(), app.UserLimit(st), app.MonitorLimit(st), license.FreeUsers, license.FreeMonitors}, nil
+	}{st, s.app.Usage(), app.UserLimit(st), s.app.MonitorCap().Limit, license.FreeUsers, license.FreeMonitors}, nil
 }
 
 // licensePut installs a licence file (its JSON as the body); an invalid

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/githubflyideas/unagikuma/internal/cluster"
 	"github.com/githubflyideas/unagikuma/internal/config"
 )
 
@@ -146,5 +147,59 @@ func TestImportOnNodeIsLocalOnly(t *testing.T) {
 	}
 	if _, res, _, err := a.ImportKuma(gatusFile(3), "test", KumaOptions{Source: "gatus", Local: true}); err != nil || res.Monitors != 3 {
 		t.Fatalf("local import on a node: %v", err)
+	}
+}
+
+// The master keeps what a node says about its own configuration: a copy of
+// its text (never applied) and its monitors, counted toward the limit for
+// the nodes the configuration still has.
+func TestMasterKeepsSiteLocalReports(t *testing.T) {
+	a, _, _, dir := newApp(t, capConfig(50)+"b IN NODE Beijing\n")
+	defer a.Store().Close()
+	text := localZone(30, "bj")
+	a.onSiteLocalReport("b", 30, "h1", &text)
+	if b, err := os.ReadFile(filepath.Join(dir, "sites", "b."+SiteLocalFile)); err != nil || string(b) != text {
+		t.Fatalf("copy: %v %q", err, b)
+	}
+	if got := a.MonitorCount(a.Config().Config); got != 80 {
+		t.Fatalf("count with b's own monitors: %d, want 80", got)
+	}
+	// A node the configuration no longer has is not counted.
+	a.onSiteLocalReport("gone", 40, "h2", nil)
+	if got := a.MonitorCount(a.Config().Config); got != 80 {
+		t.Fatalf("count with a removed node: %d", got)
+	}
+	// The shared configuration can now grow only to 100 with b's 30.
+	if _, err := a.EditConfig("test", "add", func(f *config.File) error {
+		for i := 0; i < 21; i++ {
+			if err := f.UpsertRecord(config.RecordSpec{Name: fmt.Sprintf("x%02d", i), Type: "PING", Target: "10.9.9.9"}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err == nil {
+		t.Fatal("101 with b's own monitors accepted")
+	}
+}
+
+// A node judges additions to its own configuration by the master's word on
+// the cluster's standing; with no limit there, nothing is refused.
+func TestNodeJudgesLocalByClusterUsage(t *testing.T) {
+	a, _, _, _ := newApp(t, capConfig(5))
+	defer a.Store().Close()
+	a.am.member = &Membership{Node: "b", Server: "https://master.invalid"}
+	a.setClusterUsage(cluster.Usage{Used: 98, Limit: 100})
+	if _, diags, err := a.SetSiteLocal(localZone(3, "loc"), "test"); err == nil || len(diags) != 1 || diags[0].Code != "monitor_limit" {
+		t.Fatalf("101 in the cluster accepted: %v", err)
+	}
+	if _, _, err := a.SetSiteLocal(localZone(2, "loc"), "test"); err != nil {
+		t.Fatalf("100 in the cluster refused: %v", err)
+	}
+	if c := a.MonitorCap(); c.Limit != 100 || c.Used != 98 {
+		t.Fatalf("the node shows its own standing, not the cluster's: %+v", c)
+	}
+	a.setClusterUsage(cluster.Usage{Used: 500, Limit: 0})
+	if _, _, err := a.SetSiteLocal(localZone(50, "loc"), "test"); err != nil {
+		t.Fatalf("a registered cluster refused: %v", err)
 	}
 }

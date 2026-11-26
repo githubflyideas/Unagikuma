@@ -45,7 +45,7 @@ func (a *App) Usage() Usage {
 			u.Nodes++
 		}
 	}
-	u.Monitors = a.MonitorCount(cfg)
+	u.Monitors = a.MonitorCap().Used // a node: the cluster's, from the master
 	if users, err := a.store.Users(); err == nil {
 		u.Users = len(users)
 	}

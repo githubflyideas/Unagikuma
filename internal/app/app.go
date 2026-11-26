@@ -63,17 +63,19 @@ type Options struct {
 
 // App is a running unagikuma instance.
 type App struct {
-	rechecks  *peerRechecker // asks other sites to check a failing monitor at once
-	opts      Options
-	log       *slog.Logger
-	store     *store.Store
-	secrets   *store.Secrets
-	license   *license.Checker
-	engine    *engine.Engine
-	sender    *notify.Sender
-	cfg       *configManager
-	heartbeat *engine.Heartbeat
-	started   time.Time
+	siteLocalMu  sync.Mutex                    // the other sites' own monitor counts
+	clusterUsage atomic.Pointer[cluster.Usage] // a node: the master's word on the monitor limit
+	rechecks     *peerRechecker                // asks other sites to check a failing monitor at once
+	opts         Options
+	log          *slog.Logger
+	store        *store.Store
+	secrets      *store.Secrets
+	license      *license.Checker
+	engine       *engine.Engine
+	sender       *notify.Sender
+	cfg          *configManager
+	heartbeat    *engine.Heartbeat
+	started      time.Time
 
 	pki    *cluster.PKI
 	master *cluster.Master
@@ -227,6 +229,7 @@ func (a *App) newMaster() error {
 		},
 		Log: o.Log.With("component", "cluster"), Now: o.Now,
 		Term:    a.Term,
+		OnLocal: a.onSiteLocalReport,
 		Retired: func() bool { return a.isMember() || a.SupersededBy() != nil },
 		Successor: func() string {
 			// A replaced master that rejoined sends agents to the new one.
@@ -499,7 +502,14 @@ func (a *App) applyLocked(cfg *config.Config) {
 		a.log.Warn("prune observation configuration", "err", err)
 	}
 	a.engine.Apply(ec)
-	a.master.SetConfigs(agentConfigs(cfg, agentEC))
+	acs := agentConfigs(cfg, agentEC)
+	// Every node judges additions to its own configuration by the
+	// cluster's standing, every site's own monitors included.
+	usage := &cluster.Usage{Used: a.MonitorCount(cfg), Limit: MonitorLimit(a.License().State())}
+	for _, ac := range acs {
+		ac.Usage = usage
+	}
+	a.master.SetConfigs(acs)
 	go a.syncStandbys()
 }
 
