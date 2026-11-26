@@ -12,7 +12,7 @@
 
 **▶ [オンラインデモ（読み取り専用・サンプルデータ）](https://githubflyideas.github.io/Unagikuma/)**
 
-![3 拠点クラスターの監視一覧：北京・広州・上海それぞれの見え方](docs/images/screen-monitors.png)
+![3 拠点クラスターの監視一覧：ロサンゼルス・ミュンヘン・東京それぞれの見え方](docs/images/screen-monitors.png)
 
 ## Unagikuma が選ばれる理由
 

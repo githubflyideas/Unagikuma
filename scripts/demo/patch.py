@@ -25,7 +25,7 @@ def walk(v):
             walk(x)
 
 # Site names: the recording's node names become the cities' short names.
-NODES = {'b': 'bj', 'c': 'gz', 'unagikuma': 'sh'}
+NODES = {'b': 'muc', 'c': 'tyo', 'unagikuma': 'lax'}
 NODE_KEYS = ('node_id', 'node', 'name', 'site', 'self', 'master', 'from', 'by')
 
 def rename(v, key=None):
@@ -133,5 +133,10 @@ for k in ('/branding', '/brand'):
     d['responses'][k]['style'] = 'noc'
     d['responses'][k]['style_trial'] = {'state': 'active', 'days_left': 7}
 d['responses']['/session'].pop('csrf', None)
-json.dump(d, open(path, 'w'), ensure_ascii=False)
+# An international setting: sites and names from Los Angeles, Munich and Tokyo.
+text = json.dumps(d, ensure_ascii=False)
+for a, b in (('北京', 'Munich'), ('广州', 'Tokyo'), ('上海', 'Los Angeles'),
+             ('core-sw-bj', 'core-sw-muc'), ('core-sw-sh', 'core-sw-lax'), ('edge-router-gz', 'edge-router-tyo')):
+    text = text.replace(a, b)
+open(path, 'w').write(text)
 print('patched')

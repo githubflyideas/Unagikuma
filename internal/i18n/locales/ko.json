@@ -948,7 +948,7 @@
 "ui.node.version": "버전",
 "ui.node.token": "토큰",
 "ui.node.fingerprint": "이 클러스터의 노드가 고정하는 CA 지문",
-"ui.node.name_hint": "monitors.conf에서 쓰는 짧은 이름(예: bj). 영문자·숫자·“.”“_”“-”로 최대 63자. 2~8자가 보기 좋고, 더 길면 모니터 목록에서 줄여 표시됩니다. 한글이나 전체 이름은 “{title}”에 넣으세요.",
+"ui.node.name_hint": "monitors.conf에서 쓰는 짧은 이름(예: lax). 영문자·숫자·“.”“_”“-”로 최대 63자. 2~8자가 보기 좋고, 더 길면 모니터 목록에서 줄여 표시됩니다. 한글이나 전체 이름은 “{title}”에 넣으세요.",
 "ui.node.title": "설명",
 "ui.node.region": "지역",
 "ui.node.self": "이 서버",

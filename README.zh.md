@@ -12,7 +12,7 @@
 
 **▶ [在线演示（只读，示例数据）](https://githubflyideas.github.io/Unagikuma/)**
 
-![三站点集群的监控列表：北京、广州、上海各自看到的结果](docs/images/screen-monitors.png)
+![三站点集群的监控列表：洛杉矶、慕尼黑、东京各自看到的结果](docs/images/screen-monitors.png)
 
 ## 为什么选择 Unagikuma
 

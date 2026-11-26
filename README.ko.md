@@ -12,7 +12,7 @@
 
 **▶ [온라인 데모 (읽기 전용, 예시 데이터)](https://githubflyideas.github.io/Unagikuma/)**
 
-![3개 사이트 클러스터의 모니터 목록: 베이징·광저우·상하이 각각의 결과](docs/images/screen-monitors.png)
+![3개 사이트 클러스터의 모니터 목록: 로스앤젤레스·뮌헨·도쿄 각각의 결과](docs/images/screen-monitors.png)
 
 ## Unagikuma를 써야 하는 이유
 

@@ -955,7 +955,7 @@
 "ui.node.version": "Versión",
 "ui.node.token": "Token",
 "ui.node.fingerprint": "Huella de la CA que fijan los nodos de este clúster",
-"ui.node.name_hint": "El nombre corto de monitors.conf, p. ej. bj. Hasta 63 caracteres: letras, dígitos, «.», «_» y «-». Lo mejor son 2 a 8 caracteres: los más largos se acortan en la lista. Pon el nombre completo en \"{title}\".",
+"ui.node.name_hint": "El nombre corto de monitors.conf, p. ej. lax. Hasta 63 caracteres: letras, dígitos, «.», «_» y «-». Lo mejor son 2 a 8 caracteres: los más largos se acortan en la lista. Pon el nombre completo en \"{title}\".",
 "ui.node.title": "Descripción",
 "ui.node.region": "Región",
 "ui.node.self": "este servidor",

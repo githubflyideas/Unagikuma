@@ -948,7 +948,7 @@
 "ui.node.version": "Versi",
 "ui.node.token": "Token",
 "ui.node.fingerprint": "Sidik jari CA yang dipatok node di klaster ini",
-"ui.node.name_hint": "Nama pendek di monitors.conf, mis. bj. Hingga 63 karakter: huruf Latin, angka, \".\", \"_\" dan \"-\". 2–8 karakter paling mudah dibaca; yang lebih panjang dipotong di daftar monitor. Nama lengkap isi di \"{title}\".",
+"ui.node.name_hint": "Nama pendek di monitors.conf, mis. lax. Hingga 63 karakter: huruf Latin, angka, \".\", \"_\" dan \"-\". 2–8 karakter paling mudah dibaca; yang lebih panjang dipotong di daftar monitor. Nama lengkap isi di \"{title}\".",
 "ui.node.title": "Deskripsi",
 "ui.node.region": "Wilayah",
 "ui.node.self": "server ini",

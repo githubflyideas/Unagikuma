@@ -12,7 +12,7 @@ Friendly, self-hosted monitoring: know the moment your websites and servers go d
 
 **▶ [Try the live demo (read-only, sample data)](https://githubflyideas.github.io/Unagikuma/)**
 
-![The monitor list of a three-site cluster: what Beijing, Guangzhou and Shanghai each see](docs/images/screen-monitors.png)
+![The monitor list of a three-site cluster: what Los Angeles, Munich and Tokyo each see](docs/images/screen-monitors.png)
 
 ## Why Unagikuma
 

@@ -955,7 +955,7 @@
 "ui.node.version": "Version",
 "ui.node.token": "Jeton",
 "ui.node.fingerprint": "Empreinte de la CA épinglée par les nœuds de ce cluster",
-"ui.node.name_hint": "Le nom court utilisé dans monitors.conf, par ex. bj. Jusqu'à 63 caractères : lettres, chiffres, « . », « _ » et « - ». 2 à 8 caractères se lisent le mieux ; plus longs, ils sont raccourcis dans la liste. Mettez le nom complet dans \"{title}\".",
+"ui.node.name_hint": "Le nom court utilisé dans monitors.conf, par ex. lax. Jusqu'à 63 caractères : lettres, chiffres, « . », « _ » et « - ». 2 à 8 caractères se lisent le mieux ; plus longs, ils sont raccourcis dans la liste. Mettez le nom complet dans \"{title}\".",
 "ui.node.title": "Description",
 "ui.node.region": "Région",
 "ui.node.self": "ce serveur",
