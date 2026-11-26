@@ -10,7 +10,9 @@
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · **Русский** · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![Список мониторов в тоне «Бумага»](docs/images/monitors-paper.png)
+**▶ [Онлайн-демо (только чтение, пример данных)](https://githubflyideas.github.io/Unagikuma/)**
+
+![Список мониторов кластера из трёх узлов: что видит каждый](docs/images/screen-monitors.png)
 
 ## Почему Unagikuma
 
@@ -46,7 +48,7 @@
 - **Две машины:** вставьте код присоединения в **Режим работы**. Каждая машина проверяет и оповещает сама, так что падение одной не оставит вас без оповещений.
 - **Кластер:** добавляйте сколько угодно площадок. Каждое оповещение показывает, что видит каждая площадка, — «лежит везде» или «лежит только отсюда».
 
-![Упавший монитор и результат каждой площадки](docs/images/detail-sites.png)
+![Упавший монитор и результат каждой площадки](docs/images/screen-site-view.png)
 
 ## Без лавины оповещений
 

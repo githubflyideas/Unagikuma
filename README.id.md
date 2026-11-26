@@ -10,7 +10,9 @@ Pemantauan self-hosted yang mudah: langsung tahu saat situs atau server Anda mat
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · **Bahasa Indonesia** · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![Daftar monitor dengan nada Kertas](docs/images/monitors-paper.png)
+**▶ [Demo daring (hanya baca, data contoh)](https://githubflyideas.github.io/Unagikuma/)**
+
+![Daftar monitor klaster tiga situs: apa yang dilihat tiap situs](docs/images/screen-monitors.png)
 
 ## Mengapa Unagikuma
 
@@ -46,7 +48,7 @@ Di Windows, jalankan `unagikuma.exe`.
 - **Dua mesin:** tempel kode bergabung di **Mode operasi**. Setiap mesin memeriksa dan memberi peringatan sendiri, jadi jika satu mati peringatan tetap jalan.
 - **Klaster:** tambahkan situs sebanyak yang Anda mau. Setiap peringatan menampilkan apa yang dilihat tiap situs, sehingga "mati di mana-mana" bisa dibedakan dari "mati dari sini saja".
 
-![Monitor yang gagal beserta hasil dari setiap situs](docs/images/detail-sites.png)
+![Monitor yang gagal beserta hasil dari setiap situs](docs/images/screen-site-view.png)
 
 ## Tanpa banjir peringatan
 

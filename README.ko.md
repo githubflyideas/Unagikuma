@@ -10,7 +10,9 @@
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · **한국어**
 
-![페이퍼(흰색) 톤의 모니터 목록](docs/images/monitors-paper.png)
+**▶ [온라인 데모 (읽기 전용, 예시 데이터)](https://githubflyideas.github.io/Unagikuma/)**
+
+![3개 사이트 클러스터의 모니터 목록: 베이징·광저우·상하이 각각의 결과](docs/images/screen-monitors.png)
 
 ## Unagikuma를 써야 하는 이유
 
@@ -46,7 +48,7 @@ Windows에서는 `unagikuma.exe`를 실행합니다.
 - **두 대:** **운영 모드** 에서 참여 코드를 붙여 넣으면 됩니다. 각자 검사하고 알리므로 어느 한쪽이 멈춰도 알림은 끊기지 않습니다.
 - **클러스터:** 사이트를 원하는 만큼 추가하세요. 모든 알림에 사이트별 결과가 함께 표시되어 "모든 곳에서 다운"인지 "여기서만 다운"인지 알 수 있습니다.
 
-![장애 중인 모니터와 사이트별 결과](docs/images/detail-sites.png)
+![장애 중인 모니터와 사이트별 결과](docs/images/screen-site-view.png)
 
 ## 알림 폭주 없음
 

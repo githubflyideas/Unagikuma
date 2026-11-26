@@ -14,7 +14,9 @@
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · **اردو** · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![کاغذ ٹون میں مانیٹرز کی فہرست](docs/images/monitors-paper.png)
+**▶ [لائیو ڈیمو (صرف پڑھنے کے لیے، نمونہ ڈیٹا)](https://githubflyideas.github.io/Unagikuma/)**
+
+![تین سائٹوں والے کلسٹر کی مانیٹر فہرست: ہر سائٹ کیا دیکھتی ہے](docs/images/screen-monitors.png)
 
 <div dir="rtl">
 

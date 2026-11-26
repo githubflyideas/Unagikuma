@@ -10,7 +10,9 @@
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · **বাংলা** · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![পেপার টোনে মনিটরের তালিকা](docs/images/monitors-paper.png)
+**▶ [লাইভ ডেমো (শুধু দেখা, নমুনা ডেটা)](https://githubflyideas.github.io/Unagikuma/)**
+
+![তিন সাইটের ক্লাস্টারের মনিটর তালিকা: প্রতিটি সাইট কী দেখে](docs/images/screen-monitors.png)
 
 ## কেন Unagikuma
 
@@ -46,7 +48,7 @@ Windows-এ `unagikuma.exe` চালান।
 - **দুই মেশিন:** **চালনার মোড** এ জয়েন কোড পেস্ট করুন। প্রতিটি মেশিন নিজে চেক ও অ্যালার্ট করে, তাই একটি বন্ধ হলেও অ্যালার্ট থামে না।
 - **ক্লাস্টার:** যত খুশি সাইট যোগ করুন। প্রতিটি অ্যালার্টে প্রতিটি সাইট কী দেখছে তা থাকে, তাই "সব জায়গা থেকে ডাউন" আর "শুধু এখান থেকে ডাউন" আলাদা করা যায়।
 
-![একটি ব্যর্থ মনিটর আর প্রতিটি সাইটের ফলাফল](docs/images/detail-sites.png)
+![একটি ব্যর্থ মনিটর আর প্রতিটি সাইটের ফলাফল](docs/images/screen-site-view.png)
 
 ## অ্যালার্টের বন্যা নয়
 

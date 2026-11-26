@@ -10,7 +10,9 @@ Friendly, self-hosted monitoring: know the moment your websites and servers go d
 
 **English** · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![The monitor list in the Paper tone](docs/images/monitors-paper.png)
+**▶ [Try the live demo (read-only, sample data)](https://githubflyideas.github.io/Unagikuma/)**
+
+![The monitor list of a three-site cluster: what Beijing, Guangzhou and Shanghai each see](docs/images/screen-monitors.png)
 
 ## Why Unagikuma
 
@@ -74,7 +76,7 @@ modules the binary was built from; its checksum is part of the signed
 - **Two machines:** paste a join code under **Run mode**. Each machine checks and alerts on its own, so either one can go down without silencing your alerts.
 - **A cluster:** add as many sites as you like. Every alert shows what each site sees, so you can tell "down everywhere" from "down from here".
 
-![A failing monitor with each site's result](docs/images/detail-sites.png)
+![A failing monitor with each site's result](docs/images/screen-site-view.png)
 
 ## No alert floods
 

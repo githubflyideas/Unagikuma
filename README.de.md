@@ -10,7 +10,9 @@ Einfaches, selbst gehostetes Monitoring: Sie wissen sofort, wenn Ihre Websites o
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · **Deutsch** · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![Die Monitorliste im Ton Papier](docs/images/monitors-paper.png)
+**▶ [Live-Demo (nur lesen, Beispieldaten)](https://githubflyideas.github.io/Unagikuma/)**
+
+![Die Monitorliste eines Clusters mit drei Standorten: was Peking, Guangzhou und Shanghai jeweils sehen](docs/images/screen-monitors.png)
 
 ## Warum Unagikuma
 
@@ -46,7 +48,7 @@ Unter Windows starten Sie `unagikuma.exe`.
 - **Zwei Rechner:** einen Beitrittscode unter **Betriebsart** einfügen. Jeder Rechner prüft und alarmiert selbst; fällt einer aus, gehen die Alarme trotzdem raus.
 - **Ein Cluster:** beliebig viele Standorte. Jeder Alarm zeigt, was jeder Standort sieht, damit du „überall down" von „nur von hier down" unterscheidest.
 
-![Ein ausgefallener Monitor mit dem Ergebnis jedes Standorts](docs/images/detail-sites.png)
+![Ein ausgefallener Monitor mit dem Ergebnis jedes Standorts](docs/images/screen-site-view.png)
 
 ## Keine Alarmfluten
 

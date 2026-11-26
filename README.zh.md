@@ -10,7 +10,9 @@
 
 [English](README.md) · **中文** · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![纸白色调下的监控列表](docs/images/monitors-paper.png)
+**▶ [在线演示（只读，示例数据）](https://githubflyideas.github.io/Unagikuma/)**
+
+![三站点集群的监控列表：北京、广州、上海各自看到的结果](docs/images/screen-monitors.png)
 
 ## 为什么选择 Unagikuma
 
@@ -47,7 +49,7 @@ Windows 上运行 `unagikuma.exe`。
 - **双机:** 在 **运行模式** 里粘贴加入码即可。两台各自检测、各自告警,任何一台宕机,告警都不会断。
 - **集群:** 想加多少站点都行。每条告警都附上各站点看到的结果,一眼分清"全网都挂了"还是"只是这里连不上"。
 
-![一个故障监控项,以及每个站点看到的结果](docs/images/detail-sites.png)
+![一个故障监控项,以及每个站点看到的结果](docs/images/screen-site-view.png)
 
 ## 不刷屏
 

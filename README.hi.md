@@ -10,7 +10,9 @@
 
 [English](README.md) · [中文](README.zh.md) · **हिन्दी** · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![पेपर टोन में मॉनिटर सूची](docs/images/monitors-paper.png)
+**▶ [लाइव डेमो (केवल पढ़ने के लिए, नमूना डेटा)](https://githubflyideas.github.io/Unagikuma/)**
+
+![तीन साइट वाले क्लस्टर की मॉनिटर सूची: हर साइट क्या देखती है](docs/images/screen-monitors.png)
 
 ## Unagikuma क्यों
 
@@ -46,7 +48,7 @@ Windows पर `unagikuma.exe` चलाएँ।
 - **दो मशीनें:** **संचालन मोड** में जॉइन कोड चिपकाएँ। हर मशीन खुद जाँचती और अलर्ट भेजती है, इसलिए एक बंद हो जाए तब भी अलर्ट नहीं रुकते।
 - **क्लस्टर:** जितनी चाहें उतनी साइटें जोड़ें। हर अलर्ट दिखाता है कि हर साइट क्या देख रही है, ताकि "हर जगह डाउन" और "सिर्फ़ यहाँ से डाउन" में फ़र्क दिखे।
 
-![एक फ़ेल मॉनिटर और हर साइट का नतीजा](docs/images/detail-sites.png)
+![एक फ़ेल मॉनिटर और हर साइट का नतीजा](docs/images/screen-site-view.png)
 
 ## अलर्ट की बाढ़ नहीं
 

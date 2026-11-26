@@ -1,0 +1,29 @@
+# Publishes the static demo of the console (scripts/demo) to GitHub Pages.
+# Once: Settings > Pages > Build and deployment > Source: GitHub Actions.
+name: demo
+on:
+  push:
+    branches: [main]
+    paths: ['web/ui/**', 'scripts/demo/**', 'internal/i18n/locales/**', '.github/workflows/demo.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/demo/build.sh dist-demo
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-demo
+      - id: deploy
+        uses: actions/deploy-pages@v4

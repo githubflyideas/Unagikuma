@@ -10,7 +10,9 @@ Une supervision auto-hébergée et simple : sachez dès qu’un site ou un serve
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · **Français** · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![La liste des moniteurs dans le ton Papier](docs/images/monitors-paper.png)
+**▶ [Démo en ligne (lecture seule, données d'exemple)](https://githubflyideas.github.io/Unagikuma/)**
+
+![La liste des sondes d'un cluster à trois sites : ce que voit chacun](docs/images/screen-monitors.png)
 
 ## Pourquoi Unagikuma
 
@@ -46,7 +48,7 @@ Sous Windows, lancez `unagikuma.exe`.
 - **Deux machines :** collez un code d'adhésion dans **Mode de fonctionnement**. Chaque machine vérifie et alerte de son côté ; si l'une tombe, les alertes continuent.
 - **Un cluster :** ajoutez autant de sites que vous voulez. Chaque alerte montre ce que voit chaque site, pour distinguer « en panne partout » de « en panne d'ici ».
 
-![Un moniteur en panne avec le résultat de chaque site](docs/images/detail-sites.png)
+![Un moniteur en panne avec le résultat de chaque site](docs/images/screen-site-view.png)
 
 ## Pas d'avalanche d'alertes
 

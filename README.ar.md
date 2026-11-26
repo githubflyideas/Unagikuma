@@ -14,7 +14,9 @@
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · **العربية** · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![قائمة المراقبات بدرجة «ورقي»](docs/images/monitors-paper.png)
+**▶ [عرض حي (للقراءة فقط، بيانات نموذجية)](https://githubflyideas.github.io/Unagikuma/)**
+
+![قائمة المراقبة في عنقود من ثلاثة مواقع: ما يراه كل موقع](docs/images/screen-monitors.png)
 
 <div dir="rtl">
 

@@ -10,7 +10,9 @@ Giám sát tự lưu trữ, dễ dùng: biết ngay khi website hay máy chủ c
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · **Tiếng Việt** · [한국어](README.ko.md)
 
-![Danh sách giám sát ở tông Giấy](docs/images/monitors-paper.png)
+**▶ [Bản demo trực tuyến (chỉ đọc, dữ liệu mẫu)](https://githubflyideas.github.io/Unagikuma/)**
+
+![Danh sách giám sát của cụm ba site: mỗi site thấy gì](docs/images/screen-monitors.png)
 
 ## Vì sao chọn Unagikuma
 
@@ -46,7 +48,7 @@ Trên Windows, chạy `unagikuma.exe`.
 - **Hai máy:** dán mã tham gia ở **Chế độ vận hành**. Mỗi máy tự kiểm tra và cảnh báo, nên một máy ngừng thì cảnh báo vẫn không gián đoạn.
 - **Một cụm:** thêm bao nhiêu địa điểm tùy ý. Mỗi cảnh báo đều cho thấy từng địa điểm đang thấy gì, để phân biệt "sập ở mọi nơi" với "chỉ sập khi nhìn từ đây".
 
-![Một mục giám sát đang lỗi cùng kết quả của từng địa điểm](docs/images/detail-sites.png)
+![Một mục giám sát đang lỗi cùng kết quả của từng địa điểm](docs/images/screen-site-view.png)
 
 ## Không lũ cảnh báo
 

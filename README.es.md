@@ -10,7 +10,9 @@ Monitorización autoalojada y sencilla: entérate en cuanto tus webs o servidore
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · **Español** · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![La lista de monitores en el tono Papel](docs/images/monitors-paper.png)
+**▶ [Demo en línea (solo lectura, datos de ejemplo)](https://githubflyideas.github.io/Unagikuma/)**
+
+![La lista de monitores de un clúster de tres sitios: lo que ve cada uno](docs/images/screen-monitors.png)
 
 ## ¿Por qué Unagikuma?
 
@@ -46,7 +48,7 @@ En Windows, ejecuta `unagikuma.exe`.
 - **Dos máquinas:** pega un código de unión en **Modo de funcionamiento**. Cada máquina comprueba y alerta por su cuenta; si una cae, las alertas siguen llegando.
 - **Un clúster:** añade tantos sitios como quieras. Cada alerta muestra lo que ve cada sitio, para distinguir «caído en todas partes» de «caído desde aquí».
 
-![Un monitor caído con el resultado de cada sitio](docs/images/detail-sites.png)
+![Un monitor caído con el resultado de cada sitio](docs/images/screen-site-view.png)
 
 ## Sin avalanchas de alertas
 

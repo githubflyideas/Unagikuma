@@ -10,7 +10,9 @@ Monitoramento auto-hospedado e descomplicado: saiba na hora quando seus sites e 
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · **Português** · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![A lista de monitores no tom Papel](docs/images/monitors-paper.png)
+**▶ [Demonstração online (só leitura, dados de exemplo)](https://githubflyideas.github.io/Unagikuma/)**
+
+![A lista de monitores de um cluster com três sites: o que cada um vê](docs/images/screen-monitors.png)
 
 ## Por que o Unagikuma
 
@@ -46,7 +48,7 @@ No Windows, execute `unagikuma.exe`.
 - **Duas máquinas:** cole um código de adesão em **Modo de operação**. Cada máquina verifica e alerta por conta própria; se uma cair, os alertas continuam.
 - **Um cluster:** adicione quantos sites quiser. Cada alerta mostra o que cada site vê, para distinguir "fora do ar em todo lugar" de "fora do ar daqui".
 
-![Um monitor com falha e o resultado de cada site](docs/images/detail-sites.png)
+![Um monitor com falha e o resultado de cada site](docs/images/screen-site-view.png)
 
 ## Sem enxurrada de alertas
 

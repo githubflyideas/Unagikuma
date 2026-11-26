@@ -10,7 +10,9 @@
 
 [English](README.md) · [中文](README.zh.md) · [हिन्दी](README.hi.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · **日本語** · [Tiếng Việt](README.vi.md) · [한국어](README.ko.md)
 
-![ペーパー（白）トーンの監視一覧](docs/images/monitors-paper.png)
+**▶ [オンラインデモ（読み取り専用・サンプルデータ）](https://githubflyideas.github.io/Unagikuma/)**
+
+![3 拠点クラスターの監視一覧：北京・広州・上海それぞれの見え方](docs/images/screen-monitors.png)
 
 ## Unagikuma が選ばれる理由
 
@@ -46,7 +48,7 @@ Windows では `unagikuma.exe` を実行します。
 - **2 台：** **運用モード** で参加コードを貼り付けるだけ。それぞれが独立してチェックと通知を行うので、どちらかが止まっても通知は途切れません。
 - **クラスター：** サイトはいくつでも追加できます。すべての通知に各サイトの結果が添えられ、「どこからもダウン」か「ここからだけダウン」かがわかります。
 
-![障害中の監視と、サイトごとの結果](docs/images/detail-sites.png)
+![障害中の監視と、サイトごとの結果](docs/images/screen-site-view.png)
 
 ## アラートの洪水を防ぐ
 

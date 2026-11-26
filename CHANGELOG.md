@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+**Added**
+- A live demo of the console on GitHub Pages: a three-site cluster with sample data, read-only, every page and style. It is built from a recording (`scripts/demo`) and published by the `demo` workflow. The READMEs link to it and show new screenshots.
+
 **Changed**
 - The ISP style is redrawn as a network operations centre: a dark blueprint grid, a slim icon rail that opens over the page instead of a hidden drawer, panels with bracketed corners, monospaced figures, and failing rows and the problem count that pulse until handled. The Starship bridge style turns violet so the two dark styles no longer look alike, and the Retail chain table header is readable again.
 - Every style keeps the page centred on a wide screen, with the navigation beside it.
