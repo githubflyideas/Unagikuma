@@ -90,7 +90,7 @@
 :root[data-style="starbridge"] .card > .bd { padding: 12px 24px 22px; }
 :root[data-style="starbridge"] .tile { text-align: center; padding: 18px 12px; }
 :root[data-style="starbridge"] .tile b { font-weight: 200; font-size: 40px; }
-:root[data-style="starbridge"] .card.scroll, :root[data-style="starbridge"] .page.list .card.scroll { background: linear-gradient(155deg, rgba(24, 48, 92, .45), rgba(6, 12, 30, .5)); }
+:root[data-style="starbridge"] .card.scroll, :root[data-style="starbridge"] .page.list .card.scroll { background: var(--panel); }
 :root[data-style="starbridge"] .tbl th { font-weight: 300; letter-spacing: .24em; border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
 :root[data-style="starbridge"] .tbl td { border-bottom: 1px solid color-mix(in srgb, var(--accent) 8%, transparent); }
 :root[data-style="starbridge"] .btn, :root[data-style="starbridge"] .search, :root[data-style="starbridge"] .chip, :root[data-style="starbridge"] .seg, :root[data-style="starbridge"] input[type=text], :root[data-style="starbridge"] input[type=password], :root[data-style="starbridge"] input[type=number], :root[data-style="starbridge"] input[type=url], :root[data-style="starbridge"] input[type=email], :root[data-style="starbridge"] select, :root[data-style="starbridge"] textarea { border-radius: 999px; }

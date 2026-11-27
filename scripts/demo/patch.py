@@ -133,10 +133,25 @@ for k in ('/branding', '/brand'):
     d['responses'][k]['style'] = 'noc'
     d['responses'][k]['style_trial'] = {'state': 'active', 'days_left': 7}
 d['responses']['/session'].pop('csrf', None)
+# The recording machine's paths and listen address: a usual installation's.
+for k, v in (('/system', None), ('/system/port', None)):
+    r = d['responses'].get(k)
+    if isinstance(r, dict):
+        for f in ('config_path', 'data_dir'):
+            if f in r:
+                r[f] = '/var/lib/unagikuma' + ('/monitors.conf' if f == 'config_path' else '')
+        if 'listen' in r:
+            r['listen'] = ':8077'
+        if 'current' in r:
+            r['current'] = 8077
+
 # An international setting: sites and names from Los Angeles, Munich and Tokyo.
 text = json.dumps(d, ensure_ascii=False)
 for a, b in (('北京', 'Munich'), ('广州', 'Tokyo'), ('上海', 'Los Angeles'),
              ('core-sw-bj', 'core-sw-muc'), ('core-sw-sh', 'core-sw-lax'), ('edge-router-gz', 'edge-router-tyo')):
     text = text.replace(a, b)
+# Any other path of the recording machine (diagnostics, the editor, scripts).
+import re as _re
+text = _re.sub(r'/tmp/[^"]*?/cl/[abc](?=[/"])', '/var/lib/unagikuma', text)
 open(path, 'w').write(text)
 print('patched')

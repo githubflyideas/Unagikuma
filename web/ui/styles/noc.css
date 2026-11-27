@@ -55,7 +55,7 @@
 
 /* ---- panels: glass with bracketed corners ---- */
 :root[data-style="noc"] .page { padding: 20px 24px 48px; gap: 18px; width: 100%; max-width: 1680px; margin-inline: auto; }
-:root[data-style="noc"] .card, :root[data-style="noc"] .kpi, :root[data-style="noc"] .sum-now { position: relative; background: linear-gradient(180deg, rgba(14, 27, 45, .92), rgba(10, 20, 34, .92)); border: 1px solid var(--border); border-radius: 3px; box-shadow: inset 0 1px 0 rgba(125, 211, 252, .06); }
+:root[data-style="noc"] .card, :root[data-style="noc"] .kpi, :root[data-style="noc"] .sum-now { position: relative; background: var(--panel); border: 1px solid var(--border); border-radius: 3px; box-shadow: inset 0 1px 0 rgba(125, 211, 252, .06); }
 :root[data-style="noc"] .card::before, :root[data-style="noc"] .card::after { content: ""; position: absolute; width: 12px; height: 12px; pointer-events: none; border-color: var(--accent); border-style: solid; opacity: .7; }
 :root[data-style="noc"] .card::before { inset-block-start: -1px; inset-inline-start: -1px; border-width: 2px 0 0 2px; }
 :root[data-style="noc"] .card::after { inset-block-end: -1px; inset-inline-end: -1px; border-width: 0 2px 2px 0; }
@@ -75,10 +75,10 @@
 :root[data-style="noc"] .tbl td.num, :root[data-style="noc"] .tbl .lat, :root[data-style="noc"] .ltr.num { font-family: var(--noc-mono); }
 
 /* ---- tables: a monitor board; failures pulse until handled ---- */
-:root[data-style="noc"] .tbl th { background: rgba(14, 27, 45, .95); color: var(--link); font-family: var(--noc-mono); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; border-bottom: 1px solid var(--border-strong); }
+:root[data-style="noc"] .tbl th { background: var(--panel-2); color: var(--link); font-family: var(--noc-mono); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; border-bottom: 1px solid var(--border-strong); }
 :root[data-style="noc"] .page.list .card.scroll thead th { background: var(--panel-2); }
 :root[data-style="noc"] .tbl td { border-bottom: 1px solid var(--border); padding-block: 9px; }
-:root[data-style="noc"] .tbl tbody tr:nth-child(even) td { background: rgba(125, 211, 252, .018); }
+:root[data-style="noc"] .tbl tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent) 3%, transparent); }
 :root[data-style="noc"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 :root[data-style="noc"] .tbl tbody tr.critical td { background: rgba(255, 77, 106, .10); }
 :root[data-style="noc"] .tbl tr.critical td:first-child { box-shadow: inset 3px 0 0 var(--critical); animation: noc-edge 1.6s ease-in-out infinite; }

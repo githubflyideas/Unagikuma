@@ -1,5 +1,5 @@
 // Application shell: session, navigation and routing.
-import { html, render, useState, useEffect } from './lib.js';
+import { html, render, useState, useEffect, useRef } from './lib.js';
 import { t, tn, setLang, detectLang, loadLanguages, langList, currentLang, fmtTime, detailText } from './i18n.js';
 import { get, post, del, setCSRF, setMe, me, onUnauthorized } from './api.js';
 import { startLive, stopLive, onConnection } from './live.js';
@@ -400,19 +400,31 @@ function Search({ route }) {
     else location.hash = '#' + path;
   };
   const setFilter = (k, val) => { const next = setTerm(v, k, val); setV(next); show(next, sort); };
-  return html`<div class="search" role="search"><span aria-hidden="true">⌕</span>
+  // The filters live in one panel behind a button in the search box, so
+  // there is one search, not a row of extra fields.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!filtersOpen) return undefined;
+    const close = (e) => { if (box.current && !box.current.contains(e.target)) setFiltersOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [filtersOpen]);
+  const active = [termOf(v, 'group'), termOf(v, 'failures') || termOf(v, 'failed'), termOf(v, 'retry') || termOf(v, 'retry_s')].filter(Boolean).length;
+  return html`<div class="search" role="search" ref=${box}><span aria-hidden="true">⌕</span>
     <input type="search" class="spacer" placeholder=${t('ui.mon.search')} aria-label=${t('ui.mon.search')} value=${v}
       onInput=${(e) => { setV(e.target.value); show(e.target.value, sort); }} />
-    <select class="filter" value=${termOf(v, 'group')} onChange=${(e) => setFilter('group', e.target.value)} aria-label=${t('ui.mon.filter.group')}>
-      <option value="">${t('ui.mon.filter.group')}</option>
-      ${groups.map(g => html`<option value=${g}>${g}</option>`)}
-    </select>
-    <input type="search" class="filter num" placeholder=${t('ui.mon.filter.failures')} aria-label=${t('ui.mon.filter.failures')}
-      value=${termOf(v, 'failures') || termOf(v, 'failed')}
-      onInput=${(e) => { const cur = setTerm(v, 'failed', ''); setV(setTerm(cur, 'failures', e.target.value)); show(setTerm(cur, 'failures', e.target.value), sort); }} />
-    <input type="search" class="filter num" placeholder=${t('ui.mon.filter.retry')} aria-label=${t('ui.mon.filter.retry')}
-      value=${termOf(v, 'retry') || termOf(v, 'retry_s')}
-      onInput=${(e) => { const cur = setTerm(v, 'retry_s', ''); setV(setTerm(cur, 'retry', e.target.value)); show(setTerm(cur, 'retry', e.target.value), sort); }} />
+    <button type="button" class=${'filter-btn' + (active ? ' on' : '')} aria-expanded=${String(filtersOpen)} onClick=${() => setFiltersOpen(!filtersOpen)}>${t('ui.mon.filter.button')}${active ? ' ' + active : ''} ▾</button>
+    ${filtersOpen && html`<div class="search-filters">
+      <label>${t('ui.mon.filter.group')}<select value=${termOf(v, 'group')} onChange=${(e) => setFilter('group', e.target.value)}>
+        <option value="">${t('ui.mon.all_groups')}</option>
+        ${groups.map(g => html`<option value=${g}>${g}</option>`)}
+      </select></label>
+      <label>${t('ui.mon.filter.failures')}<input type="text" class="ltr" value=${termOf(v, 'failures') || termOf(v, 'failed')}
+        onInput=${(e) => { const cur = setTerm(v, 'failed', ''); const next = setTerm(cur, 'failures', e.target.value); setV(next); show(next, sort); }} /></label>
+      <label>${t('ui.mon.filter.retry')}<input type="text" class="ltr" value=${termOf(v, 'retry') || termOf(v, 'retry_s')}
+        onInput=${(e) => { const cur = setTerm(v, 'retry_s', ''); const next = setTerm(cur, 'retry', e.target.value); setV(next); show(next, sort); }} /></label>
+    </div>`}
     <select class="sort" value=${sort.replace(/^-/, '')} onChange=${(e) => show(v, e.target.value)} aria-label=${t('ui.mon.sort')}>
       ${MON_SORTS.map(k => html`<option value=${k}>${t('ui.mon.sort.' + k)}</option>`)}
     </select>

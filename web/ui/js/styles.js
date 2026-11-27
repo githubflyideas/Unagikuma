@@ -20,9 +20,13 @@ function storage(v) {
 // breakpoints may need adjusting to it).
 export function onStyleLoaded(f) { loaded = f; }
 
+// Where each style puts the menu: Classic a sidebar on the left, Chain
+// Store two columns of tiles on the left, Modern Dashboard a bar on top,
+// Craftsman Workshop index tabs on the right, Starship a dock at the bottom.
+export const CHROME = { classic: 'side', retail: 'side', noc: 'top', starbridge: 'bottom', atelier: 'side' };
+
 // applyStyle shows the page in a style; the last one used is remembered so
 // the next visit opens in it without a flash of the other.
-export const CHROME = { classic: 'side', retail: 'top', noc: 'top', starbridge: 'bottom', atelier: 'top' };
 
 export function applyStyle(id) {
   const root = document.documentElement;

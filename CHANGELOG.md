@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+**Fixed**
+- Each layout has its own menu again: Classic a sidebar on the left, Chain Store two columns of tiles on the left, Modern Dashboard a bar on top, Craftsman Workshop index tabs on the right, Starship a dock at the bottom. In 3.0.2 Chain Store and Craftsman Workshop had been turned into top menus.
+- The search is one box again: group, failure count and retry interval sit behind its Filter button instead of next to it in the top bar.
+- Under a top or bottom menu, the node, run mode, language, zoom and account are one quiet row instead of a large block.
+- Modern Dashboard and Starship are readable with every palette: tables and cards no longer keep dark backgrounds from before the shared palettes.
+- The demo is recorded again with this release, so the announcement board and the port setting show sample data, and it shows no paths of the machine it was recorded on.
+
 ## v3.0.2 — 2026-11-27
 
 **Changed**

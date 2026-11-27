@@ -916,8 +916,13 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 .empty { text-align: center; margin-inline: auto; max-width: 36rem; }
 .modal-wrap, .modal-host { display: grid; place-items: center; }
 .search { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 280px; }
-.search .filter { width: auto; max-width: 9.5rem; font-size: 12.5px; }
-.search .filter.num { width: 7.2rem; }
+.search { position: relative; }
+.search .filter-btn { flex: none; border: 0; background: none; padding: 1px 6px; border-radius: 6px; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.search .filter-btn:hover, .search .filter-btn[aria-expanded="true"] { background: var(--panel); color: var(--text); }
+.search .filter-btn.on { color: var(--link); font-weight: 650; }
+.search-filters { position: absolute; z-index: 30; inset-block-start: calc(100% + 6px); inset-inline-start: 0; inset-inline-end: 0; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--panel); box-shadow: 0 12px 32px rgba(0, 0, 0, .18); color: var(--text); }
+.search-filters label { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.search-filters select, .search-filters input { width: 100%; color: var(--text); }
 .md-toolbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
 .md-preview { min-height: 12rem; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel-2); }
 .md-preview p { margin: 0 0 .6em; }
@@ -932,9 +937,14 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 .themes.styles .style-swatch span { display: inline; }
 .shell.mini .theme-dock { display: none; }
 .account-dock { display: flex; flex-direction: column; gap: 6px; }
-.page-foot, .below-bar { display: flex; justify-content: center; padding: 10px 16px 16px; }
-.page-foot .account-dock, .below-bar .account-dock { width: min(420px, 100%); align-items: stretch; text-align: center; }
-.page-foot .account-dock .row, .below-bar .account-dock .row { justify-content: center; }
+.page-foot, .below-bar { display: flex; justify-content: center; padding: 8px 16px; }
+/* Under a top or bottom menu, the node, run mode, language, zoom and the
+   account sit in one quiet row. */
+.page-foot .account-dock, .below-bar .account-dock { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.page-foot .account-dock .row, .below-bar .account-dock .row { flex-wrap: nowrap; gap: 8px; }
+.page-foot .account-dock .row .spacer, .below-bar .account-dock .row .spacer { display: none; }
+.page-foot .account-dock select, .below-bar .account-dock select { width: auto; max-width: 8.5rem; padding: 2px 6px; font-size: 12.5px; }
+.page-foot .account-dock .host, .below-bar .account-dock .host { max-width: 14rem; }
 .bottom-wrap { margin-top: auto; }
 .bottom-bar { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 16px; border-top: 1px solid var(--border); background: var(--panel); }
 .bottom-nav, .top-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
