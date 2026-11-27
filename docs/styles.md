@@ -1,8 +1,8 @@
 # Adding a page style
 
 A style changes how the console is laid out (cards, tables, spacing,
-type); colours stay with the theme, so a style must work with every
-theme, light and dark.
+type, and whether the navigation is a sidebar, a top bar or a bottom
+bar). Each style ships three colour palettes the account can switch.
 
 1. Write `web/ui/styles/<id>.css`. The id is lowercase letters, digits
    and `-`. Scope every rule under `:root[data-style="<id>"]` and use the
@@ -20,11 +20,10 @@ theme, light and dark.
    and colour contrast (WCAG AA) on the console and the public status
    page.
 
-A style may also bring its own colours, as the noc style does:
-set the theme variables under its selector and hide the theme dots
-(`.themes { display: none; }`).
 
 "classic" is the base stylesheet itself and has no file of its own.
-The shipped styles are "classic" and the four registered scenario
-styles (noc, retail, starbridge and atelier); a stored choice naming any
+The shipped styles are Classic (sidebar) and the four registered
+scenario styles: retail (Chain Store, top menu), noc (Modern Dashboard,
+top menu), starbridge (Starship, bottom menu) and atelier (Craftsman
+Workshop, top menu). Each has three palettes. A stored choice naming any
 other style falls back to "classic".
