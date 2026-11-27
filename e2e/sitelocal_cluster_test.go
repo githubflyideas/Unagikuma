@@ -24,7 +24,7 @@ func TestSiteLocalReachesMaster(t *testing.T) {
 		fmt.Fprintf(&zone, "own%d IN TCP 127.0.0.1:%d\n", i, 20000+i)
 	}
 	b.ensure()
-	if code := b.call("PUT", "/api/v1/cluster/site-local", map[string]string{"text": zone.String()}, nil); code != 200 {
+	if code := b.call("PUT", "/api/v1/cluster/site_local", map[string]string{"text": zone.String()}, nil); code != 200 {
 		t.Fatalf("b's own configuration: %d", code)
 	}
 	a.waitFor("a copy of b's own configuration on the master", func() bool {
@@ -37,7 +37,7 @@ func TestSiteLocalReachesMaster(t *testing.T) {
 		fmt.Fprintf(&big, "own%d IN TCP 127.0.0.1:%d\n", i, 20000+i)
 	}
 	var res struct{ OK bool }
-	b.call("PUT", "/api/v1/cluster/site-local", map[string]string{"text": big.String()}, &res)
+	b.call("PUT", "/api/v1/cluster/site_local", map[string]string{"text": big.String()}, &res)
 	if res.OK {
 		t.Fatal("the node accepted 101 of its own monitors")
 	}

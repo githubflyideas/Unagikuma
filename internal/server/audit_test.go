@@ -130,7 +130,7 @@ func TestAuditActionNames(t *testing.T) {
 		"PUT /api/v1/config":                       "config.update",
 		"POST /api/v1/maintenance":                 "maintenance.create",
 		"PUT /api/v1/secrets/{name}":               "secret.update",
-		"POST /api/v1/cluster/join-codes":          "cluster.join-codes",
+		"POST /api/v1/cluster/join_codes":          "cluster.join_codes",
 		"POST /api/v1/reports/daily/send":          "reports.daily.send",
 		"POST /api/v1/reports/weekly/send":         "reports.weekly.send",
 		"DELETE /api/v1/incidents/{id}/ack":        "incident.ack.delete",

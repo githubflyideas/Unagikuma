@@ -101,7 +101,7 @@ func (s *server) logCount(sub string) int { return strings.Count(s.log.String(),
 func join(t *testing.T, master, s *server, node string) {
 	t.Helper()
 	var jc struct{ Code string }
-	if code := master.call("POST", "/api/v1/cluster/join-codes", map[string]string{"server": fmt.Sprintf("https://127.0.0.1:%d", master.port)}, &jc); code != 200 {
+	if code := master.call("POST", "/api/v1/cluster/join_codes", map[string]string{"server": fmt.Sprintf("https://127.0.0.1:%d", master.port)}, &jc); code != 200 {
 		t.Fatalf("join code: %d", code)
 	}
 	if code := s.call("POST", "/api/v1/cluster/join", map[string]any{"code": jc.Code, "node": node, "title": node}, nil); code != 200 {
@@ -419,7 +419,7 @@ func TestRetestJoinsFromOneAddress(t *testing.T) {
 	}
 	for i, s := range nodes {
 		var jc struct{ Code string }
-		if code := a.call("POST", "/api/v1/cluster/join-codes", map[string]string{"server": fmt.Sprintf("https://127.0.0.1:%d", a.port)}, &jc); code != 200 {
+		if code := a.call("POST", "/api/v1/cluster/join_codes", map[string]string{"server": fmt.Sprintf("https://127.0.0.1:%d", a.port)}, &jc); code != 200 {
 			t.Fatalf("join code: %d", code)
 		}
 		if code := s.call("POST", "/api/v1/cluster/join", map[string]any{"code": jc.Code, "node": fmt.Sprintf("n%d", i)}, nil); code != 200 {

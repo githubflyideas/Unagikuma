@@ -10,14 +10,14 @@ import (
 func TestStatusSupportFooter(t *testing.T) {
 	e := newEnv(t, testBind, nil)
 	e.setup()
-	if c := e.do("PUT", "/api/v1/status-support", map[string]string{"text": "Support: ops@example.com"}, nil); c == 200 {
+	if c := e.do("PUT", "/api/v1/status_support", map[string]string{"text": "Support: ops@example.com"}, nil); c == 200 {
 		t.Fatal("unregistered: footer changed")
 	}
 	e.register()
-	if c := e.do("PUT", "/api/v1/status-support", map[string]string{"text": strings.Repeat("x", 121)}, nil); c != 400 {
+	if c := e.do("PUT", "/api/v1/status_support", map[string]string{"text": strings.Repeat("x", 121)}, nil); c != 400 {
 		t.Fatalf("too long: %d", c)
 	}
-	if c := e.do("PUT", "/api/v1/status-support", map[string]string{"text": "Support: ops@example.com"}, nil); c != 200 {
+	if c := e.do("PUT", "/api/v1/status_support", map[string]string{"text": "Support: ops@example.com"}, nil); c != 200 {
 		t.Fatalf("save: %d", c)
 	}
 	var pub struct{ Support string }

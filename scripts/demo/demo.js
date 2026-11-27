@@ -45,7 +45,7 @@
       } catch { /* fall through */ }
     }
     if (path === '/session' || path === '/setup') return json(200, moved(data['/session']));
-    if (path === '/quickadd/parse' || path.endsWith('/preview') || path === '/channels/request-preview') return json(200, data['POST ' + path] || { records: [], errors: [] });
+    if (path === '/quickadd/parse' || path.endsWith('/preview') || path === '/channels/request_preview') return json(200, data['POST ' + path] || { records: [], errors: [] });
     return json(403, NOT_SAVED);
   };
   // No live stream: the page refreshes from the recording.

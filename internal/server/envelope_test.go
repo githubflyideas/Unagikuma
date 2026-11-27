@@ -39,8 +39,8 @@ func TestListsAndDeletes(t *testing.T) {
 	e := newEnv(t, testBind, nil)
 	e.setup()
 	for _, p := range []string{"/api/v1/tokens", "/api/v1/channels", "/api/v1/tunables", "/api/v1/keywords",
-		"/api/v1/languages", "/api/v1/policies", "/api/v1/secrets", "/api/v1/status-pages", "/api/v1/announcements",
-		"/api/v1/app-profiles", "/api/v1/channel-kinds", "/api/v1/people", "/api/v1/users"} {
+		"/api/v1/languages", "/api/v1/policies", "/api/v1/secrets", "/api/v1/status_pages", "/api/v1/announcements",
+		"/api/v1/app_profiles", "/api/v1/channel_kinds", "/api/v1/people", "/api/v1/users"} {
 		var items []any
 		if c := e.do("GET", p, nil, &items); c != 200 {
 			t.Fatalf("%s: %d", p, c)

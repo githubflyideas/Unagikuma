@@ -130,8 +130,8 @@ export function MonitorEditor({ name }) {
   const editing = !!name;
   const regions = useFetch(() => get('/regions'), []);
   const mons = useFetch(() => get('/monitors'), []);
-  const optList = useFetch(() => get('/monitor-options'), []);
-  const apps = useFetch(() => listOf('/app-profiles'), []);
+  const optList = useFetch(() => get('/monitor_options'), []);
+  const apps = useFetch(() => listOf('/app_profiles'), []);
   const [f, setF] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -165,7 +165,7 @@ export function MonitorEditor({ name }) {
   useEffect(() => {
     if (!f || f.type === 'PUSH' || !f.target.trim()) { setSame(null); return undefined; }
     const timer = setTimeout(() => {
-      post('/monitors/same-check', { record: { ...record(), name: 'x' }, exclude: name || '' }).then(setSame, () => setSame(null));
+      post('/monitors/same_check', { record: { ...record(), name: 'x' }, exclude: name || '' }).then(setSame, () => setSame(null));
     }, 400);
     return () => clearTimeout(timer);
   }, [draftKey]);

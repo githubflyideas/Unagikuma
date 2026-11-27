@@ -188,7 +188,7 @@ func groupOfNewRecord(ai *authInfo, spec *config.RecordSpec) error {
 var groupRoutes = map[string]bool{
 	// Their own session and preferences.
 	"GET /api/v1/session":          true,
-	"GET /api/v1/saved-alerts":     true,
+	"GET /api/v1/saved_alerts":     true,
 	"DELETE /api/v1/session":       true,
 	"PUT /api/v1/session/password": true,
 	"GET /api/v1/preferences":      true,
@@ -207,11 +207,11 @@ var groupRoutes = map[string]bool{
 	"POST /api/v1/monitors":                    true,
 	"PUT /api/v1/monitors/{name}":              true,
 	"DELETE /api/v1/monitors/{name}":           true,
-	"POST /api/v1/monitors/bulk-delete":        true,
-	"POST /api/v1/monitors/bulk-pause":         true,
+	"POST /api/v1/monitors/bulk_delete":        true,
+	"POST /api/v1/monitors/bulk_pause":         true,
 	"POST /api/v1/monitors/{name}/check":       true,
 	"POST /api/v1/monitors/{name}/pause":       true,
-	"POST /api/v1/monitors/same-check":         true,
+	"POST /api/v1/monitors/same_check":         true,
 	"POST /api/v1/probe":                       true,
 	"POST /api/v1/quickadd/parse":              true,
 	// Incidents and events of their monitors.

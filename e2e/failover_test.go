@@ -196,7 +196,7 @@ func TestFailover(t *testing.T) {
 	b := start(t, "standby", fmt.Sprintf(soa, "b"))
 	b.setup("local", "standby-pass-1")
 	var jc struct{ Code string }
-	if code := a.call("POST", "/api/v1/cluster/join-codes", map[string]string{"server": fmt.Sprintf("https://127.0.0.1:%d", a.port)}, &jc); code != 200 {
+	if code := a.call("POST", "/api/v1/cluster/join_codes", map[string]string{"server": fmt.Sprintf("https://127.0.0.1:%d", a.port)}, &jc); code != 200 {
 		t.Fatalf("join code: %d", code)
 	}
 	if code := b.call("POST", "/api/v1/cluster/join", map[string]any{"code": jc.Code, "node": "bk", "title": "Standby"}, nil); code != 200 {

@@ -59,11 +59,11 @@ function General({ part = 'general' }) {
   // Two ways to choose the internet gateway: the public resolvers near a
   // city (cities only, no country names), or what this host's own route
   // suggests.
-  const cities = useFetch(() => listOf('/settings/exit-countries'), []);
+  const cities = useFetch(() => listOf('/settings/exit_countries'), []);
   const [cc, setCc] = useState('');
   const suggest = async (body) => {
     setSug({ busy: true });
-    try { setSug(await post('/settings/exit-suggest', body)); } catch (e) { setSug({ err: e }); }
+    try { setSug(await post('/settings/exit_suggest', body)); } catch (e) { setSug({ err: e }); }
   };
   // Picking a measured address saves it at once: the form's own save
   // button is far below and easy to miss.
@@ -114,7 +114,7 @@ function General({ part = 'general' }) {
       <div class="row nowrap"><input type="text" class="ltr" value=${f.heartbeat_url} onInput=${set('heartbeat_url')} placeholder="https://hc-ping.com/…" />
         <button type="button" class="btn" onClick=${testHb} disabled=${!s.data.heartbeat_url}>${t('ui.set.heartbeat_test')}</button></div><//>
     <${HeartbeatForm} f=${f} setF=${setF} />
-    ${hb && !hb.busy && html`<div class=${'banner ' + (hb.err || hb.LastError ? 'error' : 'ok')}>${hb.err ? errText(hb.err) : hb.LastError || t('ui.set.heartbeat_ok')}</div>`}`}
+    ${hb && !hb.busy && html`<div class=${'banner ' + (hb.err || hb.last_error ? 'error' : 'ok')}>${hb.err ? errText(hb.err) : hb.last_error || t('ui.set.heartbeat_ok')}</div>`}`}
     <div class="row"><div class="spacer"></div><button class="btn primary">${t('ui.save')}</button></div>
   </div></form>`;
 }

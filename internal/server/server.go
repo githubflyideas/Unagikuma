@@ -417,13 +417,13 @@ func notFound(what string) error {
 func sharedConfigRoute(path string) bool {
 	// Pause and resume are site-local: allowed on every node, including a
 	// read-only replica, and must not require the master's configuration.
-	if strings.HasSuffix(path, "/pause") || strings.HasSuffix(path, "/bulk-pause") {
+	if strings.HasSuffix(path, "/pause") || strings.HasSuffix(path, "/bulk_pause") {
 		return false
 	}
 	if strings.HasSuffix(path, "/test") || strings.HasSuffix(path, "/predict") || strings.HasSuffix(path, "/push-token") || strings.HasSuffix(path, "/push/rotate") {
 		return false
 	}
-	for _, p := range []string{"/api/v1/config", "/api/v1/monitors", "/api/v1/channels", "/api/v1/policies", "/api/v1/teams", "/api/v1/people", "/api/v1/tunables", "/api/v1/maintenance", "/api/v1/nodes", "/api/v1/status-pages", "/api/v1/import"} {
+	for _, p := range []string{"/api/v1/config", "/api/v1/monitors", "/api/v1/channels", "/api/v1/policies", "/api/v1/teams", "/api/v1/people", "/api/v1/tunables", "/api/v1/maintenance", "/api/v1/nodes", "/api/v1/status_pages", "/api/v1/import"} {
 		if path == p || strings.HasPrefix(path, p+"/") {
 			return true
 		}

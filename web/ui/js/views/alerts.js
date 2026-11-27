@@ -163,7 +163,7 @@ function RequestPanel({ kind, opts, docs }) {
   const key = kind + JSON.stringify(opts);
   useEffect(() => {
     const id = setTimeout(async () => {
-      try { setPv(await post('/channels/request-preview', { kind, opts, lang: currentLang() })); } catch (e) { setPv({ ok: false, error: errText(e) }); }
+      try { setPv(await post('/channels/request_preview', { kind, opts, lang: currentLang() })); } catch (e) { setPv({ ok: false, error: errText(e) }); }
     }, 400);
     return () => clearTimeout(id);
   }, [key]);
@@ -364,7 +364,7 @@ function IssueLine({ i }) {
 
 function ChannelsTab() {
   const list = useFetch(() => listOf('/channels'), []);
-  const kinds = useFetch(() => listOf('/channel-kinds'), []);
+  const kinds = useFetch(() => listOf('/channel_kinds'), []);
   const [edit, setEdit] = useState(null);
   const remove = async (c) => {
     if (!await confirmDialog(t('ui.ch.delete_confirm', { name: c.name }), { danger: true, ok: t('ui.delete') })) return;
@@ -408,7 +408,7 @@ function ChannelsTab() {
 // AlertChannels shows and sets the alert channels: where every alert goes,
 // in order (the next only when one fails) or all at once.
 function AlertChannels({ channels, onSaved }) {
-  const d = useFetch(() => get('/alert-channels'), [channels]);
+  const d = useFetch(() => get('/alert_channels'), [channels]);
   const [form, setForm] = useState(null);
   const [busy, setBusy] = useState(false);
   if (!d.data) return null;
@@ -416,7 +416,7 @@ function AlertChannels({ channels, onSaved }) {
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
-    try { await put('/alert-channels', form); toast(t('ui.saved')); setForm(null); d.reload(); onSaved(); } catch (e2) { toastError(e2); }
+    try { await put('/alert_channels', form); toast(t('ui.saved')); setForm(null); d.reload(); onSaved(); } catch (e2) { toastError(e2); }
     setBusy(false);
   };
   return html`<div class="card"><div class="bd row small" style=${{ padding: '10px 14px' }}>

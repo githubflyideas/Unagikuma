@@ -1929,7 +1929,7 @@
         "x-token-scope": "write"
       }
     },
-    "/api/v1/app-profiles": {
+    "/api/v1/app_profiles": {
       "get": {
         "operationId": "appProfiles",
         "responses": {
@@ -3533,7 +3533,7 @@
         ]
       }
     },
-    "/api/v1/channel-kinds": {
+    "/api/v1/channel_kinds": {
       "get": {
         "operationId": "channelKinds",
         "responses": {
@@ -4004,7 +4004,7 @@
         "x-token-scope": "admin"
       }
     },
-    "/api/v1/channels/request-preview": {
+    "/api/v1/channels/request_preview": {
       "post": {
         "operationId": "channelRequestPreview",
         "parameters": [
@@ -5049,7 +5049,7 @@
         "x-token-scope": "admin"
       }
     },
-    "/api/v1/cluster/join-codes": {
+    "/api/v1/cluster/join_codes": {
       "post": {
         "operationId": "joinCode",
         "parameters": [
@@ -5307,7 +5307,7 @@
         "x-token-scope": "admin"
       }
     },
-    "/api/v1/cluster/site-local": {
+    "/api/v1/cluster/site_local": {
       "get": {
         "operationId": "siteLocal",
         "responses": {
@@ -8590,7 +8590,7 @@
         "x-token-scope": "write"
       }
     },
-    "/api/v1/monitor-options": {
+    "/api/v1/monitor_options": {
       "get": {
         "operationId": "monitorOptions",
         "responses": {
@@ -8934,7 +8934,7 @@
         "x-token-scope": "write"
       }
     },
-    "/api/v1/monitors/bulk-delete": {
+    "/api/v1/monitors/bulk_delete": {
       "post": {
         "operationId": "monitorBulkDelete",
         "parameters": [
@@ -9066,7 +9066,7 @@
         "x-token-scope": "write"
       }
     },
-    "/api/v1/monitors/bulk-pause": {
+    "/api/v1/monitors/bulk_pause": {
       "post": {
         "operationId": "monitorBulkPause",
         "parameters": [
@@ -9502,7 +9502,7 @@
         "x-token-scope": "admin"
       }
     },
-    "/api/v1/monitors/same-check": {
+    "/api/v1/monitors/same_check": {
       "post": {
         "operationId": "sameCheck",
         "parameters": [
@@ -15807,7 +15807,7 @@
         "x-token-scope": "admin"
       }
     },
-    "/api/v1/saved-alerts": {
+    "/api/v1/saved_alerts": {
       "get": {
         "operationId": "savedAlerts",
         "responses": {
@@ -16896,7 +16896,7 @@
         "x-token-scope": "admin"
       }
     },
-    "/api/v1/settings/exit-countries": {
+    "/api/v1/settings/exit_countries": {
       "get": {
         "operationId": "exitCities",
         "responses": {
@@ -16989,7 +16989,7 @@
         "x-token-scope": "admin"
       }
     },
-    "/api/v1/settings/exit-suggest": {
+    "/api/v1/settings/exit_suggest": {
       "post": {
         "operationId": "exitSuggest",
         "parameters": [
@@ -17454,7 +17454,7 @@
         ]
       }
     },
-    "/api/v1/status-pages": {
+    "/api/v1/status_pages": {
       "get": {
         "operationId": "statusPages",
         "responses": {
@@ -17538,7 +17538,7 @@
         "x-token-scope": "read"
       }
     },
-    "/api/v1/status-pages/{name}": {
+    "/api/v1/status_pages/{name}": {
       "put": {
         "operationId": "statusPageUpdate",
         "parameters": [
@@ -17701,7 +17701,7 @@
         "x-token-scope": "write"
       }
     },
-    "/api/v1/status-support": {
+    "/api/v1/status_support": {
       "get": {
         "operationId": "supportGet",
         "responses": {
@@ -19736,7 +19736,7 @@
         "x-token-scope": "admin"
       }
     },
-    "/api/v1/alert-channels": {
+    "/api/v1/alert_channels": {
       "get": {
         "operationId": "alertChannelsGet",
         "responses": {

@@ -20,7 +20,7 @@ func TestSavedAlertsListed(t *testing.T) {
 			N             int
 		} `json:"items"`
 	}
-	if c := e.do("GET", "/api/v1/saved-alerts", nil, &r); c != 200 {
+	if c := e.do("GET", "/api/v1/saved_alerts", nil, &r); c != 200 {
 		t.Fatalf("get: %d", c)
 	}
 	if len(r.Days) != 7 || len(r.Items) != 2 {

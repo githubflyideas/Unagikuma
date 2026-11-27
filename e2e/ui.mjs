@@ -129,7 +129,7 @@ await step('the alert channels are chosen, and a monitor can be muted', async ()
   await page.locator('.card:has-text("Alert channels") button:has-text("Edit")').click();
   if (!(await page.locator('.modal li, .modal .row.nowrap:has-text("alerts")').count())) await page.click('.modal .chip:has-text("+ alerts")');
   await page.click('.modal .btn.primary:has-text("Save")');
-  await until('the alert channels to include it', async () => (await api('/alert-channels')).channels.includes('alerts'));
+  await until('the alert channels to include it', async () => (await api('/alert_channels')).channels.includes('alerts'));
   await page.goto(base + '/#/monitors/same-check-b/edit');
   await page.locator('label.switch:has-text("Mute") input').check();
   await page.click('form button.primary');
@@ -177,8 +177,8 @@ await step('an account limited to a group sees only it', async () => {
   const r = await tp.evaluate(async () => {
     const csrf = (await (await fetch('/api/v1/session')).json()).csrf;
     const h = { 'Content-Type': 'application/json', 'X-Unagikuma-CSRF': csrf };
-    const read = (await fetch('/api/v1/alert-channels')).status;
-    const save = (await fetch('/api/v1/alert-channels', { method: 'PUT', headers: h, body: JSON.stringify({ channels: [] }) })).status;
+    const read = (await fetch('/api/v1/alert_channels')).status;
+    const save = (await fetch('/api/v1/alert_channels', { method: 'PUT', headers: h, body: JSON.stringify({ channels: [] }) })).status;
     return { read, save };
   });
   if (r.read !== 403 || r.save !== 403) throw new Error('alert channels for a limited account: ' + JSON.stringify(r));
@@ -238,13 +238,13 @@ await step('a new e-mail address is offered for the contact directory', async ()
   await page.click('button:has-text("Add and save")');
   await page.waitForSelector('td:has-text("ops-mail")');
   if (await page.$('tr:has-text("ops-mail") .rdot')) throw new Error('a registered address has a red dot');
-  const li = (await api('/people')).people.find((p) => p.emails.includes('li@example.com'));
+  const li = (await api('/people')).items.find((p) => p.emails.includes('li@example.com'));
   if (!li || li.notify.join(',') !== 'ops-mail' || li.reach) throw new Error('the new contact is not reached through ops-mail: ' + JSON.stringify(li));
   // Li goes on leave: the channel gets a red dot with the reason.
   await page.goto(base + '/#/alerts/contacts');
   await page.waitForSelector('td:has-text("Li Lei")');
   await page.selectOption('tr:has-text("Li Lei") select', 'leave');
-  await until('Li to be on leave', async () => (await api('/people')).people.some((p) => p.id === li.id && p.status === 'leave'));
+  await until('Li to be on leave', async () => (await api('/people')).items.some((p) => p.id === li.id && p.status === 'leave'));
   await page.goto(base + '/#/alerts/channels');
   await page.waitForSelector('tr:has-text("ops-mail") .rdot');
   // Then leaves, which asks first.
@@ -252,7 +252,7 @@ await step('a new e-mail address is offered for the contact directory', async ()
   await page.waitForSelector('td:has-text("Li Lei")');
   await page.selectOption('tr:has-text("Li Lei") select', 'left');
   await page.click('.modal .btn.danger');
-  await until('Li to have left', async () => (await api('/people')).people.some((p) => p.id === li.id && p.status === 'left'));
+  await until('Li to have left', async () => (await api('/people')).items.some((p) => p.id === li.id && p.status === 'left'));
   // It is a problem too: listed on the Problems page, whose menu entry gets a red dot.
   await page.goto(base + '/#/problems');
   await page.waitForSelector('.setup-issues a[href="#/alerts/contacts"]');
@@ -281,7 +281,7 @@ await step('the daily report covers every monitor and can be switched off per pe
   await page.goto(base + '/#/alerts/contacts');
   await page.waitForSelector('td:has-text("Li Lei")');
   await page.uncheck('tr:has-text("Li Lei") label.switch input');
-  await until('Li to have switched it off', async () => (await api('/people')).people.some((p) => p.name === 'Li Lei' && p.no_report));
+  await until('Li to have switched it off', async () => (await api('/people')).items.some((p) => p.name === 'Li Lei' && p.no_report));
   if (errors.length) throw new Error(errors.join(' | '));
 });
 

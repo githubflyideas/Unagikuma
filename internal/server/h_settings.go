@@ -700,7 +700,17 @@ func (s *Server) heartbeatPreview(w http.ResponseWriter, r *http.Request) (any, 
 }
 
 func (s *Server) heartbeatTest(w http.ResponseWriter, r *http.Request) (any, error) {
-	return s.app.BeatNow(r.Context()), nil
+	st := s.app.BeatNow(r.Context())
+	return map[string]any{"configured": st.Configured, "target": st.Target, "last_ok": timeOrNil(st.LastOK),
+		"last_error": st.LastError, "last_try": timeOrNil(st.LastTry)}, nil
+}
+
+// timeOrNil is a time for an answer: null when it never happened.
+func timeOrNil(t time.Time) any {
+	if t.IsZero() {
+		return nil
+	}
+	return t
 }
 
 func (s *Server) tokensList(w http.ResponseWriter, r *http.Request) (any, error) {

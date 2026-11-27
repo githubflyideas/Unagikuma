@@ -9,15 +9,15 @@ func TestMonitorBulkDelete(t *testing.T) {
 	e := newEnv(t, testBind, nil)
 	e.setup()
 	cfg := func() string { return e.app.Config().ETag() }
-	if c := e.do("POST", "/api/v1/monitors/bulk-delete", map[string]any{"names": []string{}}, nil); c != 400 {
+	if c := e.do("POST", "/api/v1/monitors/bulk_delete", map[string]any{"names": []string{}}, nil); c != 400 {
 		t.Fatalf("empty: %d", c)
 	}
-	if c := e.do("POST", "/api/v1/monitors/bulk-delete", map[string]any{"names": []string{"web", "nope"}}, nil); c != 404 || e.app.Config().Config.FindMonitor("web") == nil {
+	if c := e.do("POST", "/api/v1/monitors/bulk_delete", map[string]any{"names": []string{"web", "nope"}}, nil); c != 404 || e.app.Config().Config.FindMonitor("web") == nil {
 		t.Fatalf("unknown name: %d", c)
 	}
 	// A stale etag fails the whole request: nothing is deleted.
 	before := cfg()
-	if c := e.do("POST", "/api/v1/monitors/bulk-delete", map[string]any{"names": []string{"web", "db"}, "etags": map[string]string{"db": `"stale"`}}, nil); c != 412 {
+	if c := e.do("POST", "/api/v1/monitors/bulk_delete", map[string]any{"names": []string{"web", "db"}, "etags": map[string]string{"db": `"stale"`}}, nil); c != 412 {
 		t.Fatalf("stale etag: %d", c)
 	}
 	if cfg() != before || e.app.Config().Config.FindMonitor("web") == nil {
@@ -25,7 +25,7 @@ func TestMonitorBulkDelete(t *testing.T) {
 	}
 	serial := e.app.Config().Serial
 	var st struct{ Serial uint32 }
-	if c := e.do("POST", "/api/v1/monitors/bulk-delete", map[string]any{"names": []string{"web", "db"}}, &st); c != 200 {
+	if c := e.do("POST", "/api/v1/monitors/bulk_delete", map[string]any{"names": []string{"web", "db"}}, &st); c != 200 {
 		t.Fatalf("delete: %d", c)
 	}
 	c := e.app.Config().Config
@@ -41,14 +41,14 @@ func TestMonitorBulkPause(t *testing.T) {
 	e := newEnv(t, testBind, nil)
 	e.setup()
 	paused := func(name string) bool { return e.app.LocalPaused(name) }
-	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{}, "paused": true}, nil); c != 400 {
+	if c := e.do("POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{}, "paused": true}, nil); c != 400 {
 		t.Fatalf("empty: %d", c)
 	}
-	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web", "nope"}, "paused": true}, nil); c != 404 || paused("web") {
+	if c := e.do("POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{"web", "nope"}, "paused": true}, nil); c != 404 || paused("web") {
 		t.Fatalf("unknown name: %d", c)
 	}
 	// A stale etag refuses the whole batch.
-	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web", "db"}, "paused": true, "etags": map[string]string{"db": `"stale"`}}, nil); c != 412 || paused("web") || paused("db") {
+	if c := e.do("POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{"web", "db"}, "paused": true, "etags": map[string]string{"db": `"stale"`}}, nil); c != 412 || paused("web") || paused("db") {
 		t.Fatalf("stale etag: %d", c)
 	}
 	var st struct {
@@ -57,7 +57,7 @@ func TestMonitorBulkPause(t *testing.T) {
 		SiteLocal bool     `json:"site_local"`
 	}
 	serial := e.app.Config().Serial
-	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web", "db", "web"}, "paused": true}, &st); c != 200 || st.Changed != 2 || !st.SiteLocal {
+	if c := e.do("POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{"web", "db", "web"}, "paused": true}, &st); c != 200 || st.Changed != 2 || !st.SiteLocal {
 		t.Fatalf("pause: %d %+v", c, st)
 	}
 	if !paused("web") || !paused("db") || paused("backup") {
@@ -68,13 +68,13 @@ func TestMonitorBulkPause(t *testing.T) {
 	}
 	// Pausing again changes nothing; one already paused and one running
 	// only touches the running one.
-	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web", "backup"}, "paused": true}, &st); c != 200 || st.Changed != 1 || !paused("backup") {
+	if c := e.do("POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{"web", "backup"}, "paused": true}, &st); c != 200 || st.Changed != 1 || !paused("backup") {
 		t.Fatalf("pause again: %d %+v", c, st)
 	}
-	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web"}, "paused": true}, &st); c != 200 || st.Changed != 0 || e.app.Config().Serial != serial {
+	if c := e.do("POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{"web"}, "paused": true}, &st); c != 200 || st.Changed != 0 || e.app.Config().Serial != serial {
 		t.Fatalf("no-op wrote the file: %d %+v", c, st)
 	}
-	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web", "db", "backup"}, "paused": false}, &st); c != 200 || st.Changed != 3 || len(st.Skipped) != 0 {
+	if c := e.do("POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{"web", "db", "backup"}, "paused": false}, &st); c != 200 || st.Changed != 3 || len(st.Skipped) != 0 {
 		t.Fatalf("resume: %d %+v", c, st)
 	}
 	if paused("web") || paused("db") || paused("backup") {

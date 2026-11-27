@@ -138,13 +138,13 @@ function NoticeForm({ initial, onClose, onSaved }) {
 // SupportFooter sets the text at the foot of every status page in place of
 // "Powered by Unagikuma": a registered installation only.
 export function SupportFooter() {
-  const d = useFetch(() => get('/status-support'), []);
+  const d = useFetch(() => get('/status_support'), []);
   const [text, setText] = useState(null);
   if (!d.data) return null;
   const v = text === null ? d.data.text : text;
   const save = async (e) => {
     e.preventDefault();
-    try { await put('/status-support', { text: v }); toast(t('ui.saved')); d.reload(); setText(null); } catch (err) { toastError(err); }
+    try { await put('/status_support', { text: v }); toast(t('ui.saved')); d.reload(); setText(null); } catch (err) { toastError(err); }
   };
   return html`<div class="card"><div class="hd"><h3>${t('ui.notice.support')}</h3></div><div class="bd">
     <form class="form" onSubmit=${save}>
@@ -157,7 +157,7 @@ export function SupportFooter() {
 
 // PublicPages lists the public status pages with their addresses to copy.
 function PublicPages() {
-  const pages = useFetch(() => listOf('/status-pages'), []);
+  const pages = useFetch(() => listOf('/status_pages'), []);
   if (!pages.data) return null;
   return html`<div class="card"><div class="hd"><h3>${t('ui.notice.pages_title')}</h3></div>
     <div class="bd">${pages.data.length ? html`<div class="col" style=${{ gap: '8px' }}>${pages.data.map(p => html`<div class="row">

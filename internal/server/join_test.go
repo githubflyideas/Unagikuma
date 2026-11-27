@@ -40,7 +40,7 @@ func TestJoinWithCode(t *testing.T) {
 		Code   string `json:"code"`
 		Server string `json:"server"`
 	}
-	if master.do("POST", "/api/v1/cluster/join-codes", map[string]any{}, &jc) != 200 || !strings.HasPrefix(jc.Code, "nkjoin1.") {
+	if master.do("POST", "/api/v1/cluster/join_codes", map[string]any{}, &jc) != 200 || !strings.HasPrefix(jc.Code, "nkjoin1.") {
 		t.Fatalf("join code: %+v", jc)
 	}
 	joiner := tlsEnv(t, `@ IN SOA box. admin.localhost. ( 2026102801 1s 500ms 300ms 2 )
@@ -106,7 +106,7 @@ sw      IN PING 10.9.9.1
 	var other struct {
 		Code string `json:"code"`
 	}
-	joiner.do("POST", "/api/v1/cluster/join-codes", map[string]any{}, &other)
+	joiner.do("POST", "/api/v1/cluster/join_codes", map[string]any{}, &other)
 	if c := master.do("POST", "/api/v1/cluster/join", map[string]any{"code": other.Code, "node": "m2"}, nil); c != 409 {
 		t.Fatalf("master joining another cluster: %d", c)
 	}
