@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.1.3 — 2026-11-27
 
 **Security**
 - Sign-in: five failed sign-ins from one address within a minute lock that address out for a minute, and the lock is applied before the password is checked; a successful sign-in clears the count. A flood of wrong passwords from one address no longer keeps the password checks busy for everyone else. As a backstop, at most eight password hashes now run at once (was two).
