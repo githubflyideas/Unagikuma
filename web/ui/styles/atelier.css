@@ -15,7 +15,7 @@
   --side-text: #fff6e8; --side-muted: #ffe6c8; --side-hover: rgba(255, 246, 232, .12); --side-on: #fff6e8; --side-on-text: #8f3a07; --side-mark: #fff6e8;
   color-scheme: light;
 }
-:root[data-style="atelier"] .themes { display: none; }
+
 /* ===== Ledger layout: the sidebar is taken apart. The navigation is a
    row of index tabs sticking out of the right edge of the book (icons;
    the open one shows its name), every card is a ruled ledger page with
@@ -24,7 +24,7 @@
 :root[data-style="atelier"] .shell, :root[data-style="atelier"] .shell.mini { display: block; max-width: none; background: transparent; box-shadow: none; }
 :root[data-style="atelier"] .side { display: contents; }
 :root[data-style="atelier"] .side::before { display: none; }
-:root[data-style="atelier"] .themes { display: none; }
+
 /* masthead: a stamp at the top left */
 :root[data-style="atelier"] .brand { position: absolute; z-index: 60; inset-block-start: 18px; inset-inline-start: 26px; flex-direction: row; gap: 12px; padding: 0; align-items: center; text-align: start; font-family: var(--serif); font-style: italic; font-size: 22px; letter-spacing: .04em; color: var(--accent); }
 :root[data-style="atelier"] .brand img { width: 52px; height: 52px; border-radius: 50%; padding: 5px; background: #fffaf0; box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 4px #fffaf0, 0 0 0 5.5px var(--accent); filter: sepia(.75) saturate(1.25) hue-rotate(-12deg); }
@@ -85,3 +85,25 @@
   :root[data-style="atelier"] .top { padding: 8px 12px; }
   :root[data-style="atelier"] .page { padding: 14px 12px 40px; max-width: none; }
 }
+
+/* Top-menu chrome: ledger index tabs sit under the title, not on the
+   right edge; language, zoom and sign-out move to a centred footer. */
+:root[data-style="atelier"][data-chrome="top"] .shell,
+:root[data-style="atelier"][data-chrome="top"] .shell.mini { display: grid !important; grid-template-columns: 1fr !important; }
+:root[data-style="atelier"][data-chrome="top"] .side { display: none !important; }
+:root[data-style="atelier"][data-chrome="top"] .side.open { display: flex !important; flex-direction: column; position: fixed; inset-block: 0; inset-inline-start: 0; width: 260px; z-index: 40; overflow-y: auto; padding: 14px 10px; background: #b9500d; }
+:root[data-style="atelier"][data-chrome="top"] .main { padding-inline: 24px !important; }
+:root[data-style="atelier"][data-chrome="top"] .top { position: relative; margin: 0 auto; width: 100%; max-width: 1180px; padding: 28px 12px 8px; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 8px 12px; }
+:root[data-style="atelier"][data-chrome="top"] .top-brand { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--accent); }
+:root[data-style="atelier"][data-chrome="top"] .top-brand img { width: 48px; height: 48px; border-radius: 50%; padding: 4px; background: #fffaf0; box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 4px #fffaf0, 0 0 0 5.5px var(--accent); }
+:root[data-style="atelier"][data-chrome="top"] .top-nav { flex: 1 1 100%; order: 4; position: static; inset: auto; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 6px; }
+:root[data-style="atelier"][data-chrome="top"] .top-nav a { width: auto !important; height: auto !important; min-height: 40px; padding: 8px 14px 10px; border-radius: 10px 10px 0 0; color: #fff6e8; font-family: var(--serif); font-size: 14px; letter-spacing: .04em; background: var(--tab, #b9500d); box-shadow: 0 -2px 6px rgba(70, 40, 10, .2); text-decoration: none; }
+:root[data-style="atelier"][data-chrome="top"] .top-nav a:nth-child(5n+1) { --tab: #b9500d; }
+:root[data-style="atelier"][data-chrome="top"] .top-nav a:nth-child(5n+2) { --tab: #8a5a2b; }
+:root[data-style="atelier"][data-chrome="top"] .top-nav a:nth-child(5n+3) { --tab: #7a6a1c; }
+:root[data-style="atelier"][data-chrome="top"] .top-nav a:nth-child(5n+4) { --tab: #9c3d2a; }
+:root[data-style="atelier"][data-chrome="top"] .top-nav a:nth-child(5n) { --tab: #5f4a37; }
+:root[data-style="atelier"][data-chrome="top"] .top-nav a.on { background: var(--panel); color: var(--accent); font-weight: 700; box-shadow: inset 0 4px 0 var(--tab, #b9500d); }
+:root[data-style="atelier"][data-chrome="top"] .top-nav a .lbl { opacity: 1 !important; display: inline; }
+:root[data-style="atelier"][data-chrome="top"] .theme-dock { flex: 1 1 100%; order: 5; }
+:root[data-style="atelier"][data-chrome="top"] .page-foot { background: rgba(255, 250, 240, .94); border-top: 1px dashed var(--border-strong); }

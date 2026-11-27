@@ -20,7 +20,7 @@
   --noc-glow: 0 0 0 1px rgba(56, 189, 248, .25), 0 0 24px rgba(56, 189, 248, .12);
   color-scheme: dark;
 }
-:root[data-style="noc"] .themes { display: none; }
+
 
 /* ---- the room: a dark floor with a faint blueprint grid ---- */
 :root[data-style="noc"] body {
@@ -143,3 +143,16 @@
 @media (prefers-reduced-motion: reduce) {
   :root[data-style="noc"] .top::after, :root[data-style="noc"] .verdict.critical, :root[data-style="noc"] .tbl tr.critical td:first-child, :root[data-style="noc"] .pill.critical::before { animation: none; }
 }
+
+/* Top-menu chrome: a command bar instead of the icon rail. */
+:root[data-style="noc"][data-chrome="top"] .shell,
+:root[data-style="noc"][data-chrome="top"] .shell.mini { display: grid !important; grid-template-columns: 1fr !important; }
+:root[data-style="noc"][data-chrome="top"] .side { display: none !important; }
+:root[data-style="noc"][data-chrome="top"] .side.open { display: flex !important; flex-direction: column; position: fixed; inset-block: 0; inset-inline-start: 0; width: 240px; z-index: 40; overflow: auto; padding: 12px; background: rgba(7, 15, 27, .96); }
+:root[data-style="noc"][data-chrome="top"] .top { flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 14px; padding: 10px 20px 8px; background: rgba(7, 15, 27, .88); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
+:root[data-style="noc"][data-chrome="top"] .top-brand { font-family: var(--noc-mono); font-size: 13px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--text); }
+:root[data-style="noc"][data-chrome="top"] .top-nav { flex: 1 1 100%; order: 4; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+:root[data-style="noc"][data-chrome="top"] .top-nav a { padding: 8px 12px; border-radius: 3px; font-family: var(--noc-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--side-text); text-decoration: none; }
+:root[data-style="noc"][data-chrome="top"] .top-nav a.on { background: var(--side-on); color: var(--side-on-text); box-shadow: var(--noc-glow); }
+:root[data-style="noc"][data-chrome="top"] .theme-dock { flex: 1 1 100%; order: 5; }
+:root[data-style="noc"][data-chrome="top"] .page-foot { background: rgba(7, 15, 27, .92); border-top: 1px solid var(--border); }

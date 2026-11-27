@@ -119,7 +119,10 @@ export function Monitors({ query }) {
           case 'flag': hit = r.flags.includes(v); break;
           case 'attempts': hit = cmpNum(r.max_attempts, v); break;
           // failed:2 / failed:>=2 — rounds that failed in a row so far (a hard failure shows the monitor's attempts).
-          case 'failed': hit = r.status !== 'ok' && cmpNum(r.attempt, v); break;
+          case 'failed':
+          case 'failures': hit = cmpNum(r.attempt, v); break;
+          case 'retry':
+          case 'retry_s': hit = cmpNum(r.retry_s || 0, String(v).replace(/s$/, '')); break;
           default: hit = [r.name, r.title, r.target, r.group, r.keyword].join(' ').toLowerCase().includes(term);
         }
         return hit !== neg;
