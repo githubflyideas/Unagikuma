@@ -33,7 +33,7 @@
 :root[data-style="atelier"] .nav .rdot { margin: 0 10px 0 auto !important; }
 /* the style chips: a small row at the top right, next to the tabs */
 /* the account stamp at the bottom left */
-:root[data-style="atelier"] .side .foot { position: fixed; z-index: 60; inset-block-end: 10px; inset-inline-end: 6px; width: 104px; margin: 0; padding: 6px 6px; flex-direction: column; align-items: stretch; gap: 5px; background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px dashed var(--border-strong); border-radius: 4px; color: var(--text); font-size: 11px; text-align: center; }
+:root[data-style="atelier"] .side .foot { position: fixed; z-index: 60; inset-block-end: 10px; inset-inline-end: 6px; width: 150px; margin: 0; padding: 6px 6px; flex-direction: column; align-items: stretch; gap: 5px; background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px dashed var(--border-strong); border-radius: 4px; color: var(--text); font-size: 11px; text-align: center; }
 :root[data-style="atelier"] .side .foot .host { display: none; }
 :root[data-style="atelier"] .side .foot .row { flex-wrap: wrap; justify-content: center; gap: 4px; } :root[data-style="atelier"] .side .foot .lang-zoom { flex-direction: column; }
 :root[data-style="atelier"] .side .foot select { width: 100%; max-width: none; font-size: 11.5px; padding: 2px; background: var(--panel); border: 1px solid var(--border-strong); }
@@ -43,7 +43,7 @@
 :root[data-style="atelier"] .top { position: static; margin: 0 auto; width: 100%; max-width: 1180px; padding: 84px 12px 6px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
 :root[data-style="atelier"] .top > .btn.sm:first-child { display: none; }
 :root[data-style="atelier"] .top .crumbs { flex: 0 0 100%; order: -1; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 44px; line-height: 1.1; color: var(--accent); letter-spacing: .01em; margin-bottom: 6px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
-:root[data-style="atelier"] .main { padding-inline: 116px; }
+:root[data-style="atelier"] .main { padding-inline: 162px; }
 :root[data-style="atelier"] .page { margin: 0 auto; width: 100%; max-width: 1180px; padding: 18px 12px 80px; gap: 26px; }
 /* ledger pages */
 :root[data-style="atelier"] .card, :root[data-style="atelier"] .modal { position: relative; outline: 0; border: 1px solid var(--border-strong); border-radius: 3px 10px 10px 3px; padding-inline-start: 46px; box-shadow: 0 2px 0 var(--panel) inset, 4px 6px 16px color-mix(in srgb, var(--text) 16%, transparent), 8px 12px 0 -4px var(--panel-2), 8px 12px 0 -3px var(--border-strong);
