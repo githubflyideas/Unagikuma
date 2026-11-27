@@ -433,7 +433,7 @@ func TestNextSerial(t *testing.T) {
 	}{
 		{2026102101, day, 2026102201, false},
 		{2026102201, day, 2026102202, false},
-		{2026102299, day, 2026102300, false}, // borrows the next day's prefix
+		{2026102299, day, 2026102300, true}, // borrows the next day's prefix, and says so
 		{5, day, 2026102201, false},
 		{2026102101, day.AddDate(0, 0, 30), 2026102102, true}, // clock jumped
 	}
