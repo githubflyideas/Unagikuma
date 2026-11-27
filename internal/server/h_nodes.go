@@ -295,11 +295,30 @@ func (s *Server) nodeHandover(w http.ResponseWriter, r *http.Request) (any, erro
 	return map[string]any{"node": name, "term": term}, nil
 }
 
+// localNodeJSON is one node in a replica's own view, with durations in
+// milliseconds like every other API field.
+type localNodeJSON struct {
+	Node     string    `json:"node"`
+	Online   bool      `json:"online"`
+	Since    time.Time `json:"since"`
+	LastSeen time.Time `json:"last_seen"`
+	RTTMS    float64   `json:"rtt_ms"`
+	SkewMS   float64   `json:"skew_ms"`
+	Serial   uint32    `json:"serial"`
+	Version  string    `json:"version,omitempty"`
+	Verdict  string    `json:"verdict,omitempty"`
+}
+
 // localNodes is a replica's majority view of the other nodes while it
 // checks on its own (empty otherwise).
-func (s *Server) localNodes() []engine.NodeStatus {
+func (s *Server) localNodes() []localNodeJSON {
+	out := []localNodeJSON{}
 	if !s.app.ReplicaStatus().Local {
-		return []engine.NodeStatus{}
+		return out
 	}
-	return s.app.Engine().Nodes()
+	for _, n := range s.app.Engine().Nodes() {
+		out = append(out, localNodeJSON{Node: n.Node, Online: n.Online, Since: n.Since, LastSeen: n.LastSeen,
+			RTTMS: float64(n.RTT) / 1e6, SkewMS: float64(n.Skew) / 1e6, Serial: n.Serial, Version: n.Version, Verdict: n.Verdict})
+	}
+	return out
 }

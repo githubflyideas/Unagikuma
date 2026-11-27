@@ -555,7 +555,7 @@ func (s *Store) MergedSites() ([]string, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []string
+	out := []string{}
 	for rows.Next() {
 		var x string
 		if err := rows.Scan(&x); err != nil {
