@@ -24,12 +24,12 @@ type Lang struct {
 	RTL  bool   `json:"rtl,omitempty"`
 }
 
-// langs is ordered by total number of speakers.
+// langs is ordered by total number of speakers, most first.
 var langs = []Lang{
-	{"en", "English", false}, {"zh", "简体中文", false}, {"zh-TW", "繁體中文", false}, {"hi", "हिन्दी", false}, {"es", "Español", false},
-	{"ar", "العربية", true}, {"fr", "Français", false}, {"bn", "বাংলা", false}, {"pt", "Português", false},
-	{"ru", "Русский", false}, {"id", "Bahasa Indonesia", false}, {"ur", "اردو", true}, {"de", "Deutsch", false},
-	{"ja", "日本語", false}, {"vi", "Tiếng Việt", false}, {"ko", "한국어", false},
+	{"en", "English", false}, {"zh", "简体中文", false}, {"hi", "हिन्दी", false}, {"es", "Español", false},
+	{"fr", "Français", false}, {"ar", "العربية", true}, {"bn", "বাংলা", false}, {"pt", "Português", false},
+	{"ru", "Русский", false}, {"ur", "اردو", true}, {"id", "Bahasa Indonesia", false}, {"de", "Deutsch", false},
+	{"ja", "日本語", false}, {"vi", "Tiếng Việt", false}, {"ko", "한국어", false}, {"zh-TW", "繁體中文", false},
 }
 
 var catalogs = map[string]map[string]string{}

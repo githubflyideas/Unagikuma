@@ -4,6 +4,7 @@ import { t, tn, dur, detailText } from '../i18n.js';
 import { get, post, del } from '../api.js';
 import { useFetch, useLive, Loading, ErrorBox, Empty, Ago, Dot, Modal, Field, toast, toastError, reasonText, enc, href, useDocTitle, shortId } from '../ui.js';
 
+import { Verdict } from '../verdict.js';
 import { HistorySite } from './history-site.js';
 
 // AckTrail lists every acknowledgement of an incident, oldest first: a
@@ -200,6 +201,7 @@ export function Problems({ tab }) {
   return html`<div class="page list">
     ${(tab==='all'||tab==='resolved') && html`<${HistorySite} value=${site} onChange=${s=>{setSite(s);setSelected(new Set());}} />`}
     <${ProblemTabs} tab=${tab} />
+    <${Verdict} />
     ${(tab === 'unhandled' || tab === 'all') && html`<${SetupIssues} />`}
     ${selectable && selected.size > 0 && html`<div class="row card" style=${{ padding: '8px 12px' }}>
       <span>${tn('ui.inc.selected', selected.size)}</span><div class="spacer"></div>

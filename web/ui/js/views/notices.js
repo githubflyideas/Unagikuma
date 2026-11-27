@@ -4,7 +4,7 @@
 import { html, useState, useMemo } from '../lib.js';
 import { t, fmtTime } from '../i18n.js';
 import { get, post, del, put, me } from '../api.js';
-import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog } from '../ui.js';
+import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, Copy } from '../ui.js';
 
 const SEVERITIES = ['info', 'minor', 'major', 'maintenance'];
 
@@ -155,6 +155,18 @@ export function SupportFooter() {
     </form></div></div>`;
 }
 
+// PublicPages lists the public status pages with their addresses to copy.
+function PublicPages() {
+  const pages = useFetch(() => get('/status-pages'), []);
+  if (!pages.data) return null;
+  return html`<div class="card"><div class="hd"><h3>${t('ui.notice.pages_title')}</h3></div>
+    <div class="bd">${pages.data.length ? html`<div class="col" style=${{ gap: '8px' }}>${pages.data.map(p => html`<div class="row">
+        <b>${p.title}</b>
+        <a class="ltr mono small" href=${p.url} target="_blank" rel="noopener">${p.url}</a>
+        <div class="spacer"></div><${Copy} text=${p.url} />
+      </div>`)}</div>` : html`<p class="muted small" style=${{ margin: 0 }}>${t('ui.notice.no_pages_hint')}</p>`}</div></div>`;
+}
+
 export function NoticesTab() {
   const list = useFetch(() => get('/announcements'), []);
   const [edit, setEdit] = useState(null);
@@ -166,6 +178,7 @@ export function NoticesTab() {
   return html`<div class="col board" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.notice.intro')}</p>
       ${me.role !== 'viewer' && html`<button class="btn primary" onClick=${() => setEdit({})}>${t('ui.notice.add')}</button>`}</div>
+    <${PublicPages} />
     ${!list.data ? (list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`)
       : !items.length ? html`<${Empty} title=${t('ui.notice.none')}>${t('ui.notice.none_hint')}<//>`
       : html`<div class="card"><div class="bd flush tbl-wrap"><table class="tbl">

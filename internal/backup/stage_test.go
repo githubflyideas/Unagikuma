@@ -175,3 +175,29 @@ func TestApplyFailureRestoresEverything(t *testing.T) {
 		t.Errorf("the staged restore was not set aside: %s", names)
 	}
 }
+
+// A check that refuses the unpacked archive leaves nothing staged and the
+// installation as it was.
+func TestStageCheckRefuses(t *testing.T) {
+	src, db := setup(t)
+	archive := write(t, src, db, Options{Passphrase: "long enough pass"})
+	dst := installation(t, "OLD")
+	_, err := StageChecked(bytes.NewReader(archive), dst, "long enough pass", time.Now(), func(dir string) error {
+		if _, e := os.Stat(filepath.Join(dir, "core.db")); e != nil {
+			t.Errorf("the check should see the unpacked files: %v", e)
+		}
+		return os.ErrInvalid
+	})
+	if err == nil {
+		t.Fatal("a refused archive was staged")
+	}
+	if _, ok := Pending(dst); ok {
+		t.Fatal("a restore is pending after the refusal")
+	}
+	if got := readFile(t, filepath.Join(dst, "core.db")); got != "OLD core.db" {
+		t.Fatalf("core.db changed: %q", got)
+	}
+	if left, _ := filepath.Glob(filepath.Join(dst, ".restore-staging-*")); len(left) != 0 {
+		t.Fatalf("staging left behind: %v", left)
+	}
+}

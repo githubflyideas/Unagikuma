@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"slices"
@@ -893,7 +895,7 @@ func (s *Server) restoreStage(w http.ResponseWriter, r *http.Request) (any, erro
 		}
 		pass = string(b)
 	}
-	st, err := backup.Stage(http.MaxBytesReader(w, r.Body, maxRestoreBytes), s.app.DataDir(), pass, s.now())
+	st, err := backup.StageChecked(http.MaxBytesReader(w, r.Body, maxRestoreBytes), s.app.DataDir(), pass, s.now(), s.checkStaged)
 	if err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) {
@@ -903,6 +905,34 @@ func (s *Server) restoreStage(w http.ResponseWriter, r *http.Request) (any, erro
 	}
 	auditOf(r).note("instance", st.Instance).note("made", st.Created).note("version", st.Version).note("keys", st.Keys).target = "restore"
 	return map[string]any{"staged": st}, nil
+}
+
+// checkStaged refuses a restore this version could not start with: before
+// it is staged, the databases must be readable by this version and the
+// configuration must pass the checks a start makes. Nothing is changed
+// when it refuses.
+func (s *Server) checkStaged(dir string) error {
+	if err := store.CheckSchema(dir); err != nil {
+		return fmt.Errorf("this backup cannot be used with this version, so nothing was changed: %v", err)
+	}
+	src, err := os.ReadFile(filepath.Join(dir, "monitors.conf"))
+	if err != nil {
+		return nil // a backup without a configuration keeps the current one
+	}
+	_, diags := s.app.ValidateConfig(src)
+	var msgs []string
+	for _, d := range diags {
+		if d.Severity == config.SevError && d.Code != "unknown_secret" { // its secrets come with it
+			msgs = append(msgs, d.Error())
+		}
+	}
+	if len(msgs) > 0 {
+		if len(msgs) > 3 {
+			msgs = append(msgs[:3], fmt.Sprintf("… and %d more", len(msgs)-3))
+		}
+		return fmt.Errorf("the configuration in this backup does not pass the checks of this version, so nothing was changed: %s", strings.Join(msgs, "; "))
+	}
+	return nil
 }
 
 // restoreCancel drops the restore waiting for the next start.

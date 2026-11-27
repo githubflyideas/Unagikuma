@@ -131,3 +131,30 @@ func TestRestoreIsStagedNotApplied(t *testing.T) {
 		t.Fatalf("still pending after cancel: %s", st)
 	}
 }
+
+// A backup this version could not start with is refused when it is
+// uploaded: a configuration that fails the checks, or a database written
+// by a newer version.
+func TestCheckStagedRefusesWhatCannotStart(t *testing.T) {
+	e := newEnv(t, testBind, nil)
+	e.setup()
+	dir := t.TempDir()
+	if err := e.srv.checkStaged(dir); err != nil {
+		t.Fatalf("an empty backup folder: %v", err)
+	}
+	// The running installation's own configuration passes.
+	good, _ := os.ReadFile(e.app.ConfigPath())
+	if err := os.WriteFile(filepath.Join(dir, "monitors.conf"), good, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.srv.checkStaged(dir); err != nil {
+		t.Fatalf("a valid configuration: %v", err)
+	}
+	bad := append([]byte("$FILE revision=1\nthis IN NOSUCHRECORD x=\n"), good...)
+	if err := os.WriteFile(filepath.Join(dir, "monitors.conf"), bad, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.srv.checkStaged(dir); err == nil || !strings.Contains(err.Error(), "nothing was changed") {
+		t.Fatalf("a configuration with errors: %v", err)
+	}
+}

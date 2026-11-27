@@ -937,7 +937,7 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 .page-foot, .below-bar { display: flex; justify-content: center; padding: 8px 16px; }
 /* Under a top or bottom menu, the node, run mode, language, zoom and the
    account sit in one quiet row. */
-.page-foot .account-dock, .below-bar .account-dock { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.page-foot .account-dock, .below-bar .account-dock { display: flex; width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px; font-size: 13px; color: var(--muted); }
 .page-foot .account-dock .row, .below-bar .account-dock .row { flex-wrap: nowrap; gap: 8px; }
 .page-foot .account-dock .row .spacer, .below-bar .account-dock .row .spacer { display: none; }
 .page-foot .account-dock select, .below-bar .account-dock select { width: auto; max-width: 8.5rem; padding: 2px 6px; font-size: 12.5px; }
@@ -999,3 +999,9 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 .logo-cycle { position: relative; }
 .logo-cycle::after { content: ""; position: absolute; inset-inline-end: -2px; inset-block-end: -2px; width: 12px; height: 12px; border-radius: 50%;
   background: conic-gradient(#3d7c78, #a8566b, #e0a526, #f28c28, #e0246f, #3d7c78); border: 2px solid var(--panel); }
+
+.verdict-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+
+/* Under a top or bottom menu the page is centred under it (the layouts
+   with a sidebar keep the page at the menu's side). */
+:root[data-chrome="top"] .page, :root[data-chrome="bottom"] .page { margin-inline: auto; }

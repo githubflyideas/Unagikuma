@@ -4,7 +4,7 @@ import { t, tn, setLang, detectLang, loadLanguages, langList, currentLang, fmtTi
 import { get, post, del, setCSRF, setMe, me, onUnauthorized } from './api.js';
 import { startLive, stopLive, onConnection } from './live.js';
 import { useRoute, href, Toasts, ConfirmHost, useFetch, useLive, errText, Field, replaceRoute, monitorsPath, MON_SORTS, PRODUCT, Modal } from './ui.js';
-import { Overview, heldCount } from './views/overview.js';
+import { Overview } from './views/overview.js';
 import { Monitors } from './views/monitors.js';
 import { MonitorDetail } from './views/monitor.js';
 import { MonitorEditor } from './views/editor.js';
@@ -309,7 +309,6 @@ function Shell({ user, onLogout, onLang }) {
         ${chrome !== 'side' && brandBlock('brand top-brand')}
         <div class="crumbs">${t((NAV.find(n => n[0] === (first === '/expiry' ? '/monitors' : first)) || NAV[0])[1])}</div>
         <${Search} route=${route} />
-        ${ov.data && html`<${Verdict} ov=${ov.data} />`}
         ${chrome === 'top' && html`<nav class="top-nav">${navLinks}</nav>`}
       </header>
       ${banner && html`<div class="page" style=${{ paddingBottom: 0 }}><${ConfigBanner} banner=${banner} /></div>`}
@@ -333,27 +332,6 @@ function Shell({ user, onLogout, onLang }) {
       </div>`}
     </div>
   </div>`;
-}
-
-// Verdict sums the whole installation up in one chip, with the counts
-// next to it.
-function Verdict({ ov }) {
-  const paths = ov.paths || [];
-  const anomalies = (ov.health && ov.health.anomalies) || [];
-  const nodeDown = paths.some(p => !p.self && p.online && ['wan_down', 'lan_down', 'no_route'].includes(p.uplink));
-  let cls = 'ok', text = t('ui.top.all_ok');
-  if (anomalies.length || nodeDown) { cls = 'held'; text = t('ui.top.held'); }
-  else if (ov.unhandled > 0) { cls = 'critical'; text = t('ui.top.unhandled', { n: ov.unhandled }); }
-  else if (ov.degraded > 0) { cls = 'warn'; text = t('ui.top.warn'); }
-  else if ((ov.counts.unknown || 0) > 0) { cls = 'unknown'; text = t('ui.top.unknown', { n: ov.counts.unknown }); }
-  const week = ov.value_week || {};
-  const saved = heldCount(week);
-  // The chip counts problems still to handle; the line beside it says how
-  // many monitors fail out of all, so the two numbers do not seem to clash.
-  const down = (ov.counts.critical || 0) + (ov.counts.degraded || 0);
-  const sub = [down ? t('ui.top.down_of', { down, n: ov.counts.total || 0 }) : t('ui.top.monitors', { n: ov.counts.total || 0 }),
-    saved ? t('ui.top.saved', { n: saved }) : ''].filter(Boolean).join(' · ');
-  return html`<a class=${'verdict ' + cls} href=${cls === 'critical' ? '#/problems' : '#/'}><i></i>${text}</a><span class="top-sub">${sub}</span>`;
 }
 
 // RunMode names how this installation runs and opens the run mode page.

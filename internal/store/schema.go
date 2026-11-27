@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -193,6 +194,41 @@ func migrateDB(s *Store, name string, migrations []string) error {
 		}
 		if err := tx.Commit(); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// CheckSchema says whether the databases in dir (core.db, history.db) can
+// be opened by this version: a database from before 3.0.1 cannot be
+// upgraded and one from a newer version cannot be read. A missing
+// database is fine. Nothing in dir is changed.
+func CheckSchema(dir string) error {
+	for _, c := range []struct {
+		name       string
+		migrations []string
+	}{{"core", coreMigrations}, {"history", historyMigrations}} {
+		path := filepath.Join(dir, c.name+".db")
+		if _, err := os.Stat(path); err != nil {
+			continue
+		}
+		db, err := sql.Open("sqlite", "file:"+path+"?mode=ro")
+		if err != nil {
+			return fmt.Errorf("%s.db: %w", c.name, err)
+		}
+		var version int
+		err = db.QueryRow(`PRAGMA user_version`).Scan(&version)
+		db.Close()
+		if err != nil {
+			return fmt.Errorf("%s.db is not a readable database: %w", c.name, err)
+		}
+		current := schemaEpoch + len(c.migrations) - 1
+		switch {
+		case version == 0:
+		case version < schemaEpoch:
+			return fmt.Errorf("%s.db is from before 3.0.1 (schema %d) and cannot be upgraded", c.name, version)
+		case version > current:
+			return fmt.Errorf("%s.db was written by a newer unagikuma (schema %d > %d)", c.name, version, current)
 		}
 	}
 	return nil

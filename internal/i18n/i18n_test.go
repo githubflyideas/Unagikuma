@@ -50,7 +50,7 @@ func TestNormalizeAndLangs(t *testing.T) {
 	if Normalize("pt_BR") != "pt" || Normalize("ZH-hant") != "zh-TW" || Normalize("zh-CN") != "zh" || Normalize("zh-TW") != "zh-TW" || Normalize("") != "en" || Normalize("tlh") != "en" {
 		t.Fatal("normalize")
 	}
-	if len(Langs()) != 16 || Langs()[1].Name != "简体中文" || Langs()[2].Code != "zh-TW" || !Langs()[5].RTL {
+	if len(Langs()) != 16 || Langs()[1].Name != "简体中文" || Langs()[15].Code != "zh-TW" || !Langs()[5].RTL {
 		t.Fatal("langs")
 	}
 	if b, ok := Catalog("zh"); !ok || len(b) == 0 {

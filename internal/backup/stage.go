@@ -37,6 +37,13 @@ type Staged struct {
 // staged before. A damaged archive, a wrong passphrase or an archive
 // without a database leaves nothing behind.
 func Stage(r io.Reader, dataDir, passphrase string, now time.Time) (Staged, error) {
+	return StageChecked(r, dataDir, passphrase, now, nil)
+}
+
+// StageChecked is Stage with one more check: check is given the folder the
+// archive was unpacked into and can refuse it (a configuration or
+// database this version cannot run), which leaves nothing behind either.
+func StageChecked(r io.Reader, dataDir, passphrase string, now time.Time, check func(dir string) error) (Staged, error) {
 	var st Staged
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
 		return st, err
@@ -57,6 +64,11 @@ func Stage(r io.Reader, dataDir, passphrase string, now time.Time) (Staged, erro
 	}
 	if !contains(m.Files, "core.db") {
 		return st, errors.New("this backup has no database (core.db): it is not a backup of a whole installation")
+	}
+	if check != nil {
+		if err := check(tmp); err != nil {
+			return st, err
+		}
 	}
 	st = Staged{Manifest: m, StagedAt: now}
 	b, err := json.Marshal(st)

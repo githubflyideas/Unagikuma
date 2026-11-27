@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+**Fixed**
+- A backup is checked before a restore is staged: a database written by a newer version (or from before 3.0.1) and a configuration that fails this version's checks are refused with the reason, and nothing is changed. Before, such a backup was accepted and the program would not start afterwards.
+- The status line (the verdict chip with its counts) moved from the top bar to the Problems page.
+- Under the top and bottom menus, the node, run mode, language, zoom and account are really on one line (a missing `display: flex` had kept them stacked). In Starship the bottom menu and these controls are one solid strip that the page no longer runs under, and its labels no longer overlap.
+- Chain Store cards follow the palette in the dark palettes (they were white with pale text).
+- Craftsman Workshop: the account box is wide enough for its text, the mascot keeps its own colours, and the open tab no longer covers the page's buttons.
+- Starship: the alert channels dialog opens in full (the blur of the card behind it had cut it off) and is opaque.
+- Under a top or bottom menu the page is centred on wide screens.
+- Announcements lists the public status pages with their addresses, each with a Copy button.
+- Languages are listed by number of speakers; Traditional Chinese now comes last.
+
 ## v3.1.0 — 2026-11-27
 
 **Changed**
