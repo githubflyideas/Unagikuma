@@ -95,7 +95,8 @@ func (s *Server) clusterJoin(w http.ResponseWriter, r *http.Request) (any, error
 func (s *Server) clusterAgent(w http.ResponseWriter, r *http.Request) (any, error) {
 	st := s.app.Standby()
 	st.Key = "" // never shown
-	return map[string]any{"member": s.app.Agent().Member, "status": s.app.Agent().Status, "standby": st, "replica": s.app.ReplicaStatus()}, nil
+	ag := s.app.Agent()
+	return map[string]any{"member": ag.Member, "status": ag.Status, "standby": st, "replica": s.app.ReplicaStatus()}, nil
 }
 
 // clusterPromote makes this standby the master, with the copy of the

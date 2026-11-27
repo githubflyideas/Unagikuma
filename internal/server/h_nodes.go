@@ -67,7 +67,7 @@ func (s *Server) nodeViews() []nodeView {
 		Anchors: map[string][]string{}, Serial: cfg.Serial}
 	for _, n := range cfg.Nodes {
 		v := nodeView{Name: n.Name, Title: n.Description, Region: n.Region, Probe: n.Probe, Policy: n.Policy,
-			TimeoutS: int(n.NodeTimeout.Seconds()), Anchors: map[string][]string{"lan": n.AnchorsLAN, "wan": n.AnchorsWAN}, AnchorsText: n.Opts["anchors"],
+			TimeoutS: int(n.NodeTimeout.Seconds()), Anchors: map[string][]string{"lan": orEmptyOf(n.AnchorsLAN), "wan": orEmptyOf(n.AnchorsWAN)}, AnchorsText: n.Opts["anchors"],
 			Standby: n.Standby, ETag: s.recordETags()[n.Name]}
 		if n.Name == cfg.MName {
 			self.Title, self.Region, self.Probe, self.Anchors, self.AnchorsText, self.Policy, self.ETag = v.Title, v.Region, v.Probe, v.Anchors, v.AnchorsText, v.Policy, v.ETag
@@ -123,7 +123,7 @@ func (s *Server) nodesList(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 	return map[string]any{"layout": layout, "nodes": views, "fingerprint": s.app.PKI().Fingerprint(), "server": agentServerURL(r),
 		"agent": s.app.Agent(), "instance": s.app.Instance(), "monitors": monitors,
-		"replica": rep, "peers": s.app.Peers(), "local_nodes": s.localNodes(), "gateway": s.app.GatewayStates()}, nil
+		"replica": rep, "peers": orEmptyOf(s.app.Peers()), "local_nodes": s.localNodes(), "gateway": s.app.GatewayStates()}, nil
 }
 
 var hostRe = regexp.MustCompile(`^(\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9.-]+)(:[0-9]{1,5})?$`)
@@ -321,4 +321,13 @@ func (s *Server) localNodes() []localNodeJSON {
 			RTTMS: float64(n.RTT) / 1e6, SkewMS: float64(n.Skew) / 1e6, Serial: n.Serial, Version: n.Version, Verdict: n.Verdict})
 	}
 	return out
+}
+
+// orEmptyOf turns a nil list into an empty one: lists in the API are
+// never null.
+func orEmptyOf[T any](l []T) []T {
+	if l == nil {
+		return []T{}
+	}
+	return l
 }

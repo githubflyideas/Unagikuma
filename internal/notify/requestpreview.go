@@ -52,7 +52,7 @@ func PreviewRequest(kind string, opts map[string]string, lang, instance string) 
 	fillStandIns(kind, ch.Opts)
 	m := sampleMessage(&Message{Lang: lang, Instance: instance})
 	title, text := textOf(ch.Opts, m)
-	pv := &RequestPreview{Title: title, Text: text}
+	pv := &RequestPreview{Title: title, Text: text, Query: [][]string{}, Headers: [][]string{}}
 	if ch.Kind == "email" || ch.Kind == "log" || ch.Kind == "group" {
 		return pv, ErrNoHTTP
 	}
