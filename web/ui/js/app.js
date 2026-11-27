@@ -19,7 +19,7 @@ import { Nodes } from './views/nodes.js';
 import { IncidentReport } from './views/incident.js';
 import { DrawerHost } from './views/drawer.js';
 import { PaletteHost, openPalette } from './views/palette.js';
-import { loadBrand, loadMyStyle, applyCachedStyle, onStyleLoaded, signedOut, currentStyle, setMyStyle, brand, CHROME } from './styles.js';
+import { loadBrand, loadMyStyle, applyCachedStyle, onStyleLoaded, signedOut, currentStyle, CHROME, setPhone } from './styles.js';
 import { storageGet, storageSet } from './storage.js';
 
 // Layouts are chosen in Settings, Style and branding.
@@ -181,18 +181,33 @@ const NAV = [
   ['/nodes', 'ui.nav.runmode', '⛭'],
 ];
 
+// A phone shows a short menu: monitors, alerts and notifications, settings.
+// Any other address opens the monitor list there.
+const PHONE_NAV = new Set(['/monitors', '/alerts', '/settings']);
+function isPhone() { return matchMedia(`(max-width: ${Math.round(860 * zoomFactor())}px)`).matches; }
+function usePhone() {
+  const [phone, set] = useState(() => { const p = isPhone(); setPhone(p); return p; });
+  useEffect(() => {
+    const f = () => { const p = isPhone(); setPhone(p); set(p); };
+    addEventListener('resize', f);
+    return () => removeEventListener('resize', f);
+  }, []);
+  return phone;
+}
+
 const LIMITED_NAV = new Set(['/', '/monitors', '/problems', '/events']);
 
 const OLD_ALERT_TABS = { notices: 'pages', report: 'report' };
 
 function Shell({ user, onLogout, onLang }) {
   const route = useRoute();
+  const phone = usePhone();
   const [open, setOpen] = useState(false);
   const [live, setLive] = useState(false);
   const [palette, setPalette] = useState(paletteOf(storage('unagikuma.palette') || storage('unagikuma.theme')));
   const [styleRev, setStyleRev] = useState(0);
   const styleId = currentStyle();
-  const chrome = CHROME[styleId] || 'side';
+  const chrome = phone ? 'side' : CHROME[styleId] || 'side';
   useEffect(() => {
     const v = storage('unagikuma.palette') || storage('unagikuma.theme');
     if (v && paletteOf(v) && v !== paletteOf(v)) storage('unagikuma.palette', paletteOf(v));
@@ -232,9 +247,12 @@ function Shell({ user, onLogout, onLang }) {
     setMini(!mini);
   };
 
+  const phoneAway = phone && !PHONE_NAV.has(first);
+  useEffect(() => { if (phoneAway) replaceRoute('/monitors'); }, [phoneAway]);
   let view;
   const p = route.parts;
-  switch (p[0]) {
+  if (phoneAway) view = html`<${Monitors} query=${new URLSearchParams()} />`;
+  else switch (p[0]) {
     case undefined: view = html`<${Overview} />`; break;
     case 'problems': view = p[1] === 'expiry' ? html`<${Expiry} />` : html`<${Problems} tab=${p[1] || 'unhandled'} />`; break;
     case 'monitors':
@@ -256,7 +274,7 @@ function Shell({ user, onLogout, onLang }) {
     case 'settings': view = p[1] === 'nodes' ? html`<div class="page"><${Nodes} /></div>`
       : p[1] === 'users' ? html`<${Alerts} tab="contacts" />` // logins are in the user list now
       : ADVANCED_TABS.includes(p[1]) ? html`<${Settings} advanced tab=${p[1]} user=${user} />` // old addresses of the advanced tabs
-      : html`<${Settings} tab=${p[1] || 'general'} user=${user} />`; break;
+      : html`<${Settings} tab=${p[1] || 'general'} user=${user} phone=${phone} />`; break;
     case 'advanced': view = html`<${Settings} advanced tab=${p[1] || ADVANCED_TABS[0]} user=${user} />`; break;
     case 'nodes': view = html`<div class="page"><${Nodes} /></div>`; break;
     default: view = html`<div class="page"><div class="empty"><b>404</b></div></div>`;
@@ -266,7 +284,7 @@ function Shell({ user, onLogout, onLang }) {
   // has its own place in the sidebar.
   // An account limited to groups works with their monitors only.
   // Everyone has Settings for their own account (password).
-  const nav = NAV.filter(([path]) => (!me.groups || LIMITED_NAV.has(path)) && ((path !== '/advanced' && path !== '/settings') || me.role === 'admin'));
+  const nav = NAV.filter(([path]) => (!phone || PHONE_NAV.has(path)) && (!me.groups || LIMITED_NAV.has(path)) && ((path !== '/advanced' && path !== '/settings') || me.role === 'admin'));
   const navLinks = nav.map(([path, key, ico]) => html`<a href=${href(path)} class=${first === path ? 'on' : ''}>
           <span class="ico" title=${mini ? t(key) : ''}>${ico}</span><span class="lbl">${t(key)}</span>
           ${path === '/problems' && setup.length > 0 && html`<span class="rdot setup" style=${{ marginTop: 0, marginInlineStart: 'auto' }} title=${setup.map(x => x.n ? tn(x.key, x.n) : t(x.key)).join('\n')}></span>`}

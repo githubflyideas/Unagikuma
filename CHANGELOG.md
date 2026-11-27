@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+**Changed**
+- Phones (860 px wide or less) get a short console: Classic layout only, and three tabs: Monitors, Alerts and notifications, Settings (general settings only). Any other address opens the monitor list, failing monitors first. The layout an account chose still applies on a computer. The other layouts' phone versions are removed.
+
 ## v3.0.3 — 2026-11-27
 
 **Fixed**

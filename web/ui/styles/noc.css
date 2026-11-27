@@ -115,18 +115,6 @@
 @keyframes noc-edge { 0%, 100% { box-shadow: inset 3px 0 0 var(--critical); } 50% { box-shadow: inset 6px 0 0 var(--critical); } }
 @keyframes noc-blink { to { visibility: hidden; } }
 
-/* ---- a phone: the usual drawer, full labels ---- */
-@media (max-width: 860px) {
-  :root[data-style="noc"] .shell { grid-template-columns: 1fr; }
-  :root[data-style="noc"] .side, :root[data-style="noc"] .side:hover { width: 250px; overflow: auto; }
-  :root[data-style="noc"] .side .foot, :root[data-style="noc"] .side .nav .lbl, :root[data-style="noc"] .side .brand > div { opacity: 1 !important; }
-  :root[data-style="noc"] .side:not(:hover):not(:focus-within) .nav .count { position: static; margin-inline-start: auto; }
-  :root[data-style="noc"] .top > .btn.sm:first-child { display: inline-flex; }
-  :root[data-style="noc"] .top { padding: 8px 12px; }
-  :root[data-style="noc"] .top .crumbs { font-size: 13px; letter-spacing: .12em; }
-  :root[data-style="noc"] .page { padding: 14px 12px 40px; }
-  :root[data-style="noc"] .tile b { font-size: 26px; }
-}
 @media (prefers-reduced-motion: reduce) {
   :root[data-style="noc"] .top::after, :root[data-style="noc"] .verdict.critical, :root[data-style="noc"] .tbl tr.critical td:first-child, :root[data-style="noc"] .pill.critical::before { animation: none; }
 }

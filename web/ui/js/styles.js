@@ -9,6 +9,7 @@ const CACHE = 'unagikuma.style';
 export const brand = { name: 'Unagikuma', style: 'classic', styles: [{ id: 'classic', allowed: true }] };
 let mine = ''; // the account's choice; '' follows the default
 let loaded = () => {};
+let phone = false; // a phone always shows Classic
 
 function storage(v) {
   if (v === undefined) return storageGet(CACHE) || '';
@@ -33,6 +34,7 @@ export function applyStyle(id) {
   const known = brand.styles.find(s => s.id === id && s.allowed);
   if (!known) id = 'classic';
   storage(id);
+  if (phone) id = 'classic';
   let link = document.getElementById('ui-style');
   if (id === 'classic') {
     if (link) link.remove();
@@ -108,5 +110,13 @@ export function defaultChanged(id) {
 
 export function signedOut() {
   mine = '';
+  applyStyle(currentStyle());
+}
+
+// setPhone switches the phone view on or off: on a phone the console is
+// Classic with a short menu, whatever layout the account chose.
+export function setPhone(on) {
+  if (phone === on) return;
+  phone = on;
   applyStyle(currentStyle());
 }

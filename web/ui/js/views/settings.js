@@ -674,13 +674,14 @@ function Audit() {
 const TABS = ['general', 'gateway', 'heartbeat', 'scripts', 'branding', 'audit', 'registration'];
 export const ADVANCED_TABS = ['regions', 'tunables', 'tokens', 'secrets', 'keywords'];
 
-export function Settings({ tab, user, advanced }) {
+export function Settings({ tab, user, advanced, phone }) {
   useDocTitle(t(advanced ? 'ui.nav.advanced' : 'ui.nav.settings'));
   // Operators and viewers have no settings; an old link still shows the
   // password form, which now opens from their name in the sidebar.
   if (me.role !== 'admin' || tab === 'account') return html`<div class="page"><${Account} user=${user} /></div>`;
   const base = advanced ? '#/advanced/' : '#/settings/';
-  const tabs = advanced ? ADVANCED_TABS : TABS;
+  // A phone shows the general settings only.
+  const tabs = phone ? ['general'] : advanced ? ADVANCED_TABS : TABS;
   if (!tabs.includes(tab)) tab = tabs[0];
   let body;
   switch (tab) {
@@ -700,7 +701,7 @@ export function Settings({ tab, user, advanced }) {
     default: body = html`<${General} /><div style=${{ height: '14px' }}></div><${System} />`;
   }
   return html`<div class="page">
-    <div class="tabs">${tabs.map(k => html`<a href=${base + k} class=${tab === k ? 'on' : ''}>${t('ui.set.tab.' + k)}</a>`)}</div>
+    ${tabs.length > 1 && html`<div class="tabs">${tabs.map(k => html`<a href=${base + k} class=${tab === k ? 'on' : ''}>${t('ui.set.tab.' + k)}</a>`)}</div>`}
     ${body}
   </div>`;
 }

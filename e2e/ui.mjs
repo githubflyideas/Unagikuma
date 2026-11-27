@@ -325,6 +325,15 @@ await step('phones get no sideways scrolling', async () => {
       throw new Error(`${route} is ${w}px wide: ${wide}`);
     }
   }
+  // A phone has Classic and a short menu; other pages open the monitor list.
+  await p.goto(base + '/#/events');
+  await p.waitForTimeout(800);
+  const hash = await p.evaluate(() => location.hash);
+  if (!hash.startsWith('#/monitors')) throw new Error('a phone on #/events went to ' + hash);
+  const look = await p.evaluate(() => ({ style: document.documentElement.dataset.style,
+    nav: [...document.querySelectorAll('nav.nav a')].map((a) => a.getAttribute('href')) }));
+  if (look.style !== 'classic') throw new Error('a phone shows ' + look.style);
+  if (look.nav.join(' ') !== '#/monitors #/alerts #/settings') throw new Error('phone menu: ' + look.nav.join(' '));
   await phone.close();
 });
 
