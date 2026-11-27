@@ -35,8 +35,8 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
-	if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
-		return nil, rateLimited(wait)
+	if err := s.allowLogin(r); err != nil {
+		return nil, err
 	}
 	s.setupMu.Lock()
 	defer s.setupMu.Unlock()
@@ -121,8 +121,8 @@ func (s *Server) sessionLogin(w http.ResponseWriter, r *http.Request) (any, erro
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
-	if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
-		return nil, rateLimited(wait)
+	if err := s.allowLogin(r); err != nil {
+		return nil, err
 	}
 	u, err := s.app.Store().Authenticate(req.Username, req.Password)
 	if err != nil {

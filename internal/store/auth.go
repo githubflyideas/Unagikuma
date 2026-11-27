@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/argon2"
@@ -42,8 +44,33 @@ func sha(s string) string {
 	return hex.EncodeToString(h[:])
 }
 
+// hashSlots bounds how many password hashes run at once. Each argon2id
+// hash takes argonMemory (64 MiB): without a bound, failed logins sent
+// together from many addresses would grow the process by 64 MiB each.
+var hashSlots = make(chan struct{}, maxHashes)
+
+// maxHashes is how many password hashes may run at the same time.
+const maxHashes = 2
+
+// hashSlot waits for a free slot and returns its release. Each hash
+// hands its memory back to the system when done (a collection takes a
+// few milliseconds; the hash itself takes far longer): otherwise the
+// heap grows by several hashes' memory between collections and stays.
+func hashSlot() func() {
+	hashSlots <- struct{}{}
+	return func() {
+		<-hashSlots
+		debug.FreeOSMemory()
+	}
+}
+
+// dummyHash is checked against when the account does not exist, so the
+// answer takes as long as for a real one; it is made once.
+var dummyHash = sync.OnceValue(func() string { return HashPassword("x") })
+
 // HashPassword hashes with argon2id in the PHC string format.
 func HashPassword(pw string) string {
+	defer hashSlot()()
 	salt := make([]byte, 16)
 	_, _ = rand.Read(salt)
 	key := argon2.IDKey([]byte(pw), salt, argonTime, argonMemory, argonThreads, argonKeyLen)
@@ -68,6 +95,7 @@ func ValidHash(hash string) bool {
 
 // CheckPassword verifies a password in constant time.
 func CheckPassword(hash, pw string) bool {
+	defer hashSlot()()
 	if isBcrypt(hash) {
 		return bcrypt.CompareHashAndPassword([]byte(hash), []byte(pw)) == nil
 	}
@@ -323,9 +351,10 @@ func (s *Store) SetPassword(userID int64, password string) error {
 	if len(password) < 8 {
 		return errors.New("password must be at least 8 characters")
 	}
+	h := HashPassword(password)
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
-	if _, err := s.core.Exec(`UPDATE users SET password=? WHERE id=?`, HashPassword(password), userID); err != nil {
+	if _, err := s.core.Exec(`UPDATE users SET password=? WHERE id=?`, h, userID); err != nil {
 		return err
 	}
 	_, err := s.core.Exec(`DELETE FROM sessions WHERE user_id=?`, userID)
@@ -341,7 +370,7 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 	err := s.core.QueryRow(`SELECT id,username,password,prefs,role,areas,groups FROM users WHERE username=? AND disabled=0`, username).Scan(&u.ID, &u.Username, &hash, &prefs, &u.Role, &areas, &groups)
 	if errors.Is(err, sql.ErrNoRows) {
 		// Spend the same time as a real check so usernames cannot be probed.
-		CheckPassword(HashPassword("x"), password)
+		CheckPassword(dummyHash(), password)
 		return nil, ErrNotFound
 	}
 	if err != nil {
@@ -352,8 +381,9 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 	}
 	if isBcrypt(hash) {
 		// An imported hash: store our own from now on.
+		h := HashPassword(password)
 		s.wmu.Lock()
-		_, _ = s.core.Exec(`UPDATE users SET password=? WHERE id=?`, HashPassword(password), u.ID)
+		_, _ = s.core.Exec(`UPDATE users SET password=? WHERE id=?`, h, u.ID)
 		s.wmu.Unlock()
 	}
 	u.Prefs, u.Areas, u.Groups = prefs.String, splitAreas(areas), splitAreas(groups)

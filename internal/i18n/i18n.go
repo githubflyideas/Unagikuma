@@ -6,9 +6,9 @@
 package i18n
 
 import (
-	"errors"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"

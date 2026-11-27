@@ -50,6 +50,7 @@ type Server struct {
 	now       func() time.Time
 	api       *ratelimit.Keyed
 	login     *ratelimit.Keyed
+	loginAll  *ratelimit.Keyed // every sign-in and setup together
 	joins     *ratelimit.Keyed // cluster requests not yet authenticated
 	push      *ratelimit.Keyed
 	subs      *ratelimit.Keyed // public status page subscriptions, per IP
@@ -132,6 +133,10 @@ func New(a *app.App, o Options) *Server {
 	pr, pb := rate("api.push-rate")
 	s.api = ratelimit.NewKeyed(ar, ab, 0)
 	s.login = ratelimit.NewKeyed(lr, 3, 0)
+	// All sign-ins together, whatever their address: with the bound on
+	// concurrent password hashes this keeps a flood of failed logins
+	// from many addresses to a short queue.
+	s.loginAll = ratelimit.NewKeyed(loginAllRate, loginAllBurst, 0)
 	jr, _ := rate("cluster.join-rate")
 	s.joins = ratelimit.NewKeyed(jr, 10, 0)
 	s.push = ratelimit.NewKeyed(pr, pb, 0)
@@ -214,6 +219,25 @@ func (s *Server) Handler() http.Handler {
 
 // apiFunc is a handler returning a value to encode or an error.
 type apiFunc func(w http.ResponseWriter, r *http.Request) (any, error)
+
+// loginAllRate and loginAllBurst bound sign-ins from all addresses
+// together (per address it is the api.login-rate tunable).
+const (
+	loginAllRate  = 2.0 // per second
+	loginAllBurst = 20
+)
+
+// allowLogin applies the per-address and the overall sign-in limits.
+func (s *Server) allowLogin(r *http.Request) error {
+	now := s.now()
+	if ok, wait := s.login.Allow(s.ip(r), now); !ok {
+		return rateLimited(wait)
+	}
+	if ok, wait := s.loginAll.Allow("all", now); !ok {
+		return rateLimited(wait)
+	}
+	return nil
+}
 
 // handle registers an API endpoint with authentication and scope checks.
 // scope "" means public; "read" also accepts any authenticated caller.

@@ -1,9 +1,9 @@
 package i18n
 
 import (
-	"fmt"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"sync"
 )
