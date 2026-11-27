@@ -4,12 +4,15 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/githubflyideas/unagikuma/internal/i18n"
 	"io"
 	"net/http"
+	"reflect"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -93,7 +96,7 @@ func Errorf(status int, code, format string, args ...any) *APIError {
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	// Encoded before the status is sent: a value JSON cannot hold (NaN,
 	// an infinity) must not turn into an empty "200 OK".
-	b, err := json.Marshal(v)
+	b, err := encodeAnswer(v)
 	if err != nil {
 		status = http.StatusInternalServerError
 		b, _ = json.Marshal(map[string]any{"code": CodeInternal, "message": "the answer could not be encoded: " + err.Error()})
@@ -151,4 +154,65 @@ func decodeJSON(r *http.Request, maxBytes int64, v any) error {
 		return Errorf(http.StatusBadRequest, CodeInvalid, "unexpected data after the JSON body")
 	}
 	return nil
+}
+
+// listEnvelope puts a list answer into the one shape every list has:
+// {"items": [...]} (never null), so clients can add fields later
+// without a breaking change.
+func listEnvelope(v any) any {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Slice && rv.Kind() != reflect.Array {
+		return v
+	}
+	if rv.Kind() == reflect.Slice && rv.IsNil() {
+		v = reflect.MakeSlice(rv.Type(), 0, 0).Interface()
+	}
+	return map[string]any{"items": v}
+}
+
+// deleted answers a successful DELETE: 204 No Content, with the new
+// configuration version in the ETag header when the deletion changed it.
+func deleted(w http.ResponseWriter, v any) {
+	if m, ok := v.(map[string]any); ok {
+		if tag, ok := m["etag"].(string); ok && tag != "" {
+			w.Header().Set("ETag", tag)
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// encodeAnswer is the JSON of an answer, with every time in one form.
+func encodeAnswer(v any) ([]byte, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return normTimes(b), nil
+}
+
+// jsonTime matches a JSON string that is wholly an RFC 3339 time as
+// encoding/json writes it (fraction of 0 to 9 digits, trailing zeros cut).
+var jsonTime = regexp.MustCompile(`"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})"`)
+
+// normTimes writes every time with exactly three fraction digits
+// (milliseconds, the precision times are stored with), so that clients
+// can parse and compare them as fixed-width strings.
+func normTimes(b []byte) []byte {
+	if !bytes.Contains(b, []byte(`T`)) {
+		return b
+	}
+	return jsonTime.ReplaceAllFunc(b, func(m []byte) []byte {
+		sub := jsonTime.FindSubmatch(m)
+		frac := string(sub[2])
+		if frac == "" {
+			frac = "."
+		}
+		frac = (frac + "000")[:4]
+		out := make([]byte, 0, len(m)+4)
+		out = append(out, '"')
+		out = append(out, sub[1]...)
+		out = append(out, frac...)
+		out = append(out, sub[3]...)
+		return append(out, '"')
+	})
 }

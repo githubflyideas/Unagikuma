@@ -43,7 +43,7 @@ func TestOperatorCannotUseSecrets(t *testing.T) {
 	if c != 200 {
 		t.Fatalf("operator plain add: %d %+v", c, er)
 	}
-	if c := op.do("DELETE", "/api/v1/monitors/api", nil, nil); c != 200 && c != 204 {
+	if c := op.do("DELETE", "/api/v1/monitors/api", nil, nil); c != 204 {
 		t.Fatalf("operator delete: %d", c)
 	}
 }

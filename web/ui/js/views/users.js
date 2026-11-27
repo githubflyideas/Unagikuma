@@ -38,7 +38,7 @@ export function LoginForm({ initial, onClose, onSaved, onDeleted, channels }) {
         // name and addresses given here fill it in at once.
         const emails = splitList(form.emails), phones = splitList(form.phones);
         if (!form.person && (emails.length || phones.length)) {
-          const p = ((await get('/people')).people || []).find(x => x.username === form.username.trim());
+          const p = ((await get('/people')).items || []).find(x => x.username === form.username.trim());
           const has = { email: emails.length > 0, phone: phones.length > 0 };
           if (p) await put('/people/' + p.id, { handle: p.handle, name: form.name.trim() || p.name, emails, phones, username: p.username, note: p.note || '',
             notify: (channels || []).filter(c => has[c.contact]).map(c => c.name) });

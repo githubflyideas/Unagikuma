@@ -53,7 +53,7 @@ func TestSecretInUseIsNotDeleted(t *testing.T) {
 		t.Fatalf("edit after a refused delete: %d", c)
 	}
 	// Once nothing uses it, it goes.
-	if c := e.do("DELETE", "/api/v1/channels/wh", nil, nil); c != 200 {
+	if c := e.do("DELETE", "/api/v1/channels/wh", nil, nil); c != 204 {
 		t.Fatalf("delete channel: %d", c)
 	}
 	if c := e.do("DELETE", "/api/v1/secrets/hook", nil, nil); c != 204 {

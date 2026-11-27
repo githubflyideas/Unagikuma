@@ -3,7 +3,7 @@
 // name to open a monitor.
 import { html, useState, useEffect, useLayoutEffect, useRef } from '../lib.js';
 import { t, currentLang } from '../i18n.js';
-import { get, post } from '../api.js';
+import { get, post, listOf } from '../api.js';
 import { Pill, openMonitor, enc, toast, toastError, checkNow } from '../ui.js';
 
 export function openPalette() { dispatchEvent(new CustomEvent('unagikuma:palette')); }
@@ -41,7 +41,7 @@ function Palette({ onClose }) {
   useEffect(() => { get('/monitors').then(d => setRows(d.items), () => {}); }, []);
   const text = q.trim();
   const kq = keywordQuery(text);
-  useEffect(() => { if (kq && !kws) get('/keywords').then(setKws, () => setKws([])); }, [!!kq]);
+  useEffect(() => { if (kq && !kws) listOf('/keywords').then(setKws, () => setKws([])); }, [!!kq]);
   useEffect(() => setIdx(0), [q]);
 
   const find = (name) => rows.find(r => r.name === name) || rows.find(r => r.name.toLowerCase() === (name || '').toLowerCase());

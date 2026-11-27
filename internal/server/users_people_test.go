@@ -14,7 +14,7 @@ func TestLoginsArePeople(t *testing.T) {
 	}
 	list := func() []person {
 		var r struct {
-			People []person `json:"people"`
+			People []person `json:"items"`
 		}
 		e.do("GET", "/api/v1/people", nil, &r)
 		return r.People
@@ -42,7 +42,7 @@ func TestLoginsArePeople(t *testing.T) {
 	if c := e.do("DELETE", "/api/v1/people/"+itoa(p.ID), nil, nil); c != 409 {
 		t.Fatalf("person of a login deleted: %d", c)
 	}
-	if c := e.do("DELETE", "/api/v1/users/"+itoa(made.ID), nil, nil); c != 200 {
+	if c := e.do("DELETE", "/api/v1/users/"+itoa(made.ID), nil, nil); c != 204 {
 		t.Fatalf("delete user: %d", c)
 	}
 	if p := find("li.lei"); p == nil || p.Username != "" {

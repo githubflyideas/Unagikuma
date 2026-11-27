@@ -294,11 +294,15 @@ func (s *Server) handle(pattern, scope string, f apiFunc) {
 			if audit {
 				s.writeAudit(pattern, r, authOf(r), rec, v)
 			}
+			if r.Method == http.MethodDelete {
+				deleted(w, v)
+				return
+			}
 			if v == nil {
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
-			writeJSON(w, http.StatusOK, v)
+			writeJSON(w, http.StatusOK, listEnvelope(v))
 		}
 		if ai := authOf(r); ai != nil {
 			caller := "u:" + ai.user

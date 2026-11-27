@@ -1,7 +1,7 @@
 // Settings: general, tunables, API tokens, secrets, keywords, system.
 import { html, useState, useEffect, useMemo } from '../lib.js';
 import { t, tn, dur, fmtTime, currentLang, langList } from '../i18n.js';
-import { get, post, put, del, setCSRF, getCSRF, me } from '../api.js';
+import { get, post, put, del, setCSRF, getCSRF, me, listOf } from '../api.js';
 import { Nodes } from './nodes.js';
 import { DELIVERY_KEYS } from './alerts.js';
 import { Branding, MyStyle } from './branding.js';
@@ -22,7 +22,7 @@ function routeText(hops) {
 // internet gateway, or the external heartbeat; each saves its own fields.
 function General({ part = 'general' }) {
   const s = useFetch(() => get('/settings'), []);
-  const tun = useFetch(() => get('/tunables'), []);
+  const tun = useFetch(() => listOf('/tunables'), []);
   const [f, setF] = useState(null);
   const [hb, setHb] = useState(null);
   const [exit, setExit] = useState(null);
@@ -59,7 +59,7 @@ function General({ part = 'general' }) {
   // Two ways to choose the internet gateway: the public resolvers near a
   // city (cities only, no country names), or what this host's own route
   // suggests.
-  const cities = useFetch(() => get('/settings/exit-countries'), []);
+  const cities = useFetch(() => listOf('/settings/exit-countries'), []);
   const [cc, setCc] = useState('');
   const suggest = async (body) => {
     setSug({ busy: true });
@@ -170,7 +170,7 @@ function HeartbeatForm({ f, setF }) {
 }
 
 function Tunables() {
-  const list = useFetch(() => get('/tunables'), []);
+  const list = useFetch(() => listOf('/tunables'), []);
   const [filter, setFilter] = useState('');
   const [onlyChanged, setOnlyChanged] = useState(false);
   const [edits, setEdits] = useState({});
@@ -275,7 +275,7 @@ function Regions() {
 }
 
 function Tokens() {
-  const list = useFetch(() => get('/tokens'), []);
+  const list = useFetch(() => listOf('/tokens'), []);
   const [form, setForm] = useState(null);
   const [created, setCreated] = useState(null);
   const create = async (e) => {
@@ -319,7 +319,7 @@ function Tokens() {
 }
 
 function Secrets() {
-  const list = useFetch(() => get('/secrets'), []);
+  const list = useFetch(() => listOf('/secrets'), []);
   const [form, setForm] = useState(null);
   const save = async (e) => {
     e.preventDefault();
@@ -351,7 +351,7 @@ function Secrets() {
 
 function Keywords() {
   const [dialect, setDialect] = useState('');
-  const list = useFetch(() => get('/keywords' + (dialect ? '?dialect=' + dialect : '')), [dialect]);
+  const list = useFetch(() => listOf('/keywords' + (dialect ? '?dialect=' + dialect : '')), [dialect]);
   const [q, setQ] = useState('');
   const zh = currentLang() === 'zh';
   if (!list.data) return list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`;
@@ -542,7 +542,7 @@ function Registration() {
   const install = async (body) => {
     setBusy(true);
     try {
-      const r = await fetch('/api/v1/license', { method: 'PUT', credentials: 'same-origin', headers: { 'X-Unagikuma-CSRF': getCSRF() }, body });
+      const r = await fetch('api/v1/license', { method: 'PUT', credentials: 'same-origin', headers: { 'X-Unagikuma-CSRF': getCSRF() }, body });
       const j = await r.json();
       if (!r.ok) throw new Error(j.message || 'HTTP ' + r.status);
       toast(t('ui.reg.installed')); setText(''); lic.reload();
@@ -643,8 +643,8 @@ function Audit() {
       </select>`}
       <button class="btn">${t('ui.audit.filter')}</button>
       <div class="spacer"></div>
-      ${!limited && html`<a class="btn" href=${'/api/v1/audit/export?format=csv&' + query()} download>${t('ui.audit.export_csv')}</a>
-      <a class="btn" href=${'/api/v1/audit/export?format=json&' + query()} download>${t('ui.audit.export_json')}</a>
+      ${!limited && html`<a class="btn" href=${'api/v1/audit/export?format=csv&' + query()} download>${t('ui.audit.export_csv')}</a>
+      <a class="btn" href=${'api/v1/audit/export?format=json&' + query()} download>${t('ui.audit.export_json')}</a>
       <button type="button" class="btn" onClick=${verify}>${t('ui.audit.verify')}</button>`}
     </form>
     ${check && html`<div class=${'banner ' + (check.ok ? 'ok' : 'error')}>${check.ok ? html`${t('ui.audit.verify_ok', { n: check.entries, head: '' })}<code class="ltr small">${check.head.slice(0, 16)}…</code>` : t('ui.audit.verify_bad', { problem: check.problem })}</div>`}

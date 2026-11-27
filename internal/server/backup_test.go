@@ -124,7 +124,7 @@ func TestRestoreIsStagedNotApplied(t *testing.T) {
 	if after, _ := os.ReadFile(e.app.ConfigPath()); !bytes.Equal(before, after) {
 		t.Fatal("staging changed the running configuration")
 	}
-	if code, _ := send("DELETE", nil, ""); code != 200 {
+	if code, _ := send("DELETE", nil, ""); code != 204 {
 		t.Fatalf("cancel: %d", code)
 	}
 	if _, st := send("GET", nil, ""); !strings.Contains(st, `"pending":false`) {

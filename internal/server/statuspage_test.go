@@ -170,7 +170,7 @@ main    IN STATUSPAGE "Service status" select="group:public" domain=status.examp
 	if code := e.do("PUT", "/api/v1/announcements/"+itoa(id), map[string]any{"title": "Database maintenance", "body": "done", "severity": "maintenance", "resolved": true}, &a); code != 200 || a["resolved_at"] == nil {
 		t.Fatalf("resolve: %d %v", code, a)
 	}
-	if code := e.do("DELETE", "/api/v1/announcements/"+itoa(id), nil, nil); code != 200 {
+	if code := e.do("DELETE", "/api/v1/announcements/"+itoa(id), nil, nil); code != 204 {
 		t.Fatalf("delete: %d", code)
 	}
 	if code := post("/api/v1/status/main/unsubscribe", `{"token":"`+token+`"}`, ""); code != 200 {

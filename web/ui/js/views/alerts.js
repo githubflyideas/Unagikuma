@@ -2,7 +2,7 @@
 // channels are where every alert goes, unless a monitor names its own.
 import { html, useState, useEffect, useRef } from '../lib.js';
 import { t, has, currentLang } from '../i18n.js';
-import { get, post, del, put, ifMatch, me } from '../api.js';
+import { get, post, del, put, ifMatch, me, listOf } from '../api.js';
 import { ContactsTab, IssueDot, NewAddresses, addressKey } from './contacts.js';
 import { PeriodsTab } from './periods.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, Pick } from '../ui.js';
@@ -220,9 +220,9 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
   const [unknown, setUnknown] = useState(null); // addresses to offer for the directory
   const [sort, setSort] = useState('common');
   const [query, setQuery] = useState('');
-  const people = useFetch(() => get('/people').catch(() => ({ people: [] })), []);
+  const people = useFetch(() => get('/people').catch(() => ({ items: [] })), []);
   const periods = useFetch(() => get('/periods').catch(() => ({ items: [] })), []);
-  const allChannels = useFetch(() => get('/channels').catch(() => []), []);
+  const allChannels = useFetch(() => listOf('/channels').catch(() => []), []);
   const found = kinds.find(k => k.kind === kind);
   // E-mail goes to an SMTP server or through this machine's sendmail
   // command; each way shows only its own fields.
@@ -301,7 +301,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
         const v = opts[f.key] !== undefined ? opts[f.key] : (editing ? '' : f.default || '');
         const label = fieldLabel(f.key) + (required(f) ? ' *' : '');
         if (f.key === 'template') return html`<${TemplateField} label=${label} value=${v.replace(/\\n/g, '\n')} onChange=${(x) => set('template', x)} />`;
-        if (f.key === 'at') return html`<${AtField} label=${label} kind=${kind} value=${v} onChange=${(x) => set('at', x)} people=${people.data && people.data.people} />`;
+        if (f.key === 'at') return html`<${AtField} label=${label} kind=${kind} value=${v} onChange=${(x) => set('at', x)} people=${people.data && people.data.items} />`;
         if (f.key === 'prefix') return html`<${PrefixField} label=${label} value=${v} onChange=${(x) => set('prefix', x)} />`;
         if (f.key === 'members') {
           const others = (Array.isArray(allChannels.data) ? allChannels.data : (allChannels.data && allChannels.data.items) || [])
@@ -363,8 +363,8 @@ function IssueLine({ i }) {
 }
 
 function ChannelsTab() {
-  const list = useFetch(() => get('/channels'), []);
-  const kinds = useFetch(() => get('/channel-kinds'), []);
+  const list = useFetch(() => listOf('/channels'), []);
+  const kinds = useFetch(() => listOf('/channel-kinds'), []);
   const [edit, setEdit] = useState(null);
   const remove = async (c) => {
     if (!await confirmDialog(t('ui.ch.delete_confirm', { name: c.name }), { danger: true, ok: t('ui.delete') })) return;
@@ -445,7 +445,7 @@ export const DELIVERY_KEYS = ['notify.channel-timeout', 'notify.channel-retries'
   'notify.retry-after-max', 'notify.failed-retry', 'notify.channel-rate'];
 
 function DeliveryRules() {
-  const tun = useFetch(() => get('/tunables'), []);
+  const tun = useFetch(() => listOf('/tunables'), []);
   const [open, setOpen] = useState(false);
   const [vals, setVals] = useState({});
   const [busy, setBusy] = useState(false);

@@ -3,7 +3,7 @@
 // written by hand.
 import { html, useState } from '../lib.js';
 import { t } from '../i18n.js';
-import { get, post, del, me } from '../api.js';
+import { get, post, del, me, listOf } from '../api.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog } from '../ui.js';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -106,7 +106,7 @@ function humanRule(src) {
 
 export function PeriodsTab() {
   const list = useFetch(() => get('/periods'), []);
-  const chans = useFetch(() => get('/channels').catch(() => []), []);
+  const chans = useFetch(() => listOf('/channels').catch(() => []), []);
   // Which channels send only in (or outside) each period.
   const usedBy = (name) => (Array.isArray(chans.data) ? chans.data : []).filter(c => c.opts && String(c.opts.period || '').replace(/^!/, '') === name)
     .map(c => (String(c.opts.period).startsWith('!') ? '!' : '') + c.name);

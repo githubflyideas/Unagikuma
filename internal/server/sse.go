@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -57,7 +56,7 @@ func (h *Hub) Publish(typ string, v any) { h.PublishFor(typ, "", v) }
 // PublishFor sends an event about a monitor ("" for none), so that clients
 // that may not see that monitor can be left out.
 func (h *Hub) PublishFor(typ, monitor string, v any) {
-	data, err := json.Marshal(v)
+	data, err := encodeAnswer(v)
 	if err != nil {
 		return
 	}

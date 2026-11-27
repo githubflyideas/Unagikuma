@@ -3,7 +3,7 @@
 // or gone, ones that keep bouncing and unknown ones are left out (red dot).
 import { html, useState } from '../lib.js';
 import { t, tn } from '../i18n.js';
-import { get, post, put, del, me } from '../api.js';
+import { get, post, put, del, me, listOf } from '../api.js';
 import { useFetch, useLive, Loading, ErrorBox, Empty, Ago, Field, Modal, toast, toastError, errText, confirmDialog } from '../ui.js';
 import { LoginForm } from './users.js';
 
@@ -129,7 +129,7 @@ function PersonForm({ initial, channels, onClose, onSaved }) {
 
 export function ContactsTab() {
   const d = useFetch(() => get('/people'), []);
-  const tun = useFetch(() => get('/tunables'), []);
+  const tun = useFetch(() => listOf('/tunables'), []);
   // Logins belong to people here: each row shows its login, if any.
   const admin = me.role === 'admin';
   const users = useFetch(() => admin ? get('/users') : Promise.resolve({ items: [] }), []);
@@ -149,12 +149,12 @@ export function ContactsTab() {
     d.reload();
     // A new login goes on to its person's addresses.
     if (fresh && username && !filled) {
-      try { const p = (await get('/people')).people.find(x => x.username === username); if (p) setEdit(p); } catch { /* the list shows it */ }
+      try { const p = (await get('/people')).items.find(x => x.username === username); if (p) setEdit(p); } catch { /* the list shows it */ }
     }
   };
   useLive(['directory'], d.reload, 500);
   if (!d.data) return d.error ? html`<${ErrorBox} error=${d.error} retry=${d.reload} />` : html`<${Loading} />`;
-  const { people, bounces, unknown, threshold } = d.data;
+  const { items: people, bounces, unknown, threshold } = d.data;
   const personal = d.data.personal_channels || [];
   const nUnknown = (unknown.email || []).length + (unknown.phone || []).length;
   const importAll = async () => {

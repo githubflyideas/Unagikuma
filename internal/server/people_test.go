@@ -61,7 +61,7 @@ func TestContactDirectory(t *testing.T) {
 			Name     string
 			Status   string
 			Channels []string
-		}
+		} `json:"items"`
 	}
 	e.do("GET", "/api/v1/people", nil, &dir)
 	var li int64
@@ -156,7 +156,7 @@ func TestContactReachable(t *testing.T) {
 			Handle string
 			Notify []string
 			Reach  string
-		}
+		} `json:"items"`
 		Personal []struct{ Name, Contact string } `json:"personal_channels"`
 	}
 	e.do("GET", "/api/v1/people", nil, &dir)

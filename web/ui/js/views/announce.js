@@ -2,7 +2,7 @@
 // status report: what is told to people, apart from the alerts themselves.
 import { html, useState } from '../lib.js';
 import { t, tn } from '../i18n.js';
-import { get, post, put, me, ifMatch } from '../api.js';
+import { get, post, put, me, ifMatch, listOf } from '../api.js';
 import { NoticesTab } from './notices.js';
 import { useFetch, Loading, ErrorBox, toast, toastError, useDocTitle, Copy, Field } from '../ui.js';
 
@@ -21,7 +21,7 @@ const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 // WeeklySettings switches the weekly report on, sets its day and time, and
 // previews it.
 function WeeklySettings() {
-  const tun = useFetch(() => get('/tunables'), []);
+  const tun = useFetch(() => listOf('/tunables'), []);
   const wk = useFetch(() => get('/reports/weekly'), []);
   const [busy, setBusy] = useState(false);
   if (!tun.data || !wk.data) return null;
@@ -53,8 +53,8 @@ function WeeklySettings() {
 // channels it goes to; a person can still switch it off for themselves in
 // the user list.
 function ReportSettings({ r, onChange }) {
-  const tun = useFetch(() => get('/tunables'), []);
-  const chs = useFetch(() => get('/channels'), []);
+  const tun = useFetch(() => listOf('/tunables'), []);
+  const chs = useFetch(() => listOf('/channels'), []);
   if (!tun.data || !chs.data) return null;
   const val = (k) => (tun.data.find(x => x.key === k) || {}).value || '';
   const setTun = async (set) => {

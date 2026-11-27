@@ -142,7 +142,7 @@ func (s *Server) people(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"people": out, "bounces": bounces, "unknown": s.app.UnknownAddresses(), "personal_channels": pc,
+	return map[string]any{"items": out, "bounces": bounces, "unknown": s.app.UnknownAddresses(), "personal_channels": pc,
 		"threshold": cfg.Tunables.Int("contacts.bounce-threshold")}, nil
 }
 

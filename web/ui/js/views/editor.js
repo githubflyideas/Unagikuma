@@ -1,7 +1,7 @@
 // Monitor editor and quick add. Both write records into monitors.conf.
 import { html, useState, useEffect } from '../lib.js';
 import { t, has, detailText, currentLang } from '../i18n.js';
-import { get, post, put, ifMatch, newKey, me } from '../api.js';
+import { get, post, put, ifMatch, newKey, me, listOf } from '../api.js';
 import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, regionTitle, Copy, Combo, PRESETS } from '../ui.js';
 
 // Check types, grouped for the type menu.
@@ -131,7 +131,7 @@ export function MonitorEditor({ name }) {
   const regions = useFetch(() => get('/regions'), []);
   const mons = useFetch(() => get('/monitors'), []);
   const optList = useFetch(() => get('/monitor-options'), []);
-  const apps = useFetch(() => get('/app-profiles'), []);
+  const apps = useFetch(() => listOf('/app-profiles'), []);
   const [f, setF] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);

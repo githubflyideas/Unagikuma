@@ -96,7 +96,7 @@ sw      IN PING 10.9.9.1
 	if c := joiner.do("POST", "/api/v1/cluster/join", map[string]any{"code": jc.Code, "node": "bj2"}, nil); c != 409 {
 		t.Fatalf("second join while joined: %d", c)
 	}
-	if joiner.do("DELETE", "/api/v1/cluster/agent", nil, nil) != 200 {
+	if joiner.do("DELETE", "/api/v1/cluster/agent", nil, nil) != 204 {
 		t.Fatal("leave")
 	}
 	if c := joiner.do("POST", "/api/v1/cluster/join", map[string]any{"code": jc.Code, "node": "bj2"}, nil); c != 400 {

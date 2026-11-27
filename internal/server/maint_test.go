@@ -33,7 +33,7 @@ func TestMaintenanceAPI(t *testing.T) {
 	if c := e.do("POST", "/api/v1/maintenance", map[string]any{"name": "web", "select": "name:web", "at": start, "duration": "1h"}, nil); c != 409 {
 		t.Fatalf("name clash: %d", c)
 	}
-	if e.do("DELETE", "/api/v1/maintenance/upgrade", nil, nil) != 200 || len(e.app.Config().Config.Maints) != 0 {
+	if e.do("DELETE", "/api/v1/maintenance/upgrade", nil, nil) != 204 || len(e.app.Config().Config.Maints) != 0 {
 		t.Fatal("delete")
 	}
 }

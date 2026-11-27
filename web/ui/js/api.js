@@ -62,6 +62,8 @@ export async function api(method, path, body, headers) {
 }
 
 export const get = (p) => api('GET', p);
+// listOf reads a list endpoint: every list answers {"items": [...]}.
+export const listOf = (p) => get(p).then((r) => r.items);
 export const post = (p, b, h) => api('POST', p, b === undefined ? {} : b, h);
 export const put = (p, b, h) => api('PUT', p, b, h);
 export const del = (p, h) => api('DELETE', p, undefined, h);
