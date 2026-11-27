@@ -39,7 +39,9 @@ type nodeView struct {
 	Version  string         `json:"version,omitempty"`
 	Platform string         `json:"platform,omitempty"`
 	Addr     string         `json:"addr,omitempty"`
-	Health   *engine.Health `json:"health,omitempty"`
+	Health   *engine.Health `json:"-"`
+	// HealthView is the node's own view of its network, as the API shows it.
+	HealthView *healthJSON `json:"health,omitempty"`
 	// The local peer-path verdict, the node's own view and its
 	// notification uplink.
 	Verdict string                `json:"verdict,omitempty"`
@@ -74,7 +76,7 @@ func (s *Server) nodeViews() []nodeView {
 			continue
 		}
 		if st, ok := status[n.Name]; ok {
-			v.Online, v.Serial, v.Version, v.Platform, v.Addr, v.Health = st.Online, st.Serial, st.Version, st.Platform, st.Addr, st.Health
+			v.Online, v.Serial, v.Version, v.Platform, v.Addr, v.Health, v.HealthView = st.Online, st.Serial, st.Version, st.Platform, st.Addr, st.Health, healthOf(st.Health)
 			v.Unsupported = st.Unsupported
 			v.Verdict, v.Reach, v.Gateway = st.Verdict, st.Reach, st.Gateway
 			v.Since, v.LastSeen = tp(st.Since), tp(st.LastSeen)
@@ -330,4 +332,37 @@ func orEmptyOf[T any](l []T) []T {
 		return []T{}
 	}
 	return l
+}
+
+// healthJSON is engine.Health for the API: round-trip times in
+// milliseconds, times null when unknown. engine.Health itself keeps its
+// shape, as nodes of other releases send it.
+type healthJSON struct {
+	Uplink         string     `json:"uplink"`
+	UplinkSince    *time.Time `json:"uplink_since"`
+	Suspected      bool       `json:"suspected"`
+	Gateway        string     `json:"gateway"`
+	GatewayOK      bool       `json:"gateway_ok"`
+	GatewayRTTMS   float64    `json:"gateway_rtt_ms"`
+	GatewayNote    string     `json:"gateway_note"`
+	GatewayState   string     `json:"gateway_state"`
+	WANDomains     int        `json:"wan_domains"`
+	WANAnchors     int        `json:"wan_anchors"`
+	DNSDown        bool       `json:"dns_down"`
+	CanJudgeUplink bool       `json:"can_judge_uplink"`
+	Exit           string     `json:"exit"`
+	ExitOK         bool       `json:"exit_ok"`
+	ExitRTTMS      float64    `json:"exit_rtt_ms"`
+	ExitAt         *time.Time `json:"exit_at"`
+	ExitIdle       bool       `json:"exit_idle"`
+}
+
+func healthOf(h *engine.Health) *healthJSON {
+	if h == nil {
+		return nil
+	}
+	return &healthJSON{Uplink: h.Uplink, UplinkSince: tp(h.UplinkSince), Suspected: h.Suspected, Gateway: h.Gateway, GatewayOK: h.GatewayOK,
+		GatewayRTTMS: float64(h.GatewayRTT) / 1e6, GatewayNote: h.GatewayNote, GatewayState: h.GatewayState, WANDomains: h.WANDomains,
+		WANAnchors: h.WANAnchors, DNSDown: h.DNSDown, CanJudgeUplink: h.CanJudgeUplink, Exit: h.Exit, ExitOK: h.ExitOK,
+		ExitRTTMS: float64(h.ExitRTT) / 1e6, ExitAt: tp(h.ExitAt), ExitIdle: h.ExitIdle}
 }

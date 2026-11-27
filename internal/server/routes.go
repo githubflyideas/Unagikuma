@@ -176,7 +176,7 @@ func (s *Server) routes() {
 	s.handleRaw("GET /api/v1/i18n/{lang}", "", http.HandlerFunc(s.catalog))
 	s.handleRaw("GET /api/v1/brand", "", http.HandlerFunc(s.brandPublic))
 	s.handleRaw("GET /api/v1/branding/{image}/preview", "", http.HandlerFunc(s.brandImagePreview))
-	s.handleRaw("GET /api/openapi.json", "", http.HandlerFunc(s.openAPISpec))
+	s.handleRaw("GET /api/v1/openapi.json", "", http.HandlerFunc(s.openAPISpec))
 
 	// Live stream.
 	s.handleRaw("GET /api/v1/stream", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -196,8 +196,8 @@ func (s *Server) routes() {
 	}))
 
 	// Public endpoints.
-	s.mux.HandleFunc("GET /healthz", s.healthz)
-	s.mux.HandleFunc("GET /metrics", s.metrics)
+	s.handleRaw("GET /healthz", "", http.HandlerFunc(s.healthz))
+	s.handleRaw("GET /metrics", "read", http.HandlerFunc(s.metrics))
 	s.mux.HandleFunc("GET "+cluster.ConnectPath, s.agentConnect)
 	s.mux.HandleFunc("GET "+app.SiteObservationPath, s.app.ServeSiteObservations)
 	s.mux.HandleFunc("POST "+app.SiteIncidentActionPath, s.app.ServeSiteIncidentAction)
@@ -216,11 +216,11 @@ func (s *Server) routes() {
 	s.handleRaw("POST /api/v1/status/{name}/subscribe", "", http.HandlerFunc(s.subscribe))
 	s.handleRaw("POST /api/v1/status/{name}/confirm", "", http.HandlerFunc(s.subscription))
 	s.handleRaw("POST /api/v1/status/{name}/unsubscribe", "", http.HandlerFunc(s.subscription))
-	s.mux.HandleFunc("GET /status/{name}/feed.atom", s.feed)
-	s.mux.HandleFunc("GET /badge/{monitor}/{kind}", s.badge)
+	s.handleRaw("GET /status/{name}/feed.atom", "", http.HandlerFunc(s.feed))
+	s.handleRaw("GET /badge/{monitor}/{kind}", "", http.HandlerFunc(s.badge))
 	for _, p := range []string{"/api/push/{token}", "/push/{token}"} {
-		s.mux.HandleFunc("GET "+p, s.pushHandler)
-		s.mux.HandleFunc("POST "+p, s.pushHandler)
+		s.handleRaw("GET "+p, "", http.HandlerFunc(s.pushHandler))
+		s.handleRaw("POST "+p, "", http.HandlerFunc(s.pushHandler))
 	}
 	s.mux.Handle("GET /api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, notFound("endpoint"))
