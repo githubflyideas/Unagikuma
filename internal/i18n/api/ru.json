@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "Нужны kind (email или phone) и адрес",
 "limit must be a positive integer": "limit должен быть положительным целым числом",
 "login required": "Требуется вход",
+"method %s is not allowed here (allowed: %s)": "Метод %s здесь не разрешён (разрешены: %s)",
 "missing or wrong CSRF token": "CSRF-токен отсутствует или неверен",
 "mode is fallback or all": "mode — fallback или all",
 "name and scopes are required": "Нужны имя и области доступа",
@@ -88,5 +89,6 @@
 "wrong username or password": "Неверное имя пользователя или пароль",
 "you cannot delete your own account": "Нельзя удалить собственную учётную запись",
 "your account is limited to some sections and cannot change shared configuration": "Ваша учётная запись ограничена некоторыми разделами и не может менять общую конфигурацию",
-"your account may only change monitors in its own sections": "Ваша учётная запись может менять мониторы только в своих разделах"
+"your account may only change monitors in its own sections": "Ваша учётная запись может менять мониторы только в своих разделах",
+"your role (%s) does not allow this": "Ваша роль (%s) не позволяет это сделать"
 }

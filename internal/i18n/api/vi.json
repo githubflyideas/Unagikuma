@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "Cần kind (email hoặc phone) và địa chỉ",
 "limit must be a positive integer": "limit phải là số nguyên dương",
 "login required": "Cần đăng nhập",
+"method %s is not allowed here (allowed: %s)": "Không được dùng phương thức %s ở đây (được phép: %s)",
 "missing or wrong CSRF token": "Mã CSRF bị thiếu hoặc sai",
 "mode is fallback or all": "mode là fallback hoặc all",
 "name and scopes are required": "Cần tên và phạm vi quyền",
@@ -88,5 +89,6 @@
 "wrong username or password": "Tên người dùng hoặc mật khẩu sai",
 "you cannot delete your own account": "Bạn không thể xóa tài khoản của chính mình",
 "your account is limited to some sections and cannot change shared configuration": "Tài khoản của bạn bị giới hạn ở một số phần và không thể sửa cấu hình dùng chung",
-"your account may only change monitors in its own sections": "Tài khoản của bạn chỉ có thể sửa giám sát trong phần của mình"
+"your account may only change monitors in its own sections": "Tài khoản của bạn chỉ có thể sửa giám sát trong phần của mình",
+"your role (%s) does not allow this": "Vai trò của bạn (%s) không cho phép việc này"
 }

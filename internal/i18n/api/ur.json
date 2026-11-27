@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "kind ‏(email یا phone) اور پتہ ضروری ہیں",
 "limit must be a positive integer": "limit کو مثبت عدد صحیح ہونا چاہیے",
 "login required": "لاگ ان ضروری ہے",
+"method %s is not allowed here (allowed: %s)": "یہاں %s طریقہ کی اجازت نہیں ہے (اجازت شدہ: %s)",
 "missing or wrong CSRF token": "CSRF ٹوکن موجود نہیں یا غلط ہے",
 "mode is fallback or all": "mode یا تو fallback ہے یا all",
 "name and scopes are required": "نام اور دائرے ضروری ہیں",
@@ -88,5 +89,6 @@
 "wrong username or password": "صارف نام یا پاس ورڈ غلط ہے",
 "you cannot delete your own account": "آپ اپنا اکاؤنٹ حذف نہیں کر سکتے",
 "your account is limited to some sections and cannot change shared configuration": "آپ کا اکاؤنٹ کچھ حصوں تک محدود ہے اور مشترکہ کنفیگریشن نہیں بدل سکتا",
-"your account may only change monitors in its own sections": "آپ کا اکاؤنٹ صرف اپنے حصوں کے مانیٹر بدل سکتا ہے"
+"your account may only change monitors in its own sections": "آپ کا اکاؤنٹ صرف اپنے حصوں کے مانیٹر بدل سکتا ہے",
+"your role (%s) does not allow this": "آپ کا کردار (%s) اس کی اجازت نہیں دیتا"
 }

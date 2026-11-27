@@ -239,6 +239,15 @@ func (s *Server) allowLogin(r *http.Request) error {
 	return nil
 }
 
+// scopeError refuses a request the caller's access does not cover, in
+// the caller's terms: a signed-in account has a role, a token has scopes.
+func scopeError(ai *authInfo, scope string) error {
+	if ai.session {
+		return Errorf(http.StatusForbidden, CodeForbidden, "your role (%s) does not allow this", ai.role)
+	}
+	return Errorf(http.StatusForbidden, CodeForbidden, "this token lacks the %q scope", scope)
+}
+
 // handle registers an API endpoint with authentication and scope checks.
 // scope "" means public; "read" also accepts any authenticated caller.
 func (s *Server) handle(pattern, scope string, f apiFunc) {
@@ -251,7 +260,7 @@ func (s *Server) handle(pattern, scope string, f apiFunc) {
 				return
 			}
 			if !ai.scopes[scope] && !ai.scopes["admin"] {
-				writeErrorFor(w, r, Errorf(http.StatusForbidden, CodeForbidden, "this token lacks the %q scope", scope))
+				writeErrorFor(w, r, scopeError(ai, scope))
 				return
 			}
 			if ai.group != nil && !groupRoutes[pattern] {

@@ -5,12 +5,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/githubflyideas/unagikuma/internal/config"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/githubflyideas/unagikuma/internal/app"
 	"github.com/githubflyideas/unagikuma/internal/backup"
+	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
 
@@ -101,18 +103,51 @@ func runRestore(args []string) error {
 	if *cfgPath == "" {
 		*cfgPath = config.PathIn(*data)
 	}
+	if !*force {
+		for _, p := range []string{filepath.Join(*data, "core.db"), *cfgPath} {
+			if _, err := os.Stat(p); err == nil {
+				return fmt.Errorf("%s exists; stop the server and use --force to replace it", p)
+			}
+		}
+	}
+	// Not under a running server: it would keep writing the files this
+	// replaces.
+	if err := os.MkdirAll(*data, 0o700); err != nil {
+		return err
+	}
+	if ok, err := lockDataDir(filepath.Join(*data, lockFile)); err != nil {
+		return err
+	} else if !ok {
+		return fmt.Errorf("unagikuma is running on %s: stop it first", *data)
+	}
+	defer closeDataLock()
 	f, err := os.Open(fs.Arg(0))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	m, err := backup.Restore(f, *data, *cfgPath, pass, *force)
+	// The same way as a restore from the web UI: unpacked beside the data
+	// and checked (databases this version can open, a configuration
+	// without errors), then put in place with the replaced files kept.
+	now := time.Now()
+	st, err := backup.StageChecked(f, *data, pass, now, func(dir string) error { return app.CheckRestore(dir, checkOptions()) })
 	if err != nil {
 		return err
 	}
+	applied, _, before, err := backup.ApplyPending(*data, *cfgPath, now)
+	if err != nil {
+		return fmt.Errorf("the backup could not be put in place, so the installation is as it was: %w", err)
+	}
+	if !applied {
+		return errors.New("the checked backup went missing before it could be put in place")
+	}
+	m := st.Manifest
 	markRestored(*data, m.Created, m.Version)
 	fmt.Printf("Restored %s (%s, made %s by %s %s) into %s.\n", strings.Join(m.Files, ", "), map[bool]string{true: "with keys", false: "without keys"}[m.Keys],
 		m.Created.Local().Format("2006-01-02 15:04"), "unagikuma", m.Version, *data)
+	if before != "" {
+		fmt.Printf("The files it replaced are kept in %s.\n", before)
+	}
 	if !m.Keys {
 		fmt.Println("Put unagikuma.key back (or set UNAGIKUMA_SECRET_KEY) so stored secrets can be read; without the old cluster CA agents must be added again.")
 	}

@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "kind(email 또는 phone)와 주소가 필요합니다",
 "limit must be a positive integer": "limit은 양의 정수여야 합니다",
 "login required": "로그인이 필요합니다",
+"method %s is not allowed here (allowed: %s)": "여기서는 %s 메서드를 사용할 수 없습니다 (허용: %s)",
 "missing or wrong CSRF token": "CSRF 토큰이 없거나 잘못되었습니다",
 "mode is fallback or all": "mode는 fallback 또는 all입니다",
 "name and scopes are required": "이름과 범위가 필요합니다",
@@ -88,5 +89,6 @@
 "wrong username or password": "사용자 이름 또는 비밀번호가 틀립니다",
 "you cannot delete your own account": "자신의 계정은 삭제할 수 없습니다",
 "your account is limited to some sections and cannot change shared configuration": "이 계정은 일부 섹션으로 제한되어 공유 설정을 변경할 수 없습니다",
-"your account may only change monitors in its own sections": "이 계정은 자신의 섹션에 있는 모니터만 변경할 수 있습니다"
+"your account may only change monitors in its own sections": "이 계정은 자신의 섹션에 있는 모니터만 변경할 수 있습니다",
+"your role (%s) does not allow this": "현재 역할(%s)로는 할 수 없습니다"
 }

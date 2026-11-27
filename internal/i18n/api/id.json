@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "kind (email atau phone) dan alamat diperlukan",
 "limit must be a positive integer": "limit harus bilangan bulat positif",
 "login required": "Perlu masuk",
+"method %s is not allowed here (allowed: %s)": "Metode %s tidak diizinkan di sini (diizinkan: %s)",
 "missing or wrong CSRF token": "Token CSRF hilang atau salah",
 "mode is fallback or all": "mode adalah fallback atau all",
 "name and scopes are required": "Nama dan cakupan diperlukan",
@@ -88,5 +89,6 @@
 "wrong username or password": "Nama pengguna atau kata sandi salah",
 "you cannot delete your own account": "Anda tidak dapat menghapus akun Anda sendiri",
 "your account is limited to some sections and cannot change shared configuration": "Akun Anda terbatas pada beberapa bagian dan tidak dapat mengubah konfigurasi bersama",
-"your account may only change monitors in its own sections": "Akun Anda hanya dapat mengubah monitor di bagiannya sendiri"
+"your account may only change monitors in its own sections": "Akun Anda hanya dapat mengubah monitor di bagiannya sendiri",
+"your role (%s) does not allow this": "Peran Anda (%s) tidak mengizinkan ini"
 }

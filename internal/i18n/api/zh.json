@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "需要 kind（email 或 phone）和地址",
 "limit must be a positive integer": "limit 必须是正整数",
 "login required": "需要登录",
+"method %s is not allowed here (allowed: %s)": "此处不允许 %s 方法（允许：%s）",
 "missing or wrong CSRF token": "CSRF 令牌缺失或错误",
 "mode is fallback or all": "mode 只能是 fallback 或 all",
 "name and scopes are required": "需要名称和权限范围",
@@ -88,5 +89,6 @@
 "wrong username or password": "用户名或密码错误",
 "you cannot delete your own account": "不能删除自己的账号",
 "your account is limited to some sections and cannot change shared configuration": "你的账号只限于部分分区，不能修改共享配置",
-"your account may only change monitors in its own sections": "你的账号只能修改自己分区里的监控"
+"your account may only change monitors in its own sections": "你的账号只能修改自己分区里的监控",
+"your role (%s) does not allow this": "你的角色（%s）不允许此操作"
 }

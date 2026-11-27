@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "kind（email または phone）とアドレスが必要です",
 "limit must be a positive integer": "limit は正の整数です",
 "login required": "ログインが必要です",
+"method %s is not allowed here (allowed: %s)": "ここでは %s メソッドは使えません（使えるもの: %s）",
 "missing or wrong CSRF token": "CSRF トークンがないか、誤っています",
 "mode is fallback or all": "mode は fallback か all です",
 "name and scopes are required": "名前とスコープが必要です",
@@ -88,5 +89,6 @@
 "wrong username or password": "ユーザー名またはパスワードが違います",
 "you cannot delete your own account": "自分のアカウントは削除できません",
 "your account is limited to some sections and cannot change shared configuration": "このアカウントは一部のセクションに限られるため、共有設定は変更できません",
-"your account may only change monitors in its own sections": "このアカウントは自分のセクションの監視だけを変更できます"
+"your account may only change monitors in its own sections": "このアカウントは自分のセクションの監視だけを変更できます",
+"your role (%s) does not allow this": "あなたのロール（%s）ではこの操作はできません"
 }

@@ -175,6 +175,28 @@ func TestCommandsOnARealInstallation(t *testing.T) {
 	if _, err := run("restore", arch, "--data", into, "--passphrase-file", pass); err == nil {
 		t.Error("restore over an installation without --force succeeded")
 	}
+	// With --force the replaced files are kept, as from the web UI.
+	if out, err := run("restore", arch, "--data", into, "--passphrase-file", pass, "--force"); err != nil || !strings.Contains(out, "restore-before-") {
+		t.Errorf("restore --force: %q %v", out, err)
+	}
+	if kept, _ := filepath.Glob(filepath.Join(into, "restore-before-*", "core.db")); len(kept) != 1 {
+		t.Errorf("replaced database not kept: %v", kept)
+	}
+	// A backup whose configuration this version refuses changes nothing.
+	badConf := filepath.Join(t.TempDir(), "bad.conf")
+	good, _ := os.ReadFile(filepath.Join(dir, "monitors.conf"))
+	_ = os.WriteFile(badConf, append(good, []byte("\nbroken IN NOSUCHTYPE 1\n")...), 0o600)
+	badArch := filepath.Join(t.TempDir(), "bad.ukbackup")
+	if out, err := run("backup", "--data", dir, "--config", badConf, "--out", badArch); err != nil {
+		t.Fatalf("backup: %q %v", out, err)
+	}
+	before, _ := os.ReadFile(filepath.Join(into, "core.db"))
+	if out, err := run("restore", badArch, "--data", into, "--force"); err == nil || !strings.Contains(out+err.Error(), "monitors.conf in the backup") {
+		t.Errorf("restore of a configuration with errors: %q %v", out, err)
+	}
+	if after, _ := os.ReadFile(filepath.Join(into, "core.db")); string(after) != string(before) {
+		t.Error("a refused restore changed the database")
+	}
 
 	// Password from a pipe, then a generated one.
 	err = withStdin(t, "New-pass-2026\n", func() error {

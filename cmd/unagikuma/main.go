@@ -226,6 +226,17 @@ func runServer(args []string) error {
 	if err != nil {
 		return err
 	}
+	// One server per data directory: a second one on it is refused before
+	// anything is touched (a staged restore included).
+	if err := os.MkdirAll(*data, 0o700); err != nil {
+		return err
+	}
+	if ok, err := lockDataDir(filepath.Join(*data, lockFile)); err != nil {
+		return err
+	} else if !ok {
+		return fmt.Errorf("already running on the data directory %s: stop it first, or start this one in another directory (or with another --data) to run a second installation", *data)
+	}
+	defer closeDataLock()
 	// A restore staged from the web UI is put in place before anything is
 	// opened; what it replaces is kept beside the data.
 	cfgForRestore := *cfgPath
@@ -239,17 +250,6 @@ func runServer(args []string) error {
 		log.Info("restored from the backup staged in the web UI", "made", st.Created, "instance", st.Instance, "version", st.Version, "replaced_files_kept_in", before)
 		fmt.Fprintf(os.Stderr, "\n  Restored from the backup made %s. The files it replaced are in %s\n\n", st.Created.Format("2006-01-02 15:04"), before)
 	}
-	// One server per data directory: a second one on it is refused before
-	// anything is touched.
-	if err := os.MkdirAll(*data, 0o700); err != nil {
-		return err
-	}
-	if ok, err := lockDataDir(filepath.Join(*data, lockFile)); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("already running on the data directory %s: stop it first, or start this one in another directory (or with another --data) to run a second installation", *data)
-	}
-	defer closeDataLock()
 	// Then the port: the one asked for, or this installation's own.
 	explicit := os.Getenv("UNAGIKUMA_LISTEN") != ""
 	fs.Visit(func(f *flag.Flag) { explicit = explicit || f.Name == "listen" })
@@ -496,6 +496,22 @@ func configFile(args []string) string {
 	return config.PathIn(defaultDataDir())
 }
 
+// checkOptions are the checks "unagikuma check" (and the restore
+// command) apply to a configuration without a running installation.
+func checkOptions() config.Options {
+	return config.Options{
+		ValidateMonitor: func(m *config.Monitor) error {
+			s, err := app.ProbeSpec(m, nil)
+			if err != nil || strings.Contains(s.Target, "${") {
+				return err
+			}
+			return probe.Validate(s)
+		},
+		ValidateChannel: app.ValidateChannel,
+		ChannelWarnings: app.ChannelWarnings,
+	}
+}
+
 func runCheck(args []string) error {
 	fs := flag.NewFlagSet("check", flag.ExitOnError)
 	strict := fs.Bool("strict", false, "treat warnings as errors")
@@ -507,18 +523,7 @@ func runCheck(args []string) error {
 	if err != nil {
 		return err
 	}
-	opts := config.Options{
-		ValidateMonitor: func(m *config.Monitor) error {
-			s, err := app.ProbeSpec(m, nil)
-			if err != nil || strings.Contains(s.Target, "${") {
-				return err
-			}
-			return probe.Validate(s)
-		},
-		ValidateChannel: app.ValidateChannel,
-		ChannelWarnings: app.ChannelWarnings,
-	}
-	_, cfg, diags := config.Load(path, src, opts)
+	_, cfg, diags := config.Load(path, src, checkOptions())
 	diags = append(diags, contactDiags(cfg, path, *data)...)
 	bad := false
 	for _, d := range diags {

@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "Se requieren kind (email o phone) y la dirección",
 "limit must be a positive integer": "limit debe ser un entero positivo",
 "login required": "Se requiere iniciar sesión",
+"method %s is not allowed here (allowed: %s)": "El método %s no está permitido aquí (permitidos: %s)",
 "missing or wrong CSRF token": "Token CSRF ausente o incorrecto",
 "mode is fallback or all": "mode es fallback o all",
 "name and scopes are required": "Se requieren el nombre y los alcances",
@@ -88,5 +89,6 @@
 "wrong username or password": "Usuario o contraseña incorrectos",
 "you cannot delete your own account": "No puede borrar su propia cuenta",
 "your account is limited to some sections and cannot change shared configuration": "Su cuenta está limitada a algunas secciones y no puede cambiar la configuración compartida",
-"your account may only change monitors in its own sections": "Su cuenta solo puede cambiar monitores de sus propias secciones"
+"your account may only change monitors in its own sections": "Su cuenta solo puede cambiar monitores de sus propias secciones",
+"your role (%s) does not allow this": "Tu rol (%s) no permite esto"
 }

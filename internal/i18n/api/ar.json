@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "يلزم kind (email أو phone) والعنوان",
 "limit must be a positive integer": "يجب أن يكون limit عددًا صحيحًا موجبًا",
 "login required": "يلزم تسجيل الدخول",
+"method %s is not allowed here (allowed: %s)": "الطريقة %s غير مسموح بها هنا (المسموح: %s)",
 "missing or wrong CSRF token": "رمز CSRF مفقود أو خاطئ",
 "mode is fallback or all": "mode إما fallback أو all",
 "name and scopes are required": "يلزم الاسم والنطاقات",
@@ -88,5 +89,6 @@
 "wrong username or password": "اسم المستخدم أو كلمة المرور خاطئة",
 "you cannot delete your own account": "لا يمكنك حذف حسابك",
 "your account is limited to some sections and cannot change shared configuration": "حسابك مقصور على بعض الأقسام ولا يمكنه تغيير الإعدادات المشتركة",
-"your account may only change monitors in its own sections": "لا يمكن لحسابك تغيير إلا المراقبات في أقسامه"
+"your account may only change monitors in its own sections": "لا يمكن لحسابك تغيير إلا المراقبات في أقسامه",
+"your role (%s) does not allow this": "دورك (%s) لا يسمح بهذا"
 }
