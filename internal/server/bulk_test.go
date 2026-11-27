@@ -17,8 +17,10 @@ func TestMonitorBulkDelete(t *testing.T) {
 	}
 	// A stale etag fails the whole request: nothing is deleted.
 	before := cfg()
-	if c := e.do("POST", "/api/v1/monitors/bulk_delete", map[string]any{"names": []string{"web", "db"}, "etags": map[string]string{"db": `"stale"`}}, nil); c != 412 {
-		t.Fatalf("stale etag: %d", c)
+	var stale map[string]any
+	if c := e.do("POST", "/api/v1/monitors/bulk_delete", map[string]any{"names": []string{"web", "db"}, "etags": map[string]string{"db": `"stale"`}}, &stale); c != 412 ||
+		stale["code"] != CodeChanged || stale["record_etag"] == "" || stale["record_etag"] == nil {
+		t.Fatalf("stale etag: %d %v", c, stale)
 	}
 	if cfg() != before || e.app.Config().Config.FindMonitor("web") == nil {
 		t.Fatal("a refused request changed the file")

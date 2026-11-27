@@ -732,7 +732,7 @@ func (s *Server) configError(err error) error {
 		}
 		return e
 	case errors.Is(err, app.ErrConflict):
-		return &APIError{Status: http.StatusPreconditionFailed, Code: CodeConflict, Message: err.Error(), Extra: map[string]any{"etag": s.app.Config().ETag()}}
+		return &APIError{Status: http.StatusPreconditionFailed, Code: CodeChanged, Message: err.Error(), Extra: map[string]any{"etag": s.app.Config().ETag()}}
 	case errors.Is(err, app.ErrSuperseded), errors.Is(err, app.ErrMember):
 		return &APIError{Status: http.StatusConflict, Code: CodeConflict, Message: err.Error()}
 	case errors.Is(err, config.ErrNameTaken):
@@ -925,7 +925,7 @@ func (s *Server) monitorBulkPause(w http.ResponseWriter, r *http.Request) (any, 
 		if want := req.ETags[name]; want != "" {
 			cur := etags[name]
 			if cur == "" || !etagListHas(want, cur) {
-				return nil, &APIError{Status: http.StatusPreconditionFailed, Code: CodeConflict, Message: errPrecondition{cur}.Error(), Extra: map[string]any{"etag": cur}}
+				return nil, &APIError{Status: http.StatusPreconditionFailed, Code: CodeChanged, Message: errPrecondition{cur}.Error(), Extra: map[string]any{"record_etag": cur}}
 			}
 		}
 		if s.app.EffectivelyPaused(name) == req.Paused {
@@ -978,7 +978,7 @@ func (s *Server) monitorPause(w http.ResponseWriter, r *http.Request) (any, erro
 	if want := strings.TrimSpace(r.Header.Get("If-Match")); want != "" && want != "*" {
 		cur := s.recordETags()[name]
 		if cur == "" || !etagListHas(want, cur) {
-			return nil, &APIError{Status: http.StatusPreconditionFailed, Code: CodeConflict, Message: errPrecondition{cur}.Error(), Extra: map[string]any{"etag": cur}}
+			return nil, &APIError{Status: http.StatusPreconditionFailed, Code: CodeChanged, Message: errPrecondition{cur}.Error(), Extra: map[string]any{"record_etag": cur}}
 		}
 	}
 	if m.Type == "EXEC" && !req.Paused && !req.Force {
