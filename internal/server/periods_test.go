@@ -22,11 +22,11 @@ func TestPeriodsSavedFromTheConsole(t *testing.T) {
 	if c := e.do("POST", "/api/v1/channels", map[string]any{"name": "c1", "kind": "log", "opts": map[string]string{"period": "office"}}, nil); c != 200 {
 		t.Fatalf("channel: %d", c)
 	}
-	if c := e.do("DELETE", "/api/v1/periods/office", nil, nil); c == 200 {
+	if c := e.do("DELETE", "/api/v1/periods/office", nil, nil); c == 204 {
 		t.Fatal("a period in use was deleted")
 	}
 	e.do("DELETE", "/api/v1/channels/c1", nil, nil)
-	if c := e.do("DELETE", "/api/v1/periods/office", nil, nil); c != 200 {
+	if c := e.do("DELETE", "/api/v1/periods/office", nil, nil); c != 204 {
 		t.Fatalf("delete: %d", c)
 	}
 }

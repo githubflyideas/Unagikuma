@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "Se requieren kind (email o phone) y la dirección",
 "limit must be a positive integer": "limit debe ser un entero positivo",
 "login required": "Se requiere iniciar sesión",
+"method %s is not allowed here (allowed: %s)": "El método %s no está permitido aquí (permitidos: %s)",
 "missing or wrong CSRF token": "Token CSRF ausente o incorrecto",
 "mode is fallback or all": "mode es fallback o all",
 "name and scopes are required": "Se requieren el nombre y los alcances",
@@ -45,6 +46,7 @@
 "no region %s": "No existe la región %s",
 "nothing to probe": "Nada que comprobar",
 "only administrators may add or change EXEC checks: they run programs on the probe nodes": "Solo los administradores pueden añadir o cambiar comprobaciones EXEC: ejecutan programas en los nodos de sondeo",
+"preference %s must be a short name (letters, digits and _ + . / -)": "La preferencia %s debe ser un nombre corto (letras, dígitos y _ + . / -)",
 "range is 7d, 30d or 90d": "range es 7d, 30d o 90d",
 "rejoin request replayed": "Solicitud de reincorporación repetida",
 "request body larger than %d bytes": "El cuerpo de la solicitud supera %d bytes",
@@ -81,12 +83,14 @@
 "unexpected data after the JSON body": "Datos inesperados después del cuerpo JSON",
 "unknown channel %s": "Canal desconocido %s",
 "unknown policy %s": "Política desconocida %s",
+"unknown preference %q (style, lang and timezone are kept)": "Preferencia desconocida %q (se guardan style, lang y timezone)",
 "unknown scope %q": "Alcance desconocido %q",
 "unknown status page %s": "Página de estado desconocida %s",
 "unknown type %s": "Tipo desconocido %s",
-"wrong setup token (see the server log)": "Token de configuración incorrecto (vea el registro del servidor)",
+"wrong setup token (it is in the file setup-token in the data directory)": "Token de configuración incorrecto (está en el archivo setup-token del directorio de datos)",
 "wrong username or password": "Usuario o contraseña incorrectos",
 "you cannot delete your own account": "No puede borrar su propia cuenta",
 "your account is limited to some sections and cannot change shared configuration": "Su cuenta está limitada a algunas secciones y no puede cambiar la configuración compartida",
-"your account may only change monitors in its own sections": "Su cuenta solo puede cambiar monitores de sus propias secciones"
+"your account may only change monitors in its own sections": "Su cuenta solo puede cambiar monitores de sus propias secciones",
+"your role (%s) does not allow this": "Tu rol (%s) no permite esto"
 }

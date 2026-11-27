@@ -47,7 +47,7 @@ func TestIfMatchOnRecords(t *testing.T) {
 	if code := e.do("DELETE", "/api/v1/monitors/db", nil, nil, "If-Match", dbTag); code != 412 {
 		t.Fatalf("delete with a stale etag: %d", code)
 	}
-	if code := e.do("DELETE", "/api/v1/monitors/db", nil, nil, "If-Match", etag("db")); code != 200 {
+	if code := e.do("DELETE", "/api/v1/monitors/db", nil, nil, "If-Match", etag("db")); code != 204 {
 		t.Fatalf("delete with the current etag: %d", code)
 	}
 }

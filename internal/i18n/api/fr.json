@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "kind (email ou phone) et l’adresse sont requis",
 "limit must be a positive integer": "limit doit être un entier positif",
 "login required": "Connexion requise",
+"method %s is not allowed here (allowed: %s)": "La méthode %s n’est pas autorisée ici (autorisées : %s)",
 "missing or wrong CSRF token": "Jeton CSRF manquant ou incorrect",
 "mode is fallback or all": "mode vaut fallback ou all",
 "name and scopes are required": "Le nom et les portées sont requis",
@@ -45,6 +46,7 @@
 "no region %s": "Aucune région %s",
 "nothing to probe": "Rien à sonder",
 "only administrators may add or change EXEC checks: they run programs on the probe nodes": "Seuls les administrateurs peuvent ajouter ou modifier des contrôles EXEC : ils exécutent des programmes sur les nœuds de sonde",
+"preference %s must be a short name (letters, digits and _ + . / -)": "La préférence %s doit être un nom court (lettres, chiffres et _ + . / -)",
 "range is 7d, 30d or 90d": "range vaut 7d, 30d ou 90d",
 "rejoin request replayed": "Demande de réintégration rejouée",
 "request body larger than %d bytes": "Le corps de la requête dépasse %d octets",
@@ -81,12 +83,14 @@
 "unexpected data after the JSON body": "Données inattendues après le corps JSON",
 "unknown channel %s": "Canal %s inconnu",
 "unknown policy %s": "Politique %s inconnue",
+"unknown preference %q (style, lang and timezone are kept)": "Préférence inconnue %q (sont conservés style, lang et timezone)",
 "unknown scope %q": "Portée %q inconnue",
 "unknown status page %s": "Page de statut %s inconnue",
 "unknown type %s": "Type %s inconnu",
-"wrong setup token (see the server log)": "Jeton d’installation incorrect (voir le journal du serveur)",
+"wrong setup token (it is in the file setup-token in the data directory)": "Jeton d’installation incorrect (il est dans le fichier setup-token du répertoire de données)",
 "wrong username or password": "Nom d’utilisateur ou mot de passe incorrect",
 "you cannot delete your own account": "Vous ne pouvez pas supprimer votre propre compte",
 "your account is limited to some sections and cannot change shared configuration": "Votre compte est limité à certaines sections et ne peut pas modifier la configuration partagée",
-"your account may only change monitors in its own sections": "Votre compte ne peut modifier que les moniteurs de ses propres sections"
+"your account may only change monitors in its own sections": "Votre compte ne peut modifier que les moniteurs de ses propres sections",
+"your role (%s) does not allow this": "Votre rôle (%s) ne le permet pas"
 }

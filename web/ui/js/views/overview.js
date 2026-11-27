@@ -397,7 +397,7 @@ export const heldCount = (counts) => SAVED.reduce((a, [k]) => a + ((counts && co
 // Saved shows the alerts not sent in the last seven days: the total, a
 // bar per day, and a row per reason that opens the list of those alerts.
 function Saved({ week }) {
-  const d = useFetch(() => get('/saved-alerts').catch(() => null), []);
+  const d = useFetch(() => get('/saved_alerts').catch(() => null), []);
   const [open, setOpen] = useState(null);
   const parts = SAVED.map(([k, label]) => [k, t(label), week[k] || 0]);
   const total = parts.reduce((a, p) => a + p[2], 0);

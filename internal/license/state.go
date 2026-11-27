@@ -107,11 +107,6 @@ type Checker struct {
 	st      State
 }
 
-// Open prepares the licence state of a data directory.
-func Open(dir string) (*Checker, error) {
-	return OpenWith(dir, Release())
-}
-
 // OpenWith uses another keyring (tests).
 func OpenWith(dir string, ring Keyring) (*Checker, error) {
 	id, err := installation(dir)

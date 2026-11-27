@@ -841,7 +841,4 @@ func TestUDPSourcePortTurns(t *testing.T) {
 		t.Skip("a port held by another program may not be detected on Windows (documented as possibly unsupported)")
 	}
 	want(t, Run(context.Background(), raw(slow, port, time.Second)), VoteAbstain, ReasonPortBusy)
-	if !LocalAbstain(ReasonPortBusy) {
-		t.Error("a busy source port says nothing about the target")
-	}
 }

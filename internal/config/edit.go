@@ -705,6 +705,13 @@ func NextSerial(cur uint32, now time.Time) (uint32, string, error) {
 	if cand > MaxSerial {
 		return 0, "", errors.New("serial would overflow")
 	}
+	// A revision is YYYYMMDDnn, as DNS zone serials are: two digits count
+	// the changes of a day. The 100th change of a day goes on to the next
+	// day's numbers; that keeps every revision above the one before (what
+	// matters), and is said so it is not mistaken for a wrong clock.
+	if cd, ok := serialDate(uint32(cand)); ok && cd.After(time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)) && today+1 <= MaxSerial && uint64(cur) >= today {
+		return uint32(cand), fmt.Sprintf("more than 99 changes today: the revision goes on as %d, whose date part is ahead of today's (revisions only ever go up)", cand), nil
+	}
 	return uint32(cand), "", nil
 }
 
@@ -732,7 +739,7 @@ func CheckSerial(newSerial, active uint32) error {
 	case newSerial == 0:
 		return errors.New("the revision must be at least 1")
 	case active != 0 && newSerial < active:
-		return fmt.Errorf("revision %d is lower than the active %d (use history → rollback to go back)", newSerial, active)
+		return fmt.Errorf("revision %d is lower than the active %d: a new revision must be above it (`unagikuma serial bump` sets the next one; history → rollback goes back)", newSerial, active)
 	case active != 0 && !activeDated && newDated:
 		return nil
 	case active != 0 && uint64(newSerial) > uint64(active)+1_000_000:

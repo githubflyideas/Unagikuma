@@ -25,7 +25,7 @@ Download the archive for your platform from the [releases](../../releases), unpa
 ./unagikuma            # listens on :8077, keeps its data in ./data
 ```
 
-Open `http://<host>:8077/` and create the admin account. When you open the UI from another machine, Unagikuma asks for the one-time setup token it printed to its log at first start.
+Open `http://<host>:8077/` and create the admin account. When you open the UI from another machine, Unagikuma asks for the one-time setup token: it is in the file `setup-token` in the data directory (readable by its owner only; the log says where), and is removed once the account exists.
 
 On macOS the binaries are not notarized yet, so the first start is blocked: run `xattr -d com.apple.quarantine ./unagikuma` once (or right-click it in Finder and choose *Open*).
 
@@ -116,6 +116,7 @@ company  IN DOMAIN example.com days=45 critical-days=10
 main     IN STATUSPAGE "Service status" select="group:public"
 ```
 
+- The revision is a date and a two-digit count of that day's changes (`2026102301` is the first change of 23 October 2026), as DNS zone serials are. It only ever goes up: from the 100th change of a day on, it continues with the next day's numbers (the log says so), and a hand edit must use a number above the current one — `unagikuma serial bump` sets it.
 - After editing the file by hand, **increase the revision** on the `$FILE` line; Unagikuma then validates and applies it. Saving a monitor or channel in the web UI raises it for you. Files from earlier releases start with an `@ IN SOA … ( serial interval retry timeout attempts )` line instead; it still works the same way, and its first number is the revision. **Config & import › monitors.conf** shows the file read-only, with a copy button; edit it on the server. A file with errors is never applied: the last good version keeps running and the UI shows what is wrong. On a first start there is no last good version yet; instead of refusing to start, Unagikuma starts in a repair mode — the web UI runs, the banner shows the errors, and nothing is monitored until the configuration is fixed and saved, which starts normal operation without a restart.
 - Credentials never need to be in the file: store them under **Advanced › Secrets** and refer to them as `${secret:name}`. A secret the configuration still uses cannot be deleted: the refusal names the records that use it. Values from the environment can be used as `${env:NAME}` when the server is started with `--allow-env NAME`.
 - Monitors are grouped into hosts by the address they check; `device=core-sw1` groups monitors of several addresses under one name. A host with a PING monitor is UP or DOWN by that ping.
@@ -653,6 +654,9 @@ Everything the UI does goes through a REST API under `/api/v1`. Create a token u
 - **Safe retries.** A `POST` with an `Idempotency-Key` header (any unique string, at most 255 characters) is applied once; repeating it within `api.idempotency-ttl` (24 hours) returns the first answer with `Idempotent-Replayed: true`. Failed requests are not remembered, so they can be retried with the same key.
 - **Pages.** `GET /api/v1/monitors?limit=100` returns monitors in id order with a `next_cursor`; pass it as `cursor=` for the next page until it is `null`. Without `limit` the whole list comes back sorted for display.
 - **Stable ids.** Every monitor has an `id` that survives renames; `/api/v1/monitors/id:42` addresses it wherever a name is accepted.
+- **Answers.** Every list comes as `{"items": [...]}` and is never null. Every `DELETE` answers `204` with no body. Times are RFC 3339 with milliseconds, and durations are in milliseconds (`…_ms`). Address segments are snake_case, such as `/api/v1/alert_channels`.
+- **Errors.** A failed request answers `{"code": "…", "message": "…"}`, sometimes with more fields such as `etag`. The code is stable, so test it rather than the message; for example `record_changed` (412), `conflict` (409), `forbidden` (403) or `method_not_allowed` (405, with an `Allow` header).
+- **Specification.** `GET /api/v1/openapi.json` serves the OpenAPI 3.1 description of every address and answer, whether or not you are signed in.
 - The file format itself is specified in [monitors.conf syntax](spec/monitors-conf.md).
 
 ## Troubleshooting

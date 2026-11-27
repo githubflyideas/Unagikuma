@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "Нужны kind (email или phone) и адрес",
 "limit must be a positive integer": "limit должен быть положительным целым числом",
 "login required": "Требуется вход",
+"method %s is not allowed here (allowed: %s)": "Метод %s здесь не разрешён (разрешены: %s)",
 "missing or wrong CSRF token": "CSRF-токен отсутствует или неверен",
 "mode is fallback or all": "mode — fallback или all",
 "name and scopes are required": "Нужны имя и области доступа",
@@ -45,6 +46,7 @@
 "no region %s": "Нет региона %s",
 "nothing to probe": "Нечего проверять",
 "only administrators may add or change EXEC checks: they run programs on the probe nodes": "Добавлять и менять проверки EXEC могут только администраторы: они запускают программы на узлах проверки",
+"preference %s must be a short name (letters, digits and _ + . / -)": "Настройка %s должна быть коротким именем (буквы, цифры и _ + . / -)",
 "range is 7d, 30d or 90d": "range — 7d, 30d или 90d",
 "rejoin request replayed": "Запрос на повторное присоединение повторён",
 "request body larger than %d bytes": "Тело запроса больше %d байт",
@@ -81,12 +83,14 @@
 "unexpected data after the JSON body": "Лишние данные после тела JSON",
 "unknown channel %s": "Неизвестный канал %s",
 "unknown policy %s": "Неизвестная политика %s",
+"unknown preference %q (style, lang and timezone are kept)": "Неизвестная настройка %q (сохраняются style, lang и timezone)",
 "unknown scope %q": "Неизвестная область доступа %q",
 "unknown status page %s": "Неизвестная страница статуса %s",
 "unknown type %s": "Неизвестный тип %s",
-"wrong setup token (see the server log)": "Неверный токен настройки (см. журнал сервера)",
+"wrong setup token (it is in the file setup-token in the data directory)": "Неверный токен настройки (он в файле setup-token в каталоге данных)",
 "wrong username or password": "Неверное имя пользователя или пароль",
 "you cannot delete your own account": "Нельзя удалить собственную учётную запись",
 "your account is limited to some sections and cannot change shared configuration": "Ваша учётная запись ограничена некоторыми разделами и не может менять общую конфигурацию",
-"your account may only change monitors in its own sections": "Ваша учётная запись может менять мониторы только в своих разделах"
+"your account may only change monitors in its own sections": "Ваша учётная запись может менять мониторы только в своих разделах",
+"your role (%s) does not allow this": "Ваша роль (%s) не позволяет это сделать"
 }

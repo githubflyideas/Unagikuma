@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -102,8 +103,10 @@ func TestAuditLog(t *testing.T) {
 	if c := admin.do("GET", "/api/v1/audit/verify", nil, &v); c != 200 || !v.OK || v.Entries < 5 || v.Head == "" {
 		t.Fatalf("verify: %d %+v", c, v)
 	}
+	// The export is a file (a JSON array), not a list answer.
 	var rows []map[string]any
-	if c := admin.do("GET", "/api/v1/audit/export?format=json&action=user", nil, &rows); c != 200 || len(rows) != 2 {
+	c, body := admin.raw("GET", "/api/v1/audit/export?format=json&action=user", nil, "")
+	if err := json.Unmarshal(body, &rows); c != 200 || err != nil || len(rows) != 2 {
 		t.Fatalf("export: %d %+v", c, rows)
 	}
 	ops.do("DELETE", "/api/v1/session", nil, nil)
@@ -127,7 +130,7 @@ func TestAuditActionNames(t *testing.T) {
 		"PUT /api/v1/config":                       "config.update",
 		"POST /api/v1/maintenance":                 "maintenance.create",
 		"PUT /api/v1/secrets/{name}":               "secret.update",
-		"POST /api/v1/cluster/join-codes":          "cluster.join-codes",
+		"POST /api/v1/cluster/join_codes":          "cluster.join_codes",
 		"POST /api/v1/reports/daily/send":          "reports.daily.send",
 		"POST /api/v1/reports/weekly/send":         "reports.weekly.send",
 		"DELETE /api/v1/incidents/{id}/ack":        "incident.ack.delete",

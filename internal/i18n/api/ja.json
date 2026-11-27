@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "kind（email または phone）とアドレスが必要です",
 "limit must be a positive integer": "limit は正の整数です",
 "login required": "ログインが必要です",
+"method %s is not allowed here (allowed: %s)": "ここでは %s メソッドは使えません（使えるもの: %s）",
 "missing or wrong CSRF token": "CSRF トークンがないか、誤っています",
 "mode is fallback or all": "mode は fallback か all です",
 "name and scopes are required": "名前とスコープが必要です",
@@ -45,6 +46,7 @@
 "no region %s": "リージョン %s はありません",
 "nothing to probe": "プローブする対象がありません",
 "only administrators may add or change EXEC checks: they run programs on the probe nodes": "EXEC チェックを追加・変更できるのは管理者だけです：プローブノードでプログラムを実行するためです",
+"preference %s must be a short name (letters, digits and _ + . / -)": "設定 %s は短い名前にしてください（英字、数字、_ + . / -）",
 "range is 7d, 30d or 90d": "range は 7d、30d、90d のいずれかです",
 "rejoin request replayed": "再参加リクエストが再送されました",
 "request body larger than %d bytes": "リクエスト本文が %d バイトを超えています",
@@ -81,12 +83,14 @@
 "unexpected data after the JSON body": "JSON 本文の後に余分なデータがあります",
 "unknown channel %s": "不明なチャネル %s",
 "unknown policy %s": "不明なポリシー %s",
+"unknown preference %q (style, lang and timezone are kept)": "不明な設定 %q（保存できるのは style、lang、timezone です）",
 "unknown scope %q": "不明なスコープ %q",
 "unknown status page %s": "不明なステータスページ %s",
 "unknown type %s": "不明なタイプ %s",
-"wrong setup token (see the server log)": "セットアップトークンが違います（サーバーログを参照）",
+"wrong setup token (it is in the file setup-token in the data directory)": "セットアップトークンが違います（データディレクトリの setup-token ファイルにあります）",
 "wrong username or password": "ユーザー名またはパスワードが違います",
 "you cannot delete your own account": "自分のアカウントは削除できません",
 "your account is limited to some sections and cannot change shared configuration": "このアカウントは一部のセクションに限られるため、共有設定は変更できません",
-"your account may only change monitors in its own sections": "このアカウントは自分のセクションの監視だけを変更できます"
+"your account may only change monitors in its own sections": "このアカウントは自分のセクションの監視だけを変更できます",
+"your role (%s) does not allow this": "あなたのロール（%s）ではこの操作はできません"
 }

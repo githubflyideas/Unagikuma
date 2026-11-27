@@ -13,7 +13,7 @@ export function IncidentReport({ id }) {
   const d = useFetch(() => get(`/incidents/${encodeURIComponent(id)}/report?lang=${lang}`), [id]);
   if (!d.data) return html`<div class="page">${d.error ? html`<${ErrorBox} error=${d.error} retry=${d.reload} />` : html`<${Loading} />`}</div>`;
   const r = d.data;
-  const file = (f) => `/api/v1/incidents/${encodeURIComponent(id)}/report?format=${f}&download=1&lang=${lang}`;
+  const file = (f) => `api/v1/incidents/${encodeURIComponent(id)}/report?format=${f}&download=1&lang=${lang}`;
   const at = (s) => s && !s.startsWith('0001-') ? fmtTime(s) : '—';
   const facts = [
     ['pm.f.failed', r.failed_at], ['pm.f.detected', r.detected_at], ['pm.f.notified', r.notified_at],

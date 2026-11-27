@@ -1,5 +1,43 @@
 # Changelog
 
+## v3.1.2 — 2026-11-27
+
+**Breaking (API)** — scripts and integrations that call the `/api/v1` API must be updated:
+- Path segments are snake_case: `alert_channels`, `app_profiles`, `bulk_delete`, `bulk_pause`, `channel_kinds`, `exit_countries`, `exit_suggest`, `join_codes`, `monitor_options`, `request_preview`, `same_check`, `saved_alerts`, `site_local`, `status_pages`, `status_support` (they had hyphens).
+- Every list answers `{"items": [...]}` and is never null. Lists that were bare arrays now sit under `items`, and `GET /api/v1/people` answers `items` instead of `people`.
+- Every DELETE answers 204 with no body; where a delete changes the configuration, its new version is in the ETag header. Before, some answered `{"ok":true}`.
+- Every time in an answer is RFC 3339 with exactly three fraction digits (milliseconds).
+- `POST /api/v1/settings/heartbeat/test` answers `configured`, `target`, `last_ok`, `last_try`, `last_error`, with null for "never" (it answered `Configured`, `LastOK` and so on).
+- A node's `health` (in `GET /api/v1/nodes`) gives `gateway_rtt_ms` and `exit_rtt_ms` in milliseconds, and `local_nodes` gives `rtt_ms` and `skew_ms`; they were nanoseconds under other names.
+- `PUT /api/v1/preferences` takes only `style`, `lang` and `timezone`, each a short name, in at most 4 KiB.
+- Every failed If-Match answers 412 with code `record_changed`; bulk pause and delete, pause and whole-file saves answered `conflict`. A port or restart refusal answers 409 with code `conflict` (it said `invalid`).
+- The OpenAPI document moved to `GET /api/v1/openapi.json` (it was `/api/openapi.json`).
+- The cluster protocol between machines is unchanged, so a cluster can be upgraded one machine at a time.
+
+**Security**
+- Only an enabled administrator's API tokens authenticate. Moving an administrator to another role revokes their tokens. The token list shows each token's owner.
+- Sign-in: at most two password hashes run at once, their memory is handed back after each, and an overall sign-in limit applies across all addresses. Failed logins from many addresses no longer drive memory up by gigabytes.
+- The one-time setup token is kept in `setup-token` in the data directory (readable by the owner only). The log and the console name the file instead of printing the token, and the file is removed once the first account exists.
+
+**Fixed**
+- Public status pages load their styles and scripts again, also behind a reverse proxy under a path. The security policy now allows the page's own `<base>` (`base-uri 'self'`).
+- Before its first checks, a status page says the checks have not run yet, on a neutral background. It used to say "Some systems are down" in white on white.
+- `unagikuma restore` runs the same checks as a restore from the web UI: a database this version cannot open, or a configuration with errors, is refused and nothing changes. It refuses while the server is running and keeps the files it replaced in `restore-before-<time>`.
+- Every wrong method at an API address answers a JSON 405 (code `method_not_allowed`) with an Allow header. An unknown API address answers a JSON 404. Write-only addresses answered GET with a plain 404 before, and every 405 was plain text.
+- A signed-in account refused for its role is told that its role does not allow it, not that a token lacks a scope.
+- A push to a token whose monitor is no longer a push monitor answers 404 like an unknown token, not 500.
+- Rate tunables (`api.rate`, `api.login-rate`, `api.push-rate`, `cluster.join-rate`, `statuspage.subscribe-rate`) hold as soon as the configuration changes. Before, they only took effect after a restart, while the tunables page already showed the new value.
+- Node anchors, peers and a request preview's query and headers are empty lists, never null.
+- The 100th configuration change of a day carries on into the next day's revision numbers and says so. The manual explains the revision form.
+- The console reads the API through relative addresses, so it also works under a path prefix.
+- Craftsman Workshop: the account box is wide enough for the run mode in every language.
+- The program no longer panics on bad built-in data. It reports the error and refuses to start.
+
+**Changed**
+- The OpenAPI document (3.1.2) describes every answer, with schemas taken from the code and checked against real answers. It also gives the session cookie's real name, all error codes, the push, health, metrics, badge and feed endpoints, and the error statuses. Every answer the server tests receive is checked against it, so the document and the server cannot drift apart.
+- Dead code was removed, `routes()` was split by area, and the monitors.conf import was split into its steps.
+- The browser tests use Playwright 1.65.1.
+
 ## v3.1.1 — 2026-11-27
 
 **Fixed**

@@ -1,7 +1,6 @@
 package netscope
 
 import (
-	"net"
 	"net/netip"
 	"testing"
 )
@@ -21,12 +20,6 @@ func TestOfHost(t *testing.T) {
 		if s != want.s || k != want.known {
 			t.Errorf("%s: %s/%v want %s/%v", h, s, k, want.s, want.known)
 		}
-	}
-	if OfAddrs([]net.IP{net.ParseIP("10.1.1.1"), net.ParseIP("1.1.1.1")}) != WAN {
-		t.Error("mixed should be wan")
-	}
-	if OfAddrs([]net.IP{net.ParseIP("10.1.1.1")}) != LAN {
-		t.Error("private should be lan")
 	}
 }
 

@@ -23,11 +23,14 @@ import (
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/app"
+	"github.com/githubflyideas/unagikuma/internal/appprofile"
 	"github.com/githubflyideas/unagikuma/internal/backup"
 	"github.com/githubflyideas/unagikuma/internal/cluster"
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/directory"
+	"github.com/githubflyideas/unagikuma/internal/i18n"
 	"github.com/githubflyideas/unagikuma/internal/keywords"
+	"github.com/githubflyideas/unagikuma/internal/notify"
 	"github.com/githubflyideas/unagikuma/internal/probe"
 	"github.com/githubflyideas/unagikuma/internal/server"
 	"github.com/githubflyideas/unagikuma/internal/store"
@@ -81,6 +84,10 @@ func main() {
 		// "unagikuma --version" / "--help": the program's, not the server's.
 		cmd, args = args[0], args[1:]
 	}
+	if err := builtinsError(); err != nil {
+		fmt.Fprintln(os.Stderr, "unagikuma: this build is broken:", err)
+		os.Exit(1)
+	}
 	var err error
 	// Started by the Windows service manager: run the command as a service.
 	if ok, serr := runAsService(func() error { return dispatch(cmd, args) }); ok || serr != nil {
@@ -95,6 +102,18 @@ func main() {
 		fmt.Fprintln(os.Stderr, "unagikuma:", err)
 		os.Exit(1)
 	}
+}
+
+// builtinsError is the first problem in the data built into the program
+// (catalogs, presets, profiles, keyword and tunable tables). The packages
+// load them without stopping the program; it refuses to run here instead.
+func builtinsError() error {
+	for _, f := range []func() error{i18n.LoadError, notify.LoadError, keywords.LoadError, tunables.LoadError, appprofile.LoadError} {
+		if err := f(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // topLevelFlag are the flags that are commands of the program itself.
@@ -207,6 +226,17 @@ func runServer(args []string) error {
 	if err != nil {
 		return err
 	}
+	// One server per data directory: a second one on it is refused before
+	// anything is touched (a staged restore included).
+	if err := os.MkdirAll(*data, 0o700); err != nil {
+		return err
+	}
+	if ok, err := lockDataDir(filepath.Join(*data, lockFile)); err != nil {
+		return err
+	} else if !ok {
+		return fmt.Errorf("already running on the data directory %s: stop it first, or start this one in another directory (or with another --data) to run a second installation", *data)
+	}
+	defer closeDataLock()
 	// A restore staged from the web UI is put in place before anything is
 	// opened; what it replaces is kept beside the data.
 	cfgForRestore := *cfgPath
@@ -220,17 +250,6 @@ func runServer(args []string) error {
 		log.Info("restored from the backup staged in the web UI", "made", st.Created, "instance", st.Instance, "version", st.Version, "replaced_files_kept_in", before)
 		fmt.Fprintf(os.Stderr, "\n  Restored from the backup made %s. The files it replaced are in %s\n\n", st.Created.Format("2006-01-02 15:04"), before)
 	}
-	// One server per data directory: a second one on it is refused before
-	// anything is touched.
-	if err := os.MkdirAll(*data, 0o700); err != nil {
-		return err
-	}
-	if ok, err := lockDataDir(filepath.Join(*data, lockFile)); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("already running on the data directory %s: stop it first, or start this one in another directory (or with another --data) to run a second installation", *data)
-	}
-	defer closeDataLock()
 	// Then the port: the one asked for, or this installation's own.
 	explicit := os.Getenv("UNAGIKUMA_LISTEN") != ""
 	fs.Visit(func(f *flag.Flag) { explicit = explicit || f.Name == "listen" })
@@ -275,10 +294,14 @@ func runServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	srv := server.New(a, server.Options{Log: log, Web: web.FS(), TrustedProxy: trusted, SecureCookies: *certFile != ""})
+	ui, err := web.FS()
+	if err != nil {
+		return err
+	}
+	srv := server.New(a, server.Options{Log: log, Web: ui, TrustedProxy: trusted, SecureCookies: *certFile != ""})
 	defer srv.Close()
-	if tok := srv.SetupToken(); tok != "" {
-		fmt.Fprintf(os.Stderr, "\n  First run: open the web UI to create the admin account.\n  From another machine you need this setup token: %s\n\n", tok)
+	if f := srv.SetupTokenFile(); f != "" {
+		fmt.Fprintf(os.Stderr, "\n  First run: open the web UI to create the admin account.\n  From another machine it asks for the setup token in %s\n\n", f)
 	}
 
 	ctx, stop := signal.NotifyContext(baseCtx, os.Interrupt, syscall.SIGTERM)
@@ -473,6 +496,22 @@ func configFile(args []string) string {
 	return config.PathIn(defaultDataDir())
 }
 
+// checkOptions are the checks "unagikuma check" (and the restore
+// command) apply to a configuration without a running installation.
+func checkOptions() config.Options {
+	return config.Options{
+		ValidateMonitor: func(m *config.Monitor) error {
+			s, err := app.ProbeSpec(m, nil)
+			if err != nil || strings.Contains(s.Target, "${") {
+				return err
+			}
+			return probe.Validate(s)
+		},
+		ValidateChannel: app.ValidateChannel,
+		ChannelWarnings: app.ChannelWarnings,
+	}
+}
+
 func runCheck(args []string) error {
 	fs := flag.NewFlagSet("check", flag.ExitOnError)
 	strict := fs.Bool("strict", false, "treat warnings as errors")
@@ -484,18 +523,7 @@ func runCheck(args []string) error {
 	if err != nil {
 		return err
 	}
-	opts := config.Options{
-		ValidateMonitor: func(m *config.Monitor) error {
-			s, err := app.ProbeSpec(m, nil)
-			if err != nil || strings.Contains(s.Target, "${") {
-				return err
-			}
-			return probe.Validate(s)
-		},
-		ValidateChannel: app.ValidateChannel,
-		ChannelWarnings: app.ChannelWarnings,
-	}
-	_, cfg, diags := config.Load(path, src, opts)
+	_, cfg, diags := config.Load(path, src, checkOptions())
 	diags = append(diags, contactDiags(cfg, path, *data)...)
 	bad := false
 	for _, d := range diags {

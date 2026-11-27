@@ -16,7 +16,7 @@ func TestSameCheckLookup(t *testing.T) {
 		t.Helper()
 		var out res
 		body := map[string]any{"record": map[string]any{"name": "x", "type": typ, "target": target, "opts": opts}, "exclude": exclude}
-		if code := e.do("POST", "/api/v1/monitors/same-check", body, &out); code != 200 {
+		if code := e.do("POST", "/api/v1/monitors/same_check", body, &out); code != 200 {
 			t.Fatalf("same-check: %d", code)
 		}
 		return out

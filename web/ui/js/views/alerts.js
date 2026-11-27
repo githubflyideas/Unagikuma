@@ -2,7 +2,7 @@
 // channels are where every alert goes, unless a monitor names its own.
 import { html, useState, useEffect, useRef } from '../lib.js';
 import { t, has, currentLang } from '../i18n.js';
-import { get, post, del, put, ifMatch, me } from '../api.js';
+import { get, post, del, put, ifMatch, me, listOf } from '../api.js';
 import { ContactsTab, IssueDot, NewAddresses, addressKey } from './contacts.js';
 import { PeriodsTab } from './periods.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog, useDocTitle, Pick } from '../ui.js';
@@ -163,7 +163,7 @@ function RequestPanel({ kind, opts, docs }) {
   const key = kind + JSON.stringify(opts);
   useEffect(() => {
     const id = setTimeout(async () => {
-      try { setPv(await post('/channels/request-preview', { kind, opts, lang: currentLang() })); } catch (e) { setPv({ ok: false, error: errText(e) }); }
+      try { setPv(await post('/channels/request_preview', { kind, opts, lang: currentLang() })); } catch (e) { setPv({ ok: false, error: errText(e) }); }
     }, 400);
     return () => clearTimeout(id);
   }, [key]);
@@ -220,9 +220,9 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
   const [unknown, setUnknown] = useState(null); // addresses to offer for the directory
   const [sort, setSort] = useState('common');
   const [query, setQuery] = useState('');
-  const people = useFetch(() => get('/people').catch(() => ({ people: [] })), []);
+  const people = useFetch(() => get('/people').catch(() => ({ items: [] })), []);
   const periods = useFetch(() => get('/periods').catch(() => ({ items: [] })), []);
-  const allChannels = useFetch(() => get('/channels').catch(() => []), []);
+  const allChannels = useFetch(() => listOf('/channels').catch(() => []), []);
   const found = kinds.find(k => k.kind === kind);
   // E-mail goes to an SMTP server or through this machine's sendmail
   // command; each way shows only its own fields.
@@ -301,7 +301,7 @@ function ChannelForm({ kinds, initial, onClose, onSaved }) {
         const v = opts[f.key] !== undefined ? opts[f.key] : (editing ? '' : f.default || '');
         const label = fieldLabel(f.key) + (required(f) ? ' *' : '');
         if (f.key === 'template') return html`<${TemplateField} label=${label} value=${v.replace(/\\n/g, '\n')} onChange=${(x) => set('template', x)} />`;
-        if (f.key === 'at') return html`<${AtField} label=${label} kind=${kind} value=${v} onChange=${(x) => set('at', x)} people=${people.data && people.data.people} />`;
+        if (f.key === 'at') return html`<${AtField} label=${label} kind=${kind} value=${v} onChange=${(x) => set('at', x)} people=${people.data && people.data.items} />`;
         if (f.key === 'prefix') return html`<${PrefixField} label=${label} value=${v} onChange=${(x) => set('prefix', x)} />`;
         if (f.key === 'members') {
           const others = (Array.isArray(allChannels.data) ? allChannels.data : (allChannels.data && allChannels.data.items) || [])
@@ -363,8 +363,8 @@ function IssueLine({ i }) {
 }
 
 function ChannelsTab() {
-  const list = useFetch(() => get('/channels'), []);
-  const kinds = useFetch(() => get('/channel-kinds'), []);
+  const list = useFetch(() => listOf('/channels'), []);
+  const kinds = useFetch(() => listOf('/channel_kinds'), []);
   const [edit, setEdit] = useState(null);
   const remove = async (c) => {
     if (!await confirmDialog(t('ui.ch.delete_confirm', { name: c.name }), { danger: true, ok: t('ui.delete') })) return;
@@ -408,7 +408,7 @@ function ChannelsTab() {
 // AlertChannels shows and sets the alert channels: where every alert goes,
 // in order (the next only when one fails) or all at once.
 function AlertChannels({ channels, onSaved }) {
-  const d = useFetch(() => get('/alert-channels'), [channels]);
+  const d = useFetch(() => get('/alert_channels'), [channels]);
   const [form, setForm] = useState(null);
   const [busy, setBusy] = useState(false);
   if (!d.data) return null;
@@ -416,7 +416,7 @@ function AlertChannels({ channels, onSaved }) {
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
-    try { await put('/alert-channels', form); toast(t('ui.saved')); setForm(null); d.reload(); onSaved(); } catch (e2) { toastError(e2); }
+    try { await put('/alert_channels', form); toast(t('ui.saved')); setForm(null); d.reload(); onSaved(); } catch (e2) { toastError(e2); }
     setBusy(false);
   };
   return html`<div class="card"><div class="bd row small" style=${{ padding: '10px 14px' }}>
@@ -445,7 +445,7 @@ export const DELIVERY_KEYS = ['notify.channel-timeout', 'notify.channel-retries'
   'notify.retry-after-max', 'notify.failed-retry', 'notify.channel-rate'];
 
 function DeliveryRules() {
-  const tun = useFetch(() => get('/tunables'), []);
+  const tun = useFetch(() => listOf('/tunables'), []);
   const [open, setOpen] = useState(false);
   const [vals, setVals] = useState({});
   const [busy, setBusy] = useState(false);

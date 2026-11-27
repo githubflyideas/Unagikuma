@@ -1,7 +1,7 @@
 // Monitor editor and quick add. Both write records into monitors.conf.
 import { html, useState, useEffect } from '../lib.js';
 import { t, has, detailText, currentLang } from '../i18n.js';
-import { get, post, put, ifMatch, newKey, me } from '../api.js';
+import { get, post, put, ifMatch, newKey, me, listOf } from '../api.js';
 import { useFetch, Loading, ErrorBox, Field, Modal, Pill, msText, reasonText, enc, go, toast, toastError, errText, useDocTitle, regionTitle, Copy, Combo, PRESETS } from '../ui.js';
 
 // Check types, grouped for the type menu.
@@ -130,8 +130,8 @@ export function MonitorEditor({ name }) {
   const editing = !!name;
   const regions = useFetch(() => get('/regions'), []);
   const mons = useFetch(() => get('/monitors'), []);
-  const optList = useFetch(() => get('/monitor-options'), []);
-  const apps = useFetch(() => get('/app-profiles'), []);
+  const optList = useFetch(() => get('/monitor_options'), []);
+  const apps = useFetch(() => listOf('/app_profiles'), []);
   const [f, setF] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -165,7 +165,7 @@ export function MonitorEditor({ name }) {
   useEffect(() => {
     if (!f || f.type === 'PUSH' || !f.target.trim()) { setSame(null); return undefined; }
     const timer = setTimeout(() => {
-      post('/monitors/same-check', { record: { ...record(), name: 'x' }, exclude: name || '' }).then(setSame, () => setSame(null));
+      post('/monitors/same_check', { record: { ...record(), name: 'x' }, exclude: name || '' }).then(setSame, () => setSame(null));
     }, 400);
     return () => clearTimeout(timer);
   }, [draftKey]);

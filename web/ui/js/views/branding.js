@@ -51,7 +51,7 @@ function ImageField({ kind, has, label, hint, onDone, round }) {
   };
   return html`<${Field} label=${label} hint=${hint}>
     <div class="row brand-img">
-      ${has ? html`<img src=${'/api/v1/branding/' + kind + '/preview?r=' + round} alt="" />` : html`<span class="brand-none small muted">${t('ui.brand.none')}</span>`}
+      ${has ? html`<img src=${'api/v1/branding/' + kind + '/preview?r=' + round} alt="" />` : html`<span class="brand-none small muted">${t('ui.brand.none')}</span>`}
       <label class="btn sm">${t('ui.brand.upload')}<input type="file" accept="image/png,image/jpeg,image/gif" hidden disabled=${busy} onChange=${upload} /></label>
       ${has && html`<button type="button" class="btn sm ghost" onClick=${remove}>${t('ui.brand.remove')}</button>`}
     </div><//>`;

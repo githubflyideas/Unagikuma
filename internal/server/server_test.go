@@ -12,8 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/githubflyideas/unagikuma/internal/ratelimit"
 )
 
 func TestWriteError(t *testing.T) {
@@ -76,21 +74,6 @@ func TestClientIP(t *testing.T) {
 	trusted := func(ip net.IP) bool { return ip.IsPrivate() }
 	if got := clientIP(r, trusted); got != "5.6.7.8" {
 		t.Fatalf("trusted proxy: %s", got)
-	}
-}
-
-func TestLimiter(t *testing.T) {
-	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	l := &limiter{keyed: ratelimit.NewKeyed(1, 2, 0), now: func() time.Time { return now }, key: func(r *http.Request) string { return "k" }}
-	h := l.wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	codes := []int{}
-	for i := 0; i < 3; i++ {
-		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
-		codes = append(codes, rec.Code)
-	}
-	if codes[0] != 200 || codes[1] != 200 || codes[2] != 429 {
-		t.Fatalf("%v", codes)
 	}
 }
 

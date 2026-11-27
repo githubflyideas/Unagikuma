@@ -242,8 +242,15 @@ func (s *Server) pushHandler(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]any{"ok": false, "msg": "monitor not found or not active"})
 		return
 	}
-	if err != nil || !s.app.IsPushReceiver(name) {
+	if err != nil {
 		writeError(w, err)
+		return
+	}
+	if !s.app.IsPushReceiver(name) {
+		// A token of a monitor this server does not take pushes for (no
+		// longer a push monitor, or received by another node): the same
+		// answer as an unknown token, not an internal error.
+		writeJSON(w, http.StatusNotFound, map[string]any{"ok": false, "msg": "monitor not found or not active"})
 		return
 	}
 	q := r.URL.Query()

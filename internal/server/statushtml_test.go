@@ -49,7 +49,7 @@ func TestStatusPageServerRendered(t *testing.T) {
 func TestStatusPageCreateRemoved(t *testing.T) {
 	e := newEnv(t, testBind, nil)
 	e.setup()
-	if code := e.do("POST", "/api/v1/status-pages", map[string]any{"name": "public", "title": "Our services", "select": "type:HTTP"}, nil); code != 405 {
+	if code := e.do("POST", "/api/v1/status_pages", map[string]any{"name": "public", "title": "Our services", "select": "type:HTTP"}, nil); code != 405 {
 		t.Fatalf("create should be gone: %d", code)
 	}
 	var a map[string]any

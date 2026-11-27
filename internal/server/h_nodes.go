@@ -39,7 +39,9 @@ type nodeView struct {
 	Version  string         `json:"version,omitempty"`
 	Platform string         `json:"platform,omitempty"`
 	Addr     string         `json:"addr,omitempty"`
-	Health   *engine.Health `json:"health,omitempty"`
+	Health   *engine.Health `json:"-"`
+	// HealthView is the node's own view of its network, as the API shows it.
+	HealthView *healthJSON `json:"health,omitempty"`
 	// The local peer-path verdict, the node's own view and its
 	// notification uplink.
 	Verdict string                `json:"verdict,omitempty"`
@@ -67,14 +69,14 @@ func (s *Server) nodeViews() []nodeView {
 		Anchors: map[string][]string{}, Serial: cfg.Serial}
 	for _, n := range cfg.Nodes {
 		v := nodeView{Name: n.Name, Title: n.Description, Region: n.Region, Probe: n.Probe, Policy: n.Policy,
-			TimeoutS: int(n.NodeTimeout.Seconds()), Anchors: map[string][]string{"lan": n.AnchorsLAN, "wan": n.AnchorsWAN}, AnchorsText: n.Opts["anchors"],
+			TimeoutS: int(n.NodeTimeout.Seconds()), Anchors: map[string][]string{"lan": orEmptyOf(n.AnchorsLAN), "wan": orEmptyOf(n.AnchorsWAN)}, AnchorsText: n.Opts["anchors"],
 			Standby: n.Standby, ETag: s.recordETags()[n.Name]}
 		if n.Name == cfg.MName {
 			self.Title, self.Region, self.Probe, self.Anchors, self.AnchorsText, self.Policy, self.ETag = v.Title, v.Region, v.Probe, v.Anchors, v.AnchorsText, v.Policy, v.ETag
 			continue
 		}
 		if st, ok := status[n.Name]; ok {
-			v.Online, v.Serial, v.Version, v.Platform, v.Addr, v.Health = st.Online, st.Serial, st.Version, st.Platform, st.Addr, st.Health
+			v.Online, v.Serial, v.Version, v.Platform, v.Addr, v.Health, v.HealthView = st.Online, st.Serial, st.Version, st.Platform, st.Addr, st.Health, healthOf(st.Health)
 			v.Unsupported = st.Unsupported
 			v.Verdict, v.Reach, v.Gateway = st.Verdict, st.Reach, st.Gateway
 			v.Since, v.LastSeen = tp(st.Since), tp(st.LastSeen)
@@ -123,7 +125,7 @@ func (s *Server) nodesList(w http.ResponseWriter, r *http.Request) (any, error) 
 	}
 	return map[string]any{"layout": layout, "nodes": views, "fingerprint": s.app.PKI().Fingerprint(), "server": agentServerURL(r),
 		"agent": s.app.Agent(), "instance": s.app.Instance(), "monitors": monitors,
-		"replica": rep, "peers": s.app.Peers(), "local_nodes": s.localNodes(), "gateway": s.app.GatewayStates()}, nil
+		"replica": rep, "peers": orEmptyOf(s.app.Peers()), "local_nodes": s.localNodes(), "gateway": s.app.GatewayStates()}, nil
 }
 
 var hostRe = regexp.MustCompile(`^(\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9.-]+)(:[0-9]{1,5})?$`)
@@ -295,11 +297,72 @@ func (s *Server) nodeHandover(w http.ResponseWriter, r *http.Request) (any, erro
 	return map[string]any{"node": name, "term": term}, nil
 }
 
+// localNodeJSON is one node in a replica's own view, with durations in
+// milliseconds like every other API field.
+type localNodeJSON struct {
+	Node     string    `json:"node"`
+	Online   bool      `json:"online"`
+	Since    time.Time `json:"since"`
+	LastSeen time.Time `json:"last_seen"`
+	RTTMS    float64   `json:"rtt_ms"`
+	SkewMS   float64   `json:"skew_ms"`
+	Serial   uint32    `json:"serial"`
+	Version  string    `json:"version,omitempty"`
+	Verdict  string    `json:"verdict,omitempty"`
+}
+
 // localNodes is a replica's majority view of the other nodes while it
 // checks on its own (empty otherwise).
-func (s *Server) localNodes() []engine.NodeStatus {
+func (s *Server) localNodes() []localNodeJSON {
+	out := []localNodeJSON{}
 	if !s.app.ReplicaStatus().Local {
-		return []engine.NodeStatus{}
+		return out
 	}
-	return s.app.Engine().Nodes()
+	for _, n := range s.app.Engine().Nodes() {
+		out = append(out, localNodeJSON{Node: n.Node, Online: n.Online, Since: n.Since, LastSeen: n.LastSeen,
+			RTTMS: float64(n.RTT) / 1e6, SkewMS: float64(n.Skew) / 1e6, Serial: n.Serial, Version: n.Version, Verdict: n.Verdict})
+	}
+	return out
+}
+
+// orEmptyOf turns a nil list into an empty one: lists in the API are
+// never null.
+func orEmptyOf[T any](l []T) []T {
+	if l == nil {
+		return []T{}
+	}
+	return l
+}
+
+// healthJSON is engine.Health for the API: round-trip times in
+// milliseconds, times null when unknown. engine.Health itself keeps its
+// shape, as nodes of other releases send it.
+type healthJSON struct {
+	Uplink         string     `json:"uplink"`
+	UplinkSince    *time.Time `json:"uplink_since"`
+	Suspected      bool       `json:"suspected"`
+	Gateway        string     `json:"gateway"`
+	GatewayOK      bool       `json:"gateway_ok"`
+	GatewayRTTMS   float64    `json:"gateway_rtt_ms"`
+	GatewayNote    string     `json:"gateway_note"`
+	GatewayState   string     `json:"gateway_state"`
+	WANDomains     int        `json:"wan_domains"`
+	WANAnchors     int        `json:"wan_anchors"`
+	DNSDown        bool       `json:"dns_down"`
+	CanJudgeUplink bool       `json:"can_judge_uplink"`
+	Exit           string     `json:"exit"`
+	ExitOK         bool       `json:"exit_ok"`
+	ExitRTTMS      float64    `json:"exit_rtt_ms"`
+	ExitAt         *time.Time `json:"exit_at"`
+	ExitIdle       bool       `json:"exit_idle"`
+}
+
+func healthOf(h *engine.Health) *healthJSON {
+	if h == nil {
+		return nil
+	}
+	return &healthJSON{Uplink: h.Uplink, UplinkSince: tp(h.UplinkSince), Suspected: h.Suspected, Gateway: h.Gateway, GatewayOK: h.GatewayOK,
+		GatewayRTTMS: float64(h.GatewayRTT) / 1e6, GatewayNote: h.GatewayNote, GatewayState: h.GatewayState, WANDomains: h.WANDomains,
+		WANAnchors: h.WANAnchors, DNSDown: h.DNSDown, CanJudgeUplink: h.CanJudgeUplink, Exit: h.Exit, ExitOK: h.ExitOK,
+		ExitRTTMS: float64(h.ExitRTT) / 1e6, ExitAt: tp(h.ExitAt), ExitIdle: h.ExitIdle}
 }

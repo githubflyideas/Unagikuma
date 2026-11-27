@@ -15,7 +15,7 @@ func TestReplicaHTTPPauseIsSiteLocal(t *testing.T) {
 	var jc struct {
 		Code string `json:"code"`
 	}
-	if master.do("POST", "/api/v1/cluster/join-codes", map[string]any{}, &jc) != 200 {
+	if master.do("POST", "/api/v1/cluster/join_codes", map[string]any{}, &jc) != 200 {
 		t.Fatal("join code")
 	}
 	joiner := tlsEnv(t, `@ IN SOA box. admin.localhost. ( 2026102801 1s 500ms 300ms 2 )
@@ -65,7 +65,7 @@ $SET engine.first-round-delay=0s
 	if joiner.app.LocalPaused("web") {
 		t.Fatal("resume left overlay")
 	}
-	if c := joiner.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"web", "db"}, "paused": true}, &pause); c != 200 || pause.Changed != 2 {
+	if c := joiner.do("POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{"web", "db"}, "paused": true}, &pause); c != 200 || pause.Changed != 2 {
 		t.Fatalf("bulk pause on replica: %d %+v", c, pause)
 	}
 
@@ -118,7 +118,7 @@ func TestSharedDisabledResumeDoesNotWriteConfig(t *testing.T) {
 		Changed   int  `json:"changed"`
 		SiteLocal bool `json:"site_local"`
 	}
-	if c := e.do("POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"db"}, "paused": false}, &bulk); c != 200 || bulk.Changed != 1 || !bulk.SiteLocal {
+	if c := e.do("POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{"db"}, "paused": false}, &bulk); c != 200 || bulk.Changed != 1 || !bulk.SiteLocal {
 		t.Fatalf("bulk resume: %d %+v", c, bulk)
 	}
 	if e.app.Config().Serial != serial || e.app.Config().Text != text || !e.app.Config().Config.FindMonitor("db").Disabled {

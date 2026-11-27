@@ -95,8 +95,13 @@ func (s *Server) clusterJoin(w http.ResponseWriter, r *http.Request) (any, error
 func (s *Server) clusterAgent(w http.ResponseWriter, r *http.Request) (any, error) {
 	st := s.app.Standby()
 	st.Key = "" // never shown
-	return map[string]any{"member": s.app.Agent().Member, "status": s.app.Agent().Status, "standby": st, "replica": s.app.ReplicaStatus()}, nil
+	ag := s.app.Agent()
+	return map[string]any{"member": ag.Member, "status": ag.Status, "standby": st, "replica": s.app.ReplicaStatus()}, nil
 }
+
+// CodeMasterAlive: a promotion refused because the master still answers
+// (master and term say which).
+const CodeMasterAlive = "master_alive"
 
 // clusterPromote makes this standby the master, with the copy of the
 // master's state it holds; the server restarts.
@@ -113,7 +118,7 @@ func (s *Server) clusterPromote(w http.ResponseWriter, r *http.Request) (any, er
 	if err != nil {
 		var alive *app.ErrMasterAlive
 		if errors.As(err, &alive) {
-			e := Errorf(http.StatusConflict, "master_alive", "%v", err)
+			e := Errorf(http.StatusConflict, CodeMasterAlive, "%v", err)
 			e.Extra = map[string]any{"master": alive.Master, "term": alive.Term}
 			return nil, e
 		}

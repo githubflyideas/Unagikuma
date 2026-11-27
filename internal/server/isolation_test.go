@@ -182,8 +182,8 @@ func TestGroupIsolationWrites(t *testing.T) {
 		{"DELETE", "/api/v1/monitors/pg", nil},
 		{"POST", "/api/v1/monitors/pg/pause", map[string]any{"paused": true}},
 		{"POST", "/api/v1/monitors/pg/check", nil},
-		{"POST", "/api/v1/monitors/bulk-delete", map[string]any{"names": []string{"pg"}}},
-		{"POST", "/api/v1/monitors/bulk-pause", map[string]any{"names": []string{"gw"}, "paused": true}},
+		{"POST", "/api/v1/monitors/bulk_delete", map[string]any{"names": []string{"pg"}}},
+		{"POST", "/api/v1/monitors/bulk_pause", map[string]any{"names": []string{"gw"}, "paused": true}},
 		{"POST", "/api/v1/monitors/pushy/push/rotate", nil},
 	} {
 		if code := alice.do(c.method, c.path, c.body, nil); code != 404 {

@@ -11,15 +11,33 @@ import (
 )
 
 func (s *Server) routes() {
-	// Setup and session.
+	s.sessionRoutes()
+	s.monitorRoutes()
+	s.incidentRoutes()
+	s.configRoutes()
+	s.channelRoutes()
+	s.systemRoutes()
+	s.reportRoutes()
+	s.pageRoutes()
+	s.clusterRoutes()
+	s.adminRoutes()
+	s.streamRoute()
+	s.publicRoutes()
+	s.uiRoutes()
+}
+
+// sessionRoutes registers setup, sign-in and the session.
+func (s *Server) sessionRoutes() {
 	s.handle("GET /api/v1/setup/status", "", s.setupStatus)
 	s.handle("POST /api/v1/setup", "", s.setup)
 	s.handle("GET /api/v1/session", "read", s.sessionGet)
 	s.handle("POST /api/v1/session", "", s.sessionLogin)
 	s.handle("DELETE /api/v1/session", "read", s.sessionLogout)
 	s.handle("PUT /api/v1/session/password", "read", s.changePassword)
+}
 
-	// Overview and monitors.
+// monitorRoutes registers the overview and monitors.
+func (s *Server) monitorRoutes() {
 	s.handle("GET /api/v1/overview", "read", s.overview)
 	s.handle("GET /api/v1/monitors", "read", s.monitors)
 	s.handle("GET /api/v1/monitors/heartbeats", "read", s.heartbeats)
@@ -29,17 +47,19 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/monitors/{name}/push", "read", s.monitorPush)
 	s.handle("POST /api/v1/monitors/{name}/push/rotate", "write", s.monitorPushRotate)
 	s.handle("POST /api/v1/monitors", "write", s.monitorCreate)
-	s.handle("POST /api/v1/monitors/bulk-delete", "write", s.monitorBulkDelete)
-	s.handle("POST /api/v1/monitors/bulk-pause", "write", s.monitorBulkPause)
+	s.handle("POST /api/v1/monitors/bulk_delete", "write", s.monitorBulkDelete)
+	s.handle("POST /api/v1/monitors/bulk_pause", "write", s.monitorBulkPause)
 	s.handle("PUT /api/v1/monitors/{name}", "write", s.monitorUpdate)
 	s.handle("DELETE /api/v1/monitors/{name}", "write", s.monitorDelete)
 	s.handle("POST /api/v1/monitors/{name}/check", "ack", s.monitorCheck)
 	s.handle("POST /api/v1/monitors/{name}/pause", "write", s.monitorPause)
 	s.handle("POST /api/v1/probe", "write", s.probeOnce)
 	s.handle("POST /api/v1/quickadd/parse", "read", s.quickadd)
-	s.handle("POST /api/v1/monitors/same-check", "read", s.sameCheck)
+	s.handle("POST /api/v1/monitors/same_check", "read", s.sameCheck)
+}
 
-	// Incidents, events, notifications.
+// incidentRoutes registers incidents, events and notifications.
+func (s *Server) incidentRoutes() {
 	s.handle("GET /api/v1/history/sites", "read", s.historySites)
 	s.handle("GET /api/v1/incidents", "read", s.incidents)
 	s.handle("GET /api/v1/incidents/{id}/report", "read", s.incidentReport)
@@ -49,8 +69,10 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/incidents/bulk", "ack", s.incidentBulk)
 	s.handle("GET /api/v1/events", "read", s.events)
 	s.handle("GET /api/v1/notifications", "read", s.notifications)
+}
 
-	// Configuration.
+// configRoutes registers the configuration.
+func (s *Server) configRoutes() {
 	s.handle("GET /api/v1/config", "read", s.configGet)
 	s.handle("PUT /api/v1/config", "write", global(s.configPut))
 	s.handle("POST /api/v1/config/validate", "read", s.configValidate)
@@ -58,15 +80,17 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/config/diff", "read", s.configDiff)
 	s.handle("POST /api/v1/config/rollback", "write", global(s.configRollback))
 	s.handle("POST /api/v1/config/reload", "write", global(s.configReload))
+}
 
-	// Channels and policies.
-	s.handle("GET /api/v1/channel-kinds", "read", s.channelKinds)
+// channelRoutes registers channels and policies.
+func (s *Server) channelRoutes() {
+	s.handle("GET /api/v1/channel_kinds", "read", s.channelKinds)
 	s.handle("GET /api/v1/channels", "read", s.channels)
 	s.handle("POST /api/v1/channels", "admin", global(s.channelSave))
 	s.handle("DELETE /api/v1/channels/{name}", "admin", global(s.channelDelete))
 	s.handle("POST /api/v1/channels/test", "admin", global(s.channelTest))
 	s.handle("POST /api/v1/channels/preview", "admin", s.channelPreview)
-	s.handle("POST /api/v1/channels/request-preview", "admin", s.channelRequestPreview)
+	s.handle("POST /api/v1/channels/request_preview", "admin", s.channelRequestPreview)
 	s.handle("GET /api/v1/periods", "read", s.periods)
 	s.handle("POST /api/v1/periods", "admin", global(s.periodSave))
 	s.handle("DELETE /api/v1/periods/{name}", "admin", global(s.periodDelete))
@@ -88,28 +112,34 @@ func (s *Server) routes() {
 	s.handle("POST /api/v1/policies", "admin", global(s.policySave))
 	s.handle("POST /api/v1/policies/{name}/test", "admin", global(s.policyTest))
 	s.handle("POST /api/v1/policies/{name}/predict", "read", s.policyPredict)
+}
 
-	// Settings.
+// systemRoutes registers settings, preferences and the system.
+func (s *Server) systemRoutes() {
 	s.handle("GET /api/v1/tunables", "read", s.tunablesGet)
 	s.handle("PUT /api/v1/tunables", "admin", s.tunablesPut)
 	s.handle("GET /api/v1/keywords", "read", s.keywordsList)
-	s.handle("GET /api/v1/monitor-options", "read", s.monitorOptions)
-	s.handle("GET /api/v1/app-profiles", "read", s.appProfiles)
-	s.handle("GET /api/v1/saved-alerts", "read", s.savedAlerts)
+	s.handle("GET /api/v1/monitor_options", "read", s.monitorOptions)
+	s.handle("GET /api/v1/app_profiles", "read", s.appProfiles)
+	s.handle("GET /api/v1/saved_alerts", "read", s.savedAlerts)
 	s.handle("GET /api/v1/system", "read", s.system)
-	s.handle("GET /api/v1/alert-channels", "read", s.alertChannelsGet)
-	s.handle("PUT /api/v1/alert-channels", "admin", s.alertChannelsPut)
+	s.handle("GET /api/v1/alert_channels", "read", s.alertChannelsGet)
+	s.handle("PUT /api/v1/alert_channels", "admin", s.alertChannelsPut)
 	s.handle("GET /api/v1/system/port", "admin", s.portGet)
 	s.handle("PUT /api/v1/system/port", "admin", s.portPut)
 	s.handle("POST /api/v1/system/restart", "admin", s.restart)
 	s.handle("GET /api/v1/settings", "read", s.settingsGet)
-	s.handle("GET /api/v1/settings/exit-countries", "admin", s.exitCities)
-	s.handle("POST /api/v1/settings/exit-suggest", "admin", s.exitSuggest)
+	s.handle("GET /api/v1/settings/exit_countries", "admin", s.exitCities)
+	s.handle("POST /api/v1/settings/exit_suggest", "admin", s.exitSuggest)
 	s.handle("PUT /api/v1/settings", "admin", s.settingsPut)
 	s.handle("POST /api/v1/settings/heartbeat/test", "admin", s.heartbeatTest)
 	s.handle("POST /api/v1/settings/heartbeat/preview", "admin", s.heartbeatPreview)
 	s.handle("GET /api/v1/preferences", "read", s.prefsGet)
 	s.handle("PUT /api/v1/preferences", "read", s.prefsPut)
+}
+
+// reportRoutes registers hosts, reports and imports.
+func (s *Server) reportRoutes() {
 	s.handle("GET /api/v1/hosts", "read", s.hosts)
 	s.handle("GET /api/v1/reports/availability", "read", s.availability)
 	s.handle("GET /api/v1/reports/summary", "read", s.summary)
@@ -119,14 +149,18 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/reports/weekly", "read", global(s.weeklyReport))
 	s.handle("POST /api/v1/reports/weekly/send", "write", global(s.sendWeeklyReport))
 	s.handle("POST /api/v1/import/{source}", "admin", s.kumaImport)
-	s.handle("GET /api/v1/status-pages", "read", s.statusPages)
-	s.handle("GET /api/v1/status-support", "admin", s.supportGet)
+	s.handle("GET /api/v1/status_pages", "read", s.statusPages)
+}
+
+// pageRoutes registers status pages, branding, announcements and maintenance.
+func (s *Server) pageRoutes() {
+	s.handle("GET /api/v1/status_support", "admin", s.supportGet)
 	s.handle("GET /api/v1/branding", "admin", s.brandGet)
 	s.handle("PUT /api/v1/branding", "admin", s.brandPut)
 	s.handle("PUT /api/v1/branding/{image}", "admin", requireRegistered(s, s.brandImagePut))
 	s.handle("DELETE /api/v1/branding/{image}", "admin", requireRegistered(s, s.brandImageDelete))
-	s.handle("PUT /api/v1/status-support", "admin", requireRegistered(s, s.supportPut))
-	s.handle("PUT /api/v1/status-pages/{name}", "write", global(s.statusPageUpdate))
+	s.handle("PUT /api/v1/status_support", "admin", requireRegistered(s, s.supportPut))
+	s.handle("PUT /api/v1/status_pages/{name}", "write", global(s.statusPageUpdate))
 	s.handle("GET /api/v1/announcements", "read", s.announcements)
 	s.handle("POST /api/v1/announcements", "write", global(s.announcementCreate))
 	s.handle("PUT /api/v1/announcements/{id}", "write", global(s.announcementUpdate))
@@ -134,15 +168,19 @@ func (s *Server) routes() {
 	s.handle("GET /api/v1/maintenance", "read", s.maintList)
 	s.handle("POST /api/v1/maintenance", "write", s.maintSave)
 	s.handle("DELETE /api/v1/maintenance/{name}", "write", s.maintDelete)
-	s.handle("POST /api/v1/cluster/join-codes", "admin", s.joinCode)
+	s.handle("POST /api/v1/cluster/join_codes", "admin", s.joinCode)
+}
+
+// clusterRoutes registers the cluster and its nodes.
+func (s *Server) clusterRoutes() {
 	s.handle("POST /api/v1/cluster/join", "admin", s.clusterJoin)
 	s.handle("GET /api/v1/cluster/agent", "read", s.clusterAgent)
 	s.handle("DELETE /api/v1/cluster/agent", "admin", s.clusterLeave)
 	s.handle("POST /api/v1/cluster/promote", "admin", s.clusterPromote)
-	s.handle("GET /api/v1/cluster/site-local", "admin", s.siteLocal)
+	s.handle("GET /api/v1/cluster/site_local", "admin", s.siteLocal)
 	s.handle("GET /api/v1/cluster/diverged", "admin", s.diverged)
 	s.handle("DELETE /api/v1/cluster/diverged/{id}", "admin", s.divergedDismiss)
-	s.handle("PUT /api/v1/cluster/site-local", "admin", s.siteLocalSave)
+	s.handle("PUT /api/v1/cluster/site_local", "admin", s.siteLocalSave)
 	s.handle("POST /api/v1/nodes/{name}/handover", "admin", s.nodeHandover)
 	s.handle("GET /api/v1/nodes", "read", s.nodesList)
 	s.handle("POST /api/v1/nodes", "admin", s.nodeAdd)
@@ -152,6 +190,10 @@ func (s *Server) routes() {
 	s.handle("PUT /api/v1/nodes/{name}", "admin", s.nodeUpdate)
 	s.handle("GET /api/v1/users", "admin", s.usersList)
 	s.handle("GET /api/v1/scripts", "read", s.scripts)
+}
+
+// adminRoutes registers accounts, tokens, secrets, audit, licence, backup and the public UI data.
+func (s *Server) adminRoutes() {
 	s.handle("GET /api/v1/audit", "admin", requireRegistered(s, s.auditLog))
 	s.handle("GET /api/v1/audit/export", "admin", requireRegistered(s, s.auditExport))
 	s.handle("GET /api/v1/audit/verify", "admin", requireRegistered(s, s.auditVerify))
@@ -176,9 +218,11 @@ func (s *Server) routes() {
 	s.handleRaw("GET /api/v1/i18n/{lang}", "", http.HandlerFunc(s.catalog))
 	s.handleRaw("GET /api/v1/brand", "", http.HandlerFunc(s.brandPublic))
 	s.handleRaw("GET /api/v1/branding/{image}/preview", "", http.HandlerFunc(s.brandImagePreview))
-	s.handleRaw("GET /api/openapi.json", "", http.HandlerFunc(s.openAPISpec))
+	s.handleRaw("GET /api/v1/openapi.json", "", http.HandlerFunc(s.openAPISpec))
+}
 
-	// Live stream.
+// streamRoute registers the live stream.
+func (s *Server) streamRoute() {
 	s.handleRaw("GET /api/v1/stream", "read", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ai, err := s.authenticate(r)
 		if err != nil {
@@ -194,10 +238,12 @@ func (s *Server) routes() {
 		}
 		s.hub.ServeHTTP(w, r)
 	}))
+}
 
-	// Public endpoints.
-	s.mux.HandleFunc("GET /healthz", s.healthz)
-	s.mux.HandleFunc("GET /metrics", s.metrics)
+// publicRoutes registers public endpoints and the cluster protocol.
+func (s *Server) publicRoutes() {
+	s.handleRaw("GET /healthz", "", http.HandlerFunc(s.healthz))
+	s.handleRaw("GET /metrics", "read", http.HandlerFunc(s.metrics))
 	s.mux.HandleFunc("GET "+cluster.ConnectPath, s.agentConnect)
 	s.mux.HandleFunc("GET "+app.SiteObservationPath, s.app.ServeSiteObservations)
 	s.mux.HandleFunc("POST "+app.SiteIncidentActionPath, s.app.ServeSiteIncidentAction)
@@ -216,61 +262,68 @@ func (s *Server) routes() {
 	s.handleRaw("POST /api/v1/status/{name}/subscribe", "", http.HandlerFunc(s.subscribe))
 	s.handleRaw("POST /api/v1/status/{name}/confirm", "", http.HandlerFunc(s.subscription))
 	s.handleRaw("POST /api/v1/status/{name}/unsubscribe", "", http.HandlerFunc(s.subscription))
-	s.mux.HandleFunc("GET /status/{name}/feed.atom", s.feed)
-	s.mux.HandleFunc("GET /badge/{monitor}/{kind}", s.badge)
+	s.handleRaw("GET /status/{name}/feed.atom", "", http.HandlerFunc(s.feed))
+	s.handleRaw("GET /badge/{monitor}/{kind}", "", http.HandlerFunc(s.badge))
 	for _, p := range []string{"/api/push/{token}", "/push/{token}"} {
-		s.mux.HandleFunc("GET "+p, s.pushHandler)
-		s.mux.HandleFunc("POST "+p, s.pushHandler)
+		s.handleRaw("GET "+p, "", http.HandlerFunc(s.pushHandler))
+		s.handleRaw("POST "+p, "", http.HandlerFunc(s.pushHandler))
 	}
 	s.mux.Handle("GET /api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, notFound("endpoint"))
 	}))
+}
 
-	// UI.
-	if s.opts.Web != nil {
-		files := http.FileServerFS(s.opts.Web)
-		s.mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			p := strings.TrimPrefix(r.URL.Path, "/")
-			if strings.HasPrefix(p, "status/") && !strings.Contains(strings.TrimPrefix(p, "status/"), ".") {
-				if s.serveStatusHTML(w, r, strings.Trim(strings.TrimPrefix(p, "status/"), "/")) {
-					return
-				}
-				r2 := r.Clone(r.Context())
-				r2.URL.Path = "/status.html"
-				w.Header().Set("Cache-Control", "no-cache")
-				files.ServeHTTP(w, r2)
-				return
-			}
-			if p == "wall" || p == "wall/" || p == "summary" || p == "summary/" {
-				// The wall screen and the managers' summary; they read the
-				// API with a token from the URL fragment, which never
-				// reaches this server.
-				w.Header().Set("Referrer-Policy", "no-referrer")
-				if s.serveStyledShell(w, r, strings.Trim(p, "/")+".html") {
-					return
-				}
-				r2 := r.Clone(r.Context())
-				r2.URL.Path = "/" + strings.Trim(p, "/") + ".html"
-				files.ServeHTTP(w, r2)
-				return
-			}
-			if s.serveBranded(w, r, p) {
-				return
-			}
-			if p == "" || p == "index.html" {
-				if s.serveShell(w, r, "index.html") {
-					return
-				}
-				w.Header().Set("Cache-Control", "no-cache")
-			} else if _, err := fs.Stat(s.opts.Web, p); err != nil {
-				writeError(w, notFound("page"))
-				return
-			} else if strings.HasPrefix(p, "vendor/") {
-				w.Header().Set("Cache-Control", "public, max-age=86400")
-			} else {
-				w.Header().Set("Cache-Control", "no-cache")
-			}
-			files.ServeHTTP(w, r)
-		}))
+// uiRoutes registers the web UI.
+func (s *Server) uiRoutes() {
+	if s.opts.Web == nil {
+		return
 	}
+	files := http.FileServerFS(s.opts.Web)
+	s.mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { s.serveUI(files, w, r) }))
+}
+
+// serveUI serves the console, the status pages, the wall screen and the
+// summary, and the UI's files.
+func (s *Server) serveUI(files http.Handler, w http.ResponseWriter, r *http.Request) {
+	p := strings.TrimPrefix(r.URL.Path, "/")
+	if strings.HasPrefix(p, "status/") && !strings.Contains(strings.TrimPrefix(p, "status/"), ".") {
+		if s.serveStatusHTML(w, r, strings.Trim(strings.TrimPrefix(p, "status/"), "/")) {
+			return
+		}
+		r2 := r.Clone(r.Context())
+		r2.URL.Path = "/status.html"
+		w.Header().Set("Cache-Control", "no-cache")
+		files.ServeHTTP(w, r2)
+		return
+	}
+	if p == "wall" || p == "wall/" || p == "summary" || p == "summary/" {
+		// The wall screen and the managers' summary; they read the
+		// API with a token from the URL fragment, which never
+		// reaches this server.
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		if s.serveStyledShell(w, r, strings.Trim(p, "/")+".html") {
+			return
+		}
+		r2 := r.Clone(r.Context())
+		r2.URL.Path = "/" + strings.Trim(p, "/") + ".html"
+		files.ServeHTTP(w, r2)
+		return
+	}
+	if s.serveBranded(w, r, p) {
+		return
+	}
+	if p == "" || p == "index.html" {
+		if s.serveShell(w, r, "index.html") {
+			return
+		}
+		w.Header().Set("Cache-Control", "no-cache")
+	} else if _, err := fs.Stat(s.opts.Web, p); err != nil {
+		writeError(w, notFound("page"))
+		return
+	} else if strings.HasPrefix(p, "vendor/") {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+	} else {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
+	files.ServeHTTP(w, r)
 }

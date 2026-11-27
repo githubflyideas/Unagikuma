@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/argon2"
@@ -31,9 +33,9 @@ const (
 
 func randomString(n int) string {
 	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		panic(err)
-	}
+	// crypto/rand.Read cannot fail: since Go 1.24 it never returns an
+	// error (the runtime aborts if the system source is unusable).
+	_, _ = rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
@@ -42,8 +44,33 @@ func sha(s string) string {
 	return hex.EncodeToString(h[:])
 }
 
+// hashSlots bounds how many password hashes run at once. Each argon2id
+// hash takes argonMemory (64 MiB): without a bound, failed logins sent
+// together from many addresses would grow the process by 64 MiB each.
+var hashSlots = make(chan struct{}, maxHashes)
+
+// maxHashes is how many password hashes may run at the same time.
+const maxHashes = 2
+
+// hashSlot waits for a free slot and returns its release. Each hash
+// hands its memory back to the system when done (a collection takes a
+// few milliseconds; the hash itself takes far longer): otherwise the
+// heap grows by several hashes' memory between collections and stays.
+func hashSlot() func() {
+	hashSlots <- struct{}{}
+	return func() {
+		<-hashSlots
+		debug.FreeOSMemory()
+	}
+}
+
+// dummyHash is checked against when the account does not exist, so the
+// answer takes as long as for a real one; it is made once.
+var dummyHash = sync.OnceValue(func() string { return HashPassword("x") })
+
 // HashPassword hashes with argon2id in the PHC string format.
 func HashPassword(pw string) string {
+	defer hashSlot()()
 	salt := make([]byte, 16)
 	_, _ = rand.Read(salt)
 	key := argon2.IDKey([]byte(pw), salt, argonTime, argonMemory, argonThreads, argonKeyLen)
@@ -68,6 +95,7 @@ func ValidHash(hash string) bool {
 
 // CheckPassword verifies a password in constant time.
 func CheckPassword(hash, pw string) bool {
+	defer hashSlot()()
 	if isBcrypt(hash) {
 		return bcrypt.CompareHashAndPassword([]byte(hash), []byte(pw)) == nil
 	}
@@ -323,9 +351,10 @@ func (s *Store) SetPassword(userID int64, password string) error {
 	if len(password) < 8 {
 		return errors.New("password must be at least 8 characters")
 	}
+	h := HashPassword(password)
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
-	if _, err := s.core.Exec(`UPDATE users SET password=? WHERE id=?`, HashPassword(password), userID); err != nil {
+	if _, err := s.core.Exec(`UPDATE users SET password=? WHERE id=?`, h, userID); err != nil {
 		return err
 	}
 	_, err := s.core.Exec(`DELETE FROM sessions WHERE user_id=?`, userID)
@@ -341,7 +370,7 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 	err := s.core.QueryRow(`SELECT id,username,password,prefs,role,areas,groups FROM users WHERE username=? AND disabled=0`, username).Scan(&u.ID, &u.Username, &hash, &prefs, &u.Role, &areas, &groups)
 	if errors.Is(err, sql.ErrNoRows) {
 		// Spend the same time as a real check so usernames cannot be probed.
-		CheckPassword(HashPassword("x"), password)
+		CheckPassword(dummyHash(), password)
 		return nil, ErrNotFound
 	}
 	if err != nil {
@@ -352,8 +381,9 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 	}
 	if isBcrypt(hash) {
 		// An imported hash: store our own from now on.
+		h := HashPassword(password)
 		s.wmu.Lock()
-		_, _ = s.core.Exec(`UPDATE users SET password=? WHERE id=?`, HashPassword(password), u.ID)
+		_, _ = s.core.Exec(`UPDATE users SET password=? WHERE id=?`, h, u.ID)
 		s.wmu.Unlock()
 	}
 	u.Prefs, u.Areas, u.Groups = prefs.String, splitAreas(areas), splitAreas(groups)
@@ -420,7 +450,8 @@ type Token struct {
 	Name      string     `json:"name"`
 	Prefix    string     `json:"prefix"`
 	Scopes    []string   `json:"scopes"`
-	UserID    int64      `json:"-"`
+	UserID    int64      `json:"user_id"`
+	Username  string     `json:"username"` // the administrator who made it ("" once that account is gone)
 	CreatedAt time.Time  `json:"created_at"`
 	LastUsed  *time.Time `json:"last_used,omitempty"`
 }
@@ -435,13 +466,16 @@ func (s *Store) CreateToken(userID int64, name string, scopes []string) (string,
 	return plain, err
 }
 
-// TokenByPlain resolves a bearer token and records its use.
+// TokenByPlain resolves a bearer token and records its use. Only tokens
+// made by an account that is still an enabled administrator count: tokens
+// are made by administrators, and one who is moved to another role (or
+// disabled) must not keep an administrator's reach through them.
 func (s *Store) TokenByPlain(plain string) (*Token, error) {
 	var t Token
 	var scopes string
 	var created int64
 	err := s.core.QueryRow(`SELECT id,name,prefix,scopes,user_id,created_at FROM tokens t WHERE hash=?
-		AND NOT EXISTS (SELECT 1 FROM users u WHERE u.id=t.user_id AND u.disabled=1)`, sha(plain)).
+		AND EXISTS (SELECT 1 FROM users u WHERE u.id=t.user_id AND u.disabled=0 AND u.role='admin')`, sha(plain)).
 		Scan(&t.ID, &t.Name, &t.Prefix, &scopes, &t.UserID, &created)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -458,7 +492,8 @@ func (s *Store) TokenByPlain(plain string) (*Token, error) {
 
 // Tokens lists API tokens.
 func (s *Store) Tokens() ([]Token, error) {
-	rows, err := s.core.Query(`SELECT id,name,prefix,scopes,user_id,created_at,last_used FROM tokens ORDER BY id`)
+	rows, err := s.core.Query(`SELECT t.id,t.name,t.prefix,t.scopes,COALESCE(t.user_id,0),COALESCE(u.username,''),t.created_at,t.last_used
+		FROM tokens t LEFT JOIN users u ON u.id=t.user_id ORDER BY t.id`)
 	if err != nil {
 		return nil, err
 	}
@@ -469,7 +504,7 @@ func (s *Store) Tokens() ([]Token, error) {
 		var scopes string
 		var created int64
 		var last sql.NullInt64
-		if err := rows.Scan(&t.ID, &t.Name, &t.Prefix, &scopes, &t.UserID, &created, &last); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.Prefix, &scopes, &t.UserID, &t.Username, &created, &last); err != nil {
 			return nil, err
 		}
 		t.Scopes, t.CreatedAt = strings.Split(scopes, ","), fromMS(created)

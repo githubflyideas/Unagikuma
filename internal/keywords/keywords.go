@@ -7,6 +7,7 @@
 package keywords
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -151,11 +152,21 @@ var catalog = []*Entry{
 var byName = map[string]*Entry{}
 var byPort = map[int]*Entry{}
 
+// loadErr is the first problem found in the catalogue; the program
+// refuses to start with it (see LoadError) and the tests check it.
+var loadErr error
+
+// LoadError reports whether the built-in keyword catalogue is broken.
+func LoadError() error { return loadErr }
+
 func init() {
 	for _, e := range catalog {
 		for _, n := range append([]string{e.Keyword}, e.Aliases...) {
 			if _, dup := byName[n]; dup {
-				panic("keywords: duplicate name " + n)
+				if loadErr == nil {
+					loadErr = errors.New("keywords: duplicate name " + n)
+				}
+				continue
 			}
 			byName[n] = e
 		}
@@ -187,12 +198,6 @@ func sortPort(e *Entry) int {
 // Lookup finds an entry by keyword or alias (case-insensitive).
 func Lookup(word string) (*Entry, bool) {
 	e, ok := byName[strings.ToLower(word)]
-	return e, ok
-}
-
-// ByPort finds the entry registered for a port number.
-func ByPort(port int) (*Entry, bool) {
-	e, ok := byPort[port]
 	return e, ok
 }
 

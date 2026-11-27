@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
@@ -194,7 +193,7 @@ func (s *Server) idempotent(w http.ResponseWriter, r *http.Request, caller strin
 	e.done, e.status = true, http.StatusNoContent
 	if v != nil {
 		e.status = http.StatusOK
-		e.body, _ = json.Marshal(v)
+		e.body, _ = encodeAnswer(listEnvelope(v))
 		e.body = append(e.body, '\n')
 	}
 	return true

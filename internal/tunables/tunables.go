@@ -199,15 +199,25 @@ var defs = []Def{
 	{Key: "statuspage.cache", Kind: Duration, Default: "60s", Min: "0s", Max: "1h", Desc: "status page and badge cache", DescZH: "状态页和徽章缓存时长"},
 }
 
+// loadErr is the first problem found in the table; the program refuses
+// to start with it (see LoadError) and the tests check it.
+var loadErr error
+
+// LoadError reports whether the built-in table of tunables is broken.
+func LoadError() error { return loadErr }
+
 var index = func() map[string]*Def {
 	m := make(map[string]*Def, len(defs))
 	for i := range defs {
 		d := &defs[i]
 		if _, dup := m[d.Key]; dup {
-			panic("tunables: duplicate " + d.Key)
+			if loadErr == nil {
+				loadErr = fmt.Errorf("tunables: duplicate %s", d.Key)
+			}
+			continue
 		}
-		if err := d.check(d.Default); err != nil {
-			panic(fmt.Sprintf("tunables: bad default for %s: %v", d.Key, err))
+		if err := d.check(d.Default); err != nil && loadErr == nil {
+			loadErr = fmt.Errorf("tunables: bad default for %s: %w", d.Key, err)
 		}
 		m[d.Key] = d
 	}
@@ -220,9 +230,6 @@ func Defs() []Def {
 	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
 	return out
 }
-
-// Lookup returns a definition.
-func Lookup(key string) (*Def, bool) { d, ok := index[key]; return d, ok }
 
 // Set holds overrides on top of the defaults. The zero value is all defaults.
 type Set struct{ v map[string]string }
@@ -267,11 +274,12 @@ func (s Set) raw(key string) string {
 	if v, ok := s.v[key]; ok {
 		return v
 	}
-	d, ok := index[key]
-	if !ok {
-		panic("tunables: unknown key " + key)
+	// Keys are constants of this program (TestKeysUsedAreDefined keeps
+	// them in the table); an unknown one reads as unset.
+	if d, ok := index[key]; ok {
+		return d.Default
 	}
-	return d.Default
+	return ""
 }
 
 // Raw returns the effective textual value.

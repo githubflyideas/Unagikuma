@@ -163,7 +163,7 @@ func TestBranding(t *testing.T) {
 	if name := e.app.BrandName(); name != "Harbour Ops" {
 		t.Fatalf("notification name: %q", name)
 	}
-	if c, _ := e.raw("DELETE", "/api/v1/branding/logo", nil, ""); c != 200 {
+	if c, _ := e.raw("DELETE", "/api/v1/branding/logo", nil, ""); c != 204 {
 		t.Fatalf("remove: %d", c)
 	}
 	if _, b := e.raw("GET", "/logo.png", nil, ""); !strings.Contains(string(b), "product logo") {

@@ -34,11 +34,33 @@ import (
 // $DEFAULT, $TAG, $QUORUM, $DIALECT), are not carried: the report names
 // them.
 func Unagikuma(data []byte, existing *config.Config, o Options) (*Result, error) {
+	f, cfg, err := loadUnagikuma(data)
+	if err != nil {
+		return nil, err
+	}
+	u := newUKImport(cfg, existing, o)
+	// Pass 1: decide what happens to every record, and the new names.
+	for _, rec := range f.Records() {
+		u.decide(rec)
+	}
+	// Pass 2: write the records.
+	for _, p := range u.picks {
+		u.write(p)
+	}
+	u.reportMissingSecrets()
+	u.notes(data)
+	u.r.finish()
+	return u.r, nil
+}
+
+// loadUnagikuma reads an uploaded monitors.conf; one that does not load
+// is refused with its first errors.
+func loadUnagikuma(data []byte) (*config.File, *config.Config, error) {
 	if len(data) == 0 {
-		return nil, errors.New("the file is empty")
+		return nil, nil, errors.New("the file is empty")
 	}
 	if includeLine.Match(data) {
-		return nil, errors.New("$INCLUDE is not followed: put the records into one file and import that")
+		return nil, nil, errors.New("$INCLUDE is not followed: put the records into one file and import that")
 	}
 	f, cfg, diags := config.Load("upload", data, config.Options{})
 	if config.HasErrors(diags) {
@@ -48,178 +70,219 @@ func Unagikuma(data []byte, existing *config.Config, o Options) (*Result, error)
 				msgs = append(msgs, d.Error())
 			}
 		}
-		return nil, fmt.Errorf("this is not a valid monitors.conf: %s", strings.Join(msgs, "; "))
+		return nil, nil, fmt.Errorf("this is not a valid monitors.conf: %s", strings.Join(msgs, "; "))
 	}
-	r := &Result{Source: "Unagikuma", File: o.File, Area: o.Area, When: o.now(), Secrets: map[string]string{}, totalNow: o.TotalNow, totalLimit: o.TotalLimit}
-	var here map[string]config.Record
-	hereChecks := map[string]string{} // a monitor's effect → its name here
-	taken := map[string]bool{}
+	return f, cfg, nil
+}
+
+// ukImport is one import of a monitors.conf.
+type ukImport struct {
+	r          *Result
+	o          Options
+	here       map[string]config.Record // records here, by name (nil: none given)
+	hereChecks map[string]string        // a monitor's effect → its name here
+	taken      map[string]bool          // names used here
+	src, dst   config.Defaults          // the file's defaults and the ones here
+	picks      []ukPick
+	rename     map[string]string // a record's name in the file → its name here
+	used       map[string]bool   // names given to imported records
+	missing    map[string][]string
+}
+
+// ukPick is a record that will be written, under name.
+type ukPick struct {
+	rec  config.Record
+	kind string
+	name string
+	item int
+}
+
+func newUKImport(cfg, existing *config.Config, o Options) *ukImport {
+	u := &ukImport{
+		r:          &Result{Source: "Unagikuma", File: o.File, Area: o.Area, When: o.now(), Secrets: map[string]string{}, totalNow: o.TotalNow, totalLimit: o.TotalLimit},
+		o:          o,
+		hereChecks: map[string]string{},
+		taken:      map[string]bool{},
+		src:        cfg.Defaults,
+		dst:        cfg.Defaults,
+		rename:     map[string]string{},
+		used:       map[string]bool{},
+		missing:    map[string][]string{},
+	}
 	if o.Existing != nil {
-		here = map[string]config.Record{}
+		u.here = map[string]config.Record{}
 		for _, rec := range o.Existing.Records() {
-			here[rec.Name] = rec
-			taken[rec.Name] = true
+			u.here[rec.Name] = rec
+			u.taken[rec.Name] = true
 		}
 	}
 	if existing != nil {
 		for _, m := range existing.Monitors {
-			taken[m.Name] = true
+			u.taken[m.Name] = true
 		}
+		u.dst = existing.Defaults
 	}
-	src, dst := cfg.Defaults, cfg.Defaults
-	if existing != nil {
-		dst = existing.Defaults
-	}
-	for name, rec := range here {
+	for name, rec := range u.here {
 		if config.IsMonitorType(rec.Type) {
-			k := canon(rec, dst, true)
-			if prev, ok := hereChecks[k]; !ok || name < prev {
-				hereChecks[k] = name
+			k := canon(rec, u.dst, true)
+			if prev, ok := u.hereChecks[k]; !ok || name < prev {
+				u.hereChecks[k] = name
 			}
 		}
 	}
+	return u
+}
 
-	// Pass 1: decide what happens to every record, and the new names.
-	type pick struct {
-		rec  config.Record
-		kind string
-		name string
-		item int
+// decide reports what happens to rec and, when it is imported, picks it
+// with the name it gets here.
+func (u *ukImport) decide(rec config.Record) {
+	kind, ok := recordKinds[rec.Type]
+	if !ok && config.IsMonitorType(rec.Type) {
+		kind, ok = "monitor", true
 	}
-	var picks []pick
-	rename := map[string]string{}
-	used := map[string]bool{}
-	for _, rec := range f.Records() {
-		kind, ok := recordKinds[rec.Type]
-		if !ok && config.IsMonitorType(rec.Type) {
-			kind, ok = "monitor", true
-		}
-		it := Item{Kind: kind, Source: rec.Name, Type: rec.Type, Target: rec.Target, Status: StatusImported}
-		switch {
-		case !ok:
-			it.Kind, it.Status, it.Why = "record", StatusLeftOut, "a record of a kind this import does not know"
-			r.add(it)
-			continue
-		case kind == "monitor" && autoMonitors[rec.Name]:
-			it.Status, it.Why = StatusLeftOut, "every installation adds its own gateway monitors"
-			r.add(it)
-			continue
-		}
-		name := rec.Name
-		key := canon(rec, src, kind == "monitor")
-		if kind == "monitor" {
-			// The same check, under whatever name it has here: imported
-			// before. The monitors that name it as their parent follow it.
-			if n, ok := hereChecks[key]; ok {
-				it.Name, it.Status, it.Why = n, StatusSkipped, "already here"
-				if n != rec.Name {
-					it.Why = "already here as " + n
-					rename[rec.Name] = n
-				}
-				r.add(it)
-				continue
-			}
-		}
-		if old, clash := here[name]; clash || taken[name] || used[name] {
-			if clash && kind != "monitor" && canon(old, dst, false) == key {
-				it.Name, it.Status, it.Why = name, StatusSkipped, "already here"
-				r.add(it)
-				continue
-			}
-			if kind != "monitor" {
-				it.Name, it.Status = name, StatusSkipped
-				it.Why = "a " + kind + " of this name is already here and differs; the one here is kept"
-				it.Todo = "Rename one of them and import again to have both."
-				r.add(it)
-				continue
-			}
-			name = freeName(rec.Name, taken, used)
-			rename[rec.Name] = name
-			it.attention("A different record of this name is already here; imported as "+name+".", "")
-		}
-		used[name] = true
-		it.Name = name
-		r.add(it)
-		picks = append(picks, pick{rec: rec, kind: kind, name: name, item: len(r.Items) - 1})
+	it := Item{Kind: kind, Source: rec.Name, Type: rec.Type, Target: rec.Target, Status: StatusImported}
+	switch {
+	case !ok:
+		it.Kind, it.Status, it.Why = "record", StatusLeftOut, "a record of a kind this import does not know"
+		u.r.add(it)
+		return
+	case kind == "monitor" && autoMonitors[rec.Name]:
+		it.Status, it.Why = StatusLeftOut, "every installation adds its own gateway monitors"
+		u.r.add(it)
+		return
 	}
+	name := rec.Name
+	key := canon(rec, u.src, kind == "monitor")
+	if kind == "monitor" {
+		// The same check, under whatever name it has here: imported
+		// before. The monitors that name it as their parent follow it.
+		if n, ok := u.hereChecks[key]; ok {
+			it.Name, it.Status, it.Why = n, StatusSkipped, "already here"
+			if n != rec.Name {
+				it.Why = "already here as " + n
+				u.rename[rec.Name] = n
+			}
+			u.r.add(it)
+			return
+		}
+	}
+	if old, clash := u.here[name]; clash || u.taken[name] || u.used[name] {
+		if clash && kind != "monitor" && canon(old, u.dst, false) == key {
+			it.Name, it.Status, it.Why = name, StatusSkipped, "already here"
+			u.r.add(it)
+			return
+		}
+		if kind != "monitor" {
+			it.Name, it.Status = name, StatusSkipped
+			it.Why = "a " + kind + " of this name is already here and differs; the one here is kept"
+			it.Todo = "Rename one of them and import again to have both."
+			u.r.add(it)
+			return
+		}
+		name = freeName(rec.Name, u.taken, u.used)
+		u.rename[rec.Name] = name
+		it.attention("A different record of this name is already here; imported as "+name+".", "")
+	}
+	u.used[name] = true
+	it.Name = name
+	u.r.add(it)
+	u.picks = append(u.picks, ukPick{rec: rec, kind: kind, name: name, item: len(u.r.Items) - 1})
+}
 
-	// Pass 2: write the records.
-	missing := map[string][]string{}
-	for _, p := range picks {
-		spec := config.RecordSpec{Name: p.name, Type: p.rec.Type, Target: p.rec.Target, Interval: p.rec.Interval}
-		has := map[string]bool{}
-		it := &r.Items[p.item]
-		for _, op := range p.rec.Opts {
-			has[op.Key] = true
-			v := op.Value
-			// A policy that already exists here receives these monitors'
-			// alerts: its channels, not the other file's.
-			if p.kind == "monitor" && op.Key == "policy" && here[v].Name != "" && !used[v] {
-				it.attention("Its alerts go to the policy "+v+" that is already here, and to its channels.", "")
-			}
-			if op.Key == "parent" && p.kind == "monitor" {
-				v = remapList(v, rename)
-			}
-			spec.Opts = append(spec.Opts, config.Opt{Key: op.Key, Value: v})
-			for _, m := range secretRef.FindAllStringSubmatch(v, -1) {
-				if o.SecretExists == nil || !o.SecretExists(m[1]) {
-					missing[m[1]] = appendOnce(missing[m[1]], p.name)
-				} else {
-					// The secret here has the same name, perhaps not the same
-					// purpose: its value goes wherever this record points.
-					where := p.rec.Target
-					if where == "" {
-						where = "where the record points"
-					}
-					it.attention("It uses the secret "+m[1]+" of this installation: its value will be sent to "+where+".", "Check the address before importing, or remove the record from the file.")
-				}
-			}
+// write adds a picked record to the result.
+func (u *ukImport) write(p ukPick) {
+	spec := config.RecordSpec{Name: p.name, Type: p.rec.Type, Target: p.rec.Target, Interval: p.rec.Interval}
+	has := map[string]bool{}
+	it := &u.r.Items[p.item]
+	for _, op := range p.rec.Opts {
+		has[op.Key] = true
+		v := op.Value
+		// A policy that already exists here receives these monitors'
+		// alerts: its channels, not the other file's.
+		if p.kind == "monitor" && op.Key == "policy" && u.here[v].Name != "" && !u.used[v] {
+			it.attention("Its alerts go to the policy "+v+" that is already here, and to its channels.", "")
 		}
-		if p.kind == "monitor" {
-			if spec.Interval == "" && src.Interval != dst.Interval && src.Interval > 0 {
-				spec.Interval = humanDur(int(src.Interval.Seconds()))
-			}
-			for _, d := range []struct {
-				key string
-				v   string
-				ne  bool
-			}{
-				{"retry", humanDur(int(src.Retry.Seconds())), src.Retry != dst.Retry && src.Retry > 0},
-				{"timeout", humanDur(int(src.Timeout.Seconds())), src.Timeout != dst.Timeout && src.Timeout > 0},
-				{"attempts", strconv.Itoa(src.Attempts), src.Attempts != dst.Attempts && src.Attempts > 0},
-			} {
-				if d.ne && !has[d.key] {
-					spec.Opts = append(spec.Opts, config.Opt{Key: d.key, Value: d.v})
-				}
-			}
-			r.Monitors++
+		if op.Key == "parent" && p.kind == "monitor" {
+			v = remapList(v, u.rename)
 		}
-		title, shared := sectionOf(p.kind)
-		if p.kind == "channel" {
-			r.Channels++
-		}
-		r.addToSection(title, shared, spec)
+		spec.Opts = append(spec.Opts, config.Opt{Key: op.Key, Value: v})
+		u.secretsOf(p, it, v)
 	}
-	names := make([]string, 0, len(missing))
-	for n := range missing {
+	if p.kind == "monitor" {
+		u.carryDefaults(&spec, has)
+		u.r.Monitors++
+	}
+	title, shared := sectionOf(p.kind)
+	if p.kind == "channel" {
+		u.r.Channels++
+	}
+	u.r.addToSection(title, shared, spec)
+}
+
+// secretsOf notes the secrets an option value names: missing here, or
+// here and about to be sent where the record points.
+func (u *ukImport) secretsOf(p ukPick, it *Item, v string) {
+	for _, m := range secretRef.FindAllStringSubmatch(v, -1) {
+		if u.o.SecretExists == nil || !u.o.SecretExists(m[1]) {
+			u.missing[m[1]] = appendOnce(u.missing[m[1]], p.name)
+			continue
+		}
+		// The secret here has the same name, perhaps not the same
+		// purpose: its value goes wherever this record points.
+		where := p.rec.Target
+		if where == "" {
+			where = "where the record points"
+		}
+		it.attention("It uses the secret "+m[1]+" of this installation: its value will be sent to "+where+".", "Check the address before importing, or remove the record from the file.")
+	}
+}
+
+// carryDefaults writes the file's own defaults into a monitor where they
+// differ from the ones here, so it keeps the timing it had.
+func (u *ukImport) carryDefaults(spec *config.RecordSpec, has map[string]bool) {
+	src, dst := u.src, u.dst
+	if spec.Interval == "" && src.Interval != dst.Interval && src.Interval > 0 {
+		spec.Interval = humanDur(int(src.Interval.Seconds()))
+	}
+	for _, d := range []struct {
+		key string
+		v   string
+		ne  bool
+	}{
+		{"retry", humanDur(int(src.Retry.Seconds())), src.Retry != dst.Retry && src.Retry > 0},
+		{"timeout", humanDur(int(src.Timeout.Seconds())), src.Timeout != dst.Timeout && src.Timeout > 0},
+		{"attempts", strconv.Itoa(src.Attempts), src.Attempts != dst.Attempts && src.Attempts > 0},
+	} {
+		if d.ne && !has[d.key] {
+			spec.Opts = append(spec.Opts, config.Opt{Key: d.key, Value: d.v})
+		}
+	}
+}
+
+// reportMissingSecrets lists the secrets the records need that are not here.
+func (u *ukImport) reportMissingSecrets() {
+	names := make([]string, 0, len(u.missing))
+	for n := range u.missing {
 		names = append(names, n)
 	}
 	sort.Strings(names)
 	for _, n := range names {
-		r.add(Item{Kind: "secret", Source: n, Status: StatusLeftOut,
-			Why:  "used by " + strings.Join(missing[n], ", ") + ", and not defined here (secret values are not in monitors.conf)",
+		u.r.add(Item{Kind: "secret", Source: n, Status: StatusLeftOut,
+			Why:  "used by " + strings.Join(u.missing[n], ", ") + ", and not defined here (secret values are not in monitors.conf)",
 			Todo: "Add the secret " + n + " under Advanced › Secrets first: a configuration that names a missing secret is refused, so the import waits until it exists."})
 	}
+}
+
+// notes says what of the file is not carried over.
+func (u *ukImport) notes(data []byte) {
 	if dirs := directivesIn(data); len(dirs) > 0 {
-		r.Info = append(r.Info, "Not carried over: "+strings.Join(dirs, ", ")+". Records that rely on them were written as they stand; check the preview.")
+		u.r.Info = append(u.r.Info, "Not carried over: "+strings.Join(dirs, ", ")+". Records that rely on them were written as they stand; check the preview.")
 	}
-	if o.Area != "" {
-		r.Info = append(r.Info, "Sections ($SCOPE) of the file are not kept: the monitors go to "+o.Area+".")
+	if u.o.Area != "" {
+		u.r.Info = append(u.r.Info, "Sections ($SCOPE) of the file are not kept: the monitors go to "+u.o.Area+".")
 	} else if scopeLine.Match(data) {
-		r.Info = append(r.Info, "Sections ($SCOPE) of the file are not kept: the monitors go to the general section. Choose a section to put them elsewhere.")
+		u.r.Info = append(u.r.Info, "Sections ($SCOPE) of the file are not kept: the monitors go to the general section. Choose a section to put them elsewhere.")
 	}
-	r.finish()
-	return r, nil
 }
 
 // recordKinds names the records that are not monitors.

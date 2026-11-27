@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,6 +52,7 @@ type Server struct {
 	now       func() time.Time
 	api       *ratelimit.Keyed
 	login     *ratelimit.Keyed
+	loginAll  *ratelimit.Keyed // every sign-in and setup together
 	joins     *ratelimit.Keyed // cluster requests not yet authenticated
 	push      *ratelimit.Keyed
 	subs      *ratelimit.Keyed // public status page subscriptions, per IP
@@ -121,22 +124,15 @@ func New(a *app.App, o Options) *Server {
 	boot := make([]byte, 4)
 	_, _ = rand.Read(boot)
 	s := &Server{app: a, opts: o, log: o.Log, mux: http.NewServeMux(), now: time.Now}
-	ts := a.EffectiveConfig().Tunables
 	s.hub = NewHub(hex.EncodeToString(boot), 1024, func() int { return a.EffectiveConfig().Tunables.Int("api.max-sse") })
-	rate := func(key string) (float64, int) {
-		r := ts.Rate(key)
-		return r, max(1, int(r*10))
-	}
-	ar, ab := rate("api.rate")
-	lr, _ := rate("api.login-rate")
-	pr, pb := rate("api.push-rate")
-	s.api = ratelimit.NewKeyed(ar, ab, 0)
-	s.login = ratelimit.NewKeyed(lr, 3, 0)
-	jr, _ := rate("cluster.join-rate")
-	s.joins = ratelimit.NewKeyed(jr, 10, 0)
-	s.push = ratelimit.NewKeyed(pr, pb, 0)
-	sr, _ := rate("statuspage.subscribe-rate")
-	s.subs = ratelimit.NewKeyed(sr, 3, 0)
+	// All sign-ins together, whatever their address: with the bound on
+	// concurrent password hashes this keeps a flood of failed logins
+	// from many addresses to a short queue.
+	s.loginAll = ratelimit.NewKeyed(loginAllRate, loginAllBurst, 0)
+	// The other limits take their rates from the tunables in applyRates.
+	s.api, s.login = ratelimit.NewKeyed(1, 1, 0), ratelimit.NewKeyed(1, 1, 0)
+	s.joins, s.push, s.subs = ratelimit.NewKeyed(1, 1, 0), ratelimit.NewKeyed(1, 1, 0), ratelimit.NewKeyed(1, 1, 0)
+	s.applyRates()
 	s.pubq, s.done = make(chan pubEvent, 4096), make(chan struct{})
 	a.SetPublisher(func(typ string, v any) {
 		select {
@@ -147,11 +143,60 @@ func New(a *app.App, o Options) *Server {
 	})
 	go s.publishLoop()
 	s.routes()
-	if n, _ := a.Store().UserCount(); n == 0 {
-		s.setupToken = randomHex(16)
-		s.log.Info("first run: open the web UI to finish setup", "setup_token", s.setupToken)
-	}
+	s.prepareSetupToken()
 	return s
+}
+
+// applyRates sets the request limits from the rate tunables ($SET
+// api.rate and the like), at the start and after every configuration
+// change, so a changed limit holds at once, as the tunables page shows.
+func (s *Server) applyRates() {
+	ts := s.app.EffectiveConfig().Tunables
+	rate := func(key string) (float64, int) {
+		r := ts.Rate(key)
+		return r, max(1, int(r*10))
+	}
+	ar, ab := rate("api.rate")
+	lr, _ := rate("api.login-rate")
+	pr, pb := rate("api.push-rate")
+	jr, _ := rate("cluster.join-rate")
+	sr, _ := rate("statuspage.subscribe-rate")
+	s.api.SetRate(ar, ab)
+	s.login.SetRate(lr, 3)
+	s.joins.SetRate(jr, 10)
+	s.push.SetRate(pr, pb)
+	s.subs.SetRate(sr, 3)
+}
+
+// setupTokenFile holds the one-time setup token in the data directory
+// until the first account is made. The token is not written to the log,
+// which is often kept and shared; the log names the file.
+const setupTokenFile = "setup-token"
+
+// prepareSetupToken makes the setup token on a first run and writes it,
+// readable by the owner only, to setupTokenFile; otherwise it removes a
+// file a finished setup left.
+func (s *Server) prepareSetupToken() {
+	path := filepath.Join(s.app.DataDir(), setupTokenFile)
+	if n, _ := s.app.Store().UserCount(); n > 0 {
+		_ = os.Remove(path)
+		return
+	}
+	s.setupToken = randomHex(16)
+	_ = os.Remove(path) // a file left by another user is not reused
+	if err := os.WriteFile(path, []byte(s.setupToken+"\n"), 0o600); err != nil {
+		s.log.Warn("first run: the setup token file cannot be written; only this machine can finish setup", "file", path, "err", err)
+		return
+	}
+	s.log.Info("first run: open the web UI to finish setup; from another machine it asks for the setup token in this file", "file", path)
+}
+
+// SetupTokenFile is where the setup token is ("" once set up).
+func (s *Server) SetupTokenFile() string {
+	if s.SetupToken() == "" {
+		return ""
+	}
+	return filepath.Join(s.app.DataDir(), setupTokenFile)
 }
 
 // Close stops the live event worker.
@@ -168,6 +213,10 @@ func (s *Server) publishLoop() {
 		if s.pubLost.Swap(false) {
 			// Events were dropped: tell clients to refetch everything.
 			s.hub.Publish("reset", map[string]any{})
+			s.applyRates()
+		}
+		if ev.typ == "serial" {
+			s.applyRates()
 		}
 		monitor := ""
 		switch v := ev.v.(type) {
@@ -209,11 +258,39 @@ func (s *Server) SetupToken() string {
 
 // Handler returns the root handler with the common middleware.
 func (s *Server) Handler() http.Handler {
-	return securityHeaders(recoverer(s.log, s.domainOnly(s.mux)))
+	return securityHeaders(recoverer(s.log, s.domainOnly(s.methodGuard(s.mux))))
 }
 
 // apiFunc is a handler returning a value to encode or an error.
 type apiFunc func(w http.ResponseWriter, r *http.Request) (any, error)
+
+// loginAllRate and loginAllBurst bound sign-ins from all addresses
+// together (per address it is the api.login-rate tunable).
+const (
+	loginAllRate  = 2.0 // per second
+	loginAllBurst = 20
+)
+
+// allowLogin applies the per-address and the overall sign-in limits.
+func (s *Server) allowLogin(r *http.Request) error {
+	now := s.now()
+	if ok, wait := s.login.Allow(s.ip(r), now); !ok {
+		return rateLimited(wait)
+	}
+	if ok, wait := s.loginAll.Allow("all", now); !ok {
+		return rateLimited(wait)
+	}
+	return nil
+}
+
+// scopeError refuses a request the caller's access does not cover, in
+// the caller's terms: a signed-in account has a role, a token has scopes.
+func scopeError(ai *authInfo, scope string) error {
+	if ai.session {
+		return Errorf(http.StatusForbidden, CodeForbidden, "your role (%s) does not allow this", ai.role)
+	}
+	return Errorf(http.StatusForbidden, CodeForbidden, "this token lacks the %q scope", scope)
+}
 
 // handle registers an API endpoint with authentication and scope checks.
 // scope "" means public; "read" also accepts any authenticated caller.
@@ -227,7 +304,7 @@ func (s *Server) handle(pattern, scope string, f apiFunc) {
 				return
 			}
 			if !ai.scopes[scope] && !ai.scopes["admin"] {
-				writeErrorFor(w, r, Errorf(http.StatusForbidden, CodeForbidden, "this token lacks the %q scope", scope))
+				writeErrorFor(w, r, scopeError(ai, scope))
 				return
 			}
 			if ai.group != nil && !groupRoutes[pattern] {
@@ -270,11 +347,15 @@ func (s *Server) handle(pattern, scope string, f apiFunc) {
 			if audit {
 				s.writeAudit(pattern, r, authOf(r), rec, v)
 			}
+			if r.Method == http.MethodDelete {
+				deleted(w, v)
+				return
+			}
 			if v == nil {
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
-			writeJSON(w, http.StatusOK, v)
+			writeJSON(w, http.StatusOK, listEnvelope(v))
 		}
 		if ai := authOf(r); ai != nil {
 			caller := "u:" + ai.user
@@ -389,13 +470,13 @@ func notFound(what string) error {
 func sharedConfigRoute(path string) bool {
 	// Pause and resume are site-local: allowed on every node, including a
 	// read-only replica, and must not require the master's configuration.
-	if strings.HasSuffix(path, "/pause") || strings.HasSuffix(path, "/bulk-pause") {
+	if strings.HasSuffix(path, "/pause") || strings.HasSuffix(path, "/bulk_pause") {
 		return false
 	}
 	if strings.HasSuffix(path, "/test") || strings.HasSuffix(path, "/predict") || strings.HasSuffix(path, "/push-token") || strings.HasSuffix(path, "/push/rotate") {
 		return false
 	}
-	for _, p := range []string{"/api/v1/config", "/api/v1/monitors", "/api/v1/channels", "/api/v1/policies", "/api/v1/teams", "/api/v1/people", "/api/v1/tunables", "/api/v1/maintenance", "/api/v1/nodes", "/api/v1/status-pages", "/api/v1/import"} {
+	for _, p := range []string{"/api/v1/config", "/api/v1/monitors", "/api/v1/channels", "/api/v1/policies", "/api/v1/teams", "/api/v1/people", "/api/v1/tunables", "/api/v1/maintenance", "/api/v1/nodes", "/api/v1/status_pages", "/api/v1/import"} {
 		if path == p || strings.HasPrefix(path, p+"/") {
 			return true
 		}

@@ -32,17 +32,13 @@ type Staged struct {
 	StagedAt time.Time `json:"staged_at"`
 }
 
-// Stage checks an archive (and decrypts it with passphrase when it is
+// StageChecked checks a backup archive (decrypting it when it is
 // encrypted) and unpacks it for the next start, replacing any restore
 // staged before. A damaged archive, a wrong passphrase or an archive
-// without a database leaves nothing behind.
-func Stage(r io.Reader, dataDir, passphrase string, now time.Time) (Staged, error) {
-	return StageChecked(r, dataDir, passphrase, now, nil)
-}
-
-// StageChecked is Stage with one more check: check is given the folder the
-// archive was unpacked into and can refuse it (a configuration or
-// database this version cannot run), which leaves nothing behind either.
+// without a database leaves nothing behind. check (when not nil) is given
+// the folder the archive was unpacked into and can refuse it (a
+// configuration or database this version cannot run), which leaves
+// nothing behind either.
 func StageChecked(r io.Reader, dataDir, passphrase string, now time.Time, check func(dir string) error) (Staged, error) {
 	var st Staged
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {

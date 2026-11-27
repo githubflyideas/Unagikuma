@@ -37,7 +37,7 @@ export function detectLang() {
 export async function loadLanguages() {
   try {
     const r = await fetch('api/v1/languages');
-    if (r.ok) languages = await r.json();
+    if (r.ok) languages = (await r.json()).items;
   } catch { /* offline: keep defaults */ }
   if (!languages.length) languages = [{ code: 'en', name: 'English' }];
   return languages;

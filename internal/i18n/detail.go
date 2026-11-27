@@ -3,6 +3,7 @@ package i18n
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"sync"
 )
@@ -26,15 +27,26 @@ type detailPattern struct {
 var (
 	detailOnce sync.Once
 	details    []detailPattern
+	detailErr  error
 )
 
+// loadDetails compiles the detail patterns; a broken file leaves none
+// (details pass through untranslated) and is reported by LoadError.
 func loadDetails() {
-	if err := json.Unmarshal(detailsJSON, &details); err != nil {
-		panic("i18n: details.json: " + err.Error())
+	var list []detailPattern
+	if err := json.Unmarshal(detailsJSON, &list); err != nil {
+		detailErr = fmt.Errorf("i18n: details.json: %w", err)
+		return
 	}
-	for i := range details {
-		details[i].re = regexp.MustCompile(details[i].RE)
+	for i := range list {
+		re, err := regexp.Compile(list[i].RE)
+		if err != nil {
+			detailErr = fmt.Errorf("i18n: details.json: %s: %w", list[i].Key, err)
+			return
+		}
+		list[i].re = re
 	}
+	details = list
 }
 
 // Detail translates a check result detail or a warning into lang; text it

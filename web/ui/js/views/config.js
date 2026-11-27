@@ -190,7 +190,7 @@ function ImportTab() {
       const q = new URLSearchParams({ area: local ? '' : area.trim(), role });
       if (local) q.set('target', 'local');
       if (apply) q.set('apply', '1');
-      const r = await fetch('/api/v1/import/' + source + '?' + q, { method: 'POST', credentials: 'same-origin', headers: { 'X-Unagikuma-CSRF': getCSRF() }, body: file });
+      const r = await fetch('api/v1/import/' + source + '?' + q, { method: 'POST', credentials: 'same-origin', headers: { 'X-Unagikuma-CSRF': getCSRF() }, body: file });
       const body = await r.json();
       if (!r.ok) throw new Error(body.message || 'HTTP ' + r.status);
       if (apply) {
@@ -285,11 +285,11 @@ function ExportCards() {
     try { await f(); } catch (e) { toastError(e); }
     setBusy('');
   };
-  const config = () => run('config', () => download(fetch('/api/v1/backup?kind=config', { credentials: 'same-origin' })));
+  const config = () => run('config', () => download(fetch('api/v1/backup?kind=config', { credentials: 'same-origin' })));
   const everything = (e) => {
     e.preventDefault();
     if (pass.length < 8) return toast(t('ui.sys.backup_pass_short'), 'error');
-    return run('all', () => download(fetch('/api/v1/backup', { method: 'POST', credentials: 'same-origin',
+    return run('all', () => download(fetch('api/v1/backup', { method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-Unagikuma-CSRF': getCSRF() }, body: JSON.stringify({ passphrase: pass, history: true }) })));
   };
   return html`<${Card} title=${t('ui.export.title')}>

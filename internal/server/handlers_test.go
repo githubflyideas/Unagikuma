@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -72,7 +73,7 @@ func newEnv(t *testing.T, bind string, ui fstest.MapFS) *env {
 		o.Web = ui
 	}
 	srv := New(a, o)
-	ts := httptest.NewServer(srv.Handler())
+	ts := httptest.NewServer(specRecorder(t, srv, srv.Handler()))
 	jar, _ := cookiejar.New(nil)
 	t.Cleanup(func() {
 		ts.Close()
@@ -108,6 +109,17 @@ func (e *env) do(method, path string, body any, out any, hdr ...string) int {
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
 	if out != nil && len(data) > 0 {
+		// A list is always {"items": [...]}: decoding into a slice
+		// requires that envelope (a bare array fails).
+		if rv := reflect.ValueOf(out); rv.Kind() == reflect.Pointer && rv.Elem().Kind() == reflect.Slice {
+			var env struct {
+				Items json.RawMessage `json:"items"`
+			}
+			if err := json.Unmarshal(data, &env); err != nil || env.Items == nil {
+				e.t.Fatalf("%s %s: a list without the items envelope: %s", method, path, data)
+			}
+			data = env.Items
+		}
 		if err := json.Unmarshal(data, out); err != nil {
 			e.t.Fatalf("%s %s: %v: %s", method, path, err, data)
 		}
@@ -324,7 +336,7 @@ func TestMonitorsAndConfig(t *testing.T) {
 	if e.app.Config().Config.FindMonitor("db") == nil {
 		t.Fatal("rollback did not restore db")
 	}
-	if code := e.do("DELETE", "/api/v1/monitors/api", nil, nil); code != 200 {
+	if code := e.do("DELETE", "/api/v1/monitors/api", nil, nil); code != 204 {
 		t.Fatalf("delete: %d", code)
 	}
 	if e.app.Config().Config.FindMonitor("api") != nil {

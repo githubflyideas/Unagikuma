@@ -34,6 +34,7 @@
 "kind (email or phone) and address are required": "kind (email या phone) और पता ज़रूरी हैं",
 "limit must be a positive integer": "limit धनात्मक पूर्णांक होना चाहिए",
 "login required": "लॉगिन ज़रूरी है",
+"method %s is not allowed here (allowed: %s)": "यहाँ %s विधि की अनुमति नहीं है (अनुमत: %s)",
 "missing or wrong CSRF token": "CSRF टोकन नहीं है या गलत है",
 "mode is fallback or all": "mode fallback या all है",
 "name and scopes are required": "नाम और दायरे ज़रूरी हैं",
@@ -45,6 +46,7 @@
 "no region %s": "क्षेत्र %s नहीं है",
 "nothing to probe": "जाँचने के लिए कुछ नहीं",
 "only administrators may add or change EXEC checks: they run programs on the probe nodes": "EXEC जाँच केवल व्यवस्थापक जोड़ या बदल सकते हैं: ये जाँच नोड पर प्रोग्राम चलाती हैं",
+"preference %s must be a short name (letters, digits and _ + . / -)": "पसंद %s एक छोटा नाम होना चाहिए (अक्षर, अंक और _ + . / -)",
 "range is 7d, 30d or 90d": "range 7d, 30d या 90d है",
 "rejoin request replayed": "फिर से जुड़ने का अनुरोध दोहराया गया",
 "request body larger than %d bytes": "अनुरोध का मुख्य भाग %d बाइट से बड़ा है",
@@ -81,12 +83,14 @@
 "unexpected data after the JSON body": "JSON मुख्य भाग के बाद अनपेक्षित डेटा",
 "unknown channel %s": "अज्ञात चैनल %s",
 "unknown policy %s": "अज्ञात नीति %s",
+"unknown preference %q (style, lang and timezone are kept)": "अज्ञात पसंद %q (style, lang और timezone रखे जाते हैं)",
 "unknown scope %q": "अज्ञात दायरा %q",
 "unknown status page %s": "अज्ञात स्टेटस पेज %s",
 "unknown type %s": "अज्ञात प्रकार %s",
-"wrong setup token (see the server log)": "सेटअप टोकन गलत है (सर्वर लॉग देखें)",
+"wrong setup token (it is in the file setup-token in the data directory)": "सेटअप टोकन गलत है (यह डेटा डायरेक्टरी की setup-token फ़ाइल में है)",
 "wrong username or password": "उपयोगकर्ता नाम या पासवर्ड गलत है",
 "you cannot delete your own account": "आप अपना खाता नहीं हटा सकते",
 "your account is limited to some sections and cannot change shared configuration": "आपका खाता कुछ अनुभागों तक सीमित है और साझा कॉन्फ़िगरेशन नहीं बदल सकता",
-"your account may only change monitors in its own sections": "आपका खाता केवल अपने अनुभागों के मॉनिटर बदल सकता है"
+"your account may only change monitors in its own sections": "आपका खाता केवल अपने अनुभागों के मॉनिटर बदल सकता है",
+"your role (%s) does not allow this": "आपकी भूमिका (%s) इसकी अनुमति नहीं देती"
 }

@@ -86,7 +86,7 @@ function JoinCode({ server, onClose }) {
   const [res, setRes] = useState(null);
   const make = async (e) => {
     if (e) e.preventDefault();
-    try { setRes(await post('/cluster/join-codes', { server: addr })); } catch (e2) { toastError(e2); }
+    try { setRes(await post('/cluster/join_codes', { server: addr })); } catch (e2) { toastError(e2); }
   };
   return html`<${Modal} wide title=${t('ui.join.code')} onClose=${onClose}>
     <form class="form" onSubmit=${make}>
@@ -203,7 +203,7 @@ function Membership({ state, d, reload }) {
 const SL_EXAMPLE = 'router IN PING 192.168.1.1\nprinter IN TCP 192.168.1.20:9100\nnas IN HTTP http://192.168.1.30:5000/';
 
 function SiteLocal({ single }) {
-  const r = useFetch(() => get('/cluster/site-local'), []);
+  const r = useFetch(() => get('/cluster/site_local'), []);
   const [text, setText] = useState(null);
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -213,7 +213,7 @@ function SiteLocal({ single }) {
   const save = async () => {
     setBusy(true);
     try {
-      const x = await put('/cluster/site-local', { text: cur });
+      const x = await put('/cluster/site_local', { text: cur });
       if (x.text !== undefined && x.text !== cur) setText(x.text);
       if (x.ok) { toast(t('ui.sl.saved')); setRes(null); setText(null); r.reload(); } else setRes(x);
     } catch (e) { toastError(e); }

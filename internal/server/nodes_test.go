@@ -129,7 +129,7 @@ func TestNodesAPIAndAgent(t *testing.T) {
 	}
 	waitUntil(t, func() bool { return !bj().Online })
 
-	if e.do("DELETE", "/api/v1/nodes/bj", nil, nil) != 200 || e.app.Config().Config.FindNode("bj") != nil {
+	if e.do("DELETE", "/api/v1/nodes/bj", nil, nil) != 204 || e.app.Config().Config.FindNode("bj") != nil {
 		t.Fatal("delete")
 	}
 	if toks, _ := e.app.Store().AgentTokens(); len(toks) != 0 {

@@ -33,12 +33,3 @@ func TestNotifyRetryBackoffSchedule(t *testing.T) {
 		t.Fatalf("custom base kept %v", d)
 	}
 }
-
-func TestRetryAfterDuration(t *testing.T) {
-	if d := retryAfterDuration("Retry-After: 3"); d != 3*time.Second {
-		t.Fatalf("got %v", d)
-	}
-	if d := retryAfterDuration("7"); d != 7*time.Second {
-		t.Fatalf("got %v", d)
-	}
-}

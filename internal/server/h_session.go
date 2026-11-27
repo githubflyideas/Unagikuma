@@ -4,6 +4,9 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/i18n"
@@ -35,8 +38,8 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) (any, error) {
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
-	if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
-		return nil, rateLimited(wait)
+	if err := s.allowLogin(r); err != nil {
+		return nil, err
 	}
 	s.setupMu.Lock()
 	defer s.setupMu.Unlock()
@@ -44,7 +47,7 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, Errorf(http.StatusConflict, CodeConflict, "setup is already done")
 	}
 	if !isLoopback(r) && subtle.ConstantTimeCompare([]byte(req.Token), []byte(s.setupToken)) != 1 {
-		return nil, Errorf(http.StatusForbidden, CodeForbidden, "wrong setup token (see the server log)")
+		return nil, Errorf(http.StatusForbidden, CodeForbidden, "wrong setup token (it is in the file setup-token in the data directory)")
 	}
 	if req.Username == "" {
 		req.Username = "admin"
@@ -54,6 +57,7 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 	}
 	s.setupToken = ""
+	_ = os.Remove(filepath.Join(s.app.DataDir(), setupTokenFile))
 	if req.Lang != "" {
 		_ = s.app.SetSetting("message_lang", i18n.Normalize(req.Lang))
 		prefs, _ := json.Marshal(map[string]any{"lang": i18n.Normalize(req.Lang), "timezone": req.Timezone})
@@ -121,8 +125,8 @@ func (s *Server) sessionLogin(w http.ResponseWriter, r *http.Request) (any, erro
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
-	if ok, wait := s.login.Allow(s.ip(r), s.now()); !ok {
-		return nil, rateLimited(wait)
+	if err := s.allowLogin(r); err != nil {
+		return nil, err
 	}
 	u, err := s.app.Store().Authenticate(req.Username, req.Password)
 	if err != nil {
@@ -197,10 +201,30 @@ func (s *Server) sessionUser(r *http.Request) (string, error) {
 	return se.User.Prefs, nil
 }
 
+// prefKey is what an account's own preferences may hold: its console
+// style, language and time zone, each a short word.
+var prefKey = regexp.MustCompile(`^[A-Za-z0-9_+./-]{0,64}$`)
+
 func (s *Server) prefsPut(w http.ResponseWriter, r *http.Request) (any, error) {
-	var m map[string]any
-	if err := decodeJSON(r, 64<<10, &m); err != nil {
+	var req map[string]any
+	if err := decodeJSON(r, 4<<10, &req); err != nil {
 		return nil, err
+	}
+	m := map[string]any{}
+	for k, v := range req {
+		str, ok := v.(string)
+		switch {
+		case k != "style" && k != "lang" && k != "timezone":
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "unknown preference %q (style, lang and timezone are kept)", k)
+		case !ok || !prefKey.MatchString(str):
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "preference %s must be a short name (letters, digits and _ + . / -)", k)
+		}
+		if str != "" {
+			m[k] = str
+		}
+	}
+	if v, ok := m["lang"].(string); ok {
+		m["lang"] = i18n.Normalize(v)
 	}
 	b, _ := json.Marshal(m)
 	if err := s.app.Store().SetPrefs(authOf(r).userID, string(b)); err != nil {

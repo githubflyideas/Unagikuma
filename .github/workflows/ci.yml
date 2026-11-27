@@ -57,7 +57,7 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         run: |
-          npm install --no-save --no-package-lock playwright@1.49.1
+          npm install --no-save --no-package-lock playwright@1.65.1
           chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           if [ -n "$chrome" ]; then
             echo "UNAGIKUMA_E2E_CHROME=$chrome" >> "$GITHUB_ENV"

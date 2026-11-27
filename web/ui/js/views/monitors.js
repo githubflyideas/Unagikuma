@@ -184,7 +184,7 @@ export function Monitors({ query }) {
     const etags = {};
     for (const r of picked) if (r.etag) etags[r.name] = r.etag;
     try {
-      const res = await post('/monitors/bulk-pause', { names, paused, etags });
+      const res = await post('/monitors/bulk_pause', { names, paused, etags });
       toast(t(paused ? 'ui.mon.paused_n' : 'ui.mon.resumed_n', { n: fmtNum(res.changed) }));
       if (res.skipped && res.skipped.length) toast(t('ui.mon.resume_skipped', { names: res.skipped.join(', ') }), 'error');
       list.reload();
@@ -197,7 +197,7 @@ export function Monitors({ query }) {
     const etags = {};
     for (const r of picked) if (r.etag) etags[r.name] = r.etag;
     try {
-      await post('/monitors/bulk-delete', { names, etags });
+      await post('/monitors/bulk_delete', { names, etags });
       toast(tn('ui.mon.deleted_n', names.length));
       setSel(new Set());
       list.reload();

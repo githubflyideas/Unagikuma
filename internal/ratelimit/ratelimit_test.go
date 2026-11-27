@@ -127,3 +127,10 @@ func TestWindowCountsAnySpan(t *testing.T) {
 		t.Fatal("a window without a limit allows everything")
 	}
 }
+
+// Len returns the number of tracked keys.
+func (k *Keyed) Len() int {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	return len(k.m)
+}

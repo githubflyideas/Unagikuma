@@ -61,7 +61,7 @@ func TestRegionsAndMove(t *testing.T) {
 		t.Fatalf("move to an unknown region: %d", c)
 	}
 	// Deleting north moves c (written under $SCOPE region:north) to global.
-	if c := e.do("DELETE", "/api/v1/regions/north", nil, nil); c != 200 {
+	if c := e.do("DELETE", "/api/v1/regions/north", nil, nil); c != 204 {
 		t.Fatalf("delete region: %d", c)
 	}
 	cfg = e.app.Config().Config
