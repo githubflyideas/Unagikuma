@@ -37,6 +37,7 @@ type rowJSON struct {
 	Tags        []tagJSON          `json:"tags"`
 	Policy      string             `json:"policy"`
 	IntervalS   int                `json:"interval_s"`
+	RetryS      int                `json:"retry_s"`
 	Status      string             `json:"status"`
 	StateType   string             `json:"state_type"`
 	Flags       []string           `json:"flags"`
@@ -180,7 +181,7 @@ func (s *Server) rowBase(r engine.MonitorRow, cfg *config.Config, incs map[int64
 		out.Flags = append(out.Flags, "held")
 	}
 	if m := cfg.FindMonitor(r.Name); m != nil {
-		out.Policy, out.IntervalS, out.Written = m.Policy, int(m.Interval.Seconds()), m.Written
+		out.Policy, out.IntervalS, out.RetryS, out.Written = m.Policy, int(m.Interval.Seconds()), int(m.Retry.Seconds()), m.Written
 		out.Area, out.Nodes, out.Parents, out.Host = m.Area, m.Nodes, m.Parents, m.HostKey()
 		out.Region, out.Mute, out.SysChan = m.Region, m.Mute, m.SystemChannel
 		out.Target = m.Target
@@ -218,7 +219,8 @@ func (s *Server) rowBase(r engine.MonitorRow, cfg *config.Config, incs map[int64
 
 // monitors lists rows filtered by a simple query: words match name, title,
 // target or group; key:value terms filter status, type, tag, group, depth,
-// scope; a leading '-' negates a term.
+// scope, failures (or failed), attempts, retry (or retry_s); a leading
+// '-' negates a term. Numeric terms accept 3, <3, <=3, >3, >=3 and =3.
 func (s *Server) monitors(w http.ResponseWriter, r *http.Request) (any, error) {
 	cfg := s.app.EffectiveConfig()
 	incs := s.incidentIndex()
@@ -366,7 +368,8 @@ func parseQuery(s string) query {
 		}
 		if k, v, ok := strings.Cut(f, ":"); ok && v != "" {
 			switch k {
-			case "status", "type", "tag", "group", "depth", "scope", "policy", "name", "flag", "area", "node", "host", "region":
+			case "status", "type", "tag", "group", "depth", "scope", "policy", "name", "flag", "area", "node", "host", "region",
+				"failures", "failed", "attempts", "retry", "retry_s":
 				t.key, t.val = k, v
 				q = append(q, t)
 				continue
@@ -404,6 +407,12 @@ func (t queryTerm) match(r rowJSON) bool {
 		return strings.Contains(low(r.Name), t.val)
 	case "group":
 		return strings.Contains(low(r.Group), t.val)
+	case "failures", "failed":
+		return cmpNum(r.Attempt, t.val)
+	case "attempts":
+		return cmpNum(r.MaxAttempts, t.val)
+	case "retry", "retry_s":
+		return cmpNum(r.RetryS, strings.TrimSuffix(t.val, "s"))
 	case "flag":
 		for _, f := range r.Flags {
 			if f == t.val {
@@ -438,6 +447,34 @@ func (t queryTerm) match(r rowJSON) bool {
 	}
 	hay := low(r.Name + " " + r.Title + " " + r.Target + " " + r.Group + " " + r.Keyword)
 	return strings.Contains(hay, t.val)
+}
+
+// cmpNum matches n against "3", "<3", "<=3", ">3", ">=3" and "=3".
+func cmpNum(n int, v string) bool {
+	v = strings.TrimSpace(v)
+	op := ""
+	for _, p := range []string{"<=", ">=", "<", ">", "="} {
+		if strings.HasPrefix(v, p) {
+			op, v = p, v[len(p):]
+			break
+		}
+	}
+	x, err := strconv.Atoi(v)
+	if err != nil {
+		return false
+	}
+	switch op {
+	case "<":
+		return n < x
+	case "<=":
+		return n <= x
+	case ">":
+		return n > x
+	case ">=":
+		return n >= x
+	default:
+		return n == x
+	}
 }
 
 var ranges = map[string]time.Duration{"1h": time.Hour, "6h": 6 * time.Hour, "24h": 24 * time.Hour, "7d": 7 * 24 * time.Hour, "30d": 30 * 24 * time.Hour, "90d": 90 * 24 * time.Hour}

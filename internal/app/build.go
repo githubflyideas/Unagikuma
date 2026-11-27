@@ -238,7 +238,6 @@ func (a *App) engineConfig(cfg *config.Config) engine.Config {
 	for _, mt := range cfg.Maints {
 		ec.Maints = append(ec.Maints, engine.MaintSpec{Name: mt.Name, Title: mt.Title, Monitors: mt.Monitors, Schedule: mt.Schedule, Notify: mt.Notify})
 	}
-	ec.Maints = append(ec.Maints, a.changeWindows(cfg)...)
 	leftOut := map[string][]directory.Issue{}
 	for _, c := range cfg.Channels {
 		ec.Channels[c.Name] = a.channelSpec(cfg, c, resolve, leftOut)

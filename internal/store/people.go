@@ -543,7 +543,7 @@ func (s *Store) RenameChannel(oldName, newName string) error {
 	}
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
-	for _, q := range []struct{ table, col string }{{"people", "notify"}, {"changes", "channels"}} {
+	for _, q := range []struct{ table, col string }{{"people", "notify"}} {
 		rows, err := s.core.Query(`SELECT id,`+q.col+` FROM `+q.table+` WHERE ',' || `+q.col+` || ',' LIKE ?`, "%,"+oldName+",%")
 		if err != nil {
 			return err

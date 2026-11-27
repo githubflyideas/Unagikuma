@@ -19,28 +19,26 @@ import { Nodes } from './views/nodes.js';
 import { IncidentReport } from './views/incident.js';
 import { DrawerHost } from './views/drawer.js';
 import { PaletteHost, openPalette } from './views/palette.js';
-import { loadBrand, loadMyStyle, applyCachedStyle, onStyleLoaded, signedOut } from './styles.js';
+import { loadBrand, loadMyStyle, applyCachedStyle, onStyleLoaded, signedOut, currentStyle, setMyStyle, brand, CHROME } from './styles.js';
 import { storageGet, storageSet } from './storage.js';
 
-// Five themes, each its own mood; Calm when none is chosen. Names stored
-// by earlier versions (and "auto", which there was) map to the nearest.
-const TONES = ['perfume', 'country', 'industrial', 'calm', 'passion'];
-const OLD_TONES = { light: 'calm', paper: 'calm', dark: 'industrial', ink: 'industrial', mist: 'calm', sport: 'calm', slate: 'industrial',
-  graphite: 'industrial', sky: 'calm', violet: 'country', brand: 'calm', auto: 'calm' };
-// Each dot shows its theme's own sidebar and accent colours.
-const SWATCH = {
-  perfume: 'linear-gradient(135deg, #f1e4ea 50%, #a8566b 50%)',
-  country: 'linear-gradient(135deg, #4a3426 50%, #e0a526 50%)',
-  industrial: 'linear-gradient(135deg, #15181b 50%, #f28c28 50%)',
-  calm: 'linear-gradient(135deg, #dfe5e0 50%, #3d7c78 50%)',
-  passion: 'linear-gradient(135deg, #2b0b24 50%, #e0246f 50%)',
-};
-function toneOf(v) {
-  v = OLD_TONES[v] || v;
-  return TONES.includes(v) ? v : 'calm';
+// Classic is the default layout; the other four are optional layouts.
+// Colour comes from five shared palettes, cycled by clicking the logo.
+const THEMES = ['classic', 'retail', 'noc', 'starbridge', 'atelier'];
+const PALETTES = ['calm', 'perfume', 'country', 'industrial', 'passion'];
+const OLD_PALETTES = { light: 'calm', paper: 'calm', dark: 'industrial', ink: 'industrial',
+  mist: 'calm', sport: 'calm', slate: 'industrial', graphite: 'industrial', sky: 'calm',
+  violet: 'perfume', brand: 'calm', auto: 'calm', a: 'calm', b: 'country', c: 'industrial' };
+function paletteOf(v) {
+  v = OLD_PALETTES[v] || v;
+  return PALETTES.includes(v) ? v : 'calm';
 }
-function applyTheme(v) {
-  document.documentElement.dataset.theme = toneOf(v);
+function applyPalette(v) {
+  document.documentElement.dataset.theme = paletteOf(v);
+}
+function nextPalette(v) {
+  const cur = paletteOf(v);
+  return PALETTES[(PALETTES.indexOf(cur) + 1) % PALETTES.length];
 }
 
 // The interface can be shown larger, as a whole: text, icons, charts and
@@ -192,9 +190,15 @@ function Shell({ user, onLogout, onLang }) {
   const route = useRoute();
   const [open, setOpen] = useState(false);
   const [live, setLive] = useState(false);
-  const [theme, setTheme] = useState(toneOf(storage('unagikuma.theme')));
-  // A removed tone is stored as its replacement.
-  useEffect(() => { const v = storage('unagikuma.theme'); if (v && OLD_TONES[v]) storage('unagikuma.theme', OLD_TONES[v]); }, []);
+  const [palette, setPalette] = useState(paletteOf(storage('unagikuma.palette') || storage('unagikuma.theme')));
+  const [styleRev, setStyleRev] = useState(0);
+  const styleId = currentStyle();
+  const chrome = CHROME[styleId] || 'side';
+  useEffect(() => {
+    const v = storage('unagikuma.palette') || storage('unagikuma.theme');
+    if (v && paletteOf(v) && v !== paletteOf(v)) storage('unagikuma.palette', paletteOf(v));
+  }, []);
+  useEffect(() => onStyleLoaded(() => setStyleRev(n => n + 1)), []);
   const [mini, setMini] = useState(storage('unagikuma.side') === 'mini');
   const [acct, setAcct] = useState(false);
   const ov = useFetch(() => get('/overview'), []);
@@ -207,7 +211,38 @@ function Shell({ user, onLogout, onLang }) {
   const setup = setupIssues(ov.data);
   const first = route.parts[0] === 'settings' && ADVANCED_TABS.includes(route.parts[1]) ? '/advanced'
     : route.parts[0] === 'alerts' && route.parts[1] === 'changes' ? '/notices' : '/' + (route.parts[0] || '');
-  const changeTheme = (v) => { setTheme(v); storage('unagikuma.theme', v); applyTheme(v); };
+  const changeTheme = async (id) => {
+    if (id === styleId) return;
+    const allowed = (brand.styles || []).some(x => x.id === id && x.allowed) || id === 'classic';
+    if (!allowed) return;
+    try { await setMyStyle(id === brand.style ? '' : id); } catch { /* keep the last style */ }
+    setStyleRev(n => n + 1);
+  };
+  const changePalette = (v) => { setPalette(v); storage('unagikuma.palette', v); applyPalette(v); };
+  const cyclePalette = (e) => { e.preventDefault(); e.stopPropagation(); changePalette(nextPalette(palette)); };
+  const paletteTip = t('ui.palette.cycle', { name: t('ui.theme.' + palette) });
+  const logoBtn = html`<button type="button" class="logo-cycle" title=${paletteTip} aria-label=${paletteTip} onClick=${cyclePalette}><${Logo} /></button>`;
+  const edition = html`<div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div>`;
+  const brandBlock = (cls) => html`<div class=${cls}>${logoBtn}<div><a href="#/">${PRODUCT}${edition}</a></div></div>`;
+  const themeDock = html`<div class="theme-dock" role="group" aria-label=${t('ui.theme')}>
+      <div class="themes styles" role="list">
+        ${THEMES.map((id) => {
+          const allowed = id === 'classic' || (brand.styles || []).some(x => x.id === id && x.allowed);
+          return html`<button type="button" role="listitem" class="style-swatch" aria-pressed=${String(styleId === id)} disabled=${!allowed}
+            title=${t('ui.style.' + id)} aria-label=${t('ui.style.' + id)}
+            style=${{ background: 'var(--accent)' }}
+            onClick=${() => allowed && changeTheme(id)}><span>${t('ui.style.' + id)}</span></button>`;
+        })}
+      </div>
+    </div>`;
+  const nodeName = ov.data && ov.data.instance ? html`<div class="host ellipsis" title=${ov.data.instance}>${ov.data.instance}</div>` : null;
+  const runMode = html`<${RunMode} ov=${ov.data} live=${live} />`;
+  const accountDock = html`<div class="account-dock">
+      ${chrome !== 'side' && nodeName}
+      ${chrome !== 'side' && runMode}
+      <div class="row nowrap lang-zoom"><${LangSelect} onChange=${onLang} /><${ZoomSelect} /></div>
+      <div class="row"><button type="button" class="linkish ellipsis" title=${t('ui.acc.open')} onClick=${() => setAcct(true)}>${user}</button><div class="spacer"></div><button class="btn sm ghost" onClick=${onLogout}>${t('ui.logout')}</button></div>
+    </div>`;
   // On a wide screen the button folds the sidebar to icons; on a phone it
   // slides the sidebar in.
   const toggleSide = () => {
@@ -251,39 +286,34 @@ function Shell({ user, onLogout, onLang }) {
   // An account limited to groups works with their monitors only.
   // Everyone has Settings for their own account (password).
   const nav = NAV.filter(([path]) => (!me.groups || LIMITED_NAV.has(path)) && ((path !== '/advanced' && path !== '/settings') || me.role === 'admin'));
-  return html`<div class=${'shell' + (mini ? ' mini' : '')}>
-    <aside class=${'side' + (open ? ' open' : '')}>
-      <a class="brand" href="#/"><${Logo} /><div>${PRODUCT}
-        <div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div></div></a>
-      <div class="themes" role="group" aria-label=${t('ui.theme')}>
-        ${TONES.map((v) => html`<button type="button" aria-pressed=${String(theme === v)}
-          title=${t('ui.theme.' + v)} aria-label=${t('ui.theme.' + v)}
-          style=${{ background: SWATCH[v] || 'var(--accent)' }} onClick=${() => changeTheme(v)}></button>`)}
-      </div>
-      <nav class="nav">
-        ${nav.map(([path, key, ico]) => html`<a href=${href(path)} class=${first === path ? 'on' : ''}>
+  const navLinks = nav.map(([path, key, ico]) => html`<a href=${href(path)} class=${first === path ? 'on' : ''}>
           <span class="ico" title=${mini ? t(key) : ''}>${ico}</span><span class="lbl">${t(key)}</span>
           ${path === '/problems' && setup.length > 0 && html`<span class="rdot setup" style=${{ marginTop: 0, marginInlineStart: 'auto' }} title=${setup.map(x => x.n ? tn(x.key, x.n) : t(x.key)).join('\n')}></span>`}
           ${path === '/problems' && unhandled > 0 && html`<span class="count">${unhandled}</span>`}
           ${path === '/settings' && scriptProblems > 0 && html`<span class="count" title=${t('ui.scripts.badge', { n: scriptProblems })}>${scriptProblems}</span>`}
           ${path === '/alerts' && contactIssues > 0 && html`<span class="rdot" style=${{ marginTop: 0, marginInlineStart: 'auto' }} title=${t('ui.dir.nav_dot', { n: contactIssues })}></span>`}
-        </a>`)}
-      </nav>
+        </a>`);
+  return html`<div class=${'shell chrome-' + chrome + (mini ? ' mini' : '')} data-style-rev=${styleRev}>
+    <aside class=${'side' + (open ? ' open' : '')}>
+      ${brandBlock('brand')}
+      ${chrome === 'side' && themeDock}
+      <nav class="nav">${navLinks}</nav>
       <div class="foot">
-        <div class="row nowrap lang-zoom"><${LangSelect} onChange=${onLang} /><${ZoomSelect} /></div>
-        <div class="row"><button type="button" class="linkish ellipsis" title=${t('ui.acc.open')} onClick=${() => setAcct(true)}>${user}</button><div class="spacer"></div><button class="btn sm ghost" onClick=${onLogout}>${t('ui.logout')}</button></div>
-        ${ov.data && ov.data.instance && html`<div class="host ellipsis" title=${ov.data.instance}>${ov.data.instance}</div>`}
+        ${nodeName}
+        ${runMode}
+        ${chrome === 'side' && accountDock}
       </div>
       ${acct && html`<${Modal} title=${t('ui.acc.title')} onClose=${() => setAcct(false)}><${Account} user=${user} embedded /><//>`}
     </aside>
     <div class="main">
       <header class="top">
         <button class="btn sm" onClick=${toggleSide} aria-label=${mini ? t('ui.side.expand') : t('ui.side.collapse')} title=${mini ? t('ui.side.expand') : t('ui.side.collapse')}>☰</button>
+        ${chrome !== 'side' && brandBlock('brand top-brand')}
         <div class="crumbs">${t((NAV.find(n => n[0] === (first === '/expiry' ? '/monitors' : first)) || NAV[0])[1])}</div>
         <${Search} route=${route} />
         ${ov.data && html`<${Verdict} ov=${ov.data} />`}
-        <div class="spacer"></div>
-        <${RunMode} ov=${ov.data} live=${live} />
+        ${chrome === 'top' && html`<nav class="top-nav">${navLinks}</nav>`}
+        ${chrome === 'top' && themeDock}
       </header>
       ${banner && html`<div class="page" style=${{ paddingBottom: 0 }}><${ConfigBanner} banner=${banner} /></div>`}
       ${ov.data && ov.data.storage && ov.data.storage.failing && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner error">
@@ -299,6 +329,11 @@ function Shell({ user, onLogout, onLang }) {
         <div class="spacer">${t('ui.cap.over', { used: ov.data.monitor_over.used, limit: ov.data.monitor_over.limit })}${ov.data.monitor_over.registered ? '' : ' ' + t('ui.reg.contact')}</div>
         <a class="btn sm" href="#/settings/registration">${t('ui.set.tab.registration')}</a></div></div>`}
       ${view}
+      ${chrome === 'top' && html`<footer class="page-foot">${accountDock}</footer>`}
+      ${chrome === 'bottom' && html`<div class="bottom-wrap">
+        <nav class="bottom-bar"><div class="bottom-nav">${navLinks}</div>${themeDock}</nav>
+        <div class="below-bar">${accountDock}</div>
+      </div>`}
     </div>
   </div>`;
 }
@@ -340,20 +375,44 @@ function RunMode({ ov, live }) {
 // Search filters the monitor list, with the list's own query syntax
 // (name, address, type:http, tag:, -group:, status:) and order; typing
 // on another page opens the list. Ctrl+K still opens the command palette.
+function termOf(q, k) {
+  const m = q.match(new RegExp('(?:^|\\s)' + k + ':(\\S+)'));
+  return m ? m[1] : '';
+}
+function setTerm(q, k, val) {
+  return (q.replace(new RegExp('(?:^|\\s)' + k + ':\\S+', 'g'), ' ') + (val ? ' ' + k + ':' + val : '')).replace(/\s+/g, ' ').trim();
+}
+
 function Search({ route }) {
   const onList = route.parts[0] === 'monitors' && !route.parts[1];
   const q = onList ? route.query.get('q') || '' : '';
   const sort = onList ? route.query.get('sort') || 'status' : 'status';
   const [v, setV] = useState(q);
+  const [groups, setGroups] = useState([]);
   useEffect(() => setV(q), [q]);
+  useEffect(() => { get('/monitors?sort=name').then(d => {
+    const g = [...new Set((d.items || []).map(r => r.group).filter(Boolean))].sort();
+    setGroups(g);
+  }).catch(() => {}); }, []);
   const show = (nq, ns) => {
     const path = monitorsPath(nq.trim(), ns);
     if (onList) replaceRoute(path);
     else location.hash = '#' + path;
   };
+  const setFilter = (k, val) => { const next = setTerm(v, k, val); setV(next); show(next, sort); };
   return html`<div class="search" role="search"><span aria-hidden="true">⌕</span>
     <input type="search" class="spacer" placeholder=${t('ui.mon.search')} aria-label=${t('ui.mon.search')} value=${v}
       onInput=${(e) => { setV(e.target.value); show(e.target.value, sort); }} />
+    <select class="filter" value=${termOf(v, 'group')} onChange=${(e) => setFilter('group', e.target.value)} aria-label=${t('ui.mon.filter.group')}>
+      <option value="">${t('ui.mon.filter.group')}</option>
+      ${groups.map(g => html`<option value=${g}>${g}</option>`)}
+    </select>
+    <input type="search" class="filter num" placeholder=${t('ui.mon.filter.failures')} aria-label=${t('ui.mon.filter.failures')}
+      value=${termOf(v, 'failures') || termOf(v, 'failed')}
+      onInput=${(e) => { const cur = setTerm(v, 'failed', ''); setV(setTerm(cur, 'failures', e.target.value)); show(setTerm(cur, 'failures', e.target.value), sort); }} />
+    <input type="search" class="filter num" placeholder=${t('ui.mon.filter.retry')} aria-label=${t('ui.mon.filter.retry')}
+      value=${termOf(v, 'retry') || termOf(v, 'retry_s')}
+      onInput=${(e) => { const cur = setTerm(v, 'retry_s', ''); setV(setTerm(cur, 'retry', e.target.value)); show(setTerm(cur, 'retry', e.target.value), sort); }} />
     <select class="sort" value=${sort.replace(/^-/, '')} onChange=${(e) => show(v, e.target.value)} aria-label=${t('ui.mon.sort')}>
       ${MON_SORTS.map(k => html`<option value=${k}>${t('ui.mon.sort.' + k)}</option>`)}
     </select>
@@ -432,7 +491,7 @@ function Root() {
 }
 
 (async () => {
-  applyTheme(storage('unagikuma.theme'));
+  applyPalette(storage('unagikuma.palette') || storage('unagikuma.theme'));
   applyZoom(storage('unagikuma.zoom'));
   applyCachedStyle();
   await Promise.all([loadLanguages(), loadBrand()]);

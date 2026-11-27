@@ -260,18 +260,16 @@ await step('a new e-mail address is offered for the contact directory', async ()
   if (errors.length) throw new Error(errors.join(' | '));
 });
 
-await step('a change is announced and closed with a receipt', async () => {
-  await page.goto(base + '/#/notices/changes');
-  await page.click('button:has-text("Announce a change")');
+await step('an announcement is posted on the board', async () => {
+  await page.goto(base + '/#/notices/pages');
+  await page.click('button:has-text("New announcement")');
   await page.fill('.modal .field:has(label:text-is("Title")) input', 'Core switch upgrade');
-  await page.fill('.modal .field:has(label:text-is("Impact")) input', 'VPN down for 10 minutes');
-  await page.click('.modal .btn.primary:has-text("Announce")');
-  await page.waitForSelector('td:has-text("Core switch upgrade")');
-  await page.click('tr:has-text("Core switch upgrade") button:has-text("Done")');
-  await page.fill('.modal textarea', 'Upgraded to 17.9, links checked');
-  await page.click('.modal .btn.primary');
-  await page.waitForSelector('tr:has-text("Core switch upgrade") .tag:has-text("Done")');
-  await until('the notices to be delivered', async () => (await api('/notifications')).items.filter((n) => n.kind === 'CHANGE').length >= 2);
+  await page.fill('.modal textarea[name="body"]', 'VPN down for 10 minutes');
+  await page.click('.modal button:has-text("Preview")');
+  await page.waitForSelector('.modal .md-preview:has-text("VPN down for 10 minutes")');
+  await page.check('.modal label.switch:has-text("Pin to the top") input');
+  await page.click('.modal .btn.primary:has-text("Save")');
+  await page.waitForSelector('tr:has-text("Core switch upgrade") .tag:has-text("pinned")');
   if (errors.length) throw new Error(errors.join(' | '));
 });
 
@@ -315,7 +313,7 @@ await step('phones get no sideways scrolling', async () => {
   const p = await phone.newPage();
   watch(p);
   const mon = (await api('/monitors')).items.find((m) => m.target === '127.0.0.1:1').name;
-  for (const route of ['#/', '#/monitors', '#/monitors/' + encodeURIComponent(mon), '#/alerts/channels', '#/alerts/contacts', '#/notices/changes', '#/notices/pages', '#/settings']) {
+  for (const route of ['#/', '#/monitors', '#/monitors/' + encodeURIComponent(mon), '#/alerts/channels', '#/alerts/contacts', '#/notices/pages', '#/settings']) {
     await p.goto(base + '/' + route);
     await p.waitForTimeout(800);
     const w = await p.evaluate(() => document.documentElement.scrollWidth);

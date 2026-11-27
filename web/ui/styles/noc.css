@@ -1,44 +1,31 @@
 /* ISP / NOC: a network operations centre. Deep navy glass on a faint
    blueprint grid, a slim icon rail that opens over the page, panels with
    bracketed corners like a radar screen, monospaced figures, and failures
-   that pulse until someone looks. Brings its own (dark) colours. Registered. */
+   that pulse until someone looks. Layout only; colours come from the shared palettes. Registered. */
 @font-face { font-family: "NOC Mono"; src: url("fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); font-weight: 500 800; font-display: swap; }
 @font-face { font-family: "NOC Mono"; src: url("fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 
 :root[data-style="noc"] {
-  --bg: #050a12; --side: #070f1b; --panel: #0a1422; --panel-2: #0e1b2d; --border: #16263b; --border-strong: #22405f;
-  --text: #dcebfa; --muted: #8fa8c2; --faint: #7d96b0;
-  --accent: #38bdf8; --accent-soft: #0b2a42; --accent-text: #021320; --link: #7dd3fc;
-  --ok: #34e89e; --ok-soft: #0a2e22; --degraded: #fbbf24; --degraded-soft: #33270a;
-  --critical: #ff4d6a; --critical-soft: #3b0f1a; --unknown: #b49cff; --unknown-soft: #1e1838;
-  --pending: #8fa8c2; --pending-soft: #122033; --maint: #60a5fa; --maint-soft: #0f2240;
-  --on-status: #021320; --on-degraded: #1d1600;
-  --empty: #13233a; --stripe: transparent;
-  --shadow: none; --radius: 3px; --bg-image: none;
-  --side-text: #cfe3f5; --side-muted: #8fa8c2; --side-hover: #0e2236; --side-on: #0b2a42; --side-on-text: #7dd3fc; --side-mark: #38bdf8;
-  --noc-mono: "NOC Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --noc-glow: 0 0 0 1px rgba(56, 189, 248, .25), 0 0 24px rgba(56, 189, 248, .12);
-  color-scheme: dark;
+  --noc-mono: "NOC Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; --noc-glow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent), 0 0 24px color-mix(in srgb, var(--accent) 12%, transparent);
 }
-:root[data-style="noc"] .themes { display: none; }
 
 /* ---- the room: a dark floor with a faint blueprint grid ---- */
 :root[data-style="noc"] body {
   background-color: var(--bg);
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, .10), transparent 70%),
-    linear-gradient(rgba(56, 189, 248, .045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 189, 248, .045) 1px, transparent 1px);
+    radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
+    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px);
   background-size: auto, 32px 32px, 32px 32px;
   background-attachment: fixed;
 }
 :root[data-style="noc"] .shell { max-width: none; background: transparent; box-shadow: none; grid-template-columns: 68px 1fr; }
 
 /* ---- the rail: icons only; it opens over the page on hover or focus ---- */
-:root[data-style="noc"] .side { width: 68px; padding: 12px 8px; background: rgba(7, 15, 27, .92); border-inline-end: 1px solid var(--border); backdrop-filter: blur(12px); z-index: 30; overflow: hidden; transition: width .18s ease, box-shadow .18s ease; }
+:root[data-style="noc"] .side { width: 68px; padding: 12px 8px; background: color-mix(in srgb, var(--side) 92%, transparent); border-inline-end: 1px solid var(--border); backdrop-filter: blur(12px); z-index: 30; overflow: hidden; transition: width .18s ease, box-shadow .18s ease; }
 :root[data-style="noc"] .side:hover, :root[data-style="noc"] .side:focus-within { width: 240px; box-shadow: 18px 0 50px rgba(0, 0, 0, .55); border-inline-end-color: var(--border-strong); }
 :root[data-style="noc"] .brand { flex-direction: row; gap: 10px; padding: 4px 6px 14px; margin-bottom: 6px; border-bottom: 1px solid var(--border); text-align: start; white-space: nowrap; font-family: var(--noc-mono); font-size: 13px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--text); }
-:root[data-style="noc"] .brand img { width: 36px; height: 36px; flex: none; filter: drop-shadow(0 0 8px rgba(56, 189, 248, .35)); }
+:root[data-style="noc"] .brand img { width: 36px; height: 36px; flex: none; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 35%, transparent)); }
 :root[data-style="noc"] .brand .edition { font-family: var(--sans); letter-spacing: 0; text-transform: none; font-size: 11.5px; }
 :root[data-style="noc"] .nav { display: flex; flex-direction: column; gap: 2px; }
 :root[data-style="noc"] .nav a { position: relative; white-space: nowrap; gap: 14px; padding: 10px 14px; border-radius: 3px; color: var(--side-text); font-size: 13.5px; font-weight: 500; }
@@ -56,10 +43,10 @@
 :root[data-style="noc"] .side .foot select { border-radius: 3px; }
 
 /* ---- the top bar: a console strip with a scanning accent line ---- */
-:root[data-style="noc"] .top { position: sticky; background: rgba(5, 10, 18, .82); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: 0 1px 0 rgba(56, 189, 248, .08); padding: 10px 24px; }
+:root[data-style="noc"] .top { position: sticky; background: color-mix(in srgb, var(--panel) 82%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 8%, transparent); padding: 10px 24px; }
 :root[data-style="noc"] .top::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: -1px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 40% 100%; background-repeat: no-repeat; animation: noc-scan 6s linear infinite; opacity: .8; }
 :root[data-style="noc"] .top > .btn.sm:first-child { display: none; }
-:root[data-style="noc"] .top .crumbs { font-family: var(--noc-mono); font-size: 15px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #fff; }
+:root[data-style="noc"] .top .crumbs { font-family: var(--noc-mono); font-size: 15px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--text); }
 :root[data-style="noc"] .top .crumbs::before { content: "▍"; color: var(--accent); margin-inline-end: 6px; }
 :root[data-style="noc"] .verdict { border-radius: 3px; font-family: var(--noc-mono); letter-spacing: .04em; border: 1px solid currentColor; background: transparent; }
 :root[data-style="noc"] .verdict.critical { background: var(--critical-soft); animation: noc-alarm 1.6s ease-in-out infinite; }
@@ -72,7 +59,7 @@
 :root[data-style="noc"] .card::before, :root[data-style="noc"] .card::after { content: ""; position: absolute; width: 12px; height: 12px; pointer-events: none; border-color: var(--accent); border-style: solid; opacity: .7; }
 :root[data-style="noc"] .card::before { inset-block-start: -1px; inset-inline-start: -1px; border-width: 2px 0 0 2px; }
 :root[data-style="noc"] .card::after { inset-block-end: -1px; inset-inline-end: -1px; border-width: 0 2px 2px 0; }
-:root[data-style="noc"] .card > .hd { padding: 11px 18px; border-bottom: 1px solid var(--border); background: rgba(56, 189, 248, .035); }
+:root[data-style="noc"] .card > .hd { padding: 11px 18px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--accent) 6%, transparent); }
 :root[data-style="noc"] .card > .hd h2, :root[data-style="noc"] .card > .hd h3 { font-family: var(--noc-mono); font-size: 12px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--link); }
 :root[data-style="noc"] .card > .bd { padding: 16px 18px; }
 :root[data-style="noc"] .card > .bd.flush { padding: 0; }
@@ -80,7 +67,7 @@
 
 /* ---- figures: big monospaced readouts ---- */
 :root[data-style="noc"] .tile { border-radius: 3px; background: var(--panel-2); border: 1px solid var(--border); border-inline-start: 3px solid var(--border-strong); padding: 14px 16px; }
-:root[data-style="noc"] .tile b { font-family: var(--noc-mono); font-size: 34px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: #f0f8ff; }
+:root[data-style="noc"] .tile b { font-family: var(--noc-mono); font-size: 34px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--text); }
 :root[data-style="noc"] .tile span { font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; }
 :root[data-style="noc"] .tile.ok { border-inline-start-color: var(--ok); } :root[data-style="noc"] .tile.ok b { color: var(--ok); text-shadow: 0 0 18px rgba(52, 232, 158, .35); }
 :root[data-style="noc"] .tile.degraded { border-inline-start-color: var(--degraded); } :root[data-style="noc"] .tile.degraded b { color: var(--degraded); }
@@ -89,10 +76,10 @@
 
 /* ---- tables: a monitor board; failures pulse until handled ---- */
 :root[data-style="noc"] .tbl th { background: rgba(14, 27, 45, .95); color: var(--link); font-family: var(--noc-mono); font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; border-bottom: 1px solid var(--border-strong); }
-:root[data-style="noc"] .page.list .card.scroll thead th { background: #0e1b2d; }
+:root[data-style="noc"] .page.list .card.scroll thead th { background: var(--panel-2); }
 :root[data-style="noc"] .tbl td { border-bottom: 1px solid var(--border); padding-block: 9px; }
 :root[data-style="noc"] .tbl tbody tr:nth-child(even) td { background: rgba(125, 211, 252, .018); }
-:root[data-style="noc"] .tbl tr.click:hover td { background: rgba(56, 189, 248, .07); }
+:root[data-style="noc"] .tbl tr.click:hover td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 :root[data-style="noc"] .tbl tbody tr.critical td { background: rgba(255, 77, 106, .10); }
 :root[data-style="noc"] .tbl tr.critical td:first-child { box-shadow: inset 3px 0 0 var(--critical); animation: noc-edge 1.6s ease-in-out infinite; }
 :root[data-style="noc"] .tbl tbody tr.degraded td { background: rgba(251, 191, 36, .07); }
@@ -103,7 +90,7 @@
 :root[data-style="noc"] .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; flex: none; }
 :root[data-style="noc"] .pill.ok { background: var(--ok-soft); color: var(--ok); }
 :root[data-style="noc"] .pill.degraded { background: var(--degraded-soft); color: var(--degraded); }
-:root[data-style="noc"] .pill.critical { background: var(--critical-soft); color: #ff8da0; }
+:root[data-style="noc"] .pill.critical { background: var(--critical-soft); color: var(--critical); }
 :root[data-style="noc"] .pill.critical::before { animation: noc-blink 1s steps(2, start) infinite; }
 :root[data-style="noc"] .pill.unknown { background: var(--unknown-soft); color: var(--unknown); }
 :root[data-style="noc"] .pill.maintenance { background: var(--maint-soft); color: var(--maint); }
@@ -112,15 +99,15 @@
 :root[data-style="noc"] .btn { border-radius: 3px; background: var(--panel-2); border-color: var(--border-strong); color: var(--text); }
 :root[data-style="noc"] .btn:hover { border-color: var(--accent); box-shadow: var(--noc-glow); }
 :root[data-style="noc"] .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 700; letter-spacing: .04em; }
-:root[data-style="noc"] .btn.primary:hover { background: #7dd3fc; }
+:root[data-style="noc"] .btn.primary:hover { background: var(--link); }
 :root[data-style="noc"] .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
-:root[data-style="noc"] input[type=text], :root[data-style="noc"] input[type=password], :root[data-style="noc"] input[type=number], :root[data-style="noc"] input[type=url], :root[data-style="noc"] input[type=email], :root[data-style="noc"] select, :root[data-style="noc"] textarea { background: #08111d; border-radius: 3px; border-color: var(--border-strong); }
+:root[data-style="noc"] input[type=text], :root[data-style="noc"] input[type=password], :root[data-style="noc"] input[type=number], :root[data-style="noc"] input[type=url], :root[data-style="noc"] input[type=email], :root[data-style="noc"] select, :root[data-style="noc"] textarea { background: var(--panel-2); border-radius: 3px; border-color: var(--border-strong); }
 :root[data-style="noc"] input:focus, :root[data-style="noc"] select:focus, :root[data-style="noc"] textarea:focus { border-color: var(--accent); box-shadow: var(--noc-glow); outline: none; }
 :root[data-style="noc"] .chip, :root[data-style="noc"] .seg { border-radius: 3px; background: var(--panel); }
 :root[data-style="noc"] .banner { border-radius: 3px; }
 :root[data-style="noc"] .pub .overall { border-radius: 3px; }
 :root[data-style="noc"] ::-webkit-scrollbar { width: 10px; height: 10px; }
-:root[data-style="noc"] ::-webkit-scrollbar-thumb { background: #1c3350; border: 2px solid var(--bg); border-radius: 6px; }
+:root[data-style="noc"] ::-webkit-scrollbar-thumb { background: var(--border-strong); border: 2px solid var(--bg); border-radius: 6px; }
 :root[data-style="noc"] ::-webkit-scrollbar-track { background: transparent; }
 
 @keyframes noc-scan { from { background-position: -40% 0; } to { background-position: 140% 0; } }
@@ -143,3 +130,16 @@
 @media (prefers-reduced-motion: reduce) {
   :root[data-style="noc"] .top::after, :root[data-style="noc"] .verdict.critical, :root[data-style="noc"] .tbl tr.critical td:first-child, :root[data-style="noc"] .pill.critical::before { animation: none; }
 }
+
+/* Top-menu chrome: a command bar instead of the icon rail. */
+:root[data-style="noc"][data-chrome="top"] .shell,
+:root[data-style="noc"][data-chrome="top"] .shell.mini { display: grid !important; grid-template-columns: 1fr !important; }
+:root[data-style="noc"][data-chrome="top"] .side { display: none !important; }
+:root[data-style="noc"][data-chrome="top"] .side.open { display: flex !important; flex-direction: column; position: fixed; inset-block: 0; inset-inline-start: 0; width: 240px; z-index: 40; overflow: auto; padding: 12px; background: color-mix(in srgb, var(--side) 96%, transparent); }
+:root[data-style="noc"][data-chrome="top"] .top { flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 14px; padding: 10px 20px 8px; background: color-mix(in srgb, var(--side) 88%, transparent); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
+:root[data-style="noc"][data-chrome="top"] .top-brand { font-family: var(--noc-mono); font-size: 13px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--text); }
+:root[data-style="noc"][data-chrome="top"] .top-nav { flex: 1 1 100%; order: 4; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+:root[data-style="noc"][data-chrome="top"] .top-nav a { padding: 8px 12px; border-radius: 3px; font-family: var(--noc-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--side-text); text-decoration: none; }
+:root[data-style="noc"][data-chrome="top"] .top-nav a.on { background: var(--side-on); color: var(--side-on-text); box-shadow: var(--noc-glow); }
+:root[data-style="noc"][data-chrome="top"] .theme-dock { flex: 1 1 100%; order: 5; }
+:root[data-style="noc"][data-chrome="top"] .page-foot { background: color-mix(in srgb, var(--side) 92%, transparent); border-top: 1px solid var(--border); }

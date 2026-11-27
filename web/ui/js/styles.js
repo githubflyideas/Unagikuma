@@ -22,6 +22,8 @@ export function onStyleLoaded(f) { loaded = f; }
 
 // applyStyle shows the page in a style; the last one used is remembered so
 // the next visit opens in it without a flash of the other.
+export const CHROME = { classic: 'side', retail: 'top', noc: 'top', starbridge: 'bottom', atelier: 'top' };
+
 export function applyStyle(id) {
   const root = document.documentElement;
   const known = brand.styles.find(s => s.id === id && s.allowed);
@@ -29,22 +31,22 @@ export function applyStyle(id) {
   storage(id);
   let link = document.getElementById('ui-style');
   if (id === 'classic') {
-    delete root.dataset.style;
     if (link) link.remove();
-    return;
-  }
-  const href = 'styles/' + id + '.css';
-  if (!link) {
-    link = document.createElement('link');
-    link.id = 'ui-style';
-    link.rel = 'stylesheet';
-    document.head.appendChild(link);
-  }
-  if (link.getAttribute('href') !== href) {
-    link.onload = () => loaded();
-    link.setAttribute('href', href);
+  } else {
+    const href = 'styles/' + id + '.css';
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'ui-style';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+    if (link.getAttribute('href') !== href) {
+      link.onload = () => loaded();
+      link.setAttribute('href', href);
+    }
   }
   root.dataset.style = id;
+  root.dataset.chrome = CHROME[id] || 'side';
 }
 
 // The style last used in this browser, until the server says otherwise.

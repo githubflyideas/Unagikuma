@@ -20,9 +20,18 @@ export function detectLang() {
     const saved = storageGet('unagikuma.lang');
     if (saved) return saved;
   } catch { /* storage may be unavailable */ }
-  const want = (navigator.languages || [navigator.language || 'en']).map(l => l.toLowerCase().split(/[-_]/)[0]);
-  const have = new Set(languages.map(l => l.code));
-  return want.find(l => have.has(l)) || 'en';
+  const tags = (navigator.languages || [navigator.language || 'en']).map(l => (l || 'en').toLowerCase().replace('_', '-'));
+  const have = new Map(languages.map(l => [l.code.toLowerCase(), l.code]));
+  for (const tag of tags) {
+    if (have.has(tag)) return have.get(tag);
+    if (tag === 'zh-hant' || tag === 'zh-hk' || tag === 'zh-mo' || tag.startsWith('zh-hant')) return have.get('zh-tw') || 'zh-TW';
+    if (tag === 'zh-hans' || tag === 'zh-cn' || tag === 'zh-sg' || tag.startsWith('zh-hans')) return have.get('zh') || 'zh';
+  }
+  for (const tag of tags) {
+    const base = tag.split('-')[0];
+    if (have.has(base)) return have.get(base);
+  }
+  return 'en';
 }
 
 export async function loadLanguages() {
@@ -131,7 +140,7 @@ export function dur(sec) {
   if (d) parts.push(t('dur.d', { n: d }));
   if (h) parts.push(t('dur.h', { n: h }));
   if (mm && !d) parts.push(t('dur.m', { n: mm }));
-  const sep = ['en', 'zh', 'ja', 'ko'].includes(lang) ? '' : ' ';
+  const sep = ['en', 'zh', 'zh-TW', 'ja', 'ko'].includes(lang) ? '' : ' ';
   return parts.join(sep);
 }
 

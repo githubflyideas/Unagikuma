@@ -34,7 +34,7 @@ var pluralForms = map[string]struct{ forms, exact []string }{
 	"fr": {[]string{"one"}, nil}, "pt": {[]string{"one"}, nil}, "hi": {[]string{"one"}, nil}, "bn": {[]string{"one"}, nil},
 	"ru": {[]string{"one", "few", "many"}, nil},
 	"ar": {[]string{"zero", "one", "two", "few", "many"}, []string{"zero", "one", "two"}},
-	"zh": {}, "ja": {}, "ko": {}, "vi": {}, "id": {},
+	"zh": {}, "zh-TW": {}, "ja": {}, "ko": {}, "vi": {}, "id": {},
 }
 
 func splitPlural(key string) (base, form string) {

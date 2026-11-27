@@ -15,10 +15,9 @@ import (
 var wantCoreCols = map[string][]string{
 	"acks":                     {"id", "incident_id", "at", "by", "via", "action", "comment", "site", "source_epoch", "original_id"},
 	"agent_tokens":             {"node", "prefix", "hash", "created_at", "last_used", "last_addr"},
-	"announcements":            {"id", "page", "title", "body", "severity", "author", "created_at", "updated_at", "resolved_at"},
+	"announcements":            {"id", "title", "body", "severity", "author", "pinned", "starts_at", "ends_at", "created_at", "updated_at", "resolved_at"},
 	"audit":                    {"id", "at", "actor", "action", "target", "area", "detail", "addr", "risk", "prev", "hash"},
 	"bounces":                  {"kind", "value", "n", "first_at", "last_at", "reason"},
-	"changes":                  {"id", "title", "description", "impact", "sel", "policy", "channels", "status_page", "announcement_id", "start_at", "end_at", "state", "note", "created_by", "created_at", "updated_at", "finished_at", "finished_by", "sent"},
 	"config_snapshots":         {"serial", "at", "source", "author", "message", "text", "sha256", "summary", "term"},
 	"contacts":                 {"id", "person_id", "kind", "value"},
 	"counters":                 {"day", "name", "n"},

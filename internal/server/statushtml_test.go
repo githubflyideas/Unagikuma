@@ -46,18 +46,18 @@ func TestStatusPageServerRendered(t *testing.T) {
 	}
 }
 
-func TestStatusPageCreate(t *testing.T) {
+func TestStatusPageCreateRemoved(t *testing.T) {
 	e := newEnv(t, testBind, nil)
 	e.setup()
-	var r struct{ URL string }
-	if code := e.do("POST", "/api/v1/status-pages", map[string]any{"name": "public", "title": "Our services", "select": "type:HTTP"}, &r); code != 200 || !strings.Contains(r.URL, "/status/public") {
-		t.Fatalf("create: %d %+v", code, r)
+	if code := e.do("POST", "/api/v1/status-pages", map[string]any{"name": "public", "title": "Our services", "select": "type:HTTP"}, nil); code != 405 {
+		t.Fatalf("create should be gone: %d", code)
 	}
-	if code := e.do("POST", "/api/v1/status-pages", map[string]any{"name": "public", "title": "Again", "select": "type:HTTP"}, nil); code != 409 {
-		t.Fatalf("duplicate: %d", code)
+	var a map[string]any
+	if code := e.do("POST", "/api/v1/announcements", map[string]any{"title": "Board", "body": "Hello **all**", "severity": "info"}, &a); code != 200 || a["title"] != "Board" {
+		t.Fatalf("board: %d %+v", code, a)
 	}
-	var page struct{ Title string }
-	if e.do("GET", "/api/v1/status/public", nil, &page); page.Title != "Our services" {
-		t.Fatalf("page: %+v", page)
+	var list []map[string]any
+	if code := e.do("GET", "/api/v1/announcements", nil, &list); code != 200 || len(list) != 1 {
+		t.Fatalf("list: %d %+v", code, list)
 	}
 }

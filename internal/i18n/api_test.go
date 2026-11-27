@@ -39,8 +39,8 @@ func TestAPIMessagesKeepTheirArguments(t *testing.T) {
 			}
 		}
 	}
-	if langs != 14 {
-		t.Errorf("%d languages translate API messages, want 14", langs)
+	if langs != 15 {
+		t.Errorf("%d languages translate API messages, want 15", langs)
 	}
 	if msg, ok := APIMessage("zh", "range is 7d, 30d or 90d"); !ok || msg != "range 只能是 7d、30d 或 90d" {
 		t.Errorf("zh: %q %v", msg, ok)

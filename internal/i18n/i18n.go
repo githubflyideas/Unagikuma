@@ -26,7 +26,7 @@ type Lang struct {
 
 // langs is ordered by total number of speakers.
 var langs = []Lang{
-	{"en", "English", false}, {"zh", "中文", false}, {"hi", "हिन्दी", false}, {"es", "Español", false},
+	{"en", "English", false}, {"zh", "简体中文", false}, {"zh-TW", "繁體中文", false}, {"hi", "हिन्दी", false}, {"es", "Español", false},
 	{"ar", "العربية", true}, {"fr", "Français", false}, {"bn", "বাংলা", false}, {"pt", "Português", false},
 	{"ru", "Русский", false}, {"id", "Bahasa Indonesia", false}, {"ur", "اردو", true}, {"de", "Deutsch", false},
 	{"ja", "日本語", false}, {"vi", "Tiếng Việt", false}, {"ko", "한국어", false},
@@ -54,11 +54,25 @@ func init() {
 // Langs returns the supported languages.
 func Langs() []Lang { return append([]Lang(nil), langs...) }
 
-// Normalize maps a language tag ("zh-CN", "pt_BR", "EN") to a supported
-// code, or "en".
+// Normalize maps a language tag ("zh-CN", "pt_BR", "EN", "zh-Hant") to a
+// supported code, or "en".
 func Normalize(tag string) string {
-	c := strings.ToLower(strings.TrimSpace(tag))
-	if i := strings.IndexAny(c, "-_"); i > 0 {
+	c := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(tag), "_", "-"))
+	if c == "" {
+		return "en"
+	}
+	for _, l := range langs {
+		if strings.ToLower(l.Code) == c {
+			return l.Code
+		}
+	}
+	switch {
+	case c == "zh-hant" || c == "zh-hk" || c == "zh-mo" || strings.HasPrefix(c, "zh-hant"):
+		return "zh-TW"
+	case c == "zh-hans" || c == "zh-cn" || c == "zh-sg" || strings.HasPrefix(c, "zh-hans") || strings.HasPrefix(c, "zh-cn"):
+		return "zh"
+	}
+	if i := strings.Index(c, "-"); i > 0 {
 		c = c[:i]
 	}
 	for _, l := range langs {
@@ -72,8 +86,9 @@ func Normalize(tag string) string {
 // Catalog returns a language's catalog for the UI as JSON, with English
 // filling any key the language lacks. Unknown languages report false.
 func Catalog(code string) ([]byte, bool) {
-	c := strings.ToLower(code)
-	if Normalize(c) != c && c != "en" {
+	c := Normalize(code)
+	raw := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(code), "_", "-"))
+	if raw != "" && c == "en" && raw != "en" && !strings.HasPrefix(raw, "en-") {
 		return nil, false
 	}
 	m := make(map[string]string, len(catalogs["en"]))
@@ -147,7 +162,7 @@ func pluralForm(lang string, n int) string {
 		n = -n
 	}
 	switch lang {
-	case "zh", "ja", "ko", "vi", "id":
+	case "zh", "zh-TW", "ja", "ko", "vi", "id":
 		return "other"
 	case "fr", "pt", "hi", "bn":
 		if n == 0 || n == 1 {
@@ -205,7 +220,7 @@ func Duration(d time.Duration, lang string) string {
 	}
 	sep := " "
 	switch Normalize(lang) {
-	case "en", "zh", "ja", "ko":
+	case "en", "zh", "zh-TW", "ja", "ko":
 		sep = ""
 	}
 	return strings.Join(parts, sep)

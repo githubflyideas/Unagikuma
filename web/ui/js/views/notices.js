@@ -1,130 +1,138 @@
-// Status pages: announcements shown on the public pages, and who follows
-// them by e-mail.
-import { html, useState } from '../lib.js';
+// The single announcement board: one list of notices, a markdown editor
+// with a live preview, severity, schedule and pinning. Public status
+// pages (if any are defined in the configuration) show the same board.
+import { html, useState, useMemo } from '../lib.js';
 import { t, fmtTime } from '../i18n.js';
 import { get, post, del, put, me } from '../api.js';
-import { ChangeForm, ChangesTab } from './changes.js';
 import { useFetch, Loading, ErrorBox, Empty, Field, Modal, toast, toastError, errText, confirmDialog } from '../ui.js';
 
 const SEVERITIES = ['info', 'minor', 'major', 'maintenance'];
 
-// A new announcement from the top of the tab picks its page; one opened
-// from a page's list belongs to that page.
-function NoticeForm({ page: fixed, pages, initial, onClose, onSaved }) {
+const pad = (n) => String(n).padStart(2, '0');
+function toLocal(d) {
+  if (!d) return '';
+  d = new Date(d);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function toISO(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString();
+}
+
+// markdownHTML renders a small, escaped markdown subset for the preview.
+export function markdownHTML(src) {
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const inline = (s) => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const lines = String(src || '').replace(/\r\n/g, '\n').split('\n');
+  const out = [];
+  let list = null;
+  const flush = () => { if (list) { out.push(`<ul>${list}</ul>`); list = null; } };
+  for (const line of lines) {
+    const m = /^(#{1,3})\s+(.*)$/.exec(line);
+    if (m) { flush(); out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); continue; }
+    if (/^>\s?/.test(line)) { flush(); out.push(`<blockquote>${inline(line.replace(/^>\s?/, ''))}</blockquote>`); continue; }
+    if (/^[-*]\s+/.test(line)) { list = (list || '') + `<li>${inline(line.replace(/^[-*]\s+/, ''))}</li>`; continue; }
+    if (!line.trim()) { flush(); continue; }
+    flush();
+    out.push(`<p>${inline(line)}</p>`);
+  }
+  flush();
+  return out.join('') || `<p class="muted">${esc('')}</p>`;
+}
+
+function wrapSel(el, before, after) {
+  const start = el.selectionStart, end = el.selectionEnd;
+  const v = el.value;
+  const sel = v.slice(start, end) || 'text';
+  const next = v.slice(0, start) + before + sel + after + v.slice(end);
+  el.value = next;
+  const from = start + before.length, to = from + sel.length;
+  el.setSelectionRange(from, to);
+  el.focus();
+  return next;
+}
+
+function NoticeForm({ initial, onClose, onSaved }) {
   const a = initial || {};
-  const [pageName, setPageName] = useState(fixed ? fixed.name : pages[0].name);
-  const page = fixed || pages.find(p => p.name === pageName) || pages[0];
-  const [f, setF] = useState({ title: a.title || '', body: a.body || '', severity: a.severity || 'minor', resolved: !!a.resolved_at, notify: !!page.subscribe });
+  const [f, setF] = useState({
+    title: a.title || '', body: a.body || '', severity: a.severity || 'info',
+    resolved: !!a.resolved_at, notify: false, pinned: !!a.pinned,
+    starts_at: toLocal(a.starts_at), ends_at: toLocal(a.ends_at),
+  });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [tab, setTab] = useState('write');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
+  const tool = (before, after) => (e) => {
+    const ta = e.currentTarget.closest('form').querySelector('textarea[name="body"]');
+    if (!ta) return;
+    setF({ ...f, body: wrapSel(ta, before, after) });
+  };
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
     setErr(null);
+    const body = {
+      title: f.title, body: f.body, severity: f.severity, resolved: f.resolved,
+      notify: f.notify, pinned: f.pinned,
+      starts_at: toISO(f.starts_at), ends_at: toISO(f.ends_at),
+    };
     try {
-      if (a.id) await put('/announcements/' + a.id, f);
-      else await post('/status-pages/' + encodeURIComponent(page.name) + '/announcements', f);
+      if (a.id) await put('/announcements/' + a.id, body);
+      else await post('/announcements', body);
       toast(t('ui.saved'));
       onSaved();
     } catch (e2) { setErr(e2); }
     setBusy(false);
   };
-  return html`<${Modal} title=${a.id ? t('ui.notice.edit') : t('ui.notice.add')} onClose=${onClose}>
-    <form class="form" onSubmit=${save}>
-      ${!fixed && pages.length > 1 && html`<${Field} label=${t('ui.notice.tab')}><select value=${pageName} onChange=${(e) => setPageName(e.target.value)}>
-        ${pages.map(p => html`<option value=${p.name}>${p.title}</option>`)}</select><//>`}
+  const preview = useMemo(() => markdownHTML(f.body), [f.body]);
+  return html`<${Modal} title=${a.id ? t('ui.notice.edit') : t('ui.notice.add')} onClose=${onClose} wide>
+    <form class="form notice-editor" onSubmit=${save}>
       <div class="two">
         <${Field} label=${t('ui.notice.title')}><input type="text" value=${f.title} maxlength="200" required onInput=${set('title')} /><//>
         <${Field} label=${t('ui.notice.severity')}><select value=${f.severity} onChange=${set('severity')}>
           ${SEVERITIES.map(s => html`<option value=${s}>${t('ui.pub.sev.' + s)}</option>`)}</select><//>
       </div>
-      <${Field} label=${t('ui.notice.body')} hint=${t('ui.notice.body_hint')}><textarea rows="6" value=${f.body} onInput=${set('body')}></textarea><//>
-      <label class="switch"><input type="checkbox" checked=${f.resolved} onChange=${set('resolved')} /> ${t('ui.notice.resolved')}</label>
-      ${page.subscribe && html`<label class="switch"><input type="checkbox" checked=${f.notify} onChange=${set('notify')} /> ${t('ui.notice.notify', { n: page.subscribers })}</label>`}
+      <div class="two">
+        <${Field} label=${t('ui.notice.starts')}><input type="datetime-local" value=${f.starts_at} onInput=${set('starts_at')} /><//>
+        <${Field} label=${t('ui.notice.ends')}><input type="datetime-local" value=${f.ends_at} onInput=${set('ends_at')} /><//>
+      </div>
+      <${Field} label=${t('ui.notice.body')} hint=${t('ui.notice.body_hint')}>
+        <div class="md-toolbar" role="toolbar" aria-label=${t('ui.notice.format')}>
+          <button type="button" class="btn sm" title="Bold" onClick=${tool('**', '**')}>B</button>
+          <button type="button" class="btn sm" title="Italic" onClick=${tool('*', '*')}><i>I</i></button>
+          <button type="button" class="btn sm" title="Heading" onClick=${tool('## ', '')}>H</button>
+          <button type="button" class="btn sm" title="List" onClick=${tool('- ', '')}>•</button>
+          <button type="button" class="btn sm" title="Link" onClick=${tool('[', '](https://)')}>🔗</button>
+          <button type="button" class="btn sm" title="Code" onClick=${tool('`', '`')}>{}</button>
+          <button type="button" class="btn sm" title="Quote" onClick=${tool('> ', '')}>“</button>
+          <div class="spacer"></div>
+          <div class="seg md-tabs">
+            <button type="button" class=${tab === 'write' ? 'on' : ''} onClick=${() => setTab('write')}>${t('ui.notice.write')}</button>
+            <button type="button" class=${tab === 'preview' ? 'on' : ''} onClick=${() => setTab('preview')}>${t('ui.notice.preview')}</button>
+          </div>
+        </div>
+        ${tab === 'write'
+          ? html`<textarea name="body" rows="10" value=${f.body} onInput=${set('body')}></textarea>`
+          : html`<div class="md-preview" dangerouslySetInnerHTML=${{ __html: preview }}></div>`}
+      <//>
+      <div class="row" style=${{ gap: '16px', flexWrap: 'wrap' }}>
+        <label class="switch"><input type="checkbox" checked=${f.pinned} onChange=${set('pinned')} /> ${t('ui.notice.pinned')}</label>
+        <label class="switch"><input type="checkbox" checked=${f.resolved} onChange=${set('resolved')} /> ${t('ui.notice.resolved')}</label>
+        <label class="switch"><input type="checkbox" checked=${f.notify} onChange=${set('notify')} /> ${t('ui.notice.notify_board')}</label>
+      </div>
       ${err && html`<div class="banner error">${errText(err)}</div>`}
       <div class="row"><div class="spacer"></div>
         <button type="button" class="btn" onClick=${onClose}>${t('ui.cancel')}</button>
         <button class="btn primary" disabled=${busy}>${t('ui.save')}</button></div>
     </form>
   <//>`;
-}
-
-function PageNotices({ page, onChanged }) {
-  const list = useFetch(() => get('/status-pages/' + encodeURIComponent(page.name) + '/announcements'), [page.name]);
-  const [edit, setEdit] = useState(null);
-  const [editPage, setEditPage] = useState(false);
-  const removePage = async () => {
-    if (!await confirmDialog(t('ui.notice.delete_page_confirm', { title: page.title }), { danger: true, ok: t('ui.delete') })) return;
-    try { await del('/status-pages/' + encodeURIComponent(page.name)); toast(t('ui.saved')); onChanged(); } catch (e) { toastError(e); }
-  };
-  const remove = async (a) => {
-    if (!await confirmDialog(t('ui.notice.delete_confirm', { title: a.title }), { danger: true, ok: t('ui.delete') })) return;
-    try { await del('/announcements/' + a.id); list.reload(); } catch (e) { toastError(e); }
-  };
-  return html`<div class="card">
-    <div class="hd"><h2>${page.title}</h2>
-      <a class="small ltr" href=${page.url} target="_blank" rel="noopener">${page.domain || page.url}</a>
-      <div class="spacer"></div>
-      <span class="small muted">${page.subscribe ? t('ui.notice.subscribers', { n: page.subscribers, pending: page.pending }) : t('ui.notice.no_subscribe')}</span>
-      ${me.role !== 'viewer' && html`<button class="btn sm" onClick=${() => setEditPage(true)}>${t('ui.notice.edit_page')}</button>
-        <button class="btn sm danger" onClick=${removePage}>${t('ui.notice.delete_page')}</button>`}</div>
-    <div class="bd flush tbl-wrap">
-      ${!list.data ? (list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`)
-        : !list.data.length ? html`<${Empty}>${t('ui.notice.none')}<//>` : html`<table class="tbl">
-        <thead><tr><th>${t('ui.notice.title')}</th><th>${t('ui.notice.severity')}</th><th>${t('ui.time')}</th><th></th></tr></thead>
-        <tbody>${list.data.map(a => html`<tr>
-          <td><b>${a.title}</b>${a.resolved_at ? html` <span class="tag">${t('ui.notice.resolved_tag')}</span>` : ''}</td>
-          <td class="small">${t('ui.pub.sev.' + a.severity)}</td>
-          <td class="small nowrap">${fmtTime(a.updated_at)}</td>
-          <td class="right nowrap"><button class="btn sm" onClick=${() => setEdit(a)}>${t('ui.edit')}</button>
-            <button class="btn sm danger" onClick=${() => remove(a)}>${t('ui.delete')}</button></td>
-        </tr>`)}</tbody></table>`}
-    </div>
-    ${editPage && html`<${Modal} title=${t('ui.notice.edit_page')} onClose=${() => setEditPage(false)}>
-      <${PageForm} page=${page} onDone=${() => { setEditPage(false); onChanged(); }} /><//>`}
-    ${edit && html`<${NoticeForm} page=${page} initial=${edit.id ? edit : null} onClose=${() => setEdit(null)} onSaved=${() => { setEdit(null); list.reload(); }} />`}
-  </div>`;
-}
-
-// PageForm adds a status page (a STATUSPAGE record) for the monitors a
-// filter selects, or changes the title and the filter of one.
-function PageForm({ page, onDone }) {
-  const ov = useFetch(() => (page ? Promise.resolve(null) : get('/overview')), []);
-  const [f, setF] = useState(page ? { name: page.name, title: page.title, select: page.select || '' } : { name: 'status', title: null, select: 'group:public' });
-  // A new page starts with "<this host> Unagikuma notice board" as its
-  // title; it can be changed here at any time.
-  const suggested = t('ui.notice.page_title_default', { host: (ov.data && ov.data.instance) || 'Unagikuma' });
-  if (f.title === null && ov.data !== undefined && (ov.data || ov.error)) setF({ ...f, title: suggested });
-  const [err, setErr] = useState(null);
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
-  const save = async (e) => {
-    e.preventDefault();
-    setErr(null);
-    try {
-      if (page) {
-        await put('/status-pages/' + encodeURIComponent(page.name), { title: (f.title || '').trim(), select: f.select.trim() });
-        toast(t('ui.saved'));
-      } else {
-        const r = await post('/status-pages', { name: f.name.trim(), title: (f.title || '').trim(), select: f.select.trim() });
-        toast(t('ui.notice.page_created', { url: r.url || '' }));
-      }
-      onDone();
-    } catch (e2) { setErr(e2); }
-  };
-  return html`<form class="form" onSubmit=${save}>
-      <div class="two">
-        <${Field} label=${t('ui.notice.page_title')} hint=${t('ui.notice.page_title_hint', { example: suggested })}><input type="text" value=${f.title || ''} onInput=${set('title')} required placeholder=${suggested} /><//>
-        <${Field} label=${t('ui.name')}><input type="text" class="ltr" value=${f.name} onInput=${set('name')} required disabled=${!!page} pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{0,62}" /><//>
-      </div>
-      <${Field} label=${t('ui.notice.page_select')} hint=${t('ui.notice.page_select_hint')}><input type="text" class="ltr" value=${f.select} onInput=${set('select')} required /><//>
-      ${err && html`<div class="banner error">${errText(err)}</div>`}
-      <div class="row"><div class="spacer"></div><button class="btn primary">${page ? t('ui.save') : t('ui.notice.create_page')}</button></div>
-    </form>`;
-}
-
-function NewPage({ onDone }) {
-  return html`<div class="card"><div class="hd"><h3>${t('ui.notice.new_page')}</h3></div><div class="bd"><${PageForm} onDone=${onDone} /></div></div>`;
 }
 
 // SupportFooter sets the text at the foot of every status page in place of
@@ -148,26 +156,33 @@ export function SupportFooter() {
 }
 
 export function NoticesTab() {
-  const pages = useFetch(() => get('/status-pages'), []);
-  const [adding, setAdding] = useState(false);
-  const [change, setChange] = useState(false);
-  const [notice, setNotice] = useState(false);
-  const [round, setRound] = useState(0);
-  if (!pages.data) return pages.error ? html`<${ErrorBox} error=${pages.error} />` : html`<${Loading} />`;
-  if (!pages.data.length) return html`<div class="col" style=${{ gap: '12px' }}>
-    <${Empty} title=${t('ui.notice.no_pages')}>${t('ui.notice.no_pages_hint')}<//>
-    <${NewPage} onDone=${pages.reload} />
-    <div class="card"><div class="hd"><h2>${t('ui.chg.tab')}</h2></div><div class="bd"><${ChangesTab} /></div></div>
-  </div>`;
-  return html`<div class="col" style=${{ gap: '12px' }}>
+  const list = useFetch(() => get('/announcements'), []);
+  const [edit, setEdit] = useState(null);
+  const remove = async (a) => {
+    if (!await confirmDialog(t('ui.notice.delete_confirm', { title: a.title }), { danger: true, ok: t('ui.delete') })) return;
+    try { await del('/announcements/' + a.id); list.reload(); } catch (e) { toastError(e); }
+  };
+  const items = list.data || [];
+  return html`<div class="col board" style=${{ gap: '12px' }}>
     <div class="row"><p class="muted small spacer" style=${{ margin: 0 }}>${t('ui.notice.intro')}</p>
-      <button class="btn primary" onClick=${() => setNotice(true)}>${t('ui.notice.add')}</button>
-      ${me.role !== 'viewer' && html`<button class="btn" onClick=${() => setChange(true)}>${t('ui.chg.add')}</button>
-        <button class="btn" onClick=${() => setAdding(true)}>${t('ui.notice.new_page')}</button>`}</div>
-    ${notice && html`<${NoticeForm} pages=${pages.data} onClose=${() => setNotice(false)} onSaved=${() => { setNotice(false); setRound(round + 1); }} />`}
-    ${change && html`<${ChangeForm} initial=${{ status_page: pages.data[0].name }} onClose=${() => setChange(false)} onSaved=${() => { setChange(false); setRound(round + 1); }} />`}
-    ${adding && html`<${Modal} title=${t('ui.notice.new_page')} onClose=${() => setAdding(false)}><${PageForm} onDone=${() => { setAdding(false); pages.reload(); }} /><//>`}
-    ${pages.data.map(p => html`<${PageNotices} key=${p.name + ':' + round} page=${p} onChanged=${pages.reload} />`)}
-    <div class="card"><div class="hd"><h2>${t('ui.chg.tab')}</h2></div><div class="bd"><${ChangesTab} key=${round} embedded /></div></div>
+      ${me.role !== 'viewer' && html`<button class="btn primary" onClick=${() => setEdit({})}>${t('ui.notice.add')}</button>`}</div>
+    ${!list.data ? (list.error ? html`<${ErrorBox} error=${list.error} />` : html`<${Loading} />`)
+      : !items.length ? html`<${Empty} title=${t('ui.notice.none')}>${t('ui.notice.none_hint')}<//>`
+      : html`<div class="card"><div class="bd flush tbl-wrap"><table class="tbl">
+        <thead><tr>
+          <th>${t('ui.notice.title')}</th><th>${t('ui.notice.severity')}</th>
+          <th>${t('ui.notice.schedule')}</th><th>${t('ui.time')}</th><th></th>
+        </tr></thead>
+        <tbody>${items.map(a => html`<tr>
+          <td><b>${a.title}</b>
+            ${a.pinned ? html` <span class="tag">${t('ui.notice.pinned_tag')}</span>` : ''}
+            ${a.resolved_at ? html` <span class="tag">${t('ui.notice.resolved_tag')}</span>` : ''}</td>
+          <td class="small">${t('ui.pub.sev.' + a.severity)}</td>
+          <td class="small nowrap">${a.starts_at || a.ends_at ? [a.starts_at ? fmtTime(a.starts_at) : '…', a.ends_at ? fmtTime(a.ends_at) : '…'].join(' – ') : '—'}</td>
+          <td class="small nowrap">${fmtTime(a.updated_at)}</td>
+          <td class="right nowrap">${me.role !== 'viewer' && html`<button class="btn sm" onClick=${() => setEdit(a)}>${t('ui.edit')}</button>
+            <button class="btn sm danger" onClick=${() => remove(a)}>${t('ui.delete')}</button>`}</td>
+        </tr>`)}</tbody></table></div></div>`}
+    ${edit && html`<${NoticeForm} initial=${edit.id ? edit : null} onClose=${() => setEdit(null)} onSaved=${() => { setEdit(null); list.reload(); }} />`}
   </div>`;
 }

@@ -1485,6 +1485,10 @@
           },
           "written_type": {
             "type": "string"
+          },
+          "retry_s": {
+            "type": "integer",
+            "description": "Retry interval in seconds."
           }
         },
         "required": [
@@ -1662,7 +1666,7 @@
   "info": {
     "description": "The REST API of the Unagikuma monitoring server. Authenticate with the session cookie (unagikuma_session, from POST /api/v1/session) or an API token sent as a Bearer token. Tokens carry scopes: read, ack, write, admin (write implies ack implies read); each operation lists the scope it needs in x-token-scope. Session-authenticated writes must send the session's CSRF token in the X-Unagikuma-CSRF header. Every failure uses the same JSON error body (see the Error schema); error codes are stable strings.",
     "title": "Unagikuma API",
-    "version": "3.0.1"
+    "version": "3.0.2"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -3527,851 +3531,6 @@
         "tags": [
           "branding"
         ]
-      }
-    },
-    "/api/v1/changes": {
-      "get": {
-        "operationId": "changes",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "q",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "state",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "format": "int64",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "format",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "text/csv": {
-                "schema": {
-                  "format": "binary",
-                  "type": "string"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Changes",
-        "tags": [
-          "changes"
-        ],
-        "x-token-scope": "read"
-      },
-      "post": {
-        "operationId": "changeCreate",
-        "parameters": [
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/changeReq"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Change Create",
-        "tags": [
-          "changes"
-        ],
-        "x-token-scope": "write"
-      }
-    },
-    "/api/v1/changes/templates": {
-      "get": {
-        "operationId": "changeTemplates",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "custom": {},
-                    "defaults": {},
-                    "events": {},
-                    "templates": {}
-                  },
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Change Templates",
-        "tags": [
-          "changes"
-        ],
-        "x-token-scope": "read"
-      },
-      "put": {
-        "operationId": "changeTemplatesPut",
-        "parameters": [
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/ChangeTemplate"
-                },
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Change Templates Put",
-        "tags": [
-          "changes"
-        ],
-        "x-token-scope": "admin"
-      }
-    },
-    "/api/v1/changes/templates/preview": {
-      "post": {
-        "operationId": "changeTemplatePreview",
-        "parameters": [
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangeTemplate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "properties": {
-                        "error": {},
-                        "ok": {
-                          "type": "boolean"
-                        }
-                      },
-                      "type": "object"
-                    },
-                    {
-                      "properties": {
-                        "ok": {
-                          "type": "boolean"
-                        }
-                      },
-                      "type": "object"
-                    }
-                  ]
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Change Template Preview",
-        "tags": [
-          "changes"
-        ],
-        "x-token-scope": "admin"
-      }
-    },
-    "/api/v1/changes/{id}": {
-      "put": {
-        "operationId": "changeUpdate",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "int64",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/changeReq"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The named record does not exist (not_found)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Change Update",
-        "tags": [
-          "changes"
-        ],
-        "x-token-scope": "write"
-      }
-    },
-    "/api/v1/changes/{id}/finish": {
-      "post": {
-        "operationId": "changeFinish",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "format": "int64",
-              "type": "integer"
-            }
-          },
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "note": {
-                    "type": "string"
-                  },
-                  "state": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "note",
-                  "state"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The named record does not exist (not_found)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Change Finish",
-        "tags": [
-          "changes"
-        ],
-        "x-token-scope": "write"
       }
     },
     "/api/v1/channel-kinds": {
@@ -18377,276 +17536,9 @@
           "status-pages"
         ],
         "x-token-scope": "read"
-      },
-      "post": {
-        "operationId": "statusPageCreate",
-        "parameters": [
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "select": {
-                    "type": "string"
-                  },
-                  "title": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "name",
-                  "select",
-                  "title"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Status Page Create",
-        "tags": [
-          "status-pages"
-        ],
-        "x-token-scope": "write"
       }
     },
     "/api/v1/status-pages/{name}": {
-      "delete": {
-        "operationId": "statusPageDelete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "The etag of the record being changed, from when it was read. If it no longer matches, the write fails with 412 (record_changed).",
-            "in": "header",
-            "name": "If-Match",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The named record does not exist (not_found)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "412": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "If-Match failed: the record changed since it was read (record_changed)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Status Page Delete",
-        "tags": [
-          "status-pages"
-        ],
-        "x-token-scope": "write"
-      },
       "put": {
         "operationId": "statusPageUpdate",
         "parameters": [
@@ -18803,239 +17695,6 @@
           }
         ],
         "summary": "Status Page Update",
-        "tags": [
-          "status-pages"
-        ],
-        "x-token-scope": "write"
-      }
-    },
-    "/api/v1/status-pages/{name}/announcements": {
-      "get": {
-        "operationId": "announcements",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The named record does not exist (not_found)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Announcements",
-        "tags": [
-          "status-pages"
-        ],
-        "x-token-scope": "read"
-      },
-      "post": {
-        "operationId": "announcementCreate",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "name",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
-            "in": "header",
-            "name": "X-Unagikuma-CSRF",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/announcementReq"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Login required (unauthorized), or setup_required before the first account exists."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "The named record does not exist (not_found)."
-          },
-          "405": {
-            "description": "Method not allowed on this path."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            },
-            "description": "Internal error (internal)."
-          }
-        },
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "bearerToken": []
-          }
-        ],
-        "summary": "Announcement Create",
         "tags": [
           "status-pages"
         ],
@@ -21297,6 +19956,221 @@
           "channels"
         ],
         "x-token-scope": "admin"
+      }
+    },
+    "/api/v1/announcements": {
+      "get": {
+        "operationId": "announcements",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Login required (unauthorized), or setup_required before the first account exists."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The named record does not exist (not_found)."
+          },
+          "405": {
+            "description": "Method not allowed on this path."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Internal error (internal)."
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerToken": []
+          }
+        ],
+        "summary": "List announcements on the board",
+        "tags": [
+          "announcements"
+        ],
+        "x-token-scope": "read"
+      },
+      "post": {
+        "operationId": "announcementCreate",
+        "parameters": [
+          {
+            "description": "Required only when authenticating with the session cookie: the session's CSRF token. Bearer-token requests do not need it.",
+            "in": "header",
+            "name": "X-Unagikuma-CSRF",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/announcementReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Invalid request (invalid, or too_large when the body exceeds the limit)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Login required (unauthorized), or setup_required before the first account exists."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The caller lacks the role or token scope for this endpoint (forbidden)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "The named record does not exist (not_found)."
+          },
+          "405": {
+            "description": "Method not allowed on this path."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict (conflict), or the configuration is read-only on this site (config_readonly)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Rate limited (rate_limited); wait retry_after_s seconds."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Internal error (internal)."
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "bearerToken": []
+          }
+        ],
+        "summary": "Create an announcement",
+        "tags": [
+          "announcements"
+        ],
+        "x-token-scope": "write"
       }
     }
   },

@@ -135,9 +135,9 @@ func (s *Server) statusPageBody(sp *config.StatusPage) []byte {
 	if mons == nil {
 		mons = []mon{}
 	}
-	anns, _ := s.app.Store().Announcements(sp.Name, now.Add(-s.app.EffectiveConfig().Tunables.Duration("statuspage.resolved-shown")), 20)
+	anns, _ := s.app.Store().Announcements(now.Add(-s.app.EffectiveConfig().Tunables.Duration("statuspage.resolved-shown")), 20)
 	for i := range anns {
-		anns[i].Author, anns[i].Page = "", "" // public
+		anns[i].Author = "" // public
 	}
 	if anns == nil {
 		anns = []store.Announcement{}

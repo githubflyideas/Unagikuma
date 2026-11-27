@@ -2,19 +2,15 @@ package app
 
 import (
 	"database/sql"
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/githubflyideas/unagikuma/internal/engine"
-	"github.com/githubflyideas/unagikuma/internal/schedule"
 	_ "modernc.org/sqlite" // read the master's copied database
 )
 
 // replicaCarry contains shared maintenance, not source-local ACKs or silences.
-// Silences is retained only to decode old snapshots; carryWindows ignores it.
+// Silences is retained only to decode old snapshots.
 type replicaCarry struct {
 	Silences []carrySilence `json:"silences,omitempty"`
 	Changes  []carryChange  `json:"changes,omitempty"`
@@ -62,25 +58,4 @@ func readCarry(dir string, now time.Time) (replicaCarry, error) {
 		}
 	}
 	return c, rows.Err()
-}
-
-// carryWindows turns shared changes (never another site's silences) into maintenance
-// windows for the local engine.
-func (a *App) carryWindows(sel func(string) []string) []engine.MaintSpec {
-	b, err := os.ReadFile(a.dataPath(replicaDir, replicaCarryFile))
-	if err != nil {
-		return nil
-	}
-	var c replicaCarry
-	if json.Unmarshal(b, &c) != nil {
-		return nil
-	}
-	var out []engine.MaintSpec
-	for _, ch := range c.Changes {
-		if mons := sel(ch.Sel); len(mons) > 0 {
-			out = append(out, engine.MaintSpec{Name: fmt.Sprintf("change-%d", ch.ID), Title: ch.Title, Monitors: mons,
-				Schedule: schedule.Spec{At: ch.Start, Duration: ch.End.Sub(ch.Start)}})
-		}
-	}
-	return out
 }

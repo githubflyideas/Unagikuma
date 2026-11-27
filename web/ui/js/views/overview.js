@@ -340,14 +340,14 @@ export function Legend() {
 function onboardDismissed() { return storageGet('unagikuma.onboard') === 'done'; }
 
 // Onboarding walks a new installation through its first monitors, a
-// channel, the default policy, who receives alerts and a status page,
+// channel, the default policy, who receives alerts and an announcement,
 // ticking each step off as it is done.
 function Onboarding({ d, reload }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [hidden, setHidden] = useState(onboardDismissed());
   const steps = [(d.counts.total || 0) > 0, d.channels.length > 0, !!d.alerting_configured,
-    (d.people || 0) > 0 && !d.contact_issues, (d.status_pages || 0) > 0];
+    (d.people || 0) > 0 && !d.contact_issues, (d.announcements || 0) > 0];
   if (hidden || steps.every(Boolean)) return null;
   const add = async () => {
     setBusy(true);
@@ -380,7 +380,7 @@ function Onboarding({ d, reload }) {
         ? html`<a class="btn" href="#/alerts/channels">${t('ui.ob.policy')}</a>`
         : html`<a class="btn" href="#/alerts/channels">${t('ui.ob.channel_first')}</a>`)}
       ${step(3, t('ui.ob.s4'), t('ui.ob.s4_hint'), html`<a class="btn" href="#/alerts/contacts">${t('ui.ob.contacts')}</a>`)}
-      ${step(4, t('ui.ob.s5'), t('ui.ob.s5_hint'), html`<a class="btn" href="#/notices/pages">${t('ui.ob.status_page')}</a>`)}
+      ${step(4, t('ui.ob.s5'), t('ui.ob.s5_hint'), html`<a class="btn" href="#/notices/pages">${t('ui.ob.announce')}</a>`)}
     </div>
   <//>`;
 }

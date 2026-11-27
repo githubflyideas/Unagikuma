@@ -186,7 +186,7 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) (any, error) {
 		"open_system": ov.OpenSystem, "pending_notifications": ov.PendingIntents, "banner": s.app.Banner(),
 		"alerting_configured": alerting, "dns": dnsInUse(), "nodes": nodes, "paths": paths, "tactical": s.tactical(r), "script_problems": s.scriptCount(),
 		"superseded": s.app.SupersededBy(), "term": s.app.Term(), "contact_issues": len(s.app.ChannelIssues()),
-		"people": len(s.app.Directory().People()), "status_pages": len(cfg.StatusPages), "storage": s.app.Store().WriteHealth(),
+		"people": len(s.app.Directory().People()), "status_pages": len(cfg.StatusPages), "announcements": announcementCount(s), "storage": s.app.Store().WriteHealth(),
 	}
 	// Over the monitor limit (an import can take an installation past
 	// it): the console says so until the count is back within it or a
@@ -495,4 +495,12 @@ func dnsInUse() map[string]any {
 		return map[string]any{"servers": set, "custom": true}
 	}
 	return map[string]any{"servers": netscope.SystemDNS(), "custom": false}
+}
+
+func announcementCount(s *Server) int {
+	n, err := s.app.Store().AnnouncementCount()
+	if err != nil {
+		return 0
+	}
+	return n
 }

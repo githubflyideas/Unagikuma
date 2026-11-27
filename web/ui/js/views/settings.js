@@ -119,7 +119,7 @@ function General({ part = 'general' }) {
   </div></form>`;
 }
 
-const HB_FIELDS = ['host', 'status', 'problems', 'monitors', 'time'];
+const HB_FIELDS = ['host', 'ip', 'agent'];
 
 // HeartbeatForm sets how the external heartbeat is sent, field by field
 // as an API client does it, and previews the request.

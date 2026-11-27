@@ -548,7 +548,6 @@ func (a *App) Run(ctx context.Context) error {
 	run(func() { a.every(ctx, 30*time.Second, func() { _ = a.store.Beat() }) })
 	run(func() { a.every(ctx, 15*time.Second, a.watchStorage) })
 	run(func() { a.every(ctx, time.Hour, func() { a.license.Check(a.now()) }) })
-	run(func() { a.every(ctx, 20*time.Second, a.tickChanges) })
 	run(func() {
 		a.every(ctx, a.Config().Config.Tunables.Duration("cluster.standby-sync"), a.syncStandbys)
 	})
@@ -837,6 +836,16 @@ func IsInvalid(err error) (*InvalidError, bool) {
 // Reapply re-applies the active configuration (after a secret or a
 // setting it depends on changed).
 func (a *App) Reapply() { a.applyConfig(a.cfg.current().Config) }
+
+// reapply applies the running configuration again (after a change of
+// state kept outside monitors.conf, such as the directory).
+func (a *App) reapply() {
+	a.applyMu.Lock()
+	defer a.applyMu.Unlock()
+	if c := a.applied.Load(); c != nil {
+		a.applyLocked(c)
+	}
+}
 
 // License is the registration of this installation.
 func (a *App) License() *license.Checker { return a.license }

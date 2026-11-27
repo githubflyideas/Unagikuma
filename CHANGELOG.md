@@ -1,5 +1,15 @@
 # Changelog
 
+## v3.0.2 — 2026-11-27
+
+**Changed**
+- Console layout is centred and aligned more carefully. Run mode and the node name live in the left sidebar (node name above run mode, run mode above the language selector). In top-menu themes the theme dock is centred and language, zoom and sign-out move to a centred footer; in bottom-menu themes they sit under the menu bar.
+- Five layouts: Classic (default) plus Chain Store, Modern Dashboard, Starship and Craftsman Workshop. Colour comes from five shared palettes (Calm, Perfume, Country, Industrial, Passion); click the logo to cycle them. The palette chips were removed. Other console themes were removed.
+- Search can filter by failure count, retry interval and group (`failures:`, `retry:`, `group:`).
+- One announcement board, with a Markdown editor, preview, severity, schedule and pinning. Publishing changes and creating extra status pages were removed.
+- External heartbeats carry `host`, `ip` and `agent` (`unagikuma <version>`). Status, problem count, monitor count and time were dropped.
+- Traditional Chinese (`zh-TW`) is a full language, third in the list; the previous Chinese catalog is labelled 简体中文.
+
 ## v3.0.1 — 2026-11-27
 
 **Changed**
