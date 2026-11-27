@@ -79,7 +79,7 @@ function Summary() {
   const running = n.total - (n.counts.paused || 0);
   return html`<div class="sum">
     <header class="sum-head">
-      <img src="/logo.png" alt="" />
+      <img src="logo.png" alt="" />
       <div><b>${PRODUCT}</b><h1>${t('ui.sum.title')}</h1></div>
       <span class="spacer"></span>
       <div class="seg" role="tablist">${['7d', '30d', '90d'].map(k => html`<button role="tab" aria-selected=${range === k} class=${range === k ? 'on' : ''} onClick=${() => setRange(k)}>${t('ui.sum.range.' + k)}</button>`)}</div>

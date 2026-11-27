@@ -120,7 +120,7 @@ function Wall() {
   const stale = at && Date.now() - at > STALE;
   return html`<div class="wall">
     <header class=${'wall-top ' + overall}>
-      <img src="/logo.png" alt="" /><b class="prod">${PRODUCT}</b>
+      <img src="logo.png" alt="" /><b class="prod">${PRODUCT}</b>
       <span class="overall">${overall === 'ok' ? '✓ ' + t('ui.wall.all_ok') : t('ui.wall.problems', { n: crit + warn })}</span>
       <span class="spacer"></span>
       ${[['critical', crit], ['degraded', warn], ['unknown', unk], ['ok', count('ok')]].map(([k, n]) => html`<span class=${'cnt ' + k + (n ? '' : ' zero')}>${n}<small>${t('status.' + k)}</small></span>`)}

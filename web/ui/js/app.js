@@ -91,7 +91,7 @@ function localZone() {
   try { return Intl.DateTimeFormat('en').resolvedOptions().timeZone; } catch { return ''; }
 }
 
-function Logo() { return html`<img src="/logo.png" alt="" />`; }
+function Logo() { return html`<img src="logo.png" alt="" />`; }
 
 function LangSelect({ onChange }) {
   return html`<select aria-label=${t('ui.language')} value=${currentLang()} onChange=${(e) => onChange(e.target.value)}>
