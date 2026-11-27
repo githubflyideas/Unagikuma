@@ -1,6 +1,6 @@
 import { html } from '../lib.js';
 import { t } from '../i18n.js';
-import { get, me, listOf } from '../api.js';
+import { me, listOf } from '../api.js';
 import { useFetch } from '../ui.js';
 
 // HistorySite picks whose history to show; a single machine has only its
