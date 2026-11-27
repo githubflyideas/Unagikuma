@@ -22,7 +22,7 @@
 **Fixed**
 - Public status pages load their styles and scripts again, also behind a reverse proxy under a path. The security policy now allows the page's own `<base>` (`base-uri 'self'`).
 - Before its first checks, a status page says the checks have not run yet, on a neutral background. It used to say "Some systems are down" in white on white.
-- `unagikuma restore` runs the same checks as a restore from the web UI: a database this version cannot open, or a configuration with errors, is refused and nothing changes. It refuses while the server is running, needs `--force` to replace an installation, and keeps the files it replaced in `restore-before-<time>`.
+- `unagikuma restore` runs the same checks as a restore from the web UI: a database this version cannot open, or a configuration with errors, is refused and nothing changes. It refuses while the server is running and keeps the files it replaced in `restore-before-<time>`.
 - Every wrong method at an API address answers a JSON 405 (code `method_not_allowed`) with an Allow header. An unknown API address answers a JSON 404. Write-only addresses answered GET with a plain 404 before, and every 405 was plain text.
 - A signed-in account refused for its role is told that its role does not allow it, not that a token lacks a scope.
 - A push to a token whose monitor is no longer a push monitor answers 404 like an unknown token, not 500.
