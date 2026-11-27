@@ -1,6 +1,6 @@
 # Changelog
 
-## v3.0.1 — unreleased
+## v3.0.1 — 2026-11-27
 
 **Changed**
 - Monitors with no group are visible only to administrators. An operator or viewer sees only the monitors in the groups they were given; with no groups assigned they see no monitors. (In 3.0, an account given no groups saw every monitor.)
