@@ -49,8 +49,14 @@ func sha(s string) string {
 // together from many addresses would grow the process by 64 MiB each.
 var hashSlots = make(chan struct{}, maxHashes)
 
-// maxHashes is how many password hashes may run at the same time.
-const maxHashes = 2
+// maxHashes is how many password hashes may run at the same time. It
+// is only a backstop: repeated failures from one address are locked
+// out in front of the password check (see the server's sign-in
+// limits), so reaching this bound takes a flood spread over many
+// addresses at once. Eight slots keep such a flood's hashing memory
+// under 8 × 64 MiB = 512 MiB — handed back after every hash — while
+// leaving room for several people signing in at the same moment.
+const maxHashes = 8
 
 // hashSlot waits for a free slot and returns its release. Each hash
 // hands its memory back to the system when done (a collection takes a

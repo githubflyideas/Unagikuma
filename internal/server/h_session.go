@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -130,10 +131,16 @@ func (s *Server) sessionLogin(w http.ResponseWriter, r *http.Request) (any, erro
 	}
 	u, err := s.app.Store().Authenticate(req.Username, req.Password)
 	if err != nil {
+		// Only a refused sign-in counts towards the address's lockout;
+		// a store error says nothing about the caller.
+		if errors.Is(err, store.ErrNotFound) {
+			s.loginFail.Fail(s.ip(r), s.now())
+		}
 		s.log.Warn("failed login", "user", req.Username, "ip", s.ip(r))
 		_ = s.app.Store().Audit(store.AuditEntry{Actor: req.Username, Action: "session.login_failed", Addr: s.ip(r), Detail: withClient(nil, s.client(r, nil))})
 		return nil, Errorf(http.StatusUnauthorized, CodeUnauthorized, "wrong username or password")
 	}
+	s.loginFail.OK(s.ip(r))
 	res, tag, err := s.startSession(w, r, u.ID, u.Username)
 	if err != nil {
 		return nil, err
