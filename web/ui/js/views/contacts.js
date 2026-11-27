@@ -170,7 +170,10 @@ export function ContactsTab() {
     try { await post('/people/' + p.id + '/status', { status }); d.reload(); } catch (e) { toastError(e); d.reload(); }
   };
   // The daily status report can be switched off person by person.
+  // The switch shows the choice at once: a list refresh while the change is
+  // on its way must not flip it back.
   const setReport = async (p, receive) => {
+    p.no_report = !receive;
     try { await post('/people/' + p.id + '/report', { receive }); d.reload(); } catch (e) { toastError(e); d.reload(); }
   };
   // Optionally, the administrators hear of recipients left out.
