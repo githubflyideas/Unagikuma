@@ -14,7 +14,7 @@ import (
 
 // Several monitors can check exactly the same thing: the same target, the
 // same options, from the same nodes — typically one service watched by
-// two teams. A monitor with share=yes takes the result of an identical
+// two watchers. A monitor with share=yes takes the result of an identical
 // check that started on this node within probe.share-window instead of
 // sending its own: the target sees one check, and both monitors keep
 // their own thresholds, incidents and notifications.

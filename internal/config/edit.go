@@ -211,6 +211,9 @@ func (r RecordSpec) check() error {
 	if !typeRe.MatchString(r.Type) {
 		return fmt.Errorf("invalid record type %q", r.Type)
 	}
+	if strings.EqualFold(r.Type, "TEAM") {
+		return fmt.Errorf("TEAM records were removed: put monitors in a group with group= and assign that group to a user, or run a second installation")
+	}
 	if r.Interval != "" && !intervalRe.MatchString(r.Interval) {
 		return fmt.Errorf("invalid interval %q", r.Interval)
 	}
@@ -226,6 +229,12 @@ func (r RecordSpec) check() error {
 	for _, o := range r.Opts {
 		if !optKeyRe.MatchString(o.Key) {
 			return fmt.Errorf("invalid option name %q", o.Key)
+		}
+		switch o.Key {
+		case "team":
+			return fmt.Errorf("team= was removed: use group= and assign that group to a user, or run a second installation")
+		case "tenant":
+			return fmt.Errorf("tenant= is not supported")
 		}
 		if err := oneLine(o.Key, o.Value); err != nil {
 			return err
@@ -303,7 +312,7 @@ func (f *File) findRecord(name string) (*Stmt, *Record) {
 }
 
 // ErrNameTaken means the name is used by a record of another kind. Names are
-// unique across all record types, and saving a channel, a policy or a team
+// unique across all record types, and saving a channel or a policy
 // must never replace a monitor (or the other way round) of the same name.
 var ErrNameTaken = errors.New("the name is already used by another kind of record")
 
@@ -837,7 +846,7 @@ func (f *File) SetOpts(name string, set map[string]string) error {
 }
 
 // RenameChannel renames a CHANNEL record and every place the file names
-// it: policies (chain=, network=, escalate=), teams (channels=), groups
+// it: policies (chain=, network=, escalate=), group channels
 // (members=) and status pages (subscribe=).
 func (f *File) RenameChannel(oldName, newName string) error {
 	if _, r := f.findRecord(oldName); r == nil || r.Type != "CHANNEL" {
@@ -865,7 +874,6 @@ func (f *File) RenameChannel(oldName, newName string) error {
 			var ok bool
 			switch {
 			case r.Type == "POLICY" && (o.Key == "chain" || o.Key == "network"),
-				r.Type == "TEAM" && o.Key == "channels",
 				r.Type == "CHANNEL" && o.Key == "members":
 				v, ok = swap(o.Value, ",")
 			case r.Type == "POLICY" && o.Key == "escalate":

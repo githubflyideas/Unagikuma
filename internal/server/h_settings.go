@@ -113,7 +113,7 @@ func (s *Server) channelSave(w http.ResponseWriter, r *http.Request) (any, error
 		Kind    string            `json:"kind"`
 		Opts    map[string]string `json:"opts"`
 		Message string            `json:"message"`
-		// From renames the channel: its old name, which teams, policies,
+		// From renames the channel: its old name, which policies,
 		// groups, status pages and people follow.
 		From string `json:"from"`
 	}
@@ -850,7 +850,7 @@ func (s *Server) backup(w http.ResponseWriter, r *http.Request) (any, error) {
 	return nil, errHandled
 }
 
-// configExport sends monitors.conf as it is: the monitors, channels, teams,
+// configExport sends monitors.conf as it is: the monitors, channels,
 // periods and status pages, and nothing else. No accounts, no secret values
 // (the file only names them), no history; another Unagikuma imports it.
 func (s *Server) configExport(w http.ResponseWriter, r *http.Request) (any, error) {

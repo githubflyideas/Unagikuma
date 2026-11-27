@@ -3,9 +3,9 @@ package server
 import "testing"
 
 func TestExecChecksNeedAdmin(t *testing.T) {
-	admin := newEnv(t, usersBind+"disk IN EXEC check_disk args=\"-w 20% -c 10%\"\n", nil)
+	admin := newEnv(t, usersBind+"disk IN EXEC check_disk args=\"-w 20% -c 10%\" group=ops\n", nil)
 	admin.setup()
-	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "ops", "password": "secret123", "role": "operator"}, nil); c != 200 {
+	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "ops", "password": "secret123", "role": "operator", "groups": []string{"ops"}}, nil); c != 200 {
 		t.Fatalf("create operator: %d", c)
 	}
 	ops := admin.loginAs("ops", "secret123")
@@ -25,12 +25,12 @@ func TestExecChecksNeedAdmin(t *testing.T) {
 	if c := ops.do("PUT", "/api/v1/config", map[string]any{"text": cfg.Text + "x IN EXEC check_x\n"}, nil); c != 403 {
 		t.Fatalf("config text with a new EXEC by an operator: %d", c)
 	}
-	// Operators keep the rest of their work.
+	// Operators keep the rest of their work (the raw configuration stays with administrators).
 	if c := ops.do("POST", "/api/v1/monitors/disk/pause", map[string]any{"paused": true}, nil); c != 200 {
 		t.Fatalf("pause: %d", c)
 	}
-	if c := ops.do("PUT", "/api/v1/config", map[string]any{"text": cfg.Text + "gw IN PING 10.0.0.1\n"}, nil); c != 200 {
-		t.Fatalf("unrelated config change: %d", c)
+	if c := ops.do("POST", "/api/v1/monitors", map[string]any{"record": map[string]any{"name": "gw", "type": "PING", "target": "10.0.0.1"}}, nil); c != 200 {
+		t.Fatalf("unrelated monitor: %d", c)
 	}
 	if c := admin.do("POST", "/api/v1/monitors", exec, nil); c != 200 {
 		t.Fatalf("admin: %d", c)

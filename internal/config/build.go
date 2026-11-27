@@ -45,12 +45,12 @@ var (
 
 // was= names the monitor's previous name: written by hand when renaming
 // in the file, it carries the history over (and does nothing afterwards).
-var metaOpts = map[string]bool{"title": true, "description": true, "tags": true, "group": true, "device": true, "handler": true, "was": true, "tenant": true}
+var metaOpts = map[string]bool{"title": true, "description": true, "tags": true, "group": true, "device": true, "handler": true, "was": true}
 var paramOpts = map[string]bool{
 	"interval": true, "retry": true, "timeout": true, "attempts": true, "recover-attempts": true,
 	"degraded": true, "quorum": true, "on-insufficient": true, "on-filtered": true, "on-node-loss": true,
 	"scope": true, "policy": true, "partial-escalate": true, "disabled": true, "grace": true,
-	"parent": true, "nodes": true, "share": true, "team": true, "region": true, "mute": true, "system-channel": true,
+	"parent": true, "nodes": true, "share": true, "region": true, "mute": true, "system-channel": true,
 }
 
 var refRe = regexp.MustCompile(`\$\{(secret|env):([A-Za-z0-9_.-]+)\}`)
@@ -341,7 +341,7 @@ func (b *builder) otherRecord(r Record) {
 	case "PERIOD":
 		b.period(r)
 	case "TEAM":
-		b.team(r)
+		b.errf(r.TypePos, "removed", "TEAM records were removed: put monitors in a group with group= and assign that group to a user, or run a second installation")
 	default:
 		if reservedTypes[r.Type] {
 			b.errf(r.TypePos, "needs_newer", "record type %s is reserved for a later version of unagikuma", r.Type)
@@ -887,7 +887,7 @@ func (o *monOpts) placement(scope *scopeDir) {
 	}
 }
 
-// flags reads the yes/no options, the device, the team and the parents.
+// flags reads the yes/no options, the device and the parents.
 func (o *monOpts) flags() {
 	b, m := o.b, o.m
 	// In the order they were always read, so diagnostics keep their order.
@@ -908,10 +908,7 @@ func (o *monOpts) flags() {
 	if v, ok := m.Opts["device"]; ok {
 		m.Device = v
 	}
-	// team=admin is the built-in team, the same as no team=.
-	if m.Team = m.Opts["team"]; m.Team == AdminTeam {
-		m.Team = ""
-	}
+	o.rejectRemoved()
 	if v, ok := m.Opts["parent"]; ok {
 		for _, p := range strings.Split(v, ",") {
 			if p = strings.TrimSpace(p); p != "" {
@@ -1570,9 +1567,6 @@ func (b *builder) implicitPolicies() {
 // MutePolicy is the policy of muted monitors (mute=yes): nothing is sent.
 const MutePolicy = "mute"
 
-// TeamPolicy names the policy made from a team's channels.
-func TeamPolicy(team string) string { return "team:" + team }
-
 var hostnameRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$`)
 
 func (b *builder) crossRefs() {
@@ -1591,9 +1585,6 @@ func (b *builder) crossRefs() {
 		}
 	}
 	for _, p := range b.cfg.Policies {
-		if p.Team != "" {
-			continue // its channels are checked with the team
-		}
 		for _, c := range p.Chain {
 			if b.cfg.FindChannel(c) == nil {
 				b.errf(p.Pos, "unknown_channel", "policy %s: channel %q is not defined", p.Name, c)
@@ -1641,7 +1632,7 @@ func (b *builder) crossRefs() {
 	}
 	b.checkParents()
 	b.checkSameChecks()
-	b.checkTeams()
+	b.applyMonitorPolicies()
 	for _, n := range b.cfg.Nodes {
 		if b.cfg.FindPolicy(n.Policy) == nil {
 			b.errf(n.Pos, "unknown_policy", "node %s: policy %q is not defined", n.Name, n.Policy)
@@ -1703,100 +1694,27 @@ func ClassifyChange(old, new *Monitor) ChangeClass {
 	return ChangeNone
 }
 
-// teamUserRe is what a member entry may look like: a user name without
-// spaces or commas (commas separate the list).
-var teamUserRe = regexp.MustCompile(`^[^\s,]{1,64}$`)
-
-// team reads a TEAM record:
-//
-//	ops IN TEAM title="Operations" members=li,wang,zhang channels=pager,mail mode=fallback
-//
-// The role lists of files before 2.6 (managers=, operators=, viewers=) are
-// read as members: the role now comes from the account.
-func (b *builder) team(r Record) {
-	if r.TargetOK && r.Target != "-" {
-		b.errf(r.TypePos, "syntax", "TEAM takes no target")
+// rejectRemoved reports team= and tenant=, which are no longer accepted.
+func (o *monOpts) rejectRemoved() {
+	b, m := o.b, o.m
+	if _, ok := m.Opts["team"]; ok {
+		b.errf(o.pos("team"), "removed", "team= was removed: use group= and assign that group to a user, or run a second installation")
 	}
-	t := &Team{Name: r.Name, Mode: "fallback", Pos: r.NamePos, Lines: lines(r.Stmt)}
-	seen := map[string]bool{}
-	for _, o := range r.Opts {
-		switch o.Key {
-		case "title":
-			if o.Value == "" || len([]rune(o.Value)) > 64 {
-				b.errf(o.Pos, "invalid_value", "title must be 1 to 64 characters")
-			}
-			t.Title = o.Value
-		case "description":
-			t.Description = o.Value
-		case "policy":
-			t.Policy = o.Value
-		case "tenant":
-			// Reserved for a later release; not used.
-		case "channels":
-			for _, c := range strings.Split(o.Value, ",") {
-				if c = strings.TrimSpace(c); c != "" {
-					t.Channels = append(t.Channels, c)
-				}
-			}
-		case "mode":
-			v := strings.ToLower(o.Value)
-			if v != "fallback" && v != "all" {
-				b.errf(o.Pos, "invalid_value", "mode must be fallback or all")
-			}
-			t.Mode = v
-		case "members", "managers", "operators", "viewers":
-			if o.Key != "members" {
-				t.Legacy = true
-			}
-			for _, u := range strings.Split(o.Value, ",") {
-				if u = strings.TrimSpace(u); u == "" {
-					continue
-				}
-				if !teamUserRe.MatchString(u) {
-					b.errf(o.Pos, "invalid_value", "%s: %q is not a user name", o.Key, u)
-					continue
-				}
-				if seen[u] {
-					b.errf(o.Pos, "invalid_value", "%s is listed twice in team %s", u, r.Name)
-					continue
-				}
-				seen[u] = true
-				t.Members = append(t.Members, u)
-			}
-		default:
-			b.errf(o.Pos, "unknown_option", "TEAM has no option %s (title, description, members, channels, mode)", o.Key)
-		}
+	if _, ok := m.Opts["tenant"]; ok {
+		b.errf(o.pos("tenant"), "removed", "tenant= is not supported")
 	}
-	if t.Title == "" {
-		t.Title = t.Name
-	}
-	b.cfg.Teams = append(b.cfg.Teams, t)
 }
 
-// checkTeams verifies the references between teams, channels, policies
-// and monitors.
-func (b *builder) checkTeams() {
-	for _, t := range b.cfg.Teams {
-		if t.Policy != "" && b.cfg.FindPolicy(t.Policy) == nil {
-			b.errf(t.Pos, "unknown_policy", "team %s: policy %q is not defined", t.Name, t.Policy)
-		}
-		for _, c := range t.Channels {
-			if b.cfg.FindChannel(c) == nil {
-				b.errf(t.Pos, "unknown_channel", "team %s: channel %q is not defined", t.Name, c)
-			}
-		}
-	}
+// applyMonitorPolicies sets mute and system-channel policies, and sends
+// alerts to the system channels when the chosen policy has none.
+func (b *builder) applyMonitorPolicies() {
 	for _, m := range b.cfg.Monitors {
-		// A monitor is notified through its own policy (policy=, or its
-		// section's), else the default one: the installation's alert
-		// channels. The two exceptions a monitor may have.
 		switch {
 		case m.Mute:
 			m.Policy = MutePolicy
 		case m.SystemChannel:
 			m.Policy = "system"
 		}
-		// With no alert channels at all, alerts go to the system channels.
 		if p := b.cfg.FindPolicy(m.Policy); p != nil && len(p.Chain) == 0 && !p.Mute {
 			if sys := b.cfg.FindPolicy("system"); sys != nil && len(sys.Chain) > 0 {
 				m.Policy, m.Unrouted = "system", true

@@ -14,7 +14,7 @@ import (
 // The weekly report looks back over seven days, for the people who do not
 // read every alert: how available the monitors were, how many problems
 // there were and for how long, which monitors did worst, and how many
-// alerts were held back. It goes to the same teams and channels as the
+// alerts were held back. It goes to the same alert channels as the
 // daily report.
 
 const weeklyLastKey = "weekly_report_last"

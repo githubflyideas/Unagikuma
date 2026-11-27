@@ -70,6 +70,29 @@ func (s *Server) serveShell(w http.ResponseWriter, r *http.Request, name string)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
-	_, _ = w.Write(injectBase(b, s.urlPrefix(r)))
+	_, _ = w.Write(injectBase(s.injectInstall(b), s.urlPrefix(r)))
 	return true
+}
+
+// injectInstall marks the shell with this installation's number, so the
+// UI can scope localStorage keys per instance on the same host.
+func (s *Server) injectInstall(page []byte) []byte {
+	id := s.app.License().InstallationID()
+	if id == "" {
+		return page
+	}
+	attr := []byte(` data-install="` + id + `"`)
+	i := bytes.Index(page, []byte("<html"))
+	if i < 0 {
+		return page
+	}
+	j := bytes.IndexByte(page[i:], '>')
+	if j < 0 {
+		return page
+	}
+	out := make([]byte, 0, len(page)+len(attr))
+	out = append(out, page[:i+j]...)
+	out = append(out, attr...)
+	out = append(out, page[i+j:]...)
+	return out
 }

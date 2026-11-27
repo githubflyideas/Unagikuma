@@ -218,7 +218,7 @@ func (s *Server) serveStyledShell(w http.ResponseWriter, r *http.Request, name s
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
-	_, _ = w.Write(injectBase(page, s.urlPrefix(r)))
+	_, _ = w.Write(injectBase(s.injectInstall(page), s.urlPrefix(r)))
 	return true
 }
 

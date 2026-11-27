@@ -1,0 +1,15 @@
+# /etc/systemd/system/unagikuma.service
+[Unit]
+Description=unagikuma monitoring
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/unagikuma server --data /var/lib/unagikuma
+Restart=on-failure
+DynamicUser=yes
+StateDirectory=unagikuma
+AmbientCapabilities=CAP_NET_RAW
+
+[Install]
+WantedBy=multi-user.target

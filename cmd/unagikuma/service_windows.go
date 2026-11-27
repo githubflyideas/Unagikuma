@@ -15,6 +15,18 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
+// windowsServiceName is set from --service-name, inserted at install time.
+var windowsServiceName string
+
+func setServiceName(name string) { windowsServiceName = name }
+
+func serviceRunName() string {
+	if windowsServiceName != "" {
+		return windowsServiceName
+	}
+	return "unagikuma"
+}
+
 // runAsService runs the command as a Windows service when the service
 // manager started us: baseCtx ends when the service is told to stop.
 func runAsService(cmd func() error) (bool, error) {
@@ -25,7 +37,7 @@ func runAsService(cmd func() error) (bool, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	baseCtx = ctx
 	h := &serviceHandler{run: cmd, cancel: cancel}
-	return true, svc.Run("unagikuma", h)
+	return true, svc.Run(serviceRunName(), h)
 }
 
 type serviceHandler struct {
@@ -90,6 +102,8 @@ func runService(args []string) error {
 		if len(cmdArgs) == 0 {
 			cmdArgs = []string{"server"}
 		}
+		// The running service must call svc.Run with this same name.
+		cmdArgs = append([]string{"--service-name", *name}, cmdArgs...)
 		s, err := m.CreateService(*name, exe, mgr.Config{
 			DisplayName: "unagikuma (" + cmdArgs[0] + ")", Description: "unagikuma monitoring", StartType: mgr.StartAutomatic,
 		}, cmdArgs...)

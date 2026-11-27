@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.0.1 — 2026-11-27
+
+**Changed**
+- Monitors with no group are visible only to administrators. An operator or viewer sees only the monitors in the groups they were given; with no groups assigned they see no monitors. (In 3.0, an account given no groups saw every monitor.)
+- `TEAM` records, the `team=` option and the `team:` selector are no longer accepted (breaking). There is no rewrite of old files on start. Put monitors in a group with `group=` and assign that group to a user, or run a second installation.
+- `tenant=` is no longer accepted, and the unused `tenant_id` columns are dropped from new and existing databases. There is no multi-tenant edition.
+- The session cookie is named `unagikuma_session_<installation-number>`, so two installations on the same host no longer share a login. The console's saved language, style and view in the browser are scoped the same way.
+- Without `--instance` (and without a name under Settings), the name shown in notifications is the host name plus the data directory's last component (`box-shop` for `--data /var/lib/unagikuma/shop`). A generic directory name such as `data` keeps the host name on port 8077, and uses `hostname-port` on another port. The cluster node name in `monitors.conf` is not changed automatically.
+- `contrib/systemd/unagikuma@.service` runs a second installation (`systemctl enable --now unagikuma@shop`). On Windows, `service install --name` now starts the service under that name.
+
+**Fixed**
+- Starting a second server on a data directory that is already running reported an error that began with a capital letter (the message is unchanged in meaning).
+- A Windows `.exe` built locally had been committed to the source tree; it is no longer in the repository.
+
+**Docs**
+- `docs/spec/monitors-conf.md` and the user manual no longer document `TEAM` records, `team=` or `tenant=`. The user manual covers several installations, the systemd template, and Windows `--name`.
+
+
 ## v3.0.0 — 2026-11-26
 
 **Changed**
@@ -12,7 +30,7 @@
 **Changed**
 - The ISP style is redrawn as a network operations centre: a dark blueprint grid, a slim icon rail that opens over the page instead of a hidden drawer, panels with bracketed corners, monospaced figures, and failing rows and the problem count that pulse until handled. The Starship bridge style turns violet so the two dark styles no longer look alike, and the Retail chain table header is readable again.
 - Every style keeps the page centred on a wide screen, with the navigation beside it.
-- Fewer things to type. Adding or changing a user: the role is a drop-down, teams are clicked, and an operator's sections are picked from the regions and nodes instead of typed as names separated by commas (on a single machine the choice is not shown). A channel group's members are clicked from the existing channels. An import's section is chosen from a list and shown only in a cluster; the import's "section manager" choice is gone (give an operator sections when editing the user instead).
+- Fewer things to type. Adding or changing a user: the role is a drop-down, groups are clicked, and an operator's sections are picked from the regions and nodes instead of typed as names separated by commas (on a single machine the choice is not shown). A channel group's members are clicked from the existing channels. An import's section is chosen from a list and shown only in a cluster; the import's "section manager" choice is gone (give an operator sections when editing the user instead).
 - Adding a user asks for the name, e-mail address and phone number in the same form, so the user can receive alerts at once.
 - The Small business, Data centre and Modern dashboard styles are gone. An installation or account set to one of them falls back to classic.
 

@@ -194,9 +194,9 @@ func (s *Server) routes() {
 			writeError(w, err)
 			return
 		}
-		// Every account but an administrator's goes through the team
+		// Every account but an administrator's goes through the group
 		// filter, which follows configuration changes: one added to a
-		// team while connected stops seeing other teams' events at once.
+		// group while connected starts seeing only that group's events at once.
 		if ai.session && ai.role != store.RoleAdmin {
 			s.hub.ServeFiltered(w, r, s.groupStream(ai.role, ai.groups))
 			return

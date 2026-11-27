@@ -262,7 +262,7 @@ func (a *App) newMaster() error {
 	return nil
 }
 
-// migrateFiles renames files from older releases and moves policies and
+// migrateFiles renames files from older releases and moves
 // push receivers to their current form.
 func (a *App) migrateFiles() error {
 	renames := [][2]string{{a.dataPath(replicaDir, legacyReplicaConfig), a.dataPath(replicaDir, replicaConfig)}}
@@ -282,13 +282,7 @@ func (a *App) migrateFiles() error {
 			return err
 		}
 	}
-	if err := a.store.SetSetting(pushOptionsDone, "1"); err != nil {
-		return err
-	}
-	if err := a.migratePoliciesToTeams(a.opts.ConfigPath); err != nil {
-		return err
-	}
-	return a.migrateTeamsToGroups(a.opts.ConfigPath)
+	return a.store.SetSetting(pushOptionsDone, "1")
 }
 
 // loadState loads the membership, the replica copy and the configuration,

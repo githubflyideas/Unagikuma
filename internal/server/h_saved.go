@@ -9,8 +9,8 @@ import (
 // savedAlerts lists the alerts not sent in the last seven days — held
 // back during a local outage, cleared before confirmed, merged into a
 // summary or stopped by the notification limit — with a count per day,
-// so the overview can show what was spared and when. A team member sees
-// only their team's monitors.
+// so the overview can show what was spared and when. An account limited
+// to groups sees only its monitors.
 func (s *Server) savedAlerts(w http.ResponseWriter, r *http.Request) (any, error) {
 	now := s.now()
 	since := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -6)
@@ -38,7 +38,7 @@ func (s *Server) savedAlerts(w http.ResponseWriter, r *http.Request) (any, error
 		}
 	}
 	// Counts of alerts kept before 2.6.11 listed them come from the daily
-	// counters, for everyone but a team member.
+	// counters, for everyone but an account limited to groups.
 	if ts == nil {
 		if daily, err := s.app.Store().DailyCounters(since); err == nil {
 			for d, names := range daily {

@@ -17,7 +17,7 @@ func TestAuditLog(t *testing.T) {
 	if c := admin.do("POST", "/api/v1/users", map[string]any{"username": "bjops", "password": "secret123", "role": "viewer"}, &created); c != 200 {
 		t.Fatalf("create: %d", c)
 	}
-	if c := admin.do("PUT", "/api/v1/users/"+itoa(created.ID), map[string]any{"role": "operator", "areas": []string{"region:north"}}, nil); c != 200 {
+	if c := admin.do("PUT", "/api/v1/users/"+itoa(created.ID), map[string]any{"role": "operator", "areas": []string{"region:north"}, "groups": []string{"ops"}}, nil); c != 200 {
 		t.Fatalf("update: %d", c)
 	}
 	ops := admin.loginAs("bjops", "secret123")

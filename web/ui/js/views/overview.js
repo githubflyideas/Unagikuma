@@ -3,6 +3,7 @@
 import { html, useState } from '../lib.js';
 import { t, tn, dur, fmtNum, fmtTime } from '../i18n.js';
 import { get, post, me } from '../api.js';
+import { storageGet, storageSet } from '../storage.js';
 import { useFetch, useLive, Card, Loading, ErrorBox, Dot, Ago, Empty, Pill, Seg, msText, reasonText, quorumText, pct, openMonitor, enc, toast, toastError, useDocTitle, gwBad, Modal } from '../ui.js';
 import { ObservationCell, observationSummary } from '../observations.js';
 import { IncidentList } from './problems.js';
@@ -336,7 +337,7 @@ export function Legend() {
 
 // ---- first run ----
 
-function onboardDismissed() { try { return localStorage.getItem('unagikuma.onboard') === 'done'; } catch { return false; } }
+function onboardDismissed() { return storageGet('unagikuma.onboard') === 'done'; }
 
 // Onboarding walks a new installation through its first monitors, a
 // channel, the default policy, who receives alerts and a status page,
@@ -362,7 +363,7 @@ function Onboarding({ d, reload }) {
     } catch (e) { toastError(e); }
     setBusy(false);
   };
-  const dismiss = () => { try { localStorage.setItem('unagikuma.onboard', 'done'); } catch { /* unavailable */ } setHidden(true); };
+  const dismiss = () => { storageSet('unagikuma.onboard', 'done'); setHidden(true); };
   // Done steps fold away: only what is left to do is shown.
   const step = (i, title, hint, body) => steps[i] ? null : html`<div class=${'ob-step' + (steps[i] ? ' done' : '')}>
     <div class="ob-n" aria-label=${steps[i] ? t('ui.ob.done') : t('ui.ob.todo')} title=${steps[i] ? t('ui.ob.done') : t('ui.ob.todo')}>${steps[i] ? '✓' : '!'}</div>

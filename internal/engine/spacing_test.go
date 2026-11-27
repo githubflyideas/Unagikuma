@@ -15,7 +15,7 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/tunables"
 )
 
-// Pings and weak UDP checks of one address (watched by several teams, or
+// Pings and weak UDP checks of one address (watched by several monitors, or
 // a ping next to a few UDP ports) start probe.same-target-gap apart, so
 // the target's limit on ICMP replies does not fake loss. Other checks of
 // that address, and checks of other addresses, start at once.

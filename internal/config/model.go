@@ -79,7 +79,6 @@ type Config struct {
 	Nodes       []*Node
 	Channels    []*Channel
 	Policies    []*Policy
-	Teams       []*Team
 	StatusPages []*StatusPage
 	Maints      []*Maint
 	Periods     []*Period
@@ -146,16 +145,15 @@ type Monitor struct {
 	CertCritical    int
 	Authorized      bool
 	Disabled        bool
-	Share           bool   // share=yes: use the result of an identical check of another monitor
-	Team            string // team=: the team that owns it ("" = the built-in admin team)
+	Share           bool // share=yes: use the result of an identical check of another monitor
 	// Region is the region whose nodes check it: RegionGlobal for every
 	// node, "" for a list of nodes.
 	Region string
 	// Mute: no notifications at all; SystemChannel: notified through the
-	// system channels instead of the team's.
+	// system channels instead of the alert channels.
 	Mute          bool
 	SystemChannel bool
-	// Unrouted: its team has no channels, so it goes to the system ones.
+	// Unrouted: its policy has no channels, so it goes to the system ones.
 	Unrouted bool
 
 	// Push monitors.
@@ -219,7 +217,7 @@ type Channel struct {
 	// Members are the channels of a "group" channel, all notified at once.
 	Members []string
 	// System marks a system channel (system=yes): it carries notices about
-	// the monitoring itself, and those of teams whose own channels are not
+	// the monitoring itself, and alerts when the usual channels are not
 	// set or failed.
 	System bool
 	// NoReport: the channel does not take the daily status report (report=no).
@@ -238,7 +236,7 @@ type Policy struct {
 	Name  string
 	Chain []string
 	// Network receives the summaries of failures that point at the
-	// network (a segment, DNS) rather than the services: the network team.
+	// network (a segment, DNS) rather than the services.
 	Network          []string
 	Mode             string // fallback | all
 	Repeat           time.Duration
@@ -253,9 +251,7 @@ type Policy struct {
 	Escalate         []Escalation
 	Opts             map[string]string
 	Implicit         bool // "default"/"system" not written in the file
-	// Team is set on the policy made from a team's channels
-	// ("team:NAME"); Mute on the policy of muted monitors.
-	Team  string
+	// Mute is set on the policy of muted monitors.
 	Mute  bool
 	Pos   Pos
 	Lines [2]int
@@ -379,100 +375,6 @@ func (c *Config) FindNode(name string) *Node {
 
 // RegionGlobal is the region of a monitor every node checks.
 const RegionGlobal = "global"
-
-// AdminTeam is the built-in team. It always exists, cannot be deleted or
-// renamed, and owns every monitor without team= (team=admin is the same).
-const AdminTeam = "admin"
-
-// Team is a group of people who own monitors (team= on a monitor): its
-// members see and handle those monitors, with the role of their account
-// (administrator, operator or read-only). A person can be in several teams.
-type Team struct {
-	Name        string
-	Title       string
-	Description string
-	// Members are user names. Files before 2.6 listed them by role
-	// (managers=, operators=, viewers=); those lists are read as members.
-	Members []string
-	// Legacy is set when the record still uses the role lists.
-	Legacy bool
-	// Channels notify the team's alerts, in order; Mode is fallback (stop
-	// at the first that succeeds) or all.
-	Channels []string
-	Mode     string
-	Policy   string // policy= of files before 2.6 ("" = none)
-	Implicit bool   // the built-in admin team, not written in the file
-	Pos      Pos
-	Lines    [2]int
-}
-
-// Has reports whether user is a member of the team.
-func (t *Team) Has(user string) bool {
-	for _, n := range t.Members {
-		if n == user {
-			return true
-		}
-	}
-	return false
-}
-
-// TeamOf is the team that owns a monitor: AdminTeam when it names none.
-func (m *Monitor) TeamOf() string {
-	if m.Team == "" {
-		return AdminTeam
-	}
-	return m.Team
-}
-
-// FindTeam returns the named team, or nil. The built-in admin team is
-// always found, written in the file or not.
-func (c *Config) FindTeam(name string) *Team {
-	for _, t := range c.Teams {
-		if t.Name == name {
-			return t
-		}
-	}
-	if name == AdminTeam {
-		return &Team{Name: AdminTeam, Title: AdminTeam, Mode: "fallback", Implicit: true}
-	}
-	return nil
-}
-
-// AllTeams lists the teams with the built-in admin team first.
-func (c *Config) AllTeams() []*Team {
-	out := []*Team{c.FindTeam(AdminTeam)}
-	for _, t := range c.Teams {
-		if t.Name != AdminTeam {
-			out = append(out, t)
-		}
-	}
-	return out
-}
-
-// MultiTeam reports whether there are teams besides the built-in one.
-func (c *Config) MultiTeam() bool {
-	for _, t := range c.Teams {
-		if t.Name != AdminTeam {
-			return true
-		}
-	}
-	return false
-}
-
-// TeamsOf lists the teams user is a member of. A user listed in no team
-// is in the built-in admin team.
-func (c *Config) TeamsOf(user string) []string {
-	var out []string
-	for _, t := range c.AllTeams() {
-		if t.Has(user) {
-			out = append(out, t.Name)
-		}
-	}
-	if len(out) == 0 {
-		out = []string{AdminTeam}
-	}
-	return out
-}
 
 // FindPolicy returns a policy by name.
 func (c *Config) FindPolicy(name string) *Policy {

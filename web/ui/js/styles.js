@@ -3,6 +3,7 @@
 // product name to show.
 import { get, put } from './api.js';
 import { setProduct } from './ui.js';
+import { storageGet, storageSet } from './storage.js';
 
 const CACHE = 'unagikuma.style';
 export const brand = { name: 'Unagikuma', style: 'classic', styles: [{ id: 'classic', allowed: true }] };
@@ -10,10 +11,8 @@ let mine = ''; // the account's choice; '' follows the default
 let loaded = () => {};
 
 function storage(v) {
-  try {
-    if (v === undefined) return localStorage.getItem(CACHE) || '';
-    localStorage.setItem(CACHE, v);
-  } catch { /* unavailable */ }
+  if (v === undefined) return storageGet(CACHE) || '';
+  storageSet(CACHE, v);
   return '';
 }
 

@@ -18,6 +18,14 @@ import (
 
 var heldLock *os.File // the data directory's lock, held until exit
 
+// closeDataLock releases the data directory so another server can start.
+func closeDataLock() {
+	if heldLock != nil {
+		_ = heldLock.Close()
+		heldLock = nil
+	}
+}
+
 const (
 	lockFile     = "unagikuma.lock"
 	portFile     = app.PortFile // the port this installation found for itself

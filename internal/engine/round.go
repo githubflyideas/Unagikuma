@@ -48,7 +48,7 @@ type gateRun struct {
 // budget of its own: pings, and weak UDP checks that hear a closed port
 // only through ICMP port unreachable (and ping the host alongside).
 // Network devices and hosts rate-limit those replies; checks of one
-// address that start together (a host watched by several teams, a ping
+// address that start together (a host watched by several monitors, a ping
 // next to a few UDP ports) can lose them and show loss or a closed port
 // as open. "" for every other check.
 func spacingKey(m *MonitorSpec) string {

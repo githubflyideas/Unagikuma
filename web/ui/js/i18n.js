@@ -1,3 +1,5 @@
+import { storageGet, storageSet } from './storage.js';
+
 // Translations come from the server's catalogs (English fills gaps).
 // Plural keys use CLDR suffixes: key_one, key_few, ... chosen by
 // Intl.PluralRules, matching the server's own rules.
@@ -15,7 +17,7 @@ export function langList() { return languages; }
 
 export function detectLang() {
   try {
-    const saved = localStorage.getItem('unagikuma.lang');
+    const saved = storageGet('unagikuma.lang');
     if (saved) return saved;
   } catch { /* storage may be unavailable */ }
   const want = (navigator.languages || [navigator.language || 'en']).map(l => l.toLowerCase().split(/[-_]/)[0]);
@@ -49,7 +51,7 @@ export async function setLang(code, remember) {
   document.documentElement.lang = lang;
   document.documentElement.dir = RTL.has(lang) ? 'rtl' : 'ltr';
   if (remember) {
-    try { localStorage.setItem('unagikuma.lang', lang); } catch { /* ignore */ }
+    storageSet('unagikuma.lang', lang);
   }
 }
 

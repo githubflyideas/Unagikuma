@@ -10,11 +10,12 @@ import (
 	"github.com/githubflyideas/unagikuma/internal/store"
 )
 
-// Groups: an account given monitor groups (and not an administrator) sees
-// only the monitors in those groups (group= on a monitor), and changes
-// them only as an operator. Other monitors are not shown to it, except the
-// state of a monitor its own depend on. An account given no groups sees
-// everything, as before.
+// Groups: an account that is not an administrator sees only the monitors
+// in the groups it was given (group= on a monitor), and changes them only
+// as an operator. Monitors with no group are visible only to
+// administrators. Other monitors are not shown, except the state of a
+// monitor its own ones depend on. An account given no groups sees no
+// monitors.
 //
 // Limiting is deny by default: such an account may only call the routes in
 // groupRoutes, each of which filters what it returns. A route added later
@@ -30,17 +31,20 @@ type groupScope struct {
 var errGroupOnly = Errorf(http.StatusForbidden, CodeForbidden, "not available to an account limited to some groups: ask an administrator")
 
 // groupScopeFor builds the scope of an account: nil for an administrator
-// or an account given no groups (it sees everything).
+// (it sees everything, including monitors with no group). Any other
+// account sees only the monitors in the groups it was given.
 func groupScopeFor(cfg *config.Config, role string, groups []string) *groupScope {
-	if role == store.RoleAdmin || len(groups) == 0 {
+	if role == store.RoleAdmin {
 		return nil
 	}
 	gs := &groupScope{groups: map[string]bool{}, operator: role == store.RoleOperator, visible: map[string]bool{}, statusOnly: map[string]bool{}}
 	for _, g := range groups {
-		gs.groups[g] = true
+		if g != "" {
+			gs.groups[g] = true
+		}
 	}
 	for _, m := range cfg.Monitors {
-		if gs.groups[m.Group] {
+		if m.Group != "" && gs.groups[m.Group] {
 			gs.visible[m.Name] = true
 		}
 	}

@@ -149,7 +149,7 @@ func (s *Server) expiry(w http.ResponseWriter, r *http.Request) (any, error) {
 	return map[string]any{"items": out}, nil
 }
 
-// weeklyReport previews the weekly report (the first team's) as it would
+// weeklyReport previews the weekly report as it would
 // be sent now.
 func (s *Server) weeklyReport(w http.ResponseWriter, r *http.Request) (any, error) {
 	ts := s.app.Config().Config.Tunables
@@ -160,7 +160,7 @@ func (s *Server) weeklyReport(w http.ResponseWriter, r *http.Request) (any, erro
 	return out, nil
 }
 
-// sendWeeklyReport sends the weekly report now, to every team receiving
+// sendWeeklyReport sends the weekly report now, to the channels receiving
 // reports.
 func (s *Server) sendWeeklyReport(w http.ResponseWriter, r *http.Request) (any, error) {
 	rs := s.app.WeeklyReports(s.now())

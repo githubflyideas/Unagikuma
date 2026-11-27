@@ -100,7 +100,18 @@ func authOf(r *http.Request) *authInfo {
 	return a
 }
 
-const sessionCookie = "unagikuma_session"
+// sessionCookiePrefix is the stem of the session cookie. The installation
+// number is appended so two instances on the same host (browsers do not
+// isolate cookies by port) do not share a login.
+const sessionCookiePrefix = "unagikuma_session"
+
+func (s *Server) sessionCookie() string {
+	id := s.app.License().InstallationID()
+	if id == "" {
+		return sessionCookiePrefix
+	}
+	return sessionCookiePrefix + "_" + id
+}
 
 // New builds the server and starts publishing live events.
 func New(a *app.App, o Options) *Server {
@@ -312,7 +323,7 @@ func (s *Server) authenticate(r *http.Request) (*authInfo, error) {
 		}
 		return ai, nil
 	}
-	c, err := r.Cookie(sessionCookie)
+	c, err := r.Cookie(s.sessionCookie())
 	if err != nil {
 		if n, _ := st.UserCount(); n == 0 {
 			return nil, Errorf(http.StatusUnauthorized, CodeSetupRequired, "setup required")

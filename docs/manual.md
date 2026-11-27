@@ -33,6 +33,8 @@ Add a monitor in the UI, use **Quick add monitors** to paste a list of targets, 
 
 ### As a service (Linux, systemd)
 
+A ready-to-copy unit is in [`contrib/systemd/unagikuma.service`](../contrib/systemd/unagikuma.service):
+
 ```ini
 # /etc/systemd/system/unagikuma.service
 [Unit]
@@ -51,6 +53,16 @@ AmbientCapabilities=CAP_NET_RAW
 WantedBy=multi-user.target
 ```
 
+Several installations on one machine use the template unit [`contrib/systemd/unagikuma@.service`](../contrib/systemd/unagikuma@.service). Each instance name is its own data directory under `/var/lib/unagikuma/`:
+
+```sh
+# /etc/systemd/system/unagikuma@.service  (copy from contrib/systemd)
+systemctl enable --now unagikuma@shop    # data in /var/lib/unagikuma/shop
+systemctl enable --now unagikuma@ops     # data in /var/lib/unagikuma/ops
+```
+
+The first installation takes port 8077; the next takes the next free port (see [Several installations on one machine](#command-line)). Pass `--listen` in `ExecStart` if you want a fixed address.
+
 `CAP_NET_RAW` is only needed for ICMP ping on systems where unprivileged ping sockets are disabled (`net.ipv4.ping_group_range`). Without either (as on a stock Debian or Ubuntu), a ping check knocks on TCP ports 443, 80 and 22 instead: a host that accepts or refuses the connection is up, and the result says it was checked over TCP. If all three ports stay silent, the check reports that this host lacks the privilege rather than marking the target down. `fallback=off` turns the TCP knock off.
 
 ### As a service (Windows)
@@ -62,7 +74,12 @@ In an Administrator PowerShell, in the folder of `unagikuma.exe`:
 .\unagikuma.exe service uninstall
 ```
 
-The service starts automatically and is restarted if it stops.
+The service starts automatically and is restarted if it stops. A second installation needs its own service name and data directory:
+
+```powershell
+.\unagikuma.exe service install --name unagikuma-shop -- server --data C:\ProgramData\unagikuma-shop --listen 127.0.0.1:8078 --log-file C:\ProgramData\unagikuma-shop\unagikuma.log
+.\unagikuma.exe service uninstall --name unagikuma-shop
+```
 
 Windows is supported, with some checks possibly unsupported:
 
@@ -210,9 +227,9 @@ ops-im    IN CHANNEL feishu url=${secret:feishu_ops}
 oncall    IN CHANNEL aliyun-sms access-key-id=LTAI… access-key-secret=${secret:ali} sign-name=Ops template-code=SMS_123 phones=13800000000
 manager   IN CHANNEL email host=smtp.example.com from=alerts@example.com to=boss@example.com
 office    IN PERIOD "mon-fri 09:00-18:00; sat 10:00-12:00"
-team      IN CHANNEL group members=ops-im,oncall
+ops-all   IN CHANNEL group members=ops-im,oncall
 night-sms IN CHANNEL aliyun-sms … period=!office
-default   IN POLICY chain=team,night-sms mode=all
+default   IN POLICY chain=ops-all,night-sms mode=all
 ```
 
 ### Channel kinds
@@ -279,8 +296,8 @@ Functions: `upper`, `lower`, `trunc 20 .Name`, `join ", " .Tags`, `json .Tags`, 
 
 - **Length.** Each service takes messages up to a size (WeCom 2048 bytes, Telegram 4096 characters, Discord 2000, Pushover 1024, …). A longer message, usually the daily report, is cut at a line and its last line says how many lines are left out.
 - **Rate.** A channel sends at most `notify.channel-rate` (20 a minute; `rate=6/m` on a channel changes it), and never more than its service takes from one robot in a minute (`notify.service-limits`: DingTalk, WeCom and Telegram 20, Discord 30, Slack 60, Feishu 100). What cannot go yet waits, and a long queue becomes one summary.
-- **Retries.** A failed delivery is tried again twice (`notify.channel-retries`, `retries=` on a channel, `retries=0` for none), after 2 and 5 seconds. A failure that will repeat (a wrong token, a refused message) is not tried again. A service that asks to wait (HTTP 429 with `Retry-After`, or its own "too fast" answer) is asked again after that long; if it asks for more than `notify.retry-after-max` (30s) the next channel of the team takes the alert.
-- **When every channel fails.** The alert does not count towards `notify.max` and is sent again after `notify.failed-retry` (2 minutes, then 4, 8, … up to the repeat interval) until someone gets it or the problem is over. The system channels and the team's administrators are told once that the team's channels failed.
+- **Retries.** A failed delivery is tried again twice (`notify.channel-retries`, `retries=` on a channel, `retries=0` for none), after 2 and 5 seconds. A failure that will repeat (a wrong token, a refused message) is not tried again. A service that asks to wait (HTTP 429 with `Retry-After`, or its own "too fast" answer) is asked again after that long; if it asks for more than `notify.retry-after-max` (30s) the next channel of the policy takes the alert.
+- **When every channel fails.** The alert does not count towards `notify.max` and is sent again after `notify.failed-retry` (2 minutes, then 4, 8, … up to the repeat interval) until someone gets it or the problem is over. The system channels and the administrators are told once that the alert channels failed.
 - **Daily report.** SMS and voice channels take it only with `report=yes`; every other channel takes it unless `report=no`.
 
 - **E-mail.** An `email` channel sends either to an SMTP server (`host=`, `port=`, `tls=starttls|tls|none`, `username=`, `password=`, `from=`) or, with `via=sendmail`, through this machine's own mail system, the way Nagios and cron do:
@@ -452,7 +469,7 @@ An operator can also be limited to some `$SCOPE` sections (`region:north`, `bj`)
 
 ### Groups
 
-A monitor can belong to a **group** (`group=` on the monitor, the Group field in its form). An account that is not an administrator can be given some groups when it is created or edited (**Alerting › Users**): it then sees, and as an operator changes, only the monitors in those groups. An account given no groups sees everything.
+A monitor can belong to a **group** (`group=` on the monitor, the Group field in its form). An account that is not an administrator can be given some groups when it is created or edited (**Settings › Users**): it then sees, and as an operator changes, only the monitors in those groups. An account given no groups sees no monitors. Monitors with no group are visible only to administrators.
 
 An account limited to groups:
 
@@ -474,10 +491,6 @@ Where notifications go:
 - The **alert channels** (**Alerting › Channels**) are tried in order until one succeeds, or all are sent to with *Send to all*. Every monitor uses them, unless it names its own policy (`policy=`).
 - A monitor may have one of two exceptions: `mute=yes` (problems are recorded, nothing is sent) or `system-channel=yes` (it goes to the system channels instead).
 - **System channels** are channels with `system=yes`. They receive the system's own notices, every alert while there are no alert channels, and the problems the alert channels failed to deliver.
-
-Releases before 2.6 used `POLICY` records. When the server starts, a policy that only lists channels (`chain=`, `mode=`) becomes the channels of the teams that used it: the `default` policy those of the admin team and of teams without a policy, and the channels of the `system` policy (or, without one, of `default`) get `system=yes`. `policy=system` on a monitor becomes `system-channel=yes`. The file is kept as `monitors.conf.before-teams` and the change is in the audit log. Policies with other options (`repeat=`, `escalate=`, …) stay and keep working for whatever names them; edit them in the file.
-
-Release 3.0 removed teams. At the first start a file with `TEAM` records is rewritten so that nobody sees or receives anything different: the admin team's channels become the alert channels (`default IN POLICY chain=…`); another team's channels, when they differ, become a policy of the team's name that its monitors name with `policy=`; a team's monitors get `group=<team>` when they have no group; a member of teams (and not of the admin team) is given the groups of those teams' monitors; `team=` options and `TEAM` records are removed, and maintenance or status page selectors naming a team (`team:web`) name the group. The file is kept as `monitors.conf.before-groups` and the change is in the audit log. In a cluster, upgrade the other machines before the master.
 
 **Settings › Audit** lists every change to accounts, roles and sections (before and after), tokens, secrets (names only), nodes and the configuration, with the person or token, the section, and the source address; configuration edits made in the file on disk are listed too (each record as it was and as it is now), and so are sign-ins and failed logins, backups, restores, imports, password resets, and what the system did by itself (holds during a local outage and their release, restarts, crashes, clock jumps, upgrades). High-risk entries are highlighted and can be filtered by risk, person, source address, sign-in and time. `GET /api/v1/audit?actor=&action=&area=&session=` serves the same to administrators.
 
@@ -605,11 +618,15 @@ Behind a reverse proxy that serves the app under a path prefix (for example `htt
 
 **Several installations on one machine.** Each installation is a data directory of its own: start the program in another directory (or give it another `--data`) and it is a separate installation, with its own monitors, accounts and alerts. Without `--listen` it takes port 8077, or the first free one up to 8099 when that is taken, remembers it in `<data>/listen.port` and keeps it on later starts; the address is printed at start. A second server on a data directory that is already running is refused. With `--listen` the port is exactly the one given.
 
+The session cookie and the browser's saved language, style and view are scoped to the installation number, so two consoles on the same host (different ports) do not share a login. After upgrading to 3.0.1 you may need to sign in once more. On Linux, use the `unagikuma@.service` template (see [As a service](#as-a-service-linux-systemd)); on Windows, `service install --name` with a distinct `--data`.
+
+The name shown in notifications, when you do not pass `--instance` and have not set one under Settings, is the host name plus the data directory's last component (for example `box-shop` for `--data /var/lib/unagikuma/shop`). If that component is a generic name such as `data` or `unagikuma`, the listen port is used instead when it is not 8077 (`box-8078`); a single installation on port 8077 keeps the host name alone, as before. The cluster node name in `monitors.conf` (the `$FILE master=` / SOA name, default `unagikuma`) is not changed automatically: give each installation its own node name if you will join them in a cluster or want alerts to name the node distinctly.
+
 The port can also be changed under **Settings › System › Port**: the new one is checked to be free and takes effect at the next start (a **Restart now** button is offered where the program comes back by itself: always on Linux and macOS, as a service on Windows). If the new port is taken by then, the program stays on the one before and the page says so, so the console never ends up out of reach. A port given with `--listen` is changed where the program is started, and so is the port of a cluster's master, whose nodes keep its address.
 
 ## Data and backups
 
-The data directory holds `monitors.conf`, `core.db` (users, incidents, notification log, configuration history, encrypted secrets), `history.db` (check results and uptime) and `unagikuma.key`, the key that encrypts the secrets. `cluster-ca.*` and `cluster.*` are the certificate authority the other machines of a cluster pin; keep them with the key so they keep trusting a restored master.
+The data directory holds `monitors.conf`, `core.db` (users, incidents, notification log, configuration history, encrypted secrets), `history.db` (check results and uptime) and `unagikuma.key`, the key that encrypts the secrets. A data directory created by a release before 3.0.1 cannot be opened; start with a fresh directory. `cluster-ca.*` and `cluster.*` are the certificate authority the other machines of a cluster pin; keep them with the key so they keep trusting a restored master.
 
 Under **Config & import › Import and export**, with the **Unagikuma** source chosen (export and restore belong to that source; the other sources only import), there are two ways out:
 

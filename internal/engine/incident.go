@@ -258,7 +258,7 @@ func (e *Engine) notices(inc *Incident, ns []PlannedNotice, now time.Time) {
 			e.decideIntent(in, LedQueued, "")
 		}
 		// Whoever an escalation told about the problem hears that it is
-		// over too (team managers among them).
+		// over too (anyone the escalation told).
 		if n.Kind == NoticeRecovery && inc.State.Escalated > 0 {
 			if chans := e.escalatedChannels(inc); len(chans) > 0 {
 				extra := *in
