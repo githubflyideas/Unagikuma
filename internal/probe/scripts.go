@@ -88,13 +88,6 @@ func PluginOf(target string, o map[string]string) string {
 	return name
 }
 
-// ResetScripts drops the cached list (after the directories change).
-func ResetScripts() {
-	scriptCache.Lock()
-	scriptCache.list = nil
-	scriptCache.Unlock()
-}
-
 const scriptReadme = `Check scripts for unagikuma EXEC checks
 ======================================
 

@@ -231,9 +231,6 @@ func Defs() []Def {
 	return out
 }
 
-// Lookup returns a definition.
-func Lookup(key string) (*Def, bool) { d, ok := index[key]; return d, ok }
-
 // Set holds overrides on top of the defaults. The zero value is all defaults.
 type Set struct{ v map[string]string }
 

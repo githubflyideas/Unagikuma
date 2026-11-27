@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 )
@@ -119,16 +118,6 @@ func Catalog(code string) ([]byte, bool) {
 	m["_details"] = string(detailsJSON)
 	b, err := json.Marshal(m)
 	return b, err == nil
-}
-
-// Keys returns the English keys (for tests and tooling).
-func Keys() []string {
-	out := make([]string, 0, len(catalogs["en"]))
-	for k := range catalogs["en"] {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
 }
 
 func lookup(lang, key string) (string, bool) {

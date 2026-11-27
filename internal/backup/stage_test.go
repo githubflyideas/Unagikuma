@@ -2,6 +2,7 @@ package backup
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -200,4 +201,9 @@ func TestStageCheckRefuses(t *testing.T) {
 	if left, _ := filepath.Glob(filepath.Join(dst, ".restore-staging-*")); len(left) != 0 {
 		t.Fatalf("staging left behind: %v", left)
 	}
+}
+
+// Stage is StageChecked without the extra check.
+func Stage(r io.Reader, dataDir, passphrase string, now time.Time) (Staged, error) {
+	return StageChecked(r, dataDir, passphrase, now, nil)
 }

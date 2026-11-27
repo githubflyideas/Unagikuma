@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strings"
-	"time"
-
-	"github.com/githubflyideas/unagikuma/internal/ratelimit"
 )
 
 // securityHeaders applies the headers every response carries. The UI is
@@ -97,21 +94,4 @@ func clientIP(r *http.Request, trusted func(net.IP) bool) string {
 		}
 	}
 	return host
-}
-
-// limiter rate-limits requests per key (token prefix or client IP).
-type limiter struct {
-	keyed *ratelimit.Keyed
-	now   func() time.Time
-	key   func(*http.Request) string
-}
-
-func (l *limiter) wrap(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if ok, wait := l.keyed.Allow(l.key(r), l.now()); !ok {
-			writeError(w, rateLimited(wait))
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }

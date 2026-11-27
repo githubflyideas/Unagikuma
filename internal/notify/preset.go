@@ -141,12 +141,3 @@ func (s *Sender) buildPreset(ctx context.Context, p *Preset, opts map[string]str
 	}
 	return req, jsonCode("", p.Success.Equals, p.Success.Field), nil
 }
-
-// Presets returns the preset definitions.
-func Presets() []*Preset {
-	out := make([]*Preset, 0, len(presets))
-	for _, p := range presets {
-		out = append(out, p)
-	}
-	return out
-}

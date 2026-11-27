@@ -386,3 +386,8 @@ func TestConditionJudge(t *testing.T) {
 		t.Errorf("queue missing: %+v", out)
 	}
 }
+
+// Parse is ParseWith for a check whose numbers have no names.
+func Parse(get func(string) string, unit string) (*Rules, error) {
+	return ParseWith(get, unit, nil)
+}

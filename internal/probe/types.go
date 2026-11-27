@@ -87,18 +87,6 @@ func RemoteReachable(r Result) bool {
 	return false
 }
 
-// LocalAbstain reports whether a reason means this node could not judge
-// (the node is not healthy for quorum purposes).
-func LocalAbstain(reason string) bool {
-	switch reason {
-	case ReasonPrivilege, ReasonPlatform, ReasonSecretUnavailable, ReasonLocalRateLimited,
-		ReasonIsolated, ReasonLocalNetwork, ReasonLocalSuspend, ReasonLocalStall,
-		ReasonLocalDNS, ReasonClockSkew, ReasonNoRoute, ReasonConfig, ReasonInternal, ReasonPortBusy:
-		return true
-	}
-	return false
-}
-
 // Spec is everything needed to run one check. Secrets in Opts are already
 // resolved by the caller.
 type Spec struct {

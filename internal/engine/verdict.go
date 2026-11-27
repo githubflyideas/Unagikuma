@@ -8,8 +8,6 @@ package engine
 
 import (
 	"fmt"
-	"math"
-	"strconv"
 	"strings"
 
 	"github.com/githubflyideas/unagikuma/internal/probe"
@@ -81,65 +79,6 @@ func (v Verdict) Summary() string {
 		s += ": " + strings.Join(v.FailingNodes, ",")
 	}
 	return s
-}
-
-type quorumKind int
-
-const (
-	qMajority quorumKind = iota
-	qAll
-	qPercent
-	qCount
-)
-
-func parseQuorum(spec string) (quorumKind, float64, error) {
-	s := strings.TrimSpace(strings.ToLower(spec))
-	switch {
-	case s == "" || s == "majority":
-		return qMajority, 0, nil
-	case s == "all":
-		return qAll, 0, nil
-	case strings.HasSuffix(s, "%"):
-		p, err := strconv.ParseFloat(strings.TrimSuffix(s, "%"), 64)
-		// NaN fails every comparison, so test the good range, not the bad.
-		if err != nil || !(p > 0 && p <= 100) {
-			return 0, 0, fmt.Errorf("bad quorum %q", spec)
-		}
-		return qPercent, p, nil
-	default:
-		n, err := strconv.Atoi(s)
-		if err != nil || n < 1 {
-			return 0, 0, fmt.Errorf("bad quorum %q", spec)
-		}
-		return qCount, float64(n), nil
-	}
-}
-
-func quorumFor(kind quorumKind, arg float64, n int) int {
-	if n <= 0 {
-		return 0
-	}
-	var q int
-	switch kind {
-	case qMajority:
-		q = n/2 + 1
-	case qAll:
-		q = n
-	case qPercent:
-		q = int(math.Ceil(float64(n) * arg / 100)) // percentages round up
-	case qCount:
-		q = int(arg)
-	}
-	return max(1, min(q, n))
-}
-
-// QuorumOf resolves a quorum spec for n participants.
-func QuorumOf(spec string, n int) (int, error) {
-	k, arg, err := parseQuorum(spec)
-	if err != nil {
-		return 0, err
-	}
-	return quorumFor(k, arg, n), nil
 }
 
 // LocalVerdict is the only runtime target verdict. Remote observations never vote.

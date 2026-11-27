@@ -46,3 +46,12 @@ func TestAPIMessagesKeepTheirArguments(t *testing.T) {
 		t.Errorf("zh: %q %v", msg, ok)
 	}
 }
+
+// APIFormats lists the message formats lang translates.
+func APIFormats(lang string) []string {
+	var out []string
+	for f := range apiCatalog()[lang] {
+		out = append(out, f)
+	}
+	return out
+}

@@ -129,13 +129,6 @@ func (k *Keyed) evict(now time.Time) {
 	}
 }
 
-// Len returns the number of tracked keys.
-func (k *Keyed) Len() int {
-	k.mu.Lock()
-	defer k.mu.Unlock()
-	return len(k.m)
-}
-
 // Window allows at most Max events in any span of Per: the way chat
 // services count their limits ("20 messages a minute"). A token bucket
 // lets a full burst follow a full minute; a window does not.

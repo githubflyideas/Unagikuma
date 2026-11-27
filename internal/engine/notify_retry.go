@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"strconv"
 	"strings"
 	"time"
 
@@ -40,24 +39,4 @@ func notifyRetryBackoff(attempts int, base time.Duration) time.Duration {
 		return 5 * time.Second
 	}
 	return base
-}
-
-// retryAfterDuration parses a Retry-After hint from a provider response body
-// or header echo stored in Attempt.Response ("Retry-After: 3" or bare seconds).
-func retryAfterDuration(resp string) time.Duration {
-	resp = strings.TrimSpace(resp)
-	if resp == "" {
-		return 0
-	}
-	lower := strings.ToLower(resp)
-	if i := strings.Index(lower, "retry-after:"); i >= 0 {
-		resp = strings.TrimSpace(resp[i+len("retry-after:"):])
-		if j := strings.IndexAny(resp, "\r\n"); j >= 0 {
-			resp = resp[:j]
-		}
-	}
-	if n, err := strconv.Atoi(strings.TrimSpace(resp)); err == nil && n > 0 {
-		return time.Duration(n) * time.Second
-	}
-	return 0
 }

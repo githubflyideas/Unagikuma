@@ -96,14 +96,10 @@ func (r *Rules) Active() bool {
 	return r != nil && (r.Warn != nil || r.Crit != nil || r.WarnCond != nil || r.CritCond != nil || r.Change > 0)
 }
 
-// Parse reads the rules from a monitor's options (get returns "" for an
-// option that is not set). unit is the unit of the check's own value.
-func Parse(get func(string) string, unit string) (*Rules, error) {
-	return ParseWith(get, unit, nil)
-}
-
-// ParseWith is Parse for a check whose numbers have names: warn= and crit=
-// may then be a condition on several of them.
+// ParseWith reads the rules from a monitor's options (get returns "" for
+// an option that is not set). unit is the unit of the check's own value.
+// For a check whose numbers have names (fields), warn= and crit= may be a
+// condition on several of them.
 func ParseWith(get func(string) string, unit string, fields Fields) (*Rules, error) {
 	r := &Rules{Value: get("value"), Direction: "both", Unit: unit}
 	switch r.Value {

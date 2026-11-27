@@ -47,12 +47,3 @@ func APIMessage(lang, format string, args ...any) (string, bool) {
 	}
 	return fmt.Sprintf(tr, args...), true
 }
-
-// APIFormats lists the message formats lang translates (for tests).
-func APIFormats(lang string) []string {
-	var out []string
-	for f := range apiCatalog()[lang] {
-		out = append(out, f)
-	}
-	return out
-}

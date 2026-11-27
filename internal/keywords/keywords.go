@@ -201,12 +201,6 @@ func Lookup(word string) (*Entry, bool) {
 	return e, ok
 }
 
-// ByPort finds the entry registered for a port number.
-func ByPort(port int) (*Entry, bool) {
-	e, ok := byPort[port]
-	return e, ok
-}
-
 // Resolution is the outcome of resolving "host:word".
 type Resolution struct {
 	Entry *Entry // nil for an unknown numeric port (raw UDP)

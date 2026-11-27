@@ -69,20 +69,6 @@ func OfHost(host string) (scope Scope, known bool) {
 	return WAN, false
 }
 
-// OfAddrs classifies a resolved name: lan only if every address is lan.
-func OfAddrs(addrs []net.IP) Scope {
-	if len(addrs) == 0 {
-		return WAN
-	}
-	for _, ip := range addrs {
-		a, ok := netip.AddrFromSlice(ip)
-		if !ok || OfAddr(a) == WAN {
-			return WAN
-		}
-	}
-	return LAN
-}
-
 // tunnelPrefixes are interface name prefixes of overlay/VPN tunnels; targets
 // routed through them depend on the uplink and are wan.
 var tunnelPrefixes = []string{"tailscale", "wg", "zt", "tun", "utun", "ppp", "ipsec", "nordlynx"}
