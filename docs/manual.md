@@ -468,6 +468,10 @@ Every handover raises a **term**. Machines follow the highest term they have see
 
 An operator can also be limited to some `$SCOPE` sections (`region:north`, `bj`): they then change only what is written in those sections.
 
+### Sign-in limits
+
+Sign-ins are limited in layers, per source address. Requests are metered by the `api.login-rate` tunable (5 per minute by default), with a fixed overall limit across all addresses on top. Failed sign-ins count separately: five failures from one address within a minute lock that address out for a minute. The lock is applied before the password is checked — during it, even the correct password is refused as "too many requests" — and a successful sign-in clears the address's count, so a few typos cost nothing. The password checks themselves are bounded as a backstop (at most eight run at once), so a flood spread over many addresses stays bounded too.
+
 ### Groups
 
 A monitor can belong to a **group** (`group=` on the monitor, the Group field in its form). An account that is not an administrator can be given some groups when it is created or edited (**Settings › Users**): it then sees, and as an operator changes, only the monitors in those groups. An account given no groups sees no monitors. Monitors with no group are visible only to administrators.

@@ -53,6 +53,7 @@ type Server struct {
 	api       *ratelimit.Keyed
 	login     *ratelimit.Keyed
 	loginAll  *ratelimit.Keyed // every sign-in and setup together
+	loginFail *ratelimit.Failures
 	joins     *ratelimit.Keyed // cluster requests not yet authenticated
 	push      *ratelimit.Keyed
 	subs      *ratelimit.Keyed // public status page subscriptions, per IP
@@ -129,6 +130,9 @@ func New(a *app.App, o Options) *Server {
 	// concurrent password hashes this keeps a flood of failed logins
 	// from many addresses to a short queue.
 	s.loginAll = ratelimit.NewKeyed(loginAllRate, loginAllBurst, 0)
+	// Failed sign-ins per address, counted in front of the password
+	// check (see allowLogin): the shape vyos-sflow uses.
+	s.loginFail = ratelimit.NewFailures(loginMaxFails, loginFailWindow, loginLockFor, 0)
 	// The other limits take their rates from the tunables in applyRates.
 	s.api, s.login = ratelimit.NewKeyed(1, 1, 0), ratelimit.NewKeyed(1, 1, 0)
 	s.joins, s.push, s.subs = ratelimit.NewKeyed(1, 1, 0), ratelimit.NewKeyed(1, 1, 0), ratelimit.NewKeyed(1, 1, 0)
@@ -271,9 +275,27 @@ const (
 	loginAllBurst = 20
 )
 
-// allowLogin applies the per-address and the overall sign-in limits.
+// Failed sign-ins from one address: this many inside the window lock
+// the address out for loginLockFor. The lock is checked before the
+// password is, so a locked address costs no password check at all —
+// checking one is the expensive part (argon2id), and a flood from one
+// address must not keep the checks busy for everyone else. A success
+// clears the count (see sessionLogin).
+const (
+	loginMaxFails   = 5
+	loginFailWindow = time.Minute
+	loginLockFor    = time.Minute
+)
+
+// allowLogin applies the sign-in limits in order: the failure lockout
+// for the caller's address first (it is the cheapest refusal and the
+// one that protects the password checks), then the per-address and
+// overall request limits.
 func (s *Server) allowLogin(r *http.Request) error {
 	now := s.now()
+	if wait, locked := s.loginFail.Locked(s.ip(r), now); locked {
+		return rateLimited(wait)
+	}
 	if ok, wait := s.login.Allow(s.ip(r), now); !ok {
 		return rateLimited(wait)
 	}
