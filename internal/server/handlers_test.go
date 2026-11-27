@@ -73,7 +73,7 @@ func newEnv(t *testing.T, bind string, ui fstest.MapFS) *env {
 		o.Web = ui
 	}
 	srv := New(a, o)
-	ts := httptest.NewServer(srv.Handler())
+	ts := httptest.NewServer(specRecorder(t, srv, srv.Handler()))
 	jar, _ := cookiejar.New(nil)
 	t.Cleanup(func() {
 		ts.Close()
