@@ -995,14 +995,7 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
   .shell.chrome-bottom .top > .btn.sm:first-child { display: none; }
 }
 
-/* Colour dots beside the logo; the logo itself also cycles them. */
-.palette-dots { display: flex; gap: 5px; margin-top: 5px; }
-.pdot { width: 13px; height: 13px; padding: 0; border-radius: 50%; border: 1.5px solid var(--panel); box-shadow: 0 0 0 1px var(--border-strong); cursor: pointer; transition: transform .12s; }
-.pdot:hover { transform: scale(1.2); }
-.pdot[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--text); }
-.pdot.p-calm { background: #3d7c78; } .pdot.p-perfume { background: #a8566b; } .pdot.p-country { background: #e0a526; }
-.pdot.p-industrial { background: #f28c28; } .pdot.p-passion { background: #e0246f; }
-.shell.mini .side .palette-dots { display: none; }
+/* The colour wheel on the logo says that clicking it changes the colours. */
 .logo-cycle { position: relative; }
 .logo-cycle::after { content: ""; position: absolute; inset-inline-end: -2px; inset-block-end: -2px; width: 12px; height: 12px; border-radius: 50%;
   background: conic-gradient(#3d7c78, #a8566b, #e0a526, #f28c28, #e0246f, #3d7c78); border: 2px solid var(--panel); }

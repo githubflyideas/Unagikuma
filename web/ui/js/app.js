@@ -215,13 +215,7 @@ function Shell({ user, onLogout, onLang }) {
   const paletteTip = t('ui.palette.cycle', { name: t('ui.theme.' + palette) });
   const logoBtn = html`<button type="button" class="logo-cycle" title=${paletteTip} aria-label=${paletteTip} onClick=${cyclePalette}><${Logo} /></button>`;
   const edition = html`<div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div>`;
-  const brandBlock = (cls) => html`<div class=${cls}>${logoBtn}<div><a href="#/">${PRODUCT}${edition}</a>${dots}</div></div>`;
-  // Colour: five small circles next to the logo (the logo cycles them too).
-  const dots = html`<span class="palette-dots" role="group" aria-label=${t('ui.palette')}>
-      ${PALETTES.map((id) => html`<button type="button" class=${'pdot p-' + id} aria-pressed=${String(palette === id)}
-        title=${t('ui.theme.' + id)} aria-label=${t('ui.theme.' + id)}
-        onClick=${(e) => { e.preventDefault(); e.stopPropagation(); changePalette(id); }}></button>`)}
-    </span>`;
+  const brandBlock = (cls) => html`<div class=${cls}>${logoBtn}<div><a href="#/">${PRODUCT}${edition}</a></div></div>`;
   const nodeName = ov.data && ov.data.instance ? html`<div class="host ellipsis" title=${ov.data.instance}>${ov.data.instance}</div>` : null;
   const runMode = html`<${RunMode} ov=${ov.data} live=${live} />`;
   const accountDock = html`<div class="account-dock">

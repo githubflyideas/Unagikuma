@@ -40,7 +40,7 @@
 :root[data-style="atelier"] .side .foot button.linkish, :root[data-style="atelier"] .side .foot a { color: var(--accent); }
 :root[data-style="atelier"] .side .foot .btn { background: transparent; border: 1px solid var(--border-strong); color: var(--text); }
 /* the page title is a large italic head */
-:root[data-style="atelier"] .top { position: static; margin: 0 auto; width: 100%; max-width: 1180px; padding: 100px 12px 6px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
+:root[data-style="atelier"] .top { position: static; margin: 0 auto; width: 100%; max-width: 1180px; padding: 84px 12px 6px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
 :root[data-style="atelier"] .top > .btn.sm:first-child { display: none; }
 :root[data-style="atelier"] .top .crumbs { flex: 0 0 100%; order: -1; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 44px; line-height: 1.1; color: var(--accent); letter-spacing: .01em; margin-bottom: 6px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
 :root[data-style="atelier"] .main { padding-inline: 96px; }
