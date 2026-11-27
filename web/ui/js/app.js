@@ -22,26 +22,23 @@ import { PaletteHost, openPalette } from './views/palette.js';
 import { loadBrand, loadMyStyle, applyCachedStyle, onStyleLoaded, signedOut, currentStyle, setMyStyle, brand, CHROME } from './styles.js';
 import { storageGet, storageSet } from './storage.js';
 
-// Classic is the default theme; the other four are optional layouts,
-// each with three curated colour palettes.
+// Classic is the default layout; the other four are optional layouts.
+// Colour comes from five shared palettes, cycled by clicking the logo.
 const THEMES = ['classic', 'retail', 'noc', 'starbridge', 'atelier'];
-const PALETTE_IDS = ['a', 'b', 'c'];
-const OLD_TONES = { light: 'a', paper: 'a', dark: 'c', ink: 'c', mist: 'a', sport: 'a', slate: 'c',
-  graphite: 'c', sky: 'a', violet: 'b', brand: 'a', auto: 'a', perfume: 'a', country: 'b',
-  industrial: 'c', calm: 'a', passion: 'c' };
-const SWATCH = {
-  classic:   { a: 'linear-gradient(135deg, #eef1f4 50%, #1f7a4d 50%)', b: 'linear-gradient(135deg, #f4ead8 50%, #c4852a 50%)', c: 'linear-gradient(135deg, #0e141b 50%, #2dd4bf 50%)' },
-  retail:    { a: 'linear-gradient(135deg, #ffd21f 50%, #0a4fd6 50%)', b: 'linear-gradient(135deg, #e8f6ee 50%, #0f8a4b 50%)', c: 'linear-gradient(135deg, #1a1030 50%, #ff4fa3 50%)' },
-  noc:       { a: 'linear-gradient(135deg, #050a12 50%, #38bdf8 50%)', b: 'linear-gradient(135deg, #f4f7fb 50%, #2563eb 50%)', c: 'linear-gradient(135deg, #111318 50%, #22d3a6 50%)' },
-  starbridge:{ a: 'linear-gradient(135deg, #04060f 50%, #c084fc 50%)', b: 'linear-gradient(135deg, #02141a 50%, #22d3ee 50%)', c: 'linear-gradient(135deg, #140804 50%, #f59e0b 50%)' },
-  atelier:   { a: 'linear-gradient(135deg, #f5ecdd 50%, #b9500d 50%)', b: 'linear-gradient(135deg, #2a1b10 50%, #d4a017 50%)', c: 'linear-gradient(135deg, #f7f2ea 50%, #3b4f7a 50%)' },
-};
+const PALETTES = ['calm', 'perfume', 'country', 'industrial', 'passion'];
+const OLD_PALETTES = { light: 'calm', paper: 'calm', dark: 'industrial', ink: 'industrial',
+  mist: 'calm', sport: 'calm', slate: 'industrial', graphite: 'industrial', sky: 'calm',
+  violet: 'perfume', brand: 'calm', auto: 'calm', a: 'calm', b: 'country', c: 'industrial' };
 function paletteOf(v) {
-  v = OLD_TONES[v] || v;
-  return PALETTE_IDS.includes(v) ? v : 'a';
+  v = OLD_PALETTES[v] || v;
+  return PALETTES.includes(v) ? v : 'calm';
 }
 function applyPalette(v) {
-  document.documentElement.dataset.palette = paletteOf(v);
+  document.documentElement.dataset.theme = paletteOf(v);
+}
+function nextPalette(v) {
+  const cur = paletteOf(v);
+  return PALETTES[(PALETTES.indexOf(cur) + 1) % PALETTES.length];
 }
 
 // The interface can be shown larger, as a whole: text, icons, charts and
@@ -198,8 +195,8 @@ function Shell({ user, onLogout, onLang }) {
   const styleId = currentStyle();
   const chrome = CHROME[styleId] || 'side';
   useEffect(() => {
-    const v = storage('unagikuma.theme');
-    if (v && OLD_TONES[v] && !storage('unagikuma.palette')) storage('unagikuma.palette', OLD_TONES[v]);
+    const v = storage('unagikuma.palette') || storage('unagikuma.theme');
+    if (v && paletteOf(v) && v !== paletteOf(v)) storage('unagikuma.palette', paletteOf(v));
   }, []);
   useEffect(() => onStyleLoaded(() => setStyleRev(n => n + 1)), []);
   const [mini, setMini] = useState(storage('unagikuma.side') === 'mini');
@@ -222,21 +219,20 @@ function Shell({ user, onLogout, onLang }) {
     setStyleRev(n => n + 1);
   };
   const changePalette = (v) => { setPalette(v); storage('unagikuma.palette', v); applyPalette(v); };
+  const cyclePalette = (e) => { e.preventDefault(); e.stopPropagation(); changePalette(nextPalette(palette)); };
+  const paletteTip = t('ui.palette.cycle', { name: t('ui.theme.' + palette) });
+  const logoBtn = html`<button type="button" class="logo-cycle" title=${paletteTip} aria-label=${paletteTip} onClick=${cyclePalette}><${Logo} /></button>`;
+  const edition = html`<div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div>`;
+  const brandBlock = (cls) => html`<div class=${cls}>${logoBtn}<div><a href="#/">${PRODUCT}${edition}</a></div></div>`;
   const themeDock = html`<div class="theme-dock" role="group" aria-label=${t('ui.theme')}>
       <div class="themes styles" role="list">
         ${THEMES.map((id) => {
           const allowed = id === 'classic' || (brand.styles || []).some(x => x.id === id && x.allowed);
           return html`<button type="button" role="listitem" class="style-swatch" aria-pressed=${String(styleId === id)} disabled=${!allowed}
             title=${t('ui.style.' + id)} aria-label=${t('ui.style.' + id)}
-            style=${{ background: (SWATCH[id] && SWATCH[id][styleId === id ? palette : 'a']) || 'var(--accent)' }}
+            style=${{ background: 'var(--accent)' }}
             onClick=${() => allowed && changeTheme(id)}><span>${t('ui.style.' + id)}</span></button>`;
         })}
-      </div>
-      <div class="themes palettes" role="radiogroup" aria-label=${t('ui.palette')}>
-        ${PALETTE_IDS.map((id) => html`<button type="button" aria-pressed=${String(palette === id)}
-          title=${t('ui.palette.' + styleId + '.' + id)} aria-label=${t('ui.palette.' + styleId + '.' + id)}
-          style=${{ background: (SWATCH[styleId] && SWATCH[styleId][id]) || 'var(--accent)' }}
-          onClick=${() => changePalette(id)}></button>`)}
       </div>
     </div>`;
   const nodeName = ov.data && ov.data.instance ? html`<div class="host ellipsis" title=${ov.data.instance}>${ov.data.instance}</div>` : null;
@@ -299,8 +295,7 @@ function Shell({ user, onLogout, onLang }) {
         </a>`);
   return html`<div class=${'shell chrome-' + chrome + (mini ? ' mini' : '')} data-style-rev=${styleRev}>
     <aside class=${'side' + (open ? ' open' : '')}>
-      <a class="brand" href="#/"><${Logo} /><div>${PRODUCT}
-        <div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div></div></a>
+      ${brandBlock('brand')}
       ${chrome === 'side' && themeDock}
       <nav class="nav">${navLinks}</nav>
       <div class="foot">
@@ -313,8 +308,7 @@ function Shell({ user, onLogout, onLang }) {
     <div class="main">
       <header class="top">
         <button class="btn sm" onClick=${toggleSide} aria-label=${mini ? t('ui.side.expand') : t('ui.side.collapse')} title=${mini ? t('ui.side.expand') : t('ui.side.collapse')}>☰</button>
-        ${chrome !== 'side' && html`<a class="brand top-brand" href="#/"><${Logo} /><div>${PRODUCT}
-          <div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div></div></a>`}
+        ${chrome !== 'side' && brandBlock('brand top-brand')}
         <div class="crumbs">${t((NAV.find(n => n[0] === (first === '/expiry' ? '/monitors' : first)) || NAV[0])[1])}</div>
         <${Search} route=${route} />
         ${ov.data && html`<${Verdict} ov=${ov.data} />`}

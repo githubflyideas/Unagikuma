@@ -2,7 +2,7 @@
 
 A style changes how the console is laid out (cards, tables, spacing,
 type, and whether the navigation is a sidebar, a top bar or a bottom
-bar). Each style ships three colour palettes the account can switch.
+bar). Colour comes from five shared palettes (Calm, Perfume, Country, Industrial, Passion); click the logo to cycle them.
 
 1. Write `web/ui/styles/<id>.css`. The id is lowercase letters, digits
    and `-`. Scope every rule under `:root[data-style="<id>"]` and use the
@@ -25,5 +25,5 @@ bar). Each style ships three colour palettes the account can switch.
 The shipped styles are Classic (sidebar) and the four registered
 scenario styles: retail (Chain Store, top menu), noc (Modern Dashboard,
 top menu), starbridge (Starship, bottom menu) and atelier (Craftsman
-Workshop, top menu). Each has three palettes. A stored choice naming any
-other style falls back to "classic".
+Workshop, top menu). All five styles use the same five palettes. A stored
+choice naming any other style falls back to "classic".
