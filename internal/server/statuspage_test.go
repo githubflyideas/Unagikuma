@@ -122,8 +122,8 @@ main    IN STATUSPAGE "Service status" select="group:public" domain=status.examp
 
 	// An announcement reaches the page, the feed and the subscriber.
 	var a map[string]any
-	if code := e.do("POST", "/api/v1/status-pages/main/announcements",
-		map[string]any{"title": "Database maintenance", "body": "Tonight 22:00", "severity": "maintenance", "notify": true}, &a); code != 200 {
+	if code := e.do("POST", "/api/v1/announcements",
+		map[string]any{"title": "Database maintenance", "body": "Tonight 22:00", "severity": "maintenance", "notify": true, "pinned": true}, &a); code != 200 || a["pinned"] != true {
 		t.Fatalf("announce: %d %v", code, a)
 	}
 	select {

@@ -4,11 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/engine"
 )
@@ -68,7 +68,7 @@ func checkHeartbeatSetting(key, value string) error {
 
 // HeartbeatFields are the facts a heartbeat can carry, in the order they
 // are sent. The setting lists the chosen ones; empty means all of them.
-var HeartbeatFields = []string{"host", "status", "problems", "monitors", "time"}
+var HeartbeatFields = []string{"host", "ip", "agent"}
 
 func heartbeatFieldsOf(v string) []string {
 	switch v {
@@ -88,26 +88,49 @@ func heartbeatFieldsOf(v string) []string {
 
 // HeartbeatInfo is what a heartbeat says about this machine.
 type HeartbeatInfo struct {
-	Host     string `json:"host"`
-	Status   string `json:"status"` // ok or problems
-	Problems int    `json:"problems"`
-	Monitors int    `json:"monitors"`
-	Time     string `json:"time"`
+	Host  string `json:"host"`
+	IP    string `json:"ip"`
+	Agent string `json:"agent"` // "unagikuma <version>"
 }
 
 func (a *App) heartbeatInfo() HeartbeatInfo {
-	in := HeartbeatInfo{Host: a.instance(), Status: "ok", Time: a.now().UTC().Format(time.RFC3339)}
-	if a.engine != nil {
-		ov := a.engine.Overview()
-		for _, c := range ov.Counts {
-			in.Monitors += c
-		}
-		in.Problems = ov.Unhandled
-		if ov.Unhandled > 0 {
-			in.Status = "problems"
+	ver := strings.TrimSpace(a.Version())
+	if ver == "" {
+		ver = "dev"
+	}
+	return HeartbeatInfo{Host: a.instance(), IP: localIP(), Agent: "unagikuma " + ver}
+}
+
+// localIP is this machine's preferred outbound unicast address.
+func localIP() string {
+	c, err := net.Dial("udp", "8.8.8.8:80")
+	if err == nil {
+		defer c.Close()
+		if a, ok := c.LocalAddr().(*net.UDPAddr); ok && a.IP != nil && !a.IP.IsLoopback() {
+			if v4 := a.IP.To4(); v4 != nil {
+				return v4.String()
+			}
+			return a.IP.String()
 		}
 	}
-	return in
+	ifs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	var v6 string
+	for _, addr := range ifs {
+		ipnet, ok := addr.(*net.IPNet)
+		if !ok || ipnet.IP == nil || ipnet.IP.IsLoopback() || ipnet.IP.IsLinkLocalUnicast() {
+			continue
+		}
+		if v4 := ipnet.IP.To4(); v4 != nil {
+			return v4.String()
+		}
+		if v6 == "" {
+			v6 = ipnet.IP.String()
+		}
+	}
+	return v6
 }
 
 // buildHeartbeat makes the call from the settings (get reads one) and the
@@ -120,19 +143,14 @@ func buildHeartbeat(get func(string) string, raw string, in HeartbeatInfo) (engi
 	}
 	q, changed := u.Query(), false
 	fields := heartbeatFieldsOf(get("heartbeat_fields"))
-	vals := map[string]any{"host": in.Host, "status": in.Status, "problems": in.Problems, "monitors": in.Monitors, "time": in.Time}
+	vals := map[string]any{"host": in.Host, "ip": in.IP, "agent": in.Agent}
 	if get("heartbeat_method") == "PUSH" {
 		hr.Method = http.MethodPost
 		if get("heartbeat_format") == "text" {
 			hr.Header.Set("Content-Type", "text/plain; charset=utf-8")
 			parts := []string{}
 			for _, f := range fields {
-				switch f {
-				case "problems", "monitors":
-					parts = append(parts, fmt.Sprint(vals[f], " ", f))
-				default:
-					parts = append(parts, fmt.Sprint(vals[f]))
-				}
+				parts = append(parts, fmt.Sprint(vals[f]))
 			}
 			hr.Body = strings.Join(parts, " ")
 		} else {

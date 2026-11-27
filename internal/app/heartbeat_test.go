@@ -11,7 +11,7 @@ import (
 )
 
 func TestBuildHeartbeat(t *testing.T) {
-	in := HeartbeatInfo{Host: "nas01", Status: "ok", Problems: 0, Monitors: 47, Time: "2026-11-13T08:00:00Z"}
+	in := HeartbeatInfo{Host: "nas01", IP: "192.168.1.10", Agent: "unagikuma 3.0.1"}
 	cases := []struct {
 		name string
 		set  map[string]string
@@ -19,7 +19,7 @@ func TestBuildHeartbeat(t *testing.T) {
 		want func(t *testing.T, method, url, auth, key, ctype, body string)
 	}{
 		{"plain GET with host info", nil, "https://hc-ping.com/abc", func(t *testing.T, m, u, _, _, _, b string) {
-			if m != "GET" || b != "" || u != "https://hc-ping.com/abc?host=nas01&monitors=47&problems=0&status=ok&time=2026-11-13T08%3A00%3A00Z" {
+			if m != "GET" || b != "" || u != "https://hc-ping.com/abc?agent=unagikuma+3.0.1&host=nas01&ip=192.168.1.10" {
 				t.Fatalf("%s %s %q", m, u, b)
 			}
 		}},
@@ -35,22 +35,22 @@ func TestBuildHeartbeat(t *testing.T) {
 		}},
 		{"PUSH JSON with basic auth", map[string]string{"heartbeat_method": "PUSH", "heartbeat_auth": "basic", "heartbeat_user": "u", "heartbeat_password": "p"}, "https://x.example/hb", func(t *testing.T, m, u, auth, _, ct, b string) {
 			if m != "POST" || u != "https://x.example/hb" || auth != "Basic dTpw" || ct != "application/json" ||
-				b != `{"host":"nas01","status":"ok","problems":0,"monitors":47,"time":"2026-11-13T08:00:00Z"}` {
+				b != `{"host":"nas01","ip":"192.168.1.10","agent":"unagikuma 3.0.1"}` {
 				t.Fatalf("%s %s %s %s %s", m, u, auth, ct, b)
 			}
 		}},
-		{"only the chosen fields", map[string]string{"heartbeat_fields": "time,host"}, "https://x.example/hb", func(t *testing.T, _, u, _, _, _, _ string) {
-			if u != "https://x.example/hb?host=nas01&time=2026-11-13T08%3A00%3A00Z" {
+		{"only the chosen fields", map[string]string{"heartbeat_fields": "agent,host"}, "https://x.example/hb", func(t *testing.T, _, u, _, _, _, _ string) {
+			if u != "https://x.example/hb?agent=unagikuma+3.0.1&host=nas01" {
 				t.Fatal(u)
 			}
 		}},
-		{"PUSH JSON with the chosen fields", map[string]string{"heartbeat_method": "PUSH", "heartbeat_fields": "status,problems"}, "https://x.example/hb", func(t *testing.T, _, _, _, _, _, b string) {
-			if b != `{"status":"ok","problems":0}` {
+		{"PUSH JSON with the chosen fields", map[string]string{"heartbeat_method": "PUSH", "heartbeat_fields": "ip,agent"}, "https://x.example/hb", func(t *testing.T, _, _, _, _, _, b string) {
+			if b != `{"ip":"192.168.1.10","agent":"unagikuma 3.0.1"}` {
 				t.Fatal(b)
 			}
 		}},
 		{"PUSH text with an API key header", map[string]string{"heartbeat_method": "PUSH", "heartbeat_format": "text", "heartbeat_auth": "apikey", "heartbeat_key_value": "k1"}, "https://x.example/hb", func(t *testing.T, _, _, _, key, ct, b string) {
-			if key != "k1" || !strings.HasPrefix(ct, "text/plain") || b != "nas01 ok 0 problems 47 monitors 2026-11-13T08:00:00Z" {
+			if key != "k1" || !strings.HasPrefix(ct, "text/plain") || b != "nas01 192.168.1.10 unagikuma 3.0.1" {
 				t.Fatalf("%s %s %q", key, ct, b)
 			}
 		}},

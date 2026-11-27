@@ -261,7 +261,7 @@ await step('a new e-mail address is offered for the contact directory', async ()
 });
 
 await step('a change is announced and closed with a receipt', async () => {
-  await page.goto(base + '/#/notices/changes');
+  await page.goto(base + '/#/notices/pages');
   await page.click('button:has-text("Announce a change")');
   await page.fill('.modal .field:has(label:text-is("Title")) input', 'Core switch upgrade');
   await page.fill('.modal .field:has(label:text-is("Impact")) input', 'VPN down for 10 minutes');
@@ -315,7 +315,7 @@ await step('phones get no sideways scrolling', async () => {
   const p = await phone.newPage();
   watch(p);
   const mon = (await api('/monitors')).items.find((m) => m.target === '127.0.0.1:1').name;
-  for (const route of ['#/', '#/monitors', '#/monitors/' + encodeURIComponent(mon), '#/alerts/channels', '#/alerts/contacts', '#/notices/changes', '#/notices/pages', '#/settings']) {
+  for (const route of ['#/', '#/monitors', '#/monitors/' + encodeURIComponent(mon), '#/alerts/channels', '#/alerts/contacts', '#/notices/pages', '#/notices/pages', '#/settings']) {
     await p.goto(base + '/' + route);
     await p.waitForTimeout(800);
     const w = await p.evaluate(() => document.documentElement.scrollWidth);

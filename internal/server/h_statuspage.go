@@ -46,11 +46,7 @@ func (s *Server) statusPages(w http.ResponseWriter, r *http.Request) (any, error
 }
 
 func (s *Server) announcements(w http.ResponseWriter, r *http.Request) (any, error) {
-	sp := s.statusPage(r.PathValue("name"))
-	if sp == nil {
-		return nil, notFound("status page")
-	}
-	return s.app.Store().Announcements(sp.Name, s.now().Add(-90*24*time.Hour), 200)
+	return s.app.Store().Announcements(s.now().Add(-90*24*time.Hour), 200)
 }
 
 type announcementReq struct {
@@ -58,42 +54,62 @@ type announcementReq struct {
 	Body     string `json:"body"`
 	Severity string `json:"severity"`
 	Resolved bool   `json:"resolved"`
-	Notify   bool   `json:"notify"` // e-mail the page's subscribers
+	Notify   bool   `json:"notify"` // e-mail status-page subscribers
+	Pinned   bool   `json:"pinned"`
+	StartsAt string `json:"starts_at"`
+	EndsAt   string `json:"ends_at"`
 }
 
-func (req *announcementReq) check() error {
+func (req *announcementReq) check() (starts, ends *time.Time, err error) {
 	req.Title, req.Body = strings.TrimSpace(req.Title), strings.TrimSpace(req.Body)
 	if req.Title == "" || len([]rune(req.Title)) > 200 || len(req.Body) > 20000 {
-		return Errorf(http.StatusBadRequest, CodeInvalid, "an announcement needs a title (at most 200 characters) and a body of at most 20000")
+		return nil, nil, Errorf(http.StatusBadRequest, CodeInvalid, "an announcement needs a title (at most 200 characters) and a body of at most 20000")
 	}
 	if req.Severity == "" {
 		req.Severity = "info"
 	}
 	if !slices.Contains(store.AnnouncementSeverities, req.Severity) {
-		return Errorf(http.StatusBadRequest, CodeInvalid, "severity must be one of %s", strings.Join(store.AnnouncementSeverities, ", "))
+		return nil, nil, Errorf(http.StatusBadRequest, CodeInvalid, "severity must be one of %s", strings.Join(store.AnnouncementSeverities, ", "))
 	}
-	return nil
+	parse := func(s, name string) (*time.Time, error) {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return nil, nil
+		}
+		t, e := time.Parse(time.RFC3339, s)
+		if e != nil {
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%s must be RFC3339", name)
+		}
+		return &t, nil
+	}
+	if starts, err = parse(req.StartsAt, "starts_at"); err != nil {
+		return nil, nil, err
+	}
+	if ends, err = parse(req.EndsAt, "ends_at"); err != nil {
+		return nil, nil, err
+	}
+	if starts != nil && ends != nil && !ends.After(*starts) {
+		return nil, nil, Errorf(http.StatusBadRequest, CodeInvalid, "ends_at must be after starts_at")
+	}
+	return starts, ends, nil
 }
 
 func (s *Server) announcementCreate(w http.ResponseWriter, r *http.Request) (any, error) {
-	sp := s.statusPage(r.PathValue("name"))
-	if sp == nil {
-		return nil, notFound("status page")
-	}
 	var req announcementReq
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
-	if err := req.check(); err != nil {
-		return nil, err
-	}
-	a, err := s.app.Store().SaveAnnouncement(store.Announcement{Page: sp.Name, Title: req.Title, Body: req.Body,
-		Severity: req.Severity, Author: authOf(r).user}, req.Resolved)
+	starts, ends, err := req.check()
 	if err != nil {
 		return nil, err
 	}
-	s.announced(sp, a, req.Notify)
-	auditOf(r).target = sp.Name
+	a, err := s.app.Store().SaveAnnouncement(store.Announcement{Title: req.Title, Body: req.Body,
+		Severity: req.Severity, Author: authOf(r).user, Pinned: req.Pinned, StartsAt: starts, EndsAt: ends}, req.Resolved)
+	if err != nil {
+		return nil, err
+	}
+	s.announced(a, req.Notify)
+	auditOf(r).target = a.Title
 	return a, nil
 }
 
@@ -109,18 +125,18 @@ func (s *Server) announcementUpdate(w http.ResponseWriter, r *http.Request) (any
 	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
 		return nil, err
 	}
-	if err := req.check(); err != nil {
+	starts, ends, err := req.check()
+	if err != nil {
 		return nil, err
 	}
 	prev.Title, prev.Body, prev.Severity = req.Title, req.Body, req.Severity
+	prev.Pinned, prev.StartsAt, prev.EndsAt = req.Pinned, starts, ends
 	a, err := s.app.Store().SaveAnnouncement(prev, req.Resolved)
 	if err != nil {
 		return nil, err
 	}
-	if sp := s.statusPage(a.Page); sp != nil {
-		s.announced(sp, a, req.Notify)
-	}
-	auditOf(r).target = a.Page
+	s.announced(a, req.Notify)
+	auditOf(r).target = a.Title
 	return a, nil
 }
 
@@ -135,38 +151,49 @@ func (s *Server) announcementDelete(w http.ResponseWriter, r *http.Request) (any
 	if err := s.app.Store().DeleteAnnouncement(id); err != nil {
 		return nil, err
 	}
-	s.pageCache.drop(a.Page)
-	auditOf(r).target = a.Page
+	s.dropPageCache()
+	auditOf(r).target = a.Title
 	return map[string]any{"ok": true}, nil
 }
 
 // announced refreshes the public page and, when asked, e-mails the
 // subscribers in the background.
-func (s *Server) announced(sp *config.StatusPage, a store.Announcement, notifySubs bool) {
-	s.pageCache.drop(sp.Name)
-	if !notifySubs || sp.Subscribe == "" {
+func (s *Server) dropPageCache() {
+	for _, sp := range s.app.EffectiveConfig().StatusPages {
+		s.pageCache.drop(sp.Name)
+	}
+}
+
+func (s *Server) announced(a store.Announcement, notifySubs bool) {
+	s.dropPageCache()
+	if !notifySubs {
 		return
 	}
-	subs, err := s.app.Store().Subscribers(sp.Name)
-	if err != nil || len(subs) == 0 {
-		return
-	}
-	ch, err := s.subscribeChannel(sp)
-	if err != nil {
-		s.log.Warn("status page subscriptions", "page", sp.Name, "err", err)
-		return
-	}
-	title := "[" + sp.Title + "] " + a.Title
-	if a.ResolvedAt != nil {
-		title = "[" + sp.Title + "] ✓ " + a.Title
-	}
-	link := s.pageURL(sp)
-	go func() {
-		for _, sub := range subs {
-			body := a.Body + "\n\n" + link + "\n\n" + "Unsubscribe: " + link + "?unsubscribe=" + url.QueryEscape(sub.Token)
-			s.mail(ch, sub.Email, title, body)
+	for _, sp := range s.app.EffectiveConfig().StatusPages {
+		if sp.Subscribe == "" {
+			continue
 		}
-	}()
+		subs, err := s.app.Store().Subscribers(sp.Name)
+		if err != nil || len(subs) == 0 {
+			continue
+		}
+		ch, err := s.subscribeChannel(sp)
+		if err != nil {
+			s.log.Warn("status page subscriptions", "page", sp.Name, "err", err)
+			continue
+		}
+		title := "[" + sp.Title + "] " + a.Title
+		if a.ResolvedAt != nil {
+			title = "[" + sp.Title + "] ✓ " + a.Title
+		}
+		link := s.pageURL(sp)
+		go func(sp *config.StatusPage, ch notify.Channel, subs []store.Subscriber, title, link string) {
+			for _, sub := range subs {
+				body := a.Body + "\n\n" + link + "\n\n" + "Unsubscribe: " + link + "?unsubscribe=" + url.QueryEscape(sub.Token)
+				s.mail(ch, sub.Email, title, body)
+			}
+		}(sp, ch, subs, title, link)
+	}
 }
 
 // subscribeChannel is the page's e-mail channel with its secrets resolved.
@@ -313,7 +340,7 @@ func (s *Server) feed(w http.ResponseWriter, r *http.Request) {
 		writeError(w, notFound("status page"))
 		return
 	}
-	list, err := s.app.Store().Announcements(sp.Name, s.now().Add(-90*24*time.Hour), 50)
+	list, err := s.app.Store().Announcements(s.now().Add(-90*24*time.Hour), 50)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -394,39 +421,6 @@ func (c *pageCache) drop(key string) {
 	c.mu.Unlock()
 }
 
-// statusPageCreate adds a STATUSPAGE record: a public page for the
-// monitors its filter selects.
-func (s *Server) statusPageCreate(w http.ResponseWriter, r *http.Request) (any, error) {
-	var req struct {
-		Name   string `json:"name"`
-		Title  string `json:"title"`
-		Select string `json:"select"`
-	}
-	if err := decodeJSON(r, s.maxBody(), &req); err != nil {
-		return nil, err
-	}
-	if !config.ValidName(req.Name) || strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Select) == "" {
-		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "a status page needs a name, a title and which monitors it shows")
-	}
-	if _, err := config.ParseSelector(req.Select); err != nil {
-		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "select: %v", err)
-	}
-	if s.app.EffectiveConfig().HasName(req.Name) {
-		return nil, Errorf(http.StatusConflict, CodeConflict, "%s already exists", req.Name)
-	}
-	spec := config.RecordSpec{Name: req.Name, Type: "STATUSPAGE", Target: strings.TrimSpace(req.Title), Opts: []config.Opt{{Key: "select", Value: req.Select}}}
-	st, err := s.editConfig(r, "add status page "+req.Name, func(f *config.File) error { return f.UpsertRecord(spec) })
-	if err != nil {
-		return nil, s.configError(err)
-	}
-	auditOf(r).target = req.Name
-	out := s.savedRecord(st, req.Name)
-	if sp := s.statusPage(req.Name); sp != nil {
-		out["url"] = s.pageURL(sp)
-	}
-	return out, nil
-}
-
 // statusPageUpdate changes a status page's title and the monitors it
 // shows; its other options (domain, subscriptions, look) stay as written.
 func (s *Server) statusPageUpdate(w http.ResponseWriter, r *http.Request) (any, error) {
@@ -474,20 +468,4 @@ func (s *Server) statusPageUpdate(w http.ResponseWriter, r *http.Request) (any, 
 	}
 	auditOf(r).target = name
 	return s.savedRecord(st, name), nil
-}
-
-// statusPageDelete removes a status page. Its announcements and
-// subscribers are kept, so a page added again under the same name has
-// them back.
-func (s *Server) statusPageDelete(w http.ResponseWriter, r *http.Request) (any, error) {
-	name := r.PathValue("name")
-	if s.statusPage(name) == nil {
-		return nil, notFound("status page")
-	}
-	st, err := s.editConfig(r, "delete status page "+name, ifMatch(r, name, func(f *config.File) error { return f.DeleteRecord(name) }))
-	if err != nil {
-		return nil, s.configError(err)
-	}
-	auditOf(r).target = name
-	return s.saved(st), nil
 }

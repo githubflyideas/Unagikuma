@@ -306,7 +306,7 @@ func (s *Server) groupOverview(r *http.Request) map[string]any {
 		"instance": s.app.Instance(), "serial": ov.Serial, "layout": "single", "counts": counts, "unhandled": unhandled,
 		"degraded": degraded, "health": health, "channels": []any{}, "expiring": expiring, "open_system": 0,
 		"alerting_configured": true, "nodes": []any{}, "paths": []any{}, "tactical": s.tactical(r), "script_problems": 0,
-		"contact_issues": 0, "people": 0, "status_pages": 0, "limited": true,
+		"contact_issues": 0, "people": 0, "status_pages": 0, "announcements": 0, "limited": true,
 	}
 }
 

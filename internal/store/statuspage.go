@@ -7,14 +7,16 @@ import (
 	"time"
 )
 
-// Announcement is a notice posted on a public status page.
+// Announcement is a notice on the single announcement board.
 type Announcement struct {
 	ID         int64      `json:"id"`
-	Page       string     `json:"page,omitempty"`
 	Title      string     `json:"title"`
 	Body       string     `json:"body"`
 	Severity   string     `json:"severity"` // info | minor | major | maintenance
 	Author     string     `json:"author,omitempty"`
+	Pinned     bool       `json:"pinned"`
+	StartsAt   *time.Time `json:"starts_at,omitempty"`
+	EndsAt     *time.Time `json:"ends_at,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`
 	ResolvedAt *time.Time `json:"resolved_at,omitempty"`
@@ -29,15 +31,15 @@ func (s *Store) SaveAnnouncement(a Announcement, resolved bool) (Announcement, e
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
 	if a.ID == 0 {
-		res, err := s.core.Exec(`INSERT INTO announcements(page,title,body,severity,author,created_at,updated_at) VALUES(?,?,?,?,?,?,?)`,
-			a.Page, a.Title, a.Body, a.Severity, a.Author, ms(now), ms(now))
+		res, err := s.core.Exec(`INSERT INTO announcements(title,body,severity,author,pinned,starts_at,ends_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)`,
+			a.Title, a.Body, a.Severity, a.Author, boolInt(a.Pinned), msPtr(a.StartsAt), msPtr(a.EndsAt), ms(now), ms(now))
 		if err != nil {
 			return a, err
 		}
 		a.ID, _ = res.LastInsertId()
 	} else {
-		res, err := s.core.Exec(`UPDATE announcements SET title=?, body=?, severity=?, updated_at=? WHERE id=?`,
-			a.Title, a.Body, a.Severity, ms(now), a.ID)
+		res, err := s.core.Exec(`UPDATE announcements SET title=?, body=?, severity=?, pinned=?, starts_at=?, ends_at=?, updated_at=? WHERE id=?`,
+			a.Title, a.Body, a.Severity, boolInt(a.Pinned), msPtr(a.StartsAt), msPtr(a.EndsAt), ms(now), a.ID)
 		if err != nil {
 			return a, err
 		}
@@ -81,15 +83,21 @@ func (s *Store) DeleteAnnouncement(id int64) error {
 	return nil
 }
 
-// Announcements lists a page's open announcements and those resolved
-// since the given time, newest first.
-func (s *Store) Announcements(page string, since time.Time, limit int) ([]Announcement, error) {
-	return s.queryAnnouncements(`WHERE page=? AND (resolved_at IS NULL OR resolved_at >= ?) ORDER BY created_at DESC, id DESC LIMIT ?`,
-		page, ms(since), limit)
+// Announcements lists open announcements and those resolved since the
+// given time, pinned first, then newest first.
+func (s *Store) AnnouncementCount() (int, error) {
+	var n int
+	err := s.core.QueryRow(`SELECT COUNT(*) FROM announcements`).Scan(&n)
+	return n, err
+}
+
+func (s *Store) Announcements(since time.Time, limit int) ([]Announcement, error) {
+	return s.queryAnnouncements(`WHERE resolved_at IS NULL OR resolved_at >= ? ORDER BY pinned DESC, created_at DESC, id DESC LIMIT ?`,
+		ms(since), limit)
 }
 
 func (s *Store) queryAnnouncements(where string, args ...any) ([]Announcement, error) {
-	rows, err := s.core.Query(`SELECT id,page,title,body,severity,author,created_at,updated_at,resolved_at FROM announcements `+where, args...)
+	rows, err := s.core.Query(`SELECT id,title,body,severity,author,pinned,starts_at,ends_at,created_at,updated_at,resolved_at FROM announcements `+where, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,11 +105,14 @@ func (s *Store) queryAnnouncements(where string, args ...any) ([]Announcement, e
 	out := []Announcement{}
 	for rows.Next() {
 		var a Announcement
+		var pin int
+		var start, end, r sql.NullInt64
 		var c, u int64
-		var r sql.NullInt64
-		if err := rows.Scan(&a.ID, &a.Page, &a.Title, &a.Body, &a.Severity, &a.Author, &c, &u, &r); err != nil {
+		if err := rows.Scan(&a.ID, &a.Title, &a.Body, &a.Severity, &a.Author, &pin, &start, &end, &c, &u, &r); err != nil {
 			return nil, err
 		}
+		a.Pinned = pin != 0
+		a.StartsAt, a.EndsAt = timePtr(start), timePtr(end)
 		a.CreatedAt, a.UpdatedAt = fromMS(c), fromMS(u)
 		if r.Valid {
 			t := fromMS(r.Int64)
@@ -110,6 +121,21 @@ func (s *Store) queryAnnouncements(where string, args ...any) ([]Announcement, e
 		out = append(out, a)
 	}
 	return out, rows.Err()
+}
+
+func msPtr(t *time.Time) any {
+	if t == nil || t.IsZero() {
+		return nil
+	}
+	return ms(*t)
+}
+
+func timePtr(n sql.NullInt64) *time.Time {
+	if !n.Valid {
+		return nil
+	}
+	t := fromMS(n.Int64)
+	return &t
 }
 
 // Subscriber is an e-mail address following a status page.

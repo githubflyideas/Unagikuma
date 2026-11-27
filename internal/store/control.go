@@ -12,7 +12,7 @@ import (
 func (s *Store) CopyControlFrom(src *Store, changes bool) error {
 	tables := []string{"people", "contacts"}
 	if changes {
-		tables = append(tables, "changes", "agent_tokens")
+		tables = append(tables, "agent_tokens")
 	}
 	type snapshot struct {
 		name string

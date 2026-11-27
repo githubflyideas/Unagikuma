@@ -241,7 +241,6 @@ func (a *App) localEngineConfig() (engine.Config, bool) {
 	for _, mt := range cfg.Maints {
 		ec.Maints = append(ec.Maints, engine.MaintSpec{Name: mt.Name, Title: mt.Title, Monitors: mt.Monitors, Schedule: mt.Schedule, Notify: mt.Notify})
 	}
-	ec.Maints = append(ec.Maints, a.carryWindows(func(sel string) []string { return changeMonitors(cfg, sel) })...)
 	ec.Anchors, ec.LocalDetect = nil, true
 	for _, n := range cfg.Nodes {
 		if n.Name != self {

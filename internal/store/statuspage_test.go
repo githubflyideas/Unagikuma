@@ -7,7 +7,7 @@ import (
 
 func TestAnnouncementsAndSubscribers(t *testing.T) {
 	s, c, _ := open(t)
-	a, err := s.SaveAnnouncement(Announcement{Page: "public", Title: "Slow API", Body: "looking into it", Severity: "minor", Author: "ops"}, false)
+	a, err := s.SaveAnnouncement(Announcement{Title: "Slow API", Body: "looking into it", Severity: "minor", Author: "ops", Pinned: true}, false)
 	if err != nil || a.ID == 0 || a.ResolvedAt != nil {
 		t.Fatalf("%+v %v", a, err)
 	}
@@ -15,10 +15,10 @@ func TestAnnouncementsAndSubscribers(t *testing.T) {
 	if a, err = s.SaveAnnouncement(a, true); err != nil || a.ResolvedAt == nil || a.Body != "fixed" {
 		t.Fatalf("resolve: %+v %v", a, err)
 	}
-	if list, _ := s.Announcements("public", c.t.Add(-time.Hour), 10); len(list) != 1 {
+	if list, _ := s.Announcements(c.t.Add(-time.Hour), 10); len(list) != 1 || !list[0].Pinned {
 		t.Fatalf("recently resolved is listed: %v", list)
 	}
-	if list, _ := s.Announcements("public", c.t.Add(time.Hour), 10); len(list) != 0 {
+	if list, _ := s.Announcements(c.t.Add(time.Hour), 10); len(list) != 0 {
 		t.Fatalf("resolved long ago is not: %v", list)
 	}
 	if _, err := s.SaveAnnouncement(Announcement{ID: 999, Title: "x", Severity: "info"}, false); err != ErrNotFound {

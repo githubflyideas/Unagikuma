@@ -73,10 +73,11 @@ var coreMigrations = []string{
 	CREATE INDEX audit_action ON audit(action);
 	CREATE TRIGGER audit_append_only BEFORE UPDATE ON audit WHEN OLD.hash != ''
 	BEGIN SELECT RAISE(ABORT, 'the audit log is append-only'); END;
-	CREATE TABLE announcements (id INTEGER PRIMARY KEY AUTOINCREMENT, page TEXT NOT NULL, title TEXT NOT NULL,
+	CREATE TABLE announcements (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL,
 		body TEXT NOT NULL DEFAULT '', severity TEXT NOT NULL, author TEXT NOT NULL DEFAULT '',
+		pinned INTEGER NOT NULL DEFAULT 0, starts_at INTEGER, ends_at INTEGER,
 		created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, resolved_at INTEGER);
-	CREATE INDEX announcements_page ON announcements(page, created_at);
+	CREATE INDEX announcements_created ON announcements(pinned DESC, created_at DESC);
 	CREATE TABLE subscribers (id INTEGER PRIMARY KEY AUTOINCREMENT, page TEXT NOT NULL, email TEXT NOT NULL,
 		token TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL, confirmed_at INTEGER, UNIQUE (page, email));
 	CREATE TABLE acks (id INTEGER PRIMARY KEY AUTOINCREMENT, incident_id INTEGER NOT NULL, at INTEGER NOT NULL,
@@ -92,12 +93,6 @@ var coreMigrations = []string{
 		kind TEXT NOT NULL, value TEXT NOT NULL, UNIQUE (kind, value));
 	CREATE TABLE bounces (kind TEXT NOT NULL, value TEXT NOT NULL, n INTEGER NOT NULL, first_at INTEGER NOT NULL,
 		last_at INTEGER NOT NULL, reason TEXT NOT NULL, PRIMARY KEY (kind, value));
-	CREATE TABLE changes (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
-		impact TEXT NOT NULL DEFAULT '', sel TEXT NOT NULL DEFAULT '', policy TEXT NOT NULL DEFAULT '', channels TEXT NOT NULL DEFAULT '',
-		status_page TEXT NOT NULL DEFAULT '', announcement_id INTEGER NOT NULL DEFAULT 0, start_at INTEGER NOT NULL, end_at INTEGER NOT NULL,
-		state TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL,
-		updated_at INTEGER NOT NULL, finished_at INTEGER NOT NULL DEFAULT 0, finished_by TEXT NOT NULL DEFAULT '', sent TEXT NOT NULL DEFAULT '');
-	CREATE INDEX changes_start ON changes(start_at);
 	CREATE TABLE decisions (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, incident_id INTEGER NOT NULL DEFAULT 0,
 		intent_id TEXT NOT NULL DEFAULT '', monitor TEXT NOT NULL DEFAULT '', step TEXT NOT NULL, data TEXT NOT NULL,
 		site TEXT NOT NULL DEFAULT '', source_epoch TEXT NOT NULL DEFAULT '', original_id INTEGER NOT NULL DEFAULT 0);
