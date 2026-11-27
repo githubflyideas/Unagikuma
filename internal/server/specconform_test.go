@@ -29,9 +29,6 @@ func specRecorder(t *testing.T, srv *Server, next http.Handler) http.Handler {
 			return
 		}
 		method, path, _ := strings.Cut(pattern, " ")
-		if !strings.HasPrefix(path, "/api/v1/") {
-			return
-		}
 		if method == http.MethodGet && r.Method == http.MethodHead {
 			return
 		}
