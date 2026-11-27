@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/i18n"
@@ -200,10 +201,30 @@ func (s *Server) sessionUser(r *http.Request) (string, error) {
 	return se.User.Prefs, nil
 }
 
+// prefKey is what an account's own preferences may hold: its console
+// style, language and time zone, each a short word.
+var prefKey = regexp.MustCompile(`^[A-Za-z0-9_+./-]{0,64}$`)
+
 func (s *Server) prefsPut(w http.ResponseWriter, r *http.Request) (any, error) {
-	var m map[string]any
-	if err := decodeJSON(r, 64<<10, &m); err != nil {
+	var req map[string]any
+	if err := decodeJSON(r, 4<<10, &req); err != nil {
 		return nil, err
+	}
+	m := map[string]any{}
+	for k, v := range req {
+		str, ok := v.(string)
+		switch {
+		case k != "style" && k != "lang" && k != "timezone":
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "unknown preference %q (style, lang and timezone are kept)", k)
+		case !ok || !prefKey.MatchString(str):
+			return nil, Errorf(http.StatusBadRequest, CodeInvalid, "preference %s must be a short name (letters, digits and _ + . / -)", k)
+		}
+		if str != "" {
+			m[k] = str
+		}
+	}
+	if v, ok := m["lang"].(string); ok {
+		m["lang"] = i18n.Normalize(v)
 	}
 	b, _ := json.Marshal(m)
 	if err := s.app.Store().SetPrefs(authOf(r).userID, string(b)); err != nil {
