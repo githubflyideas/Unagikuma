@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -26,7 +27,9 @@ func TestSetupTokenInAFileNotTheLog(t *testing.T) {
 	if err != nil || strings.TrimSpace(string(b)) != tok {
 		t.Fatalf("file: %q %v", b, err)
 	}
-	if fi, _ := os.Stat(path); fi.Mode().Perm() != 0o600 {
+	// Windows has no owner-only mode bits; the file is under the data
+	// directory's ACL there.
+	if fi, _ := os.Stat(path); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("file mode %v", fi.Mode().Perm())
 	}
 	if strings.Contains(logBuf.String(), tok) || !strings.Contains(logBuf.String(), path) {
