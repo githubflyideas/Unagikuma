@@ -85,7 +85,7 @@
 "unknown scope %q": "نامعلوم دائرہ %q",
 "unknown status page %s": "نامعلوم اسٹیٹس پیج %s",
 "unknown type %s": "نامعلوم قسم %s",
-"wrong setup token (see the server log)": "سیٹ اپ ٹوکن غلط ہے (سرور لاگ دیکھیں)",
+"wrong setup token (it is in the file setup-token in the data directory)": "سیٹ اپ ٹوکن غلط ہے (یہ ڈیٹا ڈائریکٹری کی setup-token فائل میں ہے)",
 "wrong username or password": "صارف نام یا پاس ورڈ غلط ہے",
 "you cannot delete your own account": "آپ اپنا اکاؤنٹ حذف نہیں کر سکتے",
 "your account is limited to some sections and cannot change shared configuration": "آپ کا اکاؤنٹ کچھ حصوں تک محدود ہے اور مشترکہ کنفیگریشن نہیں بدل سکتا",

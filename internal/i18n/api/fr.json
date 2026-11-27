@@ -85,7 +85,7 @@
 "unknown scope %q": "Portée %q inconnue",
 "unknown status page %s": "Page de statut %s inconnue",
 "unknown type %s": "Type %s inconnu",
-"wrong setup token (see the server log)": "Jeton d’installation incorrect (voir le journal du serveur)",
+"wrong setup token (it is in the file setup-token in the data directory)": "Jeton d’installation incorrect (il est dans le fichier setup-token du répertoire de données)",
 "wrong username or password": "Nom d’utilisateur ou mot de passe incorrect",
 "you cannot delete your own account": "Vous ne pouvez pas supprimer votre propre compte",
 "your account is limited to some sections and cannot change shared configuration": "Votre compte est limité à certaines sections et ne peut pas modifier la configuration partagée",

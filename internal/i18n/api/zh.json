@@ -85,7 +85,7 @@
 "unknown scope %q": "未知权限范围 %q",
 "unknown status page %s": "未知状态页 %s",
 "unknown type %s": "未知类型 %s",
-"wrong setup token (see the server log)": "初始化令牌错误（见服务器日志）",
+"wrong setup token (it is in the file setup-token in the data directory)": "初始化令牌错误（在数据目录的 setup-token 文件里）",
 "wrong username or password": "用户名或密码错误",
 "you cannot delete your own account": "不能删除自己的账号",
 "your account is limited to some sections and cannot change shared configuration": "你的账号只限于部分分区，不能修改共享配置",

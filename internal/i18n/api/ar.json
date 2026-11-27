@@ -85,7 +85,7 @@
 "unknown scope %q": "نطاق غير معروف %q",
 "unknown status page %s": "صفحة حالة غير معروفة %s",
 "unknown type %s": "نوع غير معروف %s",
-"wrong setup token (see the server log)": "رمز الإعداد خاطئ (انظر سجل الخادم)",
+"wrong setup token (it is in the file setup-token in the data directory)": "رمز الإعداد خاطئ (موجود في الملف setup-token في مجلد البيانات)",
 "wrong username or password": "اسم المستخدم أو كلمة المرور خاطئة",
 "you cannot delete your own account": "لا يمكنك حذف حسابك",
 "your account is limited to some sections and cannot change shared configuration": "حسابك مقصور على بعض الأقسام ولا يمكنه تغيير الإعدادات المشتركة",

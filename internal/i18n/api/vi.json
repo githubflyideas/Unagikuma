@@ -85,7 +85,7 @@
 "unknown scope %q": "Phạm vi quyền không xác định %q",
 "unknown status page %s": "Trang trạng thái không xác định %s",
 "unknown type %s": "Loại không xác định %s",
-"wrong setup token (see the server log)": "Mã thiết lập sai (xem nhật ký máy chủ)",
+"wrong setup token (it is in the file setup-token in the data directory)": "Mã thiết lập sai (nằm trong tệp setup-token ở thư mục dữ liệu)",
 "wrong username or password": "Tên người dùng hoặc mật khẩu sai",
 "you cannot delete your own account": "Bạn không thể xóa tài khoản của chính mình",
 "your account is limited to some sections and cannot change shared configuration": "Tài khoản của bạn bị giới hạn ở một số phần và không thể sửa cấu hình dùng chung",

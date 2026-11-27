@@ -4,6 +4,8 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/i18n"
@@ -44,7 +46,7 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, Errorf(http.StatusConflict, CodeConflict, "setup is already done")
 	}
 	if !isLoopback(r) && subtle.ConstantTimeCompare([]byte(req.Token), []byte(s.setupToken)) != 1 {
-		return nil, Errorf(http.StatusForbidden, CodeForbidden, "wrong setup token (see the server log)")
+		return nil, Errorf(http.StatusForbidden, CodeForbidden, "wrong setup token (it is in the file setup-token in the data directory)")
 	}
 	if req.Username == "" {
 		req.Username = "admin"
@@ -54,6 +56,7 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) (any, error) {
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 	}
 	s.setupToken = ""
+	_ = os.Remove(filepath.Join(s.app.DataDir(), setupTokenFile))
 	if req.Lang != "" {
 		_ = s.app.SetSetting("message_lang", i18n.Normalize(req.Lang))
 		prefs, _ := json.Marshal(map[string]any{"lang": i18n.Normalize(req.Lang), "timezone": req.Timezone})

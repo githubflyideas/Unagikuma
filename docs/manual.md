@@ -25,7 +25,7 @@ Download the archive for your platform from the [releases](../../releases), unpa
 ./unagikuma            # listens on :8077, keeps its data in ./data
 ```
 
-Open `http://<host>:8077/` and create the admin account. When you open the UI from another machine, Unagikuma asks for the one-time setup token it printed to its log at first start.
+Open `http://<host>:8077/` and create the admin account. When you open the UI from another machine, Unagikuma asks for the one-time setup token: it is in the file `setup-token` in the data directory (readable by its owner only; the log says where), and is removed once the account exists.
 
 On macOS the binaries are not notarized yet, so the first start is blocked: run `xattr -d com.apple.quarantine ./unagikuma` once (or right-click it in Finder and choose *Open*).
 

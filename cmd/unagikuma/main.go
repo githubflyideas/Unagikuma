@@ -300,8 +300,8 @@ func runServer(args []string) error {
 	}
 	srv := server.New(a, server.Options{Log: log, Web: ui, TrustedProxy: trusted, SecureCookies: *certFile != ""})
 	defer srv.Close()
-	if tok := srv.SetupToken(); tok != "" {
-		fmt.Fprintf(os.Stderr, "\n  First run: open the web UI to create the admin account.\n  From another machine you need this setup token: %s\n\n", tok)
+	if f := srv.SetupTokenFile(); f != "" {
+		fmt.Fprintf(os.Stderr, "\n  First run: open the web UI to create the admin account.\n  From another machine it asks for the setup token in %s\n\n", f)
 	}
 
 	ctx, stop := signal.NotifyContext(baseCtx, os.Interrupt, syscall.SIGTERM)

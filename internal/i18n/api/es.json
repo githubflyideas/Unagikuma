@@ -85,7 +85,7 @@
 "unknown scope %q": "Alcance desconocido %q",
 "unknown status page %s": "Página de estado desconocida %s",
 "unknown type %s": "Tipo desconocido %s",
-"wrong setup token (see the server log)": "Token de configuración incorrecto (vea el registro del servidor)",
+"wrong setup token (it is in the file setup-token in the data directory)": "Token de configuración incorrecto (está en el archivo setup-token del directorio de datos)",
 "wrong username or password": "Usuario o contraseña incorrectos",
 "you cannot delete your own account": "No puede borrar su propia cuenta",
 "your account is limited to some sections and cannot change shared configuration": "Su cuenta está limitada a algunas secciones y no puede cambiar la configuración compartida",

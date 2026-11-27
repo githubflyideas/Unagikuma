@@ -85,7 +85,7 @@
 "unknown scope %q": "অজানা পরিধি %q",
 "unknown status page %s": "অজানা স্ট্যাটাস পেজ %s",
 "unknown type %s": "অজানা ধরন %s",
-"wrong setup token (see the server log)": "সেটআপ টোকেন ভুল (সার্ভার লগ দেখুন)",
+"wrong setup token (it is in the file setup-token in the data directory)": "সেটআপ টোকেন ভুল (এটি ডেটা ডিরেক্টরির setup-token ফাইলে আছে)",
 "wrong username or password": "ব্যবহারকারী নাম বা পাসওয়ার্ড ভুল",
 "you cannot delete your own account": "আপনি নিজের অ্যাকাউন্ট মুছতে পারবেন না",
 "your account is limited to some sections and cannot change shared configuration": "আপনার অ্যাকাউন্ট কিছু বিভাগে সীমিত এবং শেয়ার করা কনফিগারেশন বদলাতে পারে না",

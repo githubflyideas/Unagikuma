@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -152,11 +154,39 @@ func New(a *app.App, o Options) *Server {
 	})
 	go s.publishLoop()
 	s.routes()
-	if n, _ := a.Store().UserCount(); n == 0 {
-		s.setupToken = randomHex(16)
-		s.log.Info("first run: open the web UI to finish setup", "setup_token", s.setupToken)
-	}
+	s.prepareSetupToken()
 	return s
+}
+
+// setupTokenFile holds the one-time setup token in the data directory
+// until the first account is made. The token is not written to the log,
+// which is often kept and shared; the log names the file.
+const setupTokenFile = "setup-token"
+
+// prepareSetupToken makes the setup token on a first run and writes it,
+// readable by the owner only, to setupTokenFile; otherwise it removes a
+// file a finished setup left.
+func (s *Server) prepareSetupToken() {
+	path := filepath.Join(s.app.DataDir(), setupTokenFile)
+	if n, _ := s.app.Store().UserCount(); n > 0 {
+		_ = os.Remove(path)
+		return
+	}
+	s.setupToken = randomHex(16)
+	_ = os.Remove(path) // a file left by another user is not reused
+	if err := os.WriteFile(path, []byte(s.setupToken+"\n"), 0o600); err != nil {
+		s.log.Warn("first run: the setup token file cannot be written; only this machine can finish setup", "file", path, "err", err)
+		return
+	}
+	s.log.Info("first run: open the web UI to finish setup; from another machine it asks for the setup token in this file", "file", path)
+}
+
+// SetupTokenFile is where the setup token is ("" once set up).
+func (s *Server) SetupTokenFile() string {
+	if s.SetupToken() == "" {
+		return ""
+	}
+	return filepath.Join(s.app.DataDir(), setupTokenFile)
 }
 
 // Close stops the live event worker.

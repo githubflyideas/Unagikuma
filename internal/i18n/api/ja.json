@@ -85,7 +85,7 @@
 "unknown scope %q": "不明なスコープ %q",
 "unknown status page %s": "不明なステータスページ %s",
 "unknown type %s": "不明なタイプ %s",
-"wrong setup token (see the server log)": "セットアップトークンが違います（サーバーログを参照）",
+"wrong setup token (it is in the file setup-token in the data directory)": "セットアップトークンが違います（データディレクトリの setup-token ファイルにあります）",
 "wrong username or password": "ユーザー名またはパスワードが違います",
 "you cannot delete your own account": "自分のアカウントは削除できません",
 "your account is limited to some sections and cannot change shared configuration": "このアカウントは一部のセクションに限られるため、共有設定は変更できません",

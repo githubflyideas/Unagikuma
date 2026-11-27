@@ -85,7 +85,7 @@
 "unknown scope %q": "Cakupan tidak dikenal %q",
 "unknown status page %s": "Halaman status tidak dikenal %s",
 "unknown type %s": "Jenis tidak dikenal %s",
-"wrong setup token (see the server log)": "Token penyiapan salah (lihat log server)",
+"wrong setup token (it is in the file setup-token in the data directory)": "Token penyiapan salah (ada di berkas setup-token di direktori data)",
 "wrong username or password": "Nama pengguna atau kata sandi salah",
 "you cannot delete your own account": "Anda tidak dapat menghapus akun Anda sendiri",
 "your account is limited to some sections and cannot change shared configuration": "Akun Anda terbatas pada beberapa bagian dan tidak dapat mengubah konfigurasi bersama",
