@@ -27,6 +27,9 @@ const (
 	CodeSetupRequired  = "setup_required"
 	CodeInternal       = "internal"
 	CodeTooLarge       = "too_large"
+	// CodeMethodNotAllowed: the address exists, but not with this method
+	// (the Allow header lists the ones it takes).
+	CodeMethodNotAllowed = "method_not_allowed"
 )
 
 // Location points into monitors.conf for configuration errors.

@@ -209,7 +209,7 @@ func (s *Server) SetupToken() string {
 
 // Handler returns the root handler with the common middleware.
 func (s *Server) Handler() http.Handler {
-	return securityHeaders(recoverer(s.log, s.domainOnly(s.mux)))
+	return securityHeaders(recoverer(s.log, s.domainOnly(s.methodGuard(s.mux))))
 }
 
 // apiFunc is a handler returning a value to encode or an error.
