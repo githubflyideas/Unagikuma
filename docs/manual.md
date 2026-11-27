@@ -626,7 +626,7 @@ The port can also be changed under **Settings › System › Port**: the new one
 
 ## Data and backups
 
-The data directory holds `monitors.conf`, `core.db` (users, incidents, notification log, configuration history, encrypted secrets), `history.db` (check results and uptime) and `unagikuma.key`, the key that encrypts the secrets. `cluster-ca.*` and `cluster.*` are the certificate authority the other machines of a cluster pin; keep them with the key so they keep trusting a restored master.
+The data directory holds `monitors.conf`, `core.db` (users, incidents, notification log, configuration history, encrypted secrets), `history.db` (check results and uptime) and `unagikuma.key`, the key that encrypts the secrets. A data directory created by a release before 3.0.1 cannot be opened; start with a fresh directory. `cluster-ca.*` and `cluster.*` are the certificate authority the other machines of a cluster pin; keep them with the key so they keep trusting a restored master.
 
 Under **Config & import › Import and export**, with the **Unagikuma** source chosen (export and restore belong to that source; the other sources only import), there are two ways out:
 

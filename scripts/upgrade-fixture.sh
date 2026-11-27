@@ -3,7 +3,8 @@
 # a fresh data directory, leave behind what such an installation has
 # (accounts, an encrypted channel secret, an open incident, a push token,
 # a node token, history) and pack it as
-# internal/app/testdata/upgrade/VERSION.tar.gz for the upgrade tests.
+# internal/app/testdata/upgrade/VERSION.tar.gz for the tests that check
+# a pre-3.0.1 data directory is refused.
 # Run from the repository root with each release's binary; WORKDIR must
 # not exist yet.
 set -eu
