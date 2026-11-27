@@ -124,26 +124,15 @@ func New(a *app.App, o Options) *Server {
 	boot := make([]byte, 4)
 	_, _ = rand.Read(boot)
 	s := &Server{app: a, opts: o, log: o.Log, mux: http.NewServeMux(), now: time.Now}
-	ts := a.EffectiveConfig().Tunables
 	s.hub = NewHub(hex.EncodeToString(boot), 1024, func() int { return a.EffectiveConfig().Tunables.Int("api.max-sse") })
-	rate := func(key string) (float64, int) {
-		r := ts.Rate(key)
-		return r, max(1, int(r*10))
-	}
-	ar, ab := rate("api.rate")
-	lr, _ := rate("api.login-rate")
-	pr, pb := rate("api.push-rate")
-	s.api = ratelimit.NewKeyed(ar, ab, 0)
-	s.login = ratelimit.NewKeyed(lr, 3, 0)
 	// All sign-ins together, whatever their address: with the bound on
 	// concurrent password hashes this keeps a flood of failed logins
 	// from many addresses to a short queue.
 	s.loginAll = ratelimit.NewKeyed(loginAllRate, loginAllBurst, 0)
-	jr, _ := rate("cluster.join-rate")
-	s.joins = ratelimit.NewKeyed(jr, 10, 0)
-	s.push = ratelimit.NewKeyed(pr, pb, 0)
-	sr, _ := rate("statuspage.subscribe-rate")
-	s.subs = ratelimit.NewKeyed(sr, 3, 0)
+	// The other limits take their rates from the tunables in applyRates.
+	s.api, s.login = ratelimit.NewKeyed(1, 1, 0), ratelimit.NewKeyed(1, 1, 0)
+	s.joins, s.push, s.subs = ratelimit.NewKeyed(1, 1, 0), ratelimit.NewKeyed(1, 1, 0), ratelimit.NewKeyed(1, 1, 0)
+	s.applyRates()
 	s.pubq, s.done = make(chan pubEvent, 4096), make(chan struct{})
 	a.SetPublisher(func(typ string, v any) {
 		select {
@@ -156,6 +145,27 @@ func New(a *app.App, o Options) *Server {
 	s.routes()
 	s.prepareSetupToken()
 	return s
+}
+
+// applyRates sets the request limits from the rate tunables ($SET
+// api.rate and the like), at the start and after every configuration
+// change, so a changed limit holds at once, as the tunables page shows.
+func (s *Server) applyRates() {
+	ts := s.app.EffectiveConfig().Tunables
+	rate := func(key string) (float64, int) {
+		r := ts.Rate(key)
+		return r, max(1, int(r*10))
+	}
+	ar, ab := rate("api.rate")
+	lr, _ := rate("api.login-rate")
+	pr, pb := rate("api.push-rate")
+	jr, _ := rate("cluster.join-rate")
+	sr, _ := rate("statuspage.subscribe-rate")
+	s.api.SetRate(ar, ab)
+	s.login.SetRate(lr, 3)
+	s.joins.SetRate(jr, 10)
+	s.push.SetRate(pr, pb)
+	s.subs.SetRate(sr, 3)
 }
 
 // setupTokenFile holds the one-time setup token in the data directory
@@ -203,6 +213,10 @@ func (s *Server) publishLoop() {
 		if s.pubLost.Swap(false) {
 			// Events were dropped: tell clients to refetch everything.
 			s.hub.Publish("reset", map[string]any{})
+			s.applyRates()
+		}
+		if ev.typ == "serial" {
+			s.applyRates()
 		}
 		monitor := ""
 		switch v := ev.v.(type) {
