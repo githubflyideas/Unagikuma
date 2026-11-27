@@ -299,7 +299,7 @@ function Tokens() {
       ${!list.data.length ? html`<${Empty}>${t('ui.tok.none')}<//>` : html`<table class="tbl">
         <thead><tr><th>${t('ui.name')}</th><th>${t('ui.tok.scopes')}</th><th>${t('ui.tok.created_at')}</th><th>${t('ui.tok.last_used')}</th><th></th></tr></thead>
         <tbody>${list.data.map(tk => html`<tr>
-          <td><div class="name">${tk.name}</div><div class="sub mono ltr">${tk.prefix}…</div></td>
+          <td><div class="name">${tk.name}</div><div class="sub mono ltr">${tk.prefix}…${tk.username ? ' · ' + tk.username : ''}</div></td>
           <td>${tk.scopes.map(s => html`<span class="tag">${t('ui.scope.' + s)}</span> `)}</td>
           <td class="small">${fmtTime(tk.created_at)}</td>
           <td class="small"><${Ago} at=${tk.last_used} /></td>

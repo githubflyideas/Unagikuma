@@ -420,7 +420,8 @@ type Token struct {
 	Name      string     `json:"name"`
 	Prefix    string     `json:"prefix"`
 	Scopes    []string   `json:"scopes"`
-	UserID    int64      `json:"-"`
+	UserID    int64      `json:"user_id"`
+	Username  string     `json:"username"` // the administrator who made it ("" once that account is gone)
 	CreatedAt time.Time  `json:"created_at"`
 	LastUsed  *time.Time `json:"last_used,omitempty"`
 }
@@ -435,13 +436,16 @@ func (s *Store) CreateToken(userID int64, name string, scopes []string) (string,
 	return plain, err
 }
 
-// TokenByPlain resolves a bearer token and records its use.
+// TokenByPlain resolves a bearer token and records its use. Only tokens
+// made by an account that is still an enabled administrator count: tokens
+// are made by administrators, and one who is moved to another role (or
+// disabled) must not keep an administrator's reach through them.
 func (s *Store) TokenByPlain(plain string) (*Token, error) {
 	var t Token
 	var scopes string
 	var created int64
 	err := s.core.QueryRow(`SELECT id,name,prefix,scopes,user_id,created_at FROM tokens t WHERE hash=?
-		AND NOT EXISTS (SELECT 1 FROM users u WHERE u.id=t.user_id AND u.disabled=1)`, sha(plain)).
+		AND EXISTS (SELECT 1 FROM users u WHERE u.id=t.user_id AND u.disabled=0 AND u.role='admin')`, sha(plain)).
 		Scan(&t.ID, &t.Name, &t.Prefix, &scopes, &t.UserID, &created)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -458,7 +462,8 @@ func (s *Store) TokenByPlain(plain string) (*Token, error) {
 
 // Tokens lists API tokens.
 func (s *Store) Tokens() ([]Token, error) {
-	rows, err := s.core.Query(`SELECT id,name,prefix,scopes,user_id,created_at,last_used FROM tokens ORDER BY id`)
+	rows, err := s.core.Query(`SELECT t.id,t.name,t.prefix,t.scopes,COALESCE(t.user_id,0),COALESCE(u.username,''),t.created_at,t.last_used
+		FROM tokens t LEFT JOIN users u ON u.id=t.user_id ORDER BY t.id`)
 	if err != nil {
 		return nil, err
 	}
@@ -469,7 +474,7 @@ func (s *Store) Tokens() ([]Token, error) {
 		var scopes string
 		var created int64
 		var last sql.NullInt64
-		if err := rows.Scan(&t.ID, &t.Name, &t.Prefix, &scopes, &t.UserID, &created, &last); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.Prefix, &scopes, &t.UserID, &t.Username, &created, &last); err != nil {
 			return nil, err
 		}
 		t.Scopes, t.CreatedAt = strings.Split(scopes, ","), fromMS(created)

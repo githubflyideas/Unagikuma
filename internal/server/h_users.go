@@ -142,6 +142,15 @@ func (s *Server) userUpdate(w http.ResponseWriter, r *http.Request) (any, error)
 		if err := st.SetRole(id, q.Role, q.cleanAreas()); err != nil {
 			return nil, userError(err)
 		}
+		// API tokens are an administrator's: an account moved to another
+		// role loses the ones it made.
+		if before.Role == store.RoleAdmin && q.Role != store.RoleAdmin {
+			n, err := st.DeleteUserTokens(id)
+			if err != nil {
+				return nil, err
+			}
+			a.note("tokens_revoked", n)
+		}
 	}
 	if q.Password != "" {
 		if err := st.SetPassword(id, q.Password); err != nil {
