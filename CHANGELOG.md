@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.1.1 — 2026-11-27
 
 **Fixed**
 - A backup is checked before a restore is staged: a database written by a newer version (or from before 3.0.1) and a configuration that fails this version's checks are refused with the reason, and nothing is changed. Before, such a backup was accepted and the program would not start afterwards.
