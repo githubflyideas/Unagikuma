@@ -90,7 +90,7 @@ function Page({ name }) {
   return html`<div class="pub">
     <div class="head">${d.logo && html`<img src=${d.logo} alt="" />`}<h1>${d.title}</h1></div>
     ${link && html`<div class=${'banner ' + (link.ok ? 'ok' : 'error')}>${link.ok || link.err}</div>`}
-    <div class=${'overall ' + d.status}>${d.status === 'ok' ? '✓ ' + t('ui.pub.all_ok') : d.status === 'degraded' ? '! ' + t('ui.pub.degraded') : '✗ ' + t('ui.pub.outage')}</div>
+    <div class=${'overall ' + d.status}>${d.status === 'ok' ? '✓ ' + t('ui.pub.all_ok') : d.status === 'degraded' ? '! ' + t('ui.pub.degraded') : d.status === 'critical' ? '✗ ' + t('ui.pub.outage') : '… ' + t('ui.pub.not_yet')}</div>
     ${open.map(a => html`<${Notice} a=${a} />`)}
     ${(d.maintenance || []).length > 0 && html`<section class="card"><div class="hd"><h2>${t('ui.pub.maintenance')}</h2></div>
       <div class="bd col">${d.maintenance.map(m => html`<div><b>${m.title}</b>

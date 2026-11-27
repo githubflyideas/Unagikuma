@@ -425,7 +425,7 @@ body.public { background: var(--bg); }
 .pub .head { display: flex; align-items: center; gap: 14px; }
 .pub .head img { max-height: 44px; }
 .pub .overall { padding: 16px 18px; border-radius: var(--radius); font-weight: 650; font-size: 16px; color: var(--on-status); display: flex; align-items: center; gap: 10px; }
-.pub .overall.ok { background: var(--ok); } .pub .overall.degraded { background: var(--degraded); color: var(--on-degraded); } .pub .overall.critical { background: var(--critical); }
+.pub .overall { background: var(--muted); } .pub .overall.ok { background: var(--ok); } .pub .overall.degraded { background: var(--degraded); color: var(--on-degraded); } .pub .overall.critical { background: var(--critical); }
 .pub .mon { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
 .pub .mon:last-child { border-bottom: 0; }
 .pub .beats { height: 28px; }
