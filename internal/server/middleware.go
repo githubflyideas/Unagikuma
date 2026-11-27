@@ -35,9 +35,6 @@ func recoverer(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if v := recover(); v != nil {
-				if v == http.ErrAbortHandler {
-					panic(v)
-				}
 				log.Error("handler panic", "path", r.URL.Path, "panic", v, "stack", string(debug.Stack()))
 				writeError(w, nil)
 			}

@@ -12,7 +12,10 @@ import (
 // Every listed style has its file, scopes every rule to itself, and is
 // named in every language.
 func TestStyles(t *testing.T) {
-	ui := FS()
+	ui, err := FS()
+	if err != nil {
+		t.Fatal(err)
+	}
 	b, err := fs.ReadFile(ui, "styles/styles.json")
 	if err != nil {
 		t.Fatal(err)

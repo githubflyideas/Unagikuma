@@ -31,9 +31,9 @@ const (
 
 func randomString(n int) string {
 	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		panic(err)
-	}
+	// crypto/rand.Read cannot fail: since Go 1.24 it never returns an
+	// error (the runtime aborts if the system source is unusable).
+	_, _ = rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 

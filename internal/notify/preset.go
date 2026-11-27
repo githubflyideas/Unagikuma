@@ -58,15 +58,27 @@ var presetsJSON []byte
 
 var presets = map[string]*Preset{}
 
+// loadErr is the first problem found in the embedded presets; the program
+// refuses to start with it (see LoadError) and the tests check it.
+var loadErr error
+
+// LoadError reports whether the embedded channel presets are broken.
+func LoadError() error { return loadErr }
+
 func init() {
 	var list []*Preset
 	if err := json.Unmarshal(presetsJSON, &list); err != nil {
-		panic("notify: presets.json: " + err.Error())
+		loadErr = fmt.Errorf("notify: presets.json: %w", err)
+		return
 	}
+presetLoop:
 	for _, p := range list {
 		for _, src := range append([]string{p.URL, p.Body}, values(p.Headers)...) {
 			if err := ValidateTemplate(src); err != nil {
-				panic(fmt.Sprintf("notify: preset %s: %v", p.Name, err))
+				if loadErr == nil {
+					loadErr = fmt.Errorf("notify: preset %s: %w", p.Name, err)
+				}
+				continue presetLoop
 			}
 		}
 		// Text messages carry a site mark in front when one is set.

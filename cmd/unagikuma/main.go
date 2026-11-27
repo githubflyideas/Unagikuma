@@ -23,11 +23,14 @@ import (
 	"time"
 
 	"github.com/githubflyideas/unagikuma/internal/app"
+	"github.com/githubflyideas/unagikuma/internal/appprofile"
 	"github.com/githubflyideas/unagikuma/internal/backup"
 	"github.com/githubflyideas/unagikuma/internal/cluster"
 	"github.com/githubflyideas/unagikuma/internal/config"
 	"github.com/githubflyideas/unagikuma/internal/directory"
+	"github.com/githubflyideas/unagikuma/internal/i18n"
 	"github.com/githubflyideas/unagikuma/internal/keywords"
+	"github.com/githubflyideas/unagikuma/internal/notify"
 	"github.com/githubflyideas/unagikuma/internal/probe"
 	"github.com/githubflyideas/unagikuma/internal/server"
 	"github.com/githubflyideas/unagikuma/internal/store"
@@ -81,6 +84,10 @@ func main() {
 		// "unagikuma --version" / "--help": the program's, not the server's.
 		cmd, args = args[0], args[1:]
 	}
+	if err := builtinsError(); err != nil {
+		fmt.Fprintln(os.Stderr, "unagikuma: this build is broken:", err)
+		os.Exit(1)
+	}
 	var err error
 	// Started by the Windows service manager: run the command as a service.
 	if ok, serr := runAsService(func() error { return dispatch(cmd, args) }); ok || serr != nil {
@@ -95,6 +102,18 @@ func main() {
 		fmt.Fprintln(os.Stderr, "unagikuma:", err)
 		os.Exit(1)
 	}
+}
+
+// builtinsError is the first problem in the data built into the program
+// (catalogs, presets, profiles, keyword and tunable tables). The packages
+// load them without stopping the program; it refuses to run here instead.
+func builtinsError() error {
+	for _, f := range []func() error{i18n.LoadError, notify.LoadError, keywords.LoadError, tunables.LoadError, appprofile.LoadError} {
+		if err := f(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // topLevelFlag are the flags that are commands of the program itself.
@@ -275,7 +294,11 @@ func runServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	srv := server.New(a, server.Options{Log: log, Web: web.FS(), TrustedProxy: trusted, SecureCookies: *certFile != ""})
+	ui, err := web.FS()
+	if err != nil {
+		return err
+	}
+	srv := server.New(a, server.Options{Log: log, Web: ui, TrustedProxy: trusted, SecureCookies: *certFile != ""})
 	defer srv.Close()
 	if tok := srv.SetupToken(); tok != "" {
 		fmt.Fprintf(os.Stderr, "\n  First run: open the web UI to create the admin account.\n  From another machine you need this setup token: %s\n\n", tok)

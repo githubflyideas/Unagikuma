@@ -13,6 +13,7 @@
 package appprofile
 
 import (
+	"cmp"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -97,28 +98,41 @@ func (p *Profile) Field(key string) (*Field, bool) {
 
 var registry = map[string]*Profile{}
 
-func init() {
+// loadErr is the first problem found in the embedded profiles; the
+// program refuses to start with it (see LoadError) and the tests check it.
+var loadErr error
+
+// LoadError reports whether the embedded application profiles are broken.
+func LoadError() error { return loadErr }
+
+func init() { loadErr = load() }
+
+func load() error {
 	entries, err := files.ReadDir("profiles")
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("appprofile: %w", err)
 	}
+	var first error
 	for _, e := range entries {
 		b, err := files.ReadFile("profiles/" + e.Name())
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("appprofile: %w", err)
 		}
 		var p Profile
 		if err := json.Unmarshal(b, &p); err != nil {
-			panic(fmt.Sprintf("profile %s: %v", e.Name(), err))
+			first = cmp.Or(first, fmt.Errorf("profile %s: %w", e.Name(), err))
+			continue
 		}
 		if p.Transport == "" {
 			p.Transport = "http"
 		}
 		if err := p.prepare(); err != nil {
-			panic(fmt.Sprintf("profile %s: %v", e.Name(), err))
+			first = cmp.Or(first, fmt.Errorf("profile %s: %w", e.Name(), err))
+			continue
 		}
 		registry[p.ID] = &p
 	}
+	return first
 }
 
 // prepare checks a profile and compiles its patterns, so a broken file

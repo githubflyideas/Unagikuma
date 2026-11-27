@@ -6,6 +6,7 @@
 package i18n
 
 import (
+	"errors"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -34,6 +35,20 @@ var langs = []Lang{
 
 var catalogs = map[string]map[string]string{}
 
+// loadErr is the first problem found in the embedded catalogs; the program
+// refuses to start with it (see LoadError) and the tests check it.
+var loadErr error
+
+// LoadError reports whether the embedded catalogs (and the detail
+// patterns) are broken.
+func LoadError() error {
+	if loadErr != nil {
+		return loadErr
+	}
+	detailOnce.Do(loadDetails)
+	return detailErr
+}
+
 func init() {
 	for _, l := range langs {
 		b, err := files.ReadFile("locales/" + l.Code + ".json")
@@ -42,12 +57,15 @@ func init() {
 		}
 		m := map[string]string{}
 		if err := json.Unmarshal(b, &m); err != nil {
-			panic(fmt.Sprintf("i18n: locales/%s.json: %v", l.Code, err))
+			if loadErr == nil {
+				loadErr = fmt.Errorf("i18n: locales/%s.json: %w", l.Code, err)
+			}
+			continue
 		}
 		catalogs[l.Code] = m
 	}
-	if catalogs["en"] == nil {
-		panic("i18n: the English catalog is missing")
+	if catalogs["en"] == nil && loadErr == nil {
+		loadErr = errors.New("i18n: the English catalog is missing")
 	}
 }
 

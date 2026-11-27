@@ -164,9 +164,9 @@ func randomPassword() string {
 	out := make([]byte, 0, 20)
 	buf := make([]byte, 64)
 	for len(out) < 20 {
-		if _, err := rand.Read(buf); err != nil {
-			panic(err)
-		}
+		// crypto/rand.Read cannot fail: since Go 1.24 it never returns
+		// an error (the runtime aborts if the system source is unusable).
+		_, _ = rand.Read(buf)
 		for _, c := range buf {
 			// Rejection keeps every character equally likely.
 			if int(c) < 256-256%len(alphabet) && len(out) < 20 {

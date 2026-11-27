@@ -10,10 +10,4 @@ import (
 var files embed.FS
 
 // FS returns the UI file system with index.html at its root.
-func FS() fs.FS {
-	sub, err := fs.Sub(files, "ui")
-	if err != nil {
-		panic(err)
-	}
-	return sub
-}
+func FS() (fs.FS, error) { return fs.Sub(files, "ui") }
