@@ -16,7 +16,7 @@
 :root[data-style="atelier"] .side::before { display: none; }
 
 /* masthead: a stamp at the top left */
-:root[data-style="atelier"] .brand { position: absolute; z-index: 60; inset-block-start: 18px; inset-inline-start: 26px; flex-direction: row; gap: 12px; padding: 0; align-items: center; text-align: start; font-family: var(--serif); font-style: italic; font-size: 22px; letter-spacing: .04em; color: var(--accent); }
+:root[data-style="atelier"] .brand { position: absolute; z-index: 60; inset-block-start: 18px; inset-inline-start: calc(108px + max(0px, (100% - 1372px) / 2)); flex-direction: row; gap: 12px; padding: 0; align-items: center; text-align: start; font-family: var(--serif); font-style: italic; font-size: 22px; letter-spacing: .04em; color: var(--accent); }
 :root[data-style="atelier"] .brand img { width: 52px; height: 52px; border-radius: 50%; padding: 5px; background: var(--panel); box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 4px var(--panel), 0 0 0 5.5px var(--accent); filter: sepia(.75) saturate(1.25) hue-rotate(-12deg); }
 :root[data-style="atelier"] .brand .edition { font-style: normal; font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
 :root[data-style="atelier"] .shell.mini .brand > div { display: revert; }
@@ -40,7 +40,7 @@
 :root[data-style="atelier"] .side .foot button.linkish, :root[data-style="atelier"] .side .foot a { color: var(--accent); }
 :root[data-style="atelier"] .side .foot .btn { background: transparent; border: 1px solid var(--border-strong); color: var(--text); }
 /* the page title is a large italic head */
-:root[data-style="atelier"] .top { position: static; margin: 0 auto; width: 100%; max-width: 1180px; padding: 84px 12px 6px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
+:root[data-style="atelier"] .top { position: static; margin: 0 auto; width: 100%; max-width: 1180px; padding: 100px 12px 6px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
 :root[data-style="atelier"] .top > .btn.sm:first-child { display: none; }
 :root[data-style="atelier"] .top .crumbs { flex: 0 0 100%; order: -1; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 44px; line-height: 1.1; color: var(--accent); letter-spacing: .01em; margin-bottom: 6px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
 :root[data-style="atelier"] .main { padding-inline: 96px; }
