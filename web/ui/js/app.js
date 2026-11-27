@@ -22,9 +22,8 @@ import { PaletteHost, openPalette } from './views/palette.js';
 import { loadBrand, loadMyStyle, applyCachedStyle, onStyleLoaded, signedOut, currentStyle, setMyStyle, brand, CHROME } from './styles.js';
 import { storageGet, storageSet } from './storage.js';
 
-// Classic is the default layout; the other four are optional layouts.
+// Layouts are chosen in Settings, Style and branding.
 // Colour comes from five shared palettes, cycled by clicking the logo.
-const THEMES = ['classic', 'retail', 'noc', 'starbridge', 'atelier'];
 const PALETTES = ['calm', 'perfume', 'country', 'industrial', 'passion'];
 const OLD_PALETTES = { light: 'calm', paper: 'calm', dark: 'industrial', ink: 'industrial',
   mist: 'calm', sport: 'calm', slate: 'industrial', graphite: 'industrial', sky: 'calm',
@@ -211,30 +210,18 @@ function Shell({ user, onLogout, onLang }) {
   const setup = setupIssues(ov.data);
   const first = route.parts[0] === 'settings' && ADVANCED_TABS.includes(route.parts[1]) ? '/advanced'
     : route.parts[0] === 'alerts' && route.parts[1] === 'changes' ? '/notices' : '/' + (route.parts[0] || '');
-  const changeTheme = async (id) => {
-    if (id === styleId) return;
-    const allowed = (brand.styles || []).some(x => x.id === id && x.allowed) || id === 'classic';
-    if (!allowed) return;
-    try { await setMyStyle(id === brand.style ? '' : id); } catch { /* keep the last style */ }
-    setStyleRev(n => n + 1);
-  };
   const changePalette = (v) => { setPalette(v); storage('unagikuma.palette', v); applyPalette(v); };
   const cyclePalette = (e) => { e.preventDefault(); e.stopPropagation(); changePalette(nextPalette(palette)); };
   const paletteTip = t('ui.palette.cycle', { name: t('ui.theme.' + palette) });
   const logoBtn = html`<button type="button" class="logo-cycle" title=${paletteTip} aria-label=${paletteTip} onClick=${cyclePalette}><${Logo} /></button>`;
   const edition = html`<div class="edition small muted">${me.registered ? t('ui.edition.registered') : t('ui.edition.unregistered')}${me.version ? ' · ' + me.version : ''}</div>`;
-  const brandBlock = (cls) => html`<div class=${cls}>${logoBtn}<div><a href="#/">${PRODUCT}${edition}</a></div></div>`;
-  const themeDock = html`<div class="theme-dock" role="group" aria-label=${t('ui.theme')}>
-      <div class="themes styles" role="list">
-        ${THEMES.map((id) => {
-          const allowed = id === 'classic' || (brand.styles || []).some(x => x.id === id && x.allowed);
-          return html`<button type="button" role="listitem" class="style-swatch" aria-pressed=${String(styleId === id)} disabled=${!allowed}
-            title=${t('ui.style.' + id)} aria-label=${t('ui.style.' + id)}
-            style=${{ background: 'var(--accent)' }}
-            onClick=${() => allowed && changeTheme(id)}><span>${t('ui.style.' + id)}</span></button>`;
-        })}
-      </div>
-    </div>`;
+  const brandBlock = (cls) => html`<div class=${cls}>${logoBtn}<div><a href="#/">${PRODUCT}${edition}</a>${dots}</div></div>`;
+  // Colour: five small circles next to the logo (the logo cycles them too).
+  const dots = html`<span class="palette-dots" role="group" aria-label=${t('ui.palette')}>
+      ${PALETTES.map((id) => html`<button type="button" class=${'pdot p-' + id} aria-pressed=${String(palette === id)}
+        title=${t('ui.theme.' + id)} aria-label=${t('ui.theme.' + id)}
+        onClick=${(e) => { e.preventDefault(); e.stopPropagation(); changePalette(id); }}></button>`)}
+    </span>`;
   const nodeName = ov.data && ov.data.instance ? html`<div class="host ellipsis" title=${ov.data.instance}>${ov.data.instance}</div>` : null;
   const runMode = html`<${RunMode} ov=${ov.data} live=${live} />`;
   const accountDock = html`<div class="account-dock">
@@ -296,7 +283,6 @@ function Shell({ user, onLogout, onLang }) {
   return html`<div class=${'shell chrome-' + chrome + (mini ? ' mini' : '')} data-style-rev=${styleRev}>
     <aside class=${'side' + (open ? ' open' : '')}>
       ${brandBlock('brand')}
-      ${chrome === 'side' && themeDock}
       <nav class="nav">${navLinks}</nav>
       <div class="foot">
         ${nodeName}
@@ -313,7 +299,6 @@ function Shell({ user, onLogout, onLang }) {
         <${Search} route=${route} />
         ${ov.data && html`<${Verdict} ov=${ov.data} />`}
         ${chrome === 'top' && html`<nav class="top-nav">${navLinks}</nav>`}
-        ${chrome === 'top' && themeDock}
       </header>
       ${banner && html`<div class="page" style=${{ paddingBottom: 0 }}><${ConfigBanner} banner=${banner} /></div>`}
       ${ov.data && ov.data.storage && ov.data.storage.failing && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner error">
@@ -331,7 +316,7 @@ function Shell({ user, onLogout, onLang }) {
       ${view}
       ${chrome === 'top' && html`<footer class="page-foot">${accountDock}</footer>`}
       ${chrome === 'bottom' && html`<div class="bottom-wrap">
-        <nav class="bottom-bar"><div class="bottom-nav">${navLinks}</div>${themeDock}</nav>
+        <nav class="bottom-bar"><div class="bottom-nav">${navLinks}</div></nav>
         <div class="below-bar">${accountDock}</div>
       </div>`}
     </div>

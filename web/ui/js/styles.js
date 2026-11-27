@@ -36,6 +36,7 @@ export function applyStyle(id) {
   let link = document.getElementById('ui-style');
   if (id === 'classic') {
     if (link) link.remove();
+    setTimeout(() => loaded(), 0);
   } else {
     const href = 'styles/' + id + '.css';
     if (!link) {

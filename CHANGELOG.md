@@ -7,6 +7,8 @@
 - The search is one box again: group, failure count and retry interval sit behind its Filter button instead of next to it in the top bar.
 - Under a top or bottom menu, the node, run mode, language, zoom and account are one quiet row instead of a large block.
 - Modern Dashboard and Starship are readable with every palette: tables and cards no longer keep dark backgrounds from before the shared palettes.
+- The layout is chosen only in Settings, Style and branding. The chips in the menu are gone; in their place, five small colour circles sit next to the logo, and a small colour wheel on the logo shows that clicking it changes the colours too.
+- Craftsman Workshop: the page is centred again (equal margins on both sides) and its brand stays inside the page.
 - The logo loads from a relative address, so it shows in the demo (served under /Unagikuma/) and behind a reverse proxy that serves the console under a path.
 - The demo is recorded again with this release, so the announcement board and the port setting show sample data, and it shows no paths of the machine it was recorded on.
 

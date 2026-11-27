@@ -10,7 +10,8 @@
    the open one shows its name), every card is a ruled ledger page with
    binder holes and a margin line, and the title is a large italic head. ===== */
 :root[data-style="atelier"] body { background-color: var(--bg); background-image: repeating-linear-gradient(to bottom, transparent 0 31px, color-mix(in srgb, var(--accent) 12%, transparent) 31px 32px), radial-gradient(1200px 700px at 30% -10%, color-mix(in srgb, var(--panel) 90%, transparent), transparent 70%); background-attachment: fixed; font-family: var(--serif); }
-:root[data-style="atelier"] .shell, :root[data-style="atelier"] .shell.mini { display: block; max-width: none; background: transparent; box-shadow: none; }
+:root[data-style="atelier"] .shell, :root[data-style="atelier"] .shell.mini { display: block;
+  position: relative; max-width: none; background: transparent; box-shadow: none; }
 :root[data-style="atelier"] .side { display: contents; }
 :root[data-style="atelier"] .side::before { display: none; }
 
@@ -31,8 +32,6 @@
 :root[data-style="atelier"] .nav .count { margin-inline-start: auto; margin-inline-end: 12px; background: var(--side-on); color: var(--critical); }
 :root[data-style="atelier"] .nav .rdot { margin: 0 10px 0 auto !important; }
 /* the style chips: a small row at the top right, next to the tabs */
-:root[data-style="atelier"] .side .theme-dock { position: absolute; z-index: 60; inset-block-start: 22px; inset-inline-end: 74px; }
-:root[data-style="atelier"] .side .theme-dock .styles { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 420px; }
 /* the account stamp at the bottom left */
 :root[data-style="atelier"] .side .foot { position: fixed; z-index: 60; inset-block-end: 10px; inset-inline-end: 4px; width: 74px; margin: 0; padding: 6px 5px; flex-direction: column; align-items: stretch; gap: 5px; background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px dashed var(--border-strong); border-radius: 4px; color: var(--text); font-size: 11px; text-align: center; }
 :root[data-style="atelier"] .side .foot .host { display: none; }
@@ -44,7 +43,7 @@
 :root[data-style="atelier"] .top { position: static; margin: 0 auto; width: 100%; max-width: 1180px; padding: 84px 12px 6px; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; flex-wrap: wrap; }
 :root[data-style="atelier"] .top > .btn.sm:first-child { display: none; }
 :root[data-style="atelier"] .top .crumbs { flex: 0 0 100%; order: -1; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 44px; line-height: 1.1; color: var(--accent); letter-spacing: .01em; margin-bottom: 6px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
-:root[data-style="atelier"] .main { padding-inline: 110px 80px; }
+:root[data-style="atelier"] .main { padding-inline: 96px; }
 :root[data-style="atelier"] .page { margin: 0 auto; width: 100%; max-width: 1180px; padding: 18px 12px 80px; gap: 26px; }
 /* ledger pages */
 :root[data-style="atelier"] .card, :root[data-style="atelier"] .modal { position: relative; outline: 0; border: 1px solid var(--border-strong); border-radius: 3px 10px 10px 3px; padding-inline-start: 46px; box-shadow: 0 2px 0 var(--panel) inset, 4px 6px 16px color-mix(in srgb, var(--text) 16%, transparent), 8px 12px 0 -4px var(--panel-2), 8px 12px 0 -3px var(--border-strong);
@@ -72,7 +71,6 @@
   :root[data-style="atelier"] .nav { align-items: stretch; }
   :root[data-style="atelier"] .side .nav a, :root[data-style="atelier"] .side .nav a.on { width: auto !important; border-radius: 8px; }
   :root[data-style="atelier"] .side .foot { margin-top: auto; display: flex; flex-direction: column; }
-  :root[data-style="atelier"] .side .theme-dock { position: static; }
   :root[data-style="atelier"] .brand, :root[data-style="atelier"] .brand .edition, :root[data-style="atelier"] .side .foot, :root[data-style="atelier"] .side .foot button.linkish { color: var(--side-text); }
   :root[data-style="atelier"] .top, :root[data-style="atelier"] .page { margin: 0; } :root[data-style="atelier"] .main { padding-inline: 0; }
   :root[data-style="atelier"] .top { padding: 8px 12px; }

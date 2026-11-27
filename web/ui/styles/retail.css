@@ -57,7 +57,6 @@
 :root[data-style="retail"] .side .nav a.on { background: var(--panel); color: var(--side-text); box-shadow: 0 0 0 4px var(--accent), 0 4px 0 4px rgba(0, 0, 0, .25); }
 :root[data-style="retail"] .nav .count { position: absolute; inset-block-start: 4px; inset-inline-end: 6px; margin: 0; } :root[data-style="retail"] .nav .rdot { position: absolute; inset-block-start: 8px; inset-inline-start: 8px; margin: 0 !important; }
 :root[data-style="retail"] .side .foot { position: static; margin-top: auto; padding: 8px 4px 2px; gap: 6px; color: var(--side-text); border-top: 2px dashed color-mix(in srgb, var(--side-text) 25%, transparent); }
-:root[data-style="retail"] .side .theme-dock .styles { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
 :root[data-style="retail"] .side .foot .host { display: none; } :root[data-style="retail"] .side .foot select { border-radius: 12px; font-size: 13px; padding: 4px; }
 :root[data-style="retail"] .side .foot button.linkish { color: var(--side-text); font-weight: 700; } :root[data-style="retail"] .side .foot .btn { background: var(--accent); color: var(--accent-text); border-radius: 12px; }
 :root[data-style="retail"] .top { position: static; margin: 0 auto; width: 100%; max-width: 1440px; padding: 16px 22px 4px; background: transparent; border: 0; backdrop-filter: none; box-shadow: none; }

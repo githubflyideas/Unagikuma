@@ -20,7 +20,7 @@ json.dump(d, open(sys.argv[3], 'w'), ensure_ascii=False)
 PY
 for page in index.html wall.html summary.html; do
   [ -f "$out/$page" ] || continue
-  sed -i.bak 's#<link rel="stylesheet" href="app.css">#<link rel="stylesheet" href="app.css">\n<script src="demo/demo.js"></script>\n<style>.demo-ribbon{position:sticky;top:0;z-index:100;padding:6px 12px;text-align:center;font:13px system-ui,sans-serif;background:\#1f7a4d;color:\#fff}.demo-ribbon a{color:\#fff;text-decoration:underline}</style>#' "$out/$page"
+  sed -i.bak 's#<link rel="stylesheet" href="app.css">#<link rel="stylesheet" href="app.css">\n<script src="demo/demo.js"></script>\n<style>.demo-ribbon{position:sticky;top:0;z-index:100;height:28px;box-sizing:border-box;padding:6px 12px;line-height:16px;white-space:nowrap;overflow:hidden;text-align:center;font:13px system-ui,sans-serif;background:\#1f7a4d;color:\#fff}.demo-ribbon a{color:\#fff;text-decoration:underline}:root[data-style="retail"] .side{top:28px!important;height:calc(100vh - 28px)!important}:root[data-style="starbridge"] .brand,:root[data-style="starbridge"] .top-brand{top:40px!important}</style>#' "$out/$page"
   rm -f "$out/$page.bak"
 done
 touch "$out/.nojekyll"

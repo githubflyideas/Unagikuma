@@ -930,13 +930,10 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 .md-preview ul { margin: .4em 0; padding-inline-start: 1.2em; }
 .md-preview blockquote { margin: .4em 0; padding-inline-start: 12px; border-inline-start: 3px solid var(--accent); color: var(--muted); }
 .notice-editor textarea[name="body"] { font-family: var(--mono); }
-.theme-dock { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 8px 8px; }
-.theme-dock .themes { justify-content: center; }
 .themes.styles { gap: 6px; padding: 0; }
 .themes.styles .style-swatch { width: auto; min-width: 22px; height: auto; overflow: visible; border-radius: 999px; padding: 4px 10px; font-size: 11px; line-height: 1.3; color: var(--accent-text); }
 .themes.styles .style-swatch span { display: inline; }
-.shell.mini .theme-dock { display: none; }
-.account-dock { display: flex; flex-direction: column; gap: 6px; }
+.shell.mini .account-dock { display: flex; flex-direction: column; gap: 6px; }
 .page-foot, .below-bar { display: flex; justify-content: center; padding: 8px 16px; }
 /* Under a top or bottom menu, the node, run mode, language, zoom and the
    account sit in one quiet row. */
@@ -956,8 +953,7 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 .shell.chrome-top .side { display: none; }
 .shell.chrome-top .side.open { display: flex; position: fixed; inset: 0 auto 0 0; z-index: 20; width: 240px; box-shadow: 18px 0 40px rgba(0,0,0,.25); }
 .shell.chrome-top .top { flex-wrap: wrap; justify-content: center; }
-.shell.chrome-top .top .theme-dock { flex: 1 1 100%; order: 5; }
-
+.shell.chrome-top .top 
 /* Bottom-menu chrome: nav and themes sit under the page. */
 .shell.chrome-bottom { grid-template-columns: 1fr; }
 .shell.chrome-bottom .side { display: none; }
@@ -994,9 +990,19 @@ button.sbar:not(:disabled):hover span { text-decoration: underline; }
 .shell.chrome-top .page-foot { margin-top: auto; position: static; background: var(--panel); border-top: 1px solid var(--border); }
 .shell.chrome-bottom .bottom-wrap { margin-top: auto; position: sticky; bottom: 0; z-index: 15; }
 :root[data-chrome="bottom"] .page { padding-bottom: 12rem; }
-.shell.chrome-top .top .theme-dock,
-.shell.chrome-bottom .bottom-bar .theme-dock { width: 100%; }
-@media (min-width: 861px) {
+.shell.chrome-top .top .shell.chrome-bottom .bottom-bar @media (min-width: 861px) {
   .shell.chrome-top .top > .btn.sm:first-child,
   .shell.chrome-bottom .top > .btn.sm:first-child { display: none; }
 }
+
+/* Colour dots beside the logo; the logo itself also cycles them. */
+.palette-dots { display: flex; gap: 5px; margin-top: 5px; }
+.pdot { width: 13px; height: 13px; padding: 0; border-radius: 50%; border: 1.5px solid var(--panel); box-shadow: 0 0 0 1px var(--border-strong); cursor: pointer; transition: transform .12s; }
+.pdot:hover { transform: scale(1.2); }
+.pdot[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--text); }
+.pdot.p-calm { background: #3d7c78; } .pdot.p-perfume { background: #a8566b; } .pdot.p-country { background: #e0a526; }
+.pdot.p-industrial { background: #f28c28; } .pdot.p-passion { background: #e0246f; }
+.shell.mini .side .palette-dots { display: none; }
+.logo-cycle { position: relative; }
+.logo-cycle::after { content: ""; position: absolute; inset-inline-end: -2px; inset-block-end: -2px; width: 12px; height: 12px; border-radius: 50%;
+  background: conic-gradient(#3d7c78, #a8566b, #e0a526, #f28c28, #e0246f, #3d7c78); border: 2px solid var(--panel); }
