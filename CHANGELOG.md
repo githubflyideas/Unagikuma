@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.0.3 — 2026-11-27
 
 **Fixed**
 - Each layout has its own menu again: Classic a sidebar on the left, Chain Store two columns of tiles on the left, Modern Dashboard a bar on top, Craftsman Workshop index tabs on the right, Starship a dock at the bottom. In 3.0.2 Chain Store and Craftsman Workshop had been turned into top menus.
