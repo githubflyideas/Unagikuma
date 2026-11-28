@@ -44,12 +44,14 @@ const FileName = "license.json"
 // Product is the product name a licence must carry.
 const Product = "unagikuma"
 
-// CurrentVersion is the licence format Sign produces. Version 4 is
-// version 3 plus the monitor limit in the signed message. Version 3 is
-// ECDSA P-521 over SHA-512, signatures in ASN.1 DER form; it stays
-// accepted, its licences simply carry no monitor limit. Version 2 was
-// Ed25519; it is retired and no longer accepted.
-const CurrentVersion = 4
+// CurrentVersion is the licence format Sign produces. Version 5 is
+// version 4 plus the node limit in the signed message; version 4 is
+// version 3 plus the monitor limit. Version 3 is ECDSA P-521 over
+// SHA-512, signatures in ASN.1 DER form. Versions 3 and 4 stay accepted
+// (a licence already issued must keep working): their licences simply
+// carry no node limit, and version 3 none for monitors either. Version 2
+// was Ed25519; it is retired and no longer accepted.
+const CurrentVersion = 5
 
 // format is one licence format version: the domain line its message
 // opens with and the scheme that signs and verifies it.
@@ -59,12 +61,15 @@ type format struct {
 	verify func(pub *ecdsa.PublicKey, msg, sig []byte) bool
 	// monitors: the signed message also covers MaxMonitors (version 4+).
 	monitors bool
+	// nodes: the signed message also covers MaxNodes (version 5+).
+	nodes bool
 }
 
 // formats is the version dispatch: the versions this build accepts.
 var formats = map[int]format{
-	3: {"unagikuma-license-v3", signP521, verifyP521, false},
-	4: {"unagikuma-license-v4", signP521, verifyP521, true},
+	3: {"unagikuma-license-v3", signP521, verifyP521, false, false},
+	4: {"unagikuma-license-v4", signP521, verifyP521, true, false},
+	5: {"unagikuma-license-v5", signP521, verifyP521, true, true},
 }
 
 func signP521(priv *ecdsa.PrivateKey, msg []byte) ([]byte, error) {
@@ -94,12 +99,16 @@ const (
 var Licensees = []string{LicenseeIndividual, LicenseeOrganization}
 
 // Free is what an installation without a licence gets: up to FreeUsers
-// accounts; a single installation up to FreeSingle monitors, a cluster up
-// to FreeShared shared monitors plus FreeSite of each site's own; the audit log is
+// accounts (every role counts); a single installation up to FreeSingle
+// monitors, a cluster up to FreeShared shared monitors plus FreeSite of
+// each site's own, and up to FreeNodes nodes (the master is one of them).
+// The audit log, the installation's own name, logo and status page footer,
+// and the four extra interface styles (after their trial) are
 // registered-only. Everything else is free. A licence never gives less
 // than this.
 const (
 	FreeUsers  = 5
+	FreeNodes  = 3
 	FreeSingle = 300
 	FreeShared = 100
 	FreeSite   = 100
@@ -107,7 +116,7 @@ const (
 	FreeMonitors = FreeSingle
 )
 
-// File is license.json. MaxUsers and MaxMonitors 0 mean no limit.
+// File is license.json. MaxUsers, MaxMonitors and MaxNodes 0 mean no limit.
 // Expires nil means it never expires; UpdatesUntil then says how long
 // new releases are covered.
 type File struct {
@@ -122,6 +131,7 @@ type File struct {
 	UpdatesUntil   *string `json:"updates_until,omitempty"`
 	MaxUsers       int     `json:"max_users,omitempty"`
 	MaxMonitors    int     `json:"max_monitors,omitempty"`
+	MaxNodes       int     `json:"max_nodes,omitempty"`
 	Note           string  `json:"note,omitempty"`
 	Signature      string  `json:"signature,omitempty"`
 }
@@ -201,6 +211,9 @@ func Message(f File) []byte {
 	fmt.Fprintf(&b, "%d\n", f.MaxUsers)
 	if spec.monitors {
 		fmt.Fprintf(&b, "%d\n", f.MaxMonitors)
+	}
+	if spec.nodes {
+		fmt.Fprintf(&b, "%d\n", f.MaxNodes)
 	}
 	return []byte(b.String())
 }

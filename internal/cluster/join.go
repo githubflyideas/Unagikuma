@@ -75,6 +75,16 @@ type JoinRequest struct {
 	Import   []ImportRecord `json:"import,omitempty"`
 }
 
+// RefusedError is a master's refusal of a join, with the status and the
+// error code it answered, so a caller can tell a quota from a bad code.
+type RefusedError struct {
+	Status  int
+	Code    string
+	Message string
+}
+
+func (e *RefusedError) Error() string { return "the master refused: " + e.Message }
+
 // JoinResponse gives the new node its token.
 type JoinResponse struct {
 	Node     string   `json:"node"`
@@ -120,13 +130,14 @@ func Join(ctx context.Context, info JoinInfo, req JoinRequest) (JoinResponse, er
 	b, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if res.StatusCode != http.StatusOK {
 		var e struct {
+			Code    string `json:"code"`
 			Message string `json:"message"`
 		}
 		_ = json.Unmarshal(b, &e)
 		if e.Message == "" {
 			e.Message = res.Status
 		}
-		return resp, fmt.Errorf("the master refused: %s", e.Message)
+		return resp, &RefusedError{Status: res.StatusCode, Code: e.Code, Message: e.Message}
 	}
 	if err := json.Unmarshal(b, &resp); err != nil || resp.Token == "" {
 		return resp, errors.New("unexpected answer from the master")

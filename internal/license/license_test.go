@@ -96,6 +96,33 @@ func TestCheckMaxMonitors(t *testing.T) {
 	}
 }
 
+// The node limit reaches the state from a version 5 licence; a licence
+// of version 4 or 3 has none, even when its file names one.
+func TestCheckMaxNodes(t *testing.T) {
+	priv := testPrivateKey(t)
+	ring := SingleKey(&priv.PublicKey)
+	now := time.Date(2026, 10, 28, 0, 0, 0, 0, time.UTC)
+	f := Sign(priv, File{Customer: "C", Licensee: LicenseeOrganization, Product: Product, License: TypePerpetual, MaxNodes: 8})
+	if s := Check(ring, f, "1", now); !s.Registered || s.MaxNodes != 8 {
+		t.Fatalf("v5 state: %+v", s)
+	}
+	g := f
+	g.MaxNodes = 9
+	if Check(ring, g, "1", now).Registered {
+		t.Fatal("raised node limit accepted")
+	}
+	v4 := File{Version: 4, Customer: "C", Licensee: LicenseeOrganization, Product: Product, License: TypePerpetual, MaxNodes: 2}
+	v4.KeyID = KeyID(&priv.PublicKey)
+	sig, err := formats[4].sign(priv, Message(v4))
+	if err != nil {
+		t.Fatal(err)
+	}
+	v4.Signature = b64.EncodeToString(sig)
+	if s := Check(ring, v4, "1", now); !s.Registered || s.MaxNodes != 0 {
+		t.Fatalf("v4 state: %+v", s)
+	}
+}
+
 func TestCheckerInstall(t *testing.T) {
 	priv := testPrivateKey(t)
 	dir := t.TempDir()

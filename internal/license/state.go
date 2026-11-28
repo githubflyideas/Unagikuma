@@ -37,6 +37,7 @@ type State struct {
 	UpdatesUntil   string `json:"updates_until,omitempty"`
 	MaxUsers       int    `json:"max_users"`
 	MaxMonitors    int    `json:"max_monitors"`
+	MaxNodes       int    `json:"max_nodes"`
 }
 
 // Unregistered is the state without a valid licence.
@@ -65,6 +66,11 @@ func Check(ring Keyring, f File, installID string, now time.Time) State {
 	// version 3 licence carries none, whatever its file says.
 	if f.Version >= 4 {
 		s.MaxMonitors = f.MaxMonitors
+	}
+	// The node limit is signed only from format version 5 on; an older
+	// licence carries none (no limit on nodes), whatever its file says.
+	if f.Version >= 5 {
+		s.MaxNodes = f.MaxNodes
 	}
 	if f.UpdatesUntil != nil {
 		s.UpdatesUntil = *f.UpdatesUntil

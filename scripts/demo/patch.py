@@ -126,7 +126,7 @@ fill_uptime(d['responses'])
 d['responses']['/session']['version'] = 'demo'
 # The demo shows the registered version, set up: no trial notices, no
 # get-started list.
-d['responses']['/session'].update(registered=True, site_view={'allowed': True})
+d['responses']['/session'].update(registered=True)
 d['responses']['/overview']['status_pages'] = max(1, d['responses']['/overview'].get('status_pages') or 0)
 # Open on the ISP style; every style can be tried.
 for k in ('/branding', '/brand'):

@@ -16,7 +16,8 @@ Additional Use Grant: You may make production use of the Licensed Work,
                       on a single installation no more than 300 monitors; in
                       a cluster no more than 100 monitors in the shared
                       configuration and no more than 100 in each site's own
-                      configuration; in each case not counting the gateway
+                      configuration, and no more than 3 nodes, the master
+                      included; in each case not counting the gateway
                       monitors the Licensed Work adds by itself — or within
                       the limits stated in a licence file the Licensor issued
                       to You;

@@ -97,4 +97,4 @@ Ketik kata sandi baru dua kali (tidak ditampilkan). Tambahkan `--generate` untuk
 
 ## Lisensi
 
-Business Source License 1.1, lihat [LICENSE](LICENSE). Penggunaan produksi gratis dalam batas gratis (5 akun; 300 monitor untuk instalasi tunggal, pada klaster 100 bersama ditambah 100 milik tiap situs), tanpa mengakali batas itu dan tidak sebagai layanan untuk pihak lain; di luar itu perlu lisensi komersial. Setiap versi menjadi Apache License 2.0 empat tahun setelah diterbitkan. Rilis hingga v2.6.37 diterbitkan dengan Apache License 2.0 dan tetap di bawahnya.
+Business Source License 1.1, lihat [LICENSE](LICENSE). Penggunaan produksi gratis dalam batas gratis (5 akun; 300 monitor untuk instalasi tunggal, pada klaster 100 bersama ditambah 100 milik tiap situs; 3 node pada klaster), tanpa mengakali batas itu dan tidak sebagai layanan untuk pihak lain; di luar itu perlu lisensi komersial. Setiap versi menjadi Apache License 2.0 empat tahun setelah diterbitkan. Rilis hingga v2.6.37 diterbitkan dengan Apache License 2.0 dan tetap di bawahnya.

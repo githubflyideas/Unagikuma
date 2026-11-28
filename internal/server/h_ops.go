@@ -194,6 +194,11 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) (any, error) {
 	if mc := s.app.MonitorCap(); mc.Over {
 		out["monitor_over"] = mc
 	}
+	// The same for nodes: a cluster can be past its limit after a licence
+	// ends or is removed.
+	if no := s.app.NodeCap(); no.Over && !s.app.IsMember() {
+		out["node_over"] = no
+	}
 	return out, nil
 }
 

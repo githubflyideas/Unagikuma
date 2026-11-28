@@ -87,6 +87,12 @@ func (s *Server) clusterJoin(w http.ResponseWriter, r *http.Request) (any, error
 		if errors.Is(err, app.ErrAlreadyJoined) {
 			return nil, Errorf(http.StatusConflict, CodeConflict, "%v", err)
 		}
+		// The master's licence does not allow one more node: the same
+		// 402 quota_exceeded the master answered.
+		var refused *cluster.RefusedError
+		if errors.As(err, &refused) && refused.Status == http.StatusPaymentRequired && refused.Code == CodeQuota {
+			return nil, Errorf(http.StatusPaymentRequired, CodeQuota, "%v", err)
+		}
 		return nil, Errorf(http.StatusBadRequest, CodeInvalid, "%v", err)
 	}
 	return map[string]any{"node": resp.Node, "imported": resp.Imported, "skipped": resp.Skipped}, nil

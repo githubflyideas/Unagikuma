@@ -324,6 +324,9 @@ function Shell({ user, onLogout, onLang }) {
       ${ov.data && ov.data.monitor_over && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner warning">
         <div class="spacer">${t('ui.cap.over', { used: ov.data.monitor_over.used, limit: ov.data.monitor_over.limit })}${ov.data.monitor_over.registered ? '' : ' ' + t('ui.reg.contact')}</div>
         <a class="btn sm" href="#/settings/registration">${t('ui.set.tab.registration')}</a></div></div>`}
+      ${ov.data && ov.data.node_over && html`<div class="page" style=${{ paddingBottom: 0 }}><div class="banner warning">
+        <div class="spacer">${t('ui.cap.nodes_over', { used: ov.data.node_over.used, limit: ov.data.node_over.limit })}${ov.data.node_over.registered ? '' : ' ' + t('ui.reg.contact')}</div>
+        <a class="btn sm" href="#/settings/registration">${t('ui.set.tab.registration')}</a></div></div>`}
       ${view}
       ${chrome === 'top' && html`<footer class="page-foot">${accountDock}</footer>`}
       ${chrome === 'bottom' && html`<div class="bottom-wrap">
