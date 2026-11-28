@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.1.4 — 2026-11-28
+
+**Free limits**
+- Without a licence a cluster may have 3 nodes, the master counted. The limit was written in the code but never took effect; now a fourth node is refused — joining with a join code, `POST /api/v1/nodes`, a hand-edited or imported `NODE` record — with 402 `quota_exceeded` and a message saying so. Nothing already running is dropped: a file that already has more nodes (a licence that ran out, a file edited while Unagikuma was stopped) keeps its nodes, the last version keeps running, and a banner names the limit. An expired or removed licence means 3 nodes again.
+- A licence may state `max_nodes` (licence format 5). 0 or absent means no limit, and it never gives fewer than the free 3. Licences issued before this release carry no node limit and keep working as they did, with unlimited nodes.
+- `GET /api/v1/license` answers `node_limit` and `free_nodes`; `GET /api/v1/overview` answers `node_over` to administrators when the cluster has more nodes than it may. Settings › Registration shows the nodes against the limit.
+- A node joining through a master that refuses it for its licence now gets 402 `quota_exceeded` (it was 400 `invalid`).
+
+**Site view**
+- The seven-day trial of the site view is gone. What every other site sees of each monitor is always shown, on every installation, with or without a licence. `site_view` is no longer in `GET /api/v1/session`.
+
+**Docs**
+- The README, LICENSE and manual state the same free limits as the code: 5 accounts (every role counts), 300 monitors on a single installation, in a cluster 100 shared plus 100 in each site's own configuration, and 3 nodes.
+- Corrected: the README said the audit log can be read for 3 days without a licence (reading it needs a registration; it is recorded either way), and that every interface style is free (Classic is; the four other styles have a seven-day trial).
+
+**API**
+- The OpenAPI document now describes what the server answers for `GET /api/v1/session` (`groups` only for a group-limited account, `scopes` holding only the scopes the caller has, `admin` included) and for a node that is offline in `GET /api/v1/overview` (`gateway` is null).
+
 ## v3.1.3 — 2026-11-27
 
 **Security**

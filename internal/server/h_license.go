@@ -29,7 +29,8 @@ func requireRegistered(s *Server, f apiFunc) apiFunc {
 	}
 }
 
-// CodeQuota means the licence does not allow one more node or account.
+// CodeQuota means the licence does not allow one more node, account or
+// monitor.
 const CodeQuota = "quota_exceeded"
 
 func quotaError(err error) error {
@@ -44,15 +45,17 @@ func (s *Server) licenseGet(w http.ResponseWriter, r *http.Request) (any, error)
 		Usage        app.Usage `json:"usage"`
 		UserLimit    int       `json:"user_limit"`
 		MonitorLimit int       `json:"monitor_limit"`
+		NodeLimit    int       `json:"node_limit"`
 		FreeUsers    int       `json:"free_users"`
 		FreeMonitors int       `json:"free_monitors"`
+		FreeNodes    int       `json:"free_nodes"`
 		// In a cluster: the shared configuration's free number, and each
 		// site's own; this site's own monitors and their limit.
 		FreeShared   int `json:"free_shared_monitors"`
 		FreeSite     int `json:"free_site_monitors"`
 		SiteMonitors int `json:"site_monitors"`
 		SiteLimit    int `json:"site_monitor_limit,omitempty"`
-	}{st, s.app.Usage(), app.UserLimit(st), cap.Limit, license.FreeUsers, license.FreeMonitors,
+	}{st, s.app.Usage(), app.UserLimit(st), cap.Limit, app.NodeLimit(st), license.FreeUsers, license.FreeMonitors, license.FreeNodes,
 		license.FreeShared, license.FreeSite, cap.SiteUsed, cap.SiteLimit}, nil
 }
 

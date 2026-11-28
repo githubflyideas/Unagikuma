@@ -24,8 +24,8 @@ Friendly, self-hosted monitoring: know the moment your websites and servers go d
 - **Status pages** to keep your users in the loop.
 - **Easy to switch.** Bring your monitors over from Uptime Kuma, Nagios, Checkmate, Gatus or another Unagikuma, in the web page or on the command line.
 - **Easy to back up.** Download the configuration alone or everything in one encrypted archive, and restore it from the same page.
-- **Free to start.** Everything works unregistered, with up to 5 accounts and the last 3 days of the audit log; registering lifts both.
-- **Themes and styles.** Perfume, Country, Industrial, Calm and Passion colours and every interface style are free; status colours mean the same in each.
+- **Free to start.** Everything works unregistered, within these limits: 5 accounts (every role counts), 300 monitors on a single installation (in a cluster 100 shared plus 100 in each site's own configuration) and 3 nodes in a cluster, the master included. The audit log is recorded either way; reading it needs a registration. A licence lifts the limits it states and never gives fewer.
+- **Themes and styles.** Perfume, Country, Industrial, Calm and Passion colours and the classic interface style are free; the four other styles each have a free seven-day trial; status colours mean the same in each.
 - **Speaks your language.** The interface comes in 15 languages.
 
 ## Quick start
@@ -125,4 +125,4 @@ Type the new password twice (it is not shown). Add `--generate` to get a random 
 
 ## License
 
-Business Source License 1.1, see [LICENSE](LICENSE). Production use is free within the free limits (5 accounts; 300 monitors on a single installation, in a cluster 100 shared plus 100 of each site's own), without getting around them, and not as a service for others; beyond that a commercial licence is needed. Each version becomes Apache License 2.0 four years after it is published. Releases up to v2.6.37 were published under the Apache License 2.0 and stay under it.
+Business Source License 1.1, see [LICENSE](LICENSE). Production use is free within the free limits (5 accounts; 300 monitors on a single installation, in a cluster 100 shared plus 100 of each site's own and 3 nodes), without getting around them, and not as a service for others; beyond that a commercial licence is needed. Each version becomes Apache License 2.0 four years after it is published. Releases up to v2.6.37 were published under the Apache License 2.0 and stay under it.

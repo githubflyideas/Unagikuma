@@ -30,10 +30,10 @@ func TestAccountQuota(t *testing.T) {
 	if code := e.do("GET", "/api/v1/users", nil, nil); code != 200 {
 		t.Fatalf("list: %d", code)
 	}
-	// Nodes are never limited.
+	// Accounts and nodes are counted apart: a second machine is no account.
 	var er struct{ Code string }
-	if code := e.do("POST", "/api/v1/nodes", map[string]any{"name": "bj"}, &er); code == 402 {
-		t.Fatalf("nodes are limited: %+v", er)
+	if code := e.do("POST", "/api/v1/nodes", map[string]any{"name": "bj"}, &er); code != 200 {
+		t.Fatalf("a second machine: %d %+v", code, er)
 	}
 	install := func(f license.File) {
 		t.Helper()

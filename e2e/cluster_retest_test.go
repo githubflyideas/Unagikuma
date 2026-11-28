@@ -407,8 +407,10 @@ func rejoinAfterRefusal(t *testing.T, wait time.Duration, path string) {
 }
 
 // Several machines on one address join one after another without pause.
+// The default limits apply: a cluster has 3 nodes, the master included, so
+// two join and the rest are refused for the limit (402 quota_exceeded) —
+// never for the address (429), and the nodes that joined stay online.
 func TestRetestJoinsFromOneAddress(t *testing.T) {
-	// The default limits: this is about them.
 	a := start(t, "a", fmt.Sprintf(soa, "a"))
 	a.setup("admin", "master-pass-1")
 	var nodes []*server
@@ -417,16 +419,21 @@ func TestRetestJoinsFromOneAddress(t *testing.T) {
 		s.setup("local", "node-pass-1")
 		nodes = append(nodes, s)
 	}
+	const room = 2 // 3 nodes less the master
 	for i, s := range nodes {
 		var jc struct{ Code string }
 		if code := a.call("POST", "/api/v1/cluster/join_codes", map[string]string{"server": fmt.Sprintf("https://127.0.0.1:%d", a.port)}, &jc); code != 200 {
 			t.Fatalf("join code: %d", code)
 		}
-		if code := s.call("POST", "/api/v1/cluster/join", map[string]any{"code": jc.Code, "node": fmt.Sprintf("n%d", i)}, nil); code != 200 {
-			t.Fatalf("join %d refused: %d", i, code)
+		want := 200
+		if i >= room {
+			want = 402
+		}
+		if code := s.call("POST", "/api/v1/cluster/join", map[string]any{"code": jc.Code, "node": fmt.Sprintf("n%d", i)}, nil); code != want {
+			t.Fatalf("join %d: %d, want %d", i, code, want)
 		}
 	}
-	for i := range nodes {
+	for i := range room {
 		a.waitFor("node online", func() bool { return nodeOnline(a, fmt.Sprintf("n%d", i)) })
 	}
 }

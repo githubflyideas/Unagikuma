@@ -29,11 +29,11 @@ func TestVector(t *testing.T) {
 	priv := vectorKey(0)
 	exp := "2027-10-31"
 	f := Sign(priv, File{InstallationID: "12345678", Customer: "Example KK", Licensee: LicenseeOrganization, Product: Product,
-		License: TypeTrial, Expires: &exp, MaxUsers: 10, MaxMonitors: 250})
+		License: TypeTrial, Expires: &exp, MaxUsers: 10, MaxMonitors: 250, MaxNodes: 6})
 	if f.Version != CurrentVersion {
 		t.Fatalf("version %d, want %d", f.Version, CurrentVersion)
 	}
-	const want = "unagikuma-license-v4\n80362f41\n12345678\nExample KK\norganization\nunagikuma\ntrial\n2027-10-31\nnull\n10\n250\n"
+	const want = "unagikuma-license-v5\n80362f41\n12345678\nExample KK\norganization\nunagikuma\ntrial\n2027-10-31\nnull\n10\n250\n6\n"
 	if got := string(Message(f)); got != want {
 		t.Fatalf("message:\n%q\nwant\n%q", got, want)
 	}
@@ -55,6 +55,56 @@ func TestVector(t *testing.T) {
 	g.Signature = other.Signature
 	if _, err := SingleKey(&priv.PublicKey).Verify(g); err != ErrSignature {
 		t.Fatalf("transplanted signature: %v", err)
+	}
+}
+
+// The node limit of a version 5 licence is signed, too.
+func TestVectorNodesSigned(t *testing.T) {
+	priv := vectorKey(0)
+	ring := SingleKey(&priv.PublicKey)
+	f := Sign(priv, File{Customer: "Example KK", Licensee: LicenseeOrganization, Product: Product,
+		License: TypePerpetual, MaxNodes: 10})
+	if f.Version != 5 {
+		t.Fatalf("version %d", f.Version)
+	}
+	if _, err := ring.Verify(f); err != nil {
+		t.Fatalf("v5 licence does not verify: %v", err)
+	}
+	f.MaxNodes = 11
+	if _, err := ring.Verify(f); err != ErrSignature {
+		t.Fatalf("edited max_nodes: %v", err)
+	}
+	f.MaxNodes = 0
+	if _, err := ring.Verify(f); err != ErrSignature {
+		t.Fatalf("removed max_nodes: %v", err)
+	}
+}
+
+// Version 4 stays accepted: a licence issued before the node limit
+// existed keeps verifying, and a max_nodes value in its file is not
+// covered by its signature, so it must never take effect.
+func TestVectorV4StillVerifies(t *testing.T) {
+	priv := vectorKey(0)
+	ring := SingleKey(&priv.PublicKey)
+	exp := "2027-10-31"
+	f := File{Version: 4, InstallationID: "12345678", Customer: "Example KK", Licensee: LicenseeOrganization,
+		Product: Product, License: TypeTrial, Expires: &exp, MaxUsers: 10, MaxMonitors: 250}
+	f.KeyID = KeyID(&priv.PublicKey)
+	const want = "unagikuma-license-v4\n80362f41\n12345678\nExample KK\norganization\nunagikuma\ntrial\n2027-10-31\nnull\n10\n250\n"
+	if got := string(Message(f)); got != want {
+		t.Fatalf("v4 message:\n%q\nwant\n%q", got, want)
+	}
+	sig, err := formats[4].sign(priv, Message(f))
+	if err != nil {
+		t.Fatalf("sign v4: %v", err)
+	}
+	f.Signature = b64.EncodeToString(sig)
+	if _, err := ring.Verify(f); err != nil {
+		t.Fatalf("v4 licence does not verify: %v", err)
+	}
+	f.MaxNodes = 2 // not a signed field in version 4
+	if _, err := ring.Verify(f); err != nil {
+		t.Fatalf("v4 licence with a stray max_nodes does not verify: %v", err)
 	}
 }
 

@@ -274,9 +274,6 @@ export function Monitors({ query }) {
         <div class="row"><div class="spacer"></div><button class="btn primary" disabled=${!moving.group.trim() && !moving.region}>${t('ui.mon.move')}</button></div>
       </form>
     <//>`}
-    ${me.siteView && !me.registered && html`<div class=${'banner ' + (me.siteView.allowed ? 'info' : 'warning')}>
-      <div class="spacer">${me.siteView.allowed ? t('ui.siteview.trial', { days: me.siteView.days_left }) : t('ui.siteview.locked')}</div>
-      <a class="btn sm" href="#/settings/registration">${t('ui.set.tab.registration')}</a></div>`}
     <${ErrorBox} error=${list.error} retry=${list.reload} />
     <div class="card scroll"><div class="bd flush tbl-wrap">
       ${!list.data ? html`<${Loading} />` : !total ? html`<${Empty} title=${t('ui.mon.none')}><p>${t('ui.mon.none_hint')}</p>${me.member ? html`<p class="small muted">${t('ui.member.shared_on_master', { name: me.masterName })}</p>` : html`<a class="btn primary" href="#/monitors/new">${t('ui.mon.add')}</a>`}<//>` :

@@ -560,7 +560,7 @@ function Registration() {
   return html`<div class="col" style=${{ gap: '12px' }}>
     <${Card} title=${s.registered ? t('ui.reg.registered_to', { name: s.customer }) : s.kind === 'expired' ? t('ui.reg.expired') : t('ui.reg.unregistered')}
       actions=${s.registered && html`<button class="btn sm" onClick=${remove}>${t('ui.reg.remove')}</button>`}>
-      ${!s.registered && html`<p class="small muted" style=${{ marginTop: 0 }}>${t('ui.reg.intro')} ${t('ui.reg.free_note', { n: s.free_users, m: s.free_monitors, c: s.free_shared_monitors })} ${t('ui.reg.contact')}</p>`}
+      ${!s.registered && html`<p class="small muted" style=${{ marginTop: 0 }}>${t('ui.reg.intro')} ${t('ui.reg.free_note', { n: s.free_users, m: s.free_monitors, c: s.free_shared_monitors })} ${t('ui.reg.free_nodes', { k: s.free_nodes })} ${t('ui.reg.contact')}</p>`}
       ${s.reason && html`<div class="banner warning small">${s.reason}</div>`}
       <table class="kvtable"><tbody>
         <tr><th>${t('ui.reg.installation')}</th><td class="ltr"><b>${s.installation_id}</b> <${Copy} text=${s.installation_id} /></td></tr>
@@ -568,7 +568,7 @@ function Registration() {
         ${row(t('ui.reg.type'), s.type)}
         ${row(t('ui.reg.expires'), s.registered ? (s.days < 0 ? t('ui.reg.never') : s.expires + ' (' + t('ui.reg.days_left', { n: s.days }) + ')') : s.expires)}
         ${row(t('ui.reg.updates'), s.updates_until)}
-        ${s.usage && html`<tr><th>${t('ui.reg.nodes')}</th><td>${quota(s.usage.nodes, 0)}</td></tr>
+        ${s.usage && html`<tr><th>${t('ui.reg.nodes')}</th><td>${quota(s.usage.nodes, s.node_limit)}</td></tr>
           <tr><th>${t('ui.reg.users')}</th><td>${quota(s.usage.users, s.user_limit)}</td></tr>
           <tr><th>${t('ui.reg.monitors')}</th><td>${quota(s.usage.monitors, s.monitor_limit)}</td></tr>
           ${s.site_monitor_limit > 0 && html`<tr><th>${t('ui.member.local')}</th><td>${quota(s.site_monitors, s.site_monitor_limit)}</td></tr>`}`}

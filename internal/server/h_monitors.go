@@ -710,9 +710,9 @@ func (s *Server) configError(err error) error {
 	}
 	if ie, ok := app.IsInvalid(err); ok {
 		ae := Errorf(http.StatusBadRequest, CodeInvalid, "%s", ie.Error())
-		// Past the monitor limit is a quota, answered like the account
-		// limit: 402 quota_exceeded, with the diagnostic kept.
-		if len(ie.Diags) > 0 && ie.Diags[0].Code == "monitor_limit" {
+		// Past the monitor or node limit is a quota, answered like the
+		// account limit: 402 quota_exceeded, with the diagnostic kept.
+		if len(ie.Diags) > 0 && (ie.Diags[0].Code == "monitor_limit" || ie.Diags[0].Code == "node_limit") {
 			ae = Errorf(http.StatusPaymentRequired, CodeQuota, "%s", ie.Diags[0].Msg)
 		}
 		ae.Extra = map[string]any{"diagnostics": ie.Diags}

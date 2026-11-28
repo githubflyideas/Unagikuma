@@ -61,7 +61,7 @@ type configManager struct {
 	cur  ConfigState
 	// capExempt > 0 while a change the monitor limit does not govern
 	// applies: an import (the import ceiling governs it) or the gateway
-	// seeding (its monitors never count).
+	// seeding (its monitors never count). The node limit always holds.
 	capExempt atomic.Int32
 	banner    *Banner
 	stat      fileStamp
@@ -138,9 +138,9 @@ func (cm *configManager) load() error {
 		cm.touchStamp()
 		return nil
 	}
-	// The monitor limit holds at startup as it does while running: a file
-	// changed while the program was stopped is a hand edit like any other.
-	// Grown past the limit and past what last ran, it is not applied — the
+	// The monitor and node limits hold at startup as they do while running:
+	// a file changed while the program was stopped is a hand edit like any
+	// other. Grown past a limit and past what last ran, it is not applied — the
 	// last version runs on. A first start has nothing to compare with: the
 	// file runs as it is, and an over-limit notice says so.
 	if !imported {
@@ -149,10 +149,10 @@ func (cm *configManager) load() error {
 			if sn.Text != string(text) {
 				f2, cfg2, d2 := config.Load(cm.path, []byte(sn.Text), cm.app.validators())
 				if !config.HasErrors(d2) {
-					if d := cm.app.monitorCapDiag(cfg2, cfg); d != nil {
+					if d := cm.app.capDiag(cfg2, cfg, false); d != nil {
 						cm.cur = ConfigState{Text: sn.Text, SHA: shaOf([]byte(sn.Text)), Serial: cfg2.Serial, File: f2, Config: cfg2}
-						cm.banner = &Banner{Kind: "error", Code: "monitor_limit", Message: d.Msg + "; the last version runs on", Diags: []config.Diagnostic{*d}}
-						cm.app.log.Error("monitors.conf grew past the monitor limit while stopped; running the last version", "err", d.Msg)
+						cm.banner = &Banner{Kind: "error", Code: d.Code, Message: d.Msg + "; the last version runs on", Diags: []config.Diagnostic{*d}}
+						cm.app.log.Error("monitors.conf grew past the licence limit while stopped; running the last version", "err", d.Msg)
 						cm.touchStamp()
 						return nil
 					}
@@ -293,10 +293,8 @@ func (cm *configManager) saveRenamed(text []byte, ifMatch, author, message strin
 	if err := config.CheckSerial(cfg.Serial, cm.cur.Serial); err != nil {
 		return cm.cur, &InvalidError{Diags: []config.Diagnostic{{Pos: config.Pos{Line: 1, Col: 1}, Severity: config.SevError, Code: "invalid_serial", Msg: err.Error()}}}
 	}
-	if cm.capExempt.Load() == 0 {
-		if d := cm.app.monitorCapDiag(cm.cur.Config, cfg); d != nil {
-			return cm.cur, &InvalidError{Diags: []config.Diagnostic{*d}}
-		}
+	if d := cm.app.capDiag(cm.cur.Config, cfg, cm.capExempt.Load() != 0); d != nil {
+		return cm.cur, &InvalidError{Diags: []config.Diagnostic{*d}}
 	}
 	if err := writeAtomic(cm.path, text); err != nil {
 		if os.IsPermission(err) {
@@ -378,10 +376,10 @@ func (cm *configManager) check() {
 		// fix runs as it is, like a first start.
 		var d *config.Diagnostic
 		if !cm.inRepair {
-			d = cm.app.monitorCapDiag(cm.cur.Config, cfg)
+			d = cm.app.capDiag(cm.cur.Config, cfg, false)
 		}
 		if d != nil {
-			cm.setBanner(&Banner{Kind: "error", Code: "monitor_limit", Message: d.Msg, Diags: []config.Diagnostic{*d}})
+			cm.setBanner(&Banner{Kind: "error", Code: d.Code, Message: d.Msg, Diags: []config.Diagnostic{*d}})
 		} else {
 			_ = cm.apply(text, f, cfg, "file", "", "", nil, nil)
 		}
